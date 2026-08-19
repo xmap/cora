@@ -65,6 +65,7 @@ from cora.agent._model_ref import to_port_model_ref
 from cora.agent.aggregates.agent import (
     AgentDeactivatedError,
     AgentKindMismatchError,
+    AgentNotFoundError,
     AgentNotSeededError,
     AgentStatus,
     AgentSuspendedError,
@@ -83,6 +84,11 @@ from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
     RUN_DEBRIEFER_AGENT_KIND,
     RUN_DEBRIEFER_AGENT_NAME,
+)
+from cora.agent.subscribers._terminal_run_helpers import (
+    extract_interrupted_at,
+    extract_reason,
+    find_terminal_run_event,
 )
 from cora.agent.subscribers.run_debriefer import redact_secrets
 from cora.decision.aggregates.decision import (
@@ -112,6 +118,10 @@ from cora.run.aggregates.run import RunNotFoundError, load_run
 
 _STREAM_TYPE = "Decision"
 _COMMAND_NAME = "RegenerateRunDebrief"
+
+# Stands in for a terminal event type when the Run has none. Reads as
+# what it is: the only thing that happened was an operator asking.
+_ON_DEMAND_NO_TERMINAL = "RegenerateRunDebrief:on-demand"
 
 _log = get_logger(__name__)
 
@@ -198,6 +208,14 @@ def bind(deps: Kernel) -> Handler:
         # Pre-load RunDebriefer Agent's Actor and gate on active.
         actor = await load_actor(deps.event_store, debriefer_agent_id)
         if actor is None:
+            # Two different failures wear the same shape here. The seeded
+            # singleton being absent IS a deployment fault, and its message
+            # sends the operator to the bootstrap seed. An operator-named
+            # agent being absent is a bad id in the request, and the same
+            # message would send them to a config file to look for a typo
+            # they made in a URL.
+            if command.agent_id is not None:
+                raise AgentNotFoundError(debriefer_agent_id)
             raise AgentNotSeededError(debriefer_agent_id, RUN_DEBRIEFER_AGENT_NAME)
         if not actor.active:
             raise AgentDeactivatedError(debriefer_agent_id)
@@ -219,7 +237,7 @@ def bind(deps: Kernel) -> Handler:
         # a deliberate choice and gets checked.
         if command.agent_id is not None:
             if agent is None:
-                raise AgentNotSeededError(debriefer_agent_id, RUN_DEBRIEFER_AGENT_NAME)
+                raise AgentNotFoundError(debriefer_agent_id)
             if agent.kind.value != RUN_DEBRIEFER_AGENT_KIND:
                 raise AgentKindMismatchError(
                     debriefer_agent_id,
@@ -249,10 +267,29 @@ def bind(deps: Kernel) -> Handler:
         new_id = deps.id_generator.new_id()
         now = deps.clock.now()
 
+        # What ended the Run, recovered from its own stream. The literal
+        # that used to sit here described the REQUEST rather than the Run,
+        # and the model read it as the Run having ended strangely: in a
+        # live rehearsal a 14B model called four of five such Runs
+        # anomalous and returned the reserved DebriefDeferred verdict,
+        # while a larger model shrugged it off. Either way the debrief was
+        # answering a question about the wrong event. The on-demand
+        # discriminator is not lost; it has always been recorded
+        # separately on the Decision's `inputs.trigger`, which is where
+        # provenance belongs, rather than in the model's view of the Run.
+        terminal = await find_terminal_run_event(deps.event_store, command.run_id)
+
         payload = RunDebriefPayload(
-            terminal_event_type="RegenerateRunDebrief:on-demand",
-            terminal_event_reason=None,
-            terminal_event_occurred_at=now.isoformat(),
+            # A Run with no terminal event has genuinely had nothing happen
+            # to it but this request, so there the old literal is the
+            # honest answer rather than a fallback.
+            terminal_event_type=(
+                terminal.event_type if terminal is not None else _ON_DEMAND_NO_TERMINAL
+            ),
+            terminal_event_reason=(extract_reason(terminal) if terminal is not None else None),
+            terminal_event_occurred_at=(
+                terminal.occurred_at.isoformat() if terminal is not None else now.isoformat()
+            ),
             run_id=command.run_id,
             run_name=run.name.value,
             run_status=str(run.status),
@@ -264,7 +301,7 @@ def bind(deps: Kernel) -> Handler:
             last_adjusted_at=(
                 run.last_adjusted_at.isoformat() if run.last_adjusted_at is not None else None
             ),
-            interrupted_at=None,
+            interrupted_at=(extract_interrupted_at(terminal) if terminal is not None else None),
         )
         # Same rule as the subscriber: serve the model the Agent
         # declares, so an operator-triggered regenerate cannot reach a
@@ -354,7 +391,9 @@ def bind(deps: Kernel) -> Handler:
                 occurred_at=now,
                 principal_id=debriefer_agent_id,
                 debriefer_agent_id=debriefer_agent_id,
-                debriefer_agent_name=RUN_DEBRIEFER_AGENT_NAME,
+                debriefer_agent_name=(
+                    str(agent.name) if agent is not None else RUN_DEBRIEFER_AGENT_NAME
+                ),
                 correlation_id=correlation_id,
                 causation_id=causation_id,
                 log=log,

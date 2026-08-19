@@ -25,6 +25,7 @@ from cora.access.aggregates.actor import to_payload as actor_to_payload
 from cora.agent.aggregates.agent import (
     AgentDeactivatedError,
     AgentKindMismatchError,
+    AgentNotFoundError,
     AgentNotSeededError,
     AgentSuspendedError,
 )
@@ -50,7 +51,7 @@ from cora.infrastructure.ports import (
     LLMServerError,
     LLMUsage,
 )
-from cora.run.aggregates.run import RunNotFoundError, RunStarted
+from cora.run.aggregates.run import RunCompleted, RunNotFoundError, RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.shared.identity import ActorId
@@ -119,7 +120,18 @@ async def _seed_actor(store: InMemoryEventStore, *, deactivated: bool = False) -
         )
 
 
-async def _seed_run(store: InMemoryEventStore, run_id: UUID) -> None:
+async def _seed_run(
+    store: InMemoryEventStore,
+    run_id: UUID,
+    *,
+    completed: bool = False,
+) -> None:
+    """Seed a Run stream, optionally carrying its terminal event.
+
+    Most tests here only need the Run to exist. `completed=True` appends
+    the RunCompleted that a real finished Run carries, which is what the
+    debrief payload reads back to report how the Run actually ended.
+    """
     started = RunStarted(
         run_id=run_id,
         name="Test Run",
@@ -142,6 +154,26 @@ async def _seed_run(store: InMemoryEventStore, run_id: UUID) -> None:
         stream_id=run_id,
         expected_version=0,
         events=[new_event],
+    )
+    if not completed:
+        return
+    finished = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
+    await store.append(
+        stream_type="Run",
+        stream_id=run_id,
+        expected_version=1,
+        events=[
+            to_new_event(
+                event_type=run_event_type_name(finished),
+                payload=run_to_payload(finished),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="CompleteRun",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
     )
 
 
@@ -918,7 +950,13 @@ async def test_handler_refuses_a_named_agent_of_the_wrong_kind() -> None:
 
 @pytest.mark.unit
 async def test_handler_refuses_a_named_agent_with_no_agent_record() -> None:
-    """An Actor alone is tolerated for the seeded default, not for a named one."""
+    """An Actor alone is tolerated for the seeded default, not for a named one.
+
+    Raised as not-FOUND rather than not-SEEDED: an id the operator typed
+    into a request that resolves to nothing is a bad request, and the
+    seeding error's text would send them to the bootstrap config to hunt
+    for a deployment fault that is not there.
+    """
     store = InMemoryEventStore()
     llm = FakeLLM(responses=[_CANNED_OK])
     run_id = uuid4()
@@ -928,7 +966,7 @@ async def test_handler_refuses_a_named_agent_with_no_agent_record() -> None:
     deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
     handler = bind(deps)
 
-    with pytest.raises(AgentNotSeededError):
+    with pytest.raises(AgentNotFoundError):
         await handler(
             RegenerateRunDebrief(run_id=run_id, agent_id=_OTHER_DEBRIEFER_ID),
             principal_id=_PRINCIPAL_ID,
@@ -1013,3 +1051,39 @@ async def test_handler_attributes_the_inference_trace_to_the_named_agent() -> No
     assert recorded.trace.agent_id == str(_OTHER_DEBRIEFER_ID)
     assert recorded.principal_id == _OTHER_DEBRIEFER_ID
     assert recorded.trace.provider_name == "argo"
+
+
+@pytest.mark.unit
+async def test_handler_payload_reports_the_runs_own_terminal_event() -> None:
+    """The model is told how the RUN ended, not how the debrief was asked for.
+
+    This used to send the literal "RegenerateRunDebrief:on-demand" as the
+    terminal event type, which describes the request rather than the Run.
+    Models read it as the Run having ended strangely: in a live rehearsal
+    a 14B model called four of five ordinary completed Runs anomalous and
+    returned the reserved DebriefDeferred verdict on that basis. The
+    on-demand fact is still recorded, on the Decision's inputs.trigger,
+    which is where provenance belongs.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id, completed=True)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    decision_id = await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    sent = llm.received[0].user_message.text
+    assert '"terminal_event_type": "RunCompleted"' in sent
+    assert "RegenerateRunDebrief:on-demand" not in sent
+    # the discriminator still reaches the record, just not the model
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.inputs is not None
+    assert decision.inputs["trigger"] == "on-demand"
