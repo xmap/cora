@@ -220,10 +220,24 @@ If the terminal event is `RunCompleted` and you see no signs of distress in
 the snapshot, pick `NominalCompletion` with high confidence.
 
 `capture_progress` reports the last frame counts that reached the record before
-the Run ended. When `frames_saved` is short of `frames_expected`, REPORT THE
-SHORTFALL: say how many frames short, and select `DataSuspect` unless a
-stronger terminal condition already applies. A Run can reach `RunCompleted`
-and still be short.
+the Run ended. It holds TWO INDEPENDENT PAIRS, and a count is only ever
+comparable with its own `_expected`:
+
+- `frames_saved` against `frames_saved_expected`
+- `frames_collected` against `frames_collected_expected`
+
+Never compare a saved count with a collected count. They come from different
+instruments and their totals are not the same quantity, so a difference between
+them means nothing.
+
+The SAVED pair is the one that reports what was written. When `frames_saved` is
+short of `frames_saved_expected`, REPORT THE SHORTFALL: say how many frames
+short, and select `DataSuspect` unless a stronger terminal condition already
+applies. A Run can reach `RunCompleted` and still be short.
+
+`frames_collected` slightly below `frames_collected_expected` is the NORMAL
+ending of a healthy scan, typically by about one poll interval, and is not
+evidence of anything. Do not report it.
 
 Do not explain a shortfall away. In particular, do not attribute it to slow or
 stale reporting, and do not treat a large

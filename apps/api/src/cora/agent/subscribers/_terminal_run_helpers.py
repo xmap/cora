@@ -82,6 +82,17 @@ def extract_capture_progress(event: StoredEvent) -> dict[str, int] | None:
     coerced to int here because a frame count of `1530.0` invites a
     reader, human or model, to wonder what the fraction means.
 
+    Names are symmetric on purpose: `frames_saved` /
+    `frames_saved_expected` and `frames_collected` /
+    `frames_collected_expected`. An earlier cut called the first total
+    `frames_expected`, which read like a grand total the collected count
+    fell short of, and a model duly compared 1541 saved against 10
+    collected and reported a "substantial data shortfall" on a scan that
+    was complete on both counters. The two are independently sourced
+    upstream (FPNumCapture against CamNumImages) and are only ever
+    comparable WITHIN a pair; the naming now says so without needing the
+    prompt to.
+
     Carries the four tallies AND how stale the reading was, because the
     tallies alone are not interpretable. `CaptureProgressSnapshot`
     documents why: these are the last counts that REACHED CORA before
@@ -111,7 +122,7 @@ def extract_capture_progress(event: StoredEvent) -> dict[str, int] | None:
         tallies["reading_age_seconds_before_terminal"] = lag
     for source, name in (
         ("saved_count", "frames_saved"),
-        ("saved_total", "frames_expected"),
+        ("saved_total", "frames_saved_expected"),
         ("collected_count", "frames_collected"),
         ("collected_total", "frames_collected_expected"),
     ):

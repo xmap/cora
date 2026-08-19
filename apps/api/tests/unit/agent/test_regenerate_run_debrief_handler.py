@@ -1133,7 +1133,7 @@ async def test_handler_payload_carries_the_frame_tallies() -> None:
 
     sent = llm.received[0].user_message.text
     assert '"frames_saved": 1530' in sent
-    assert '"frames_expected": 1541' in sent
+    assert '"frames_saved_expected": 1541' in sent
     # The staleness figure must travel with the tallies. Counts alone
     # invite the model to read a reporting gap as lost data, which on
     # 2-BM's record would have meant reporting data loss on 255 Runs.
