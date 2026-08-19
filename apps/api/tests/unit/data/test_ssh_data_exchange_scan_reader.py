@@ -149,6 +149,55 @@ async def test_describe_malformed_description_fails_toward_unreadable_not_an_exc
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "captured_at",
+    [None, "not-a-timestamp", 1755509877],
+    ids=["absent", "unparseable", "wrong-type"],
+)
+async def test_describe_leaves_captured_at_none_when_the_probe_cannot_date_the_scan(
+    monkeypatch: pytest.MonkeyPatch, captured_at: object
+) -> None:
+    """2-BM writes `start_date` / `end_date` as free-form strings, so a
+    scan aborted mid-write, an older tomoscan, or a probe-version skew
+    can all yield something undateable. That must degrade to a null
+    timestamp the ingest handler's own policy then refuses, never a
+    `ValueError` escaping `describe`'s never-raise contract."""
+    response = {
+        "kind": "Description",
+        "media_type": "application/x-hdf5",
+        "structurally_complete": True,
+        "projection_count": 1501,
+        "flat_count": 20,
+        "dark_count": 20,
+        "invalid_count": 0,
+        "commanded_projection_count": 1501,
+        "commanded_flat_count": 20,
+        "commanded_dark_count": 20,
+        "dropped_frame_count": 0,
+        "projection_angles_deg": [0.0, 180.0],
+        "flat_angles_deg": None,
+        "dark_angles_deg": None,
+        "captured_at": captured_at,
+        "captured_at_raw": None,
+        "captured_at_source": "start_date",
+        "byte_size": 24504057268,
+        "mtime_ns": 1755509877000000000,
+    }
+
+    async def _fake_run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
+        return response
+
+    monkeypatch.setattr(
+        "cora.data.adapters.ssh_data_exchange_scan_reader.run_probe", _fake_run_probe
+    )
+    reader = SshDataExchangeScanReader(config=_CONFIG)
+    result = await reader.describe(locator_uri="file:///local1/2BM/scan.h5")
+
+    assert isinstance(result, Description)
+    assert result.captured_at is None
+
+
+@pytest.mark.unit
 def test_constructor_rejects_a_captured_at_source_the_layout_does_not_offer() -> None:
     """Fail at construction time, not on the first remote round trip;
     reuses `DataExchangeScanReader`'s own closed-vocabulary check."""

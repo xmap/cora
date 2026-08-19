@@ -16,8 +16,11 @@ integration-tier concern; see `test_capture_scan_ingestor_postgres.py`.
 """
 
 # reportPrivateUsage: the recovery test reaches into `_FakeIngestScan`'s
-# own `_raises` to change its script mid-test; it is this file's own
-# test double, not a leak into production code.
+# own `_raises` to change its script mid-test (this file's own test
+# double, not a leak into production code), and the survives-a-failing-
+# tick test drives `_sweep_loop` directly because the lifespan builds
+# its own candidate lookup from `deps.pool` and so cannot be handed a
+# raising one.
 # pyright: reportPrivateUsage=false
 
 from __future__ import annotations
@@ -30,7 +33,10 @@ import structlog.testing
 
 from cora.api._capture_scan_ingestor import (
     CaptureScanIngestor,
+    NeverScanIngestCandidateLookup,
     ScanIngestCandidate,
+    _sweep_loop,
+    capture_scan_ingestor_lifespan,
 )
 from cora.data.aggregates.acquisition import AcquisitionAssetNotFoundError
 from cora.data.aggregates.dataset import (
@@ -55,11 +61,11 @@ _SUPPLY_ID = uuid4()
 _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
 
 
-def _deps() -> Any:
+def _deps(**settings_kwargs: Any) -> Any:
     from cora.infrastructure.config import Settings
 
     return make_inmemory_kernel(
-        settings=Settings(),  # type: ignore[call-arg]
+        settings=Settings(**settings_kwargs),  # type: ignore[call-arg]
         clock=FakeClock(DEFAULT_NOW),
         id_generator=FixedIdGenerator([uuid4() for _ in range(10)]),
         authz=AllowAllAuthorize(),
@@ -366,3 +372,136 @@ async def test_a_failed_ingest_never_logs_the_observed_path() -> None:
     for entry in logs:
         for value in entry.values():
             assert _PERSONAL_PATH_FRAGMENT not in str(value)
+
+
+@pytest.mark.unit
+async def test_tick_with_a_malformed_binding_uuid_skips_ingest() -> None:
+    """Defence in depth, not a reachable config state: the settings
+    validator already rejects a non-UUID binding value at construction.
+    The guard exists because `bindings` is a plain Mapping on the
+    constructor, so a future caller could supply one the validator never
+    saw, and an unguarded `UUID()` there would escape `tick()` as a bare
+    `ValueError` and kill the sweep loop for every other candidate."""
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan()
+    bindings = {
+        "2bmb-tomoscan": {
+            "producing_asset_id": "not-a-uuid",
+            "supply_id": str(_SUPPLY_ID),
+            "access_protocol": "POSIX",
+        }
+    }
+    ingestor = CaptureScanIngestor(
+        deps=_deps(), candidate_lookup=lookup, ingest_scan=ingest_scan, bindings=bindings
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await ingestor.tick()
+
+    assert ingest_scan.calls == []
+    for entry in logs:
+        for value in entry.values():
+            assert _PERSONAL_PATH_FRAGMENT not in str(value)
+
+
+@pytest.mark.unit
+async def test_never_candidate_lookup_yields_no_candidate() -> None:
+    """The no-pool fallback: an in-memory deployment has no projection to
+    probe, so the sweep must idle rather than fail."""
+    lookup = NeverScanIngestCandidateLookup()
+
+    assert await lookup.next_candidate() is None
+    assert await lookup.next_candidate(exclude=frozenset({_RUN_ID})) is None
+
+
+@pytest.mark.unit
+async def test_sweep_loop_survives_a_tick_that_raises() -> None:
+    """`tick()` swallows every per-candidate failure, but the candidate
+    QUERY itself sits outside that guard, so a database blip surfaces
+    here. The loop must log it and keep sweeping rather than die and
+    leave the ingestor silently stopped for the process's lifetime."""
+    import asyncio
+
+    class _RaisingLookup:
+        async def next_candidate(
+            self, *, exclude: frozenset[UUID] = frozenset()
+        ) -> ScanIngestCandidate | None:
+            _ = exclude
+            raise RuntimeError("candidate query boom")
+
+    ingestor = CaptureScanIngestor(
+        deps=_deps(),
+        candidate_lookup=_RaisingLookup(),
+        ingest_scan=_FakeIngestScan(),
+        bindings=_bindings(),
+    )
+
+    task = asyncio.create_task(_sweep_loop(ingestor, interval_seconds=0.01))
+    await asyncio.sleep(0.05)
+    still_running = not task.done()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert still_running
+
+
+@pytest.mark.unit
+async def test_sweep_loop_stops_when_cancelled_mid_tick() -> None:
+    """Cancellation arriving DURING a tick (the likely case: a tick is
+    ~30s of remote probing, the sleep between them is short) must end the
+    loop, not be caught by the same guard that keeps it alive through a
+    failing tick. Swallowing it there would hang shutdown forever."""
+    import asyncio
+
+    entered = asyncio.Event()
+
+    class _HangingLookup:
+        async def next_candidate(
+            self, *, exclude: frozenset[UUID] = frozenset()
+        ) -> ScanIngestCandidate | None:
+            _ = exclude
+            entered.set()
+            await asyncio.sleep(10)
+            return None
+
+    ingestor = CaptureScanIngestor(
+        deps=_deps(),
+        candidate_lookup=_HangingLookup(),
+        ingest_scan=_FakeIngestScan(),
+        bindings=_bindings(),
+    )
+
+    task = asyncio.create_task(_sweep_loop(ingestor, interval_seconds=10))
+    await asyncio.wait_for(entered.wait(), timeout=1)
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(task, timeout=1)
+
+
+@pytest.mark.unit
+async def test_lifespan_when_enabled_sweeps_until_the_context_exits() -> None:
+    """The enabled path end to end: startup grant probe, candidate-lookup
+    selection (no pool here, so the Never fallback), spawned sweep task,
+    and cancellation on exit. Without this the whole enabled branch of
+    the lifespan runs for the first time on the deployment."""
+    import asyncio
+
+    deps = _deps(
+        capture_scan_ingestor_enabled=True,
+        capture_path_recording_enabled=True,
+        capture_scan_ingestor_bindings=_bindings(),
+    )
+    ingest_scan = _FakeIngestScan()
+
+    with structlog.testing.capture_logs() as logs:
+        async with capture_scan_ingestor_lifespan(
+            deps, ingest_scan=ingest_scan, interval_seconds=0.01
+        ):
+            await asyncio.sleep(0.05)
+
+    events = [entry.get("event") for entry in logs]
+    assert "capture_scan_ingestor.started" in events
+    assert "capture_scan_ingestor.stopped" in events
+    assert ingest_scan.calls == []

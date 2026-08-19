@@ -287,3 +287,123 @@ async def test_run_probe_times_out_and_kills_the_process(monkeypatch: pytest.Mon
     assert response["kind"] == "ProbeError"
     assert "timed out" in response["detail"]
     assert killed["called"] is True
+
+
+class _ScriptedProcess:
+    """A finished `ssh` whose exit code and streams the test dictates."""
+
+    def __init__(self, *, returncode: int, stdout: bytes, stderr: bytes = b"") -> None:
+        self.returncode = returncode
+        self._stdout = stdout
+        self._stderr = stderr
+
+    async def communicate(self, stdin_data: bytes) -> tuple[bytes, bytes]:
+        _ = stdin_data
+        return self._stdout, self._stderr
+
+    def kill(self) -> None:  # pragma: no cover - only the timeout path kills
+        pass
+
+    async def wait(self) -> None:  # pragma: no cover
+        pass
+
+
+def _scripted(monkeypatch: pytest.MonkeyPatch, process: _ScriptedProcess) -> None:
+    async def _fake_exec(*args: Any, **kwargs: Any) -> _ScriptedProcess:
+        return process
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _fake_exec)
+
+
+_GOOD_LOCATOR = "file:///local1/2BM/scan.h5"
+
+
+@pytest.mark.unit
+async def test_run_probe_without_a_locator_uri_refuses_without_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+
+    response = await run_probe({"op": "describe"}, config=_CONFIG)
+
+    assert response["kind"] == "ProbeError"
+
+
+@pytest.mark.unit
+async def test_run_probe_reports_a_failed_ssh_launch_instead_of_raising(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No `ssh` binary on the host, or a fork failure under load. The
+    never-raise contract matters most here: this runs inside a sweep
+    tick, and an escaping OSError would take the loop down."""
+
+    async def _boom(*args: Any, **kwargs: Any) -> Any:
+        raise OSError("no such file or directory: ssh")
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _boom)
+
+    response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
+
+    assert response["kind"] == "ProbeError"
+    assert "could not launch ssh" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_reports_a_nonzero_ssh_exit_with_the_stderr_tail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The likeliest real failure at 2-BM: the host is unreachable, the
+    key is refused, or the remote interpreter does not exist. The
+    operator needs the reason, so the stderr tail is carried through."""
+    _scripted(
+        monkeypatch,
+        _ScriptedProcess(returncode=255, stdout=b"", stderr=b"Permission denied (publickey)."),
+    )
+
+    response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
+
+    assert response["kind"] == "ProbeError"
+    assert "ssh exited 255" in response["detail"]
+    assert "publickey" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_reports_an_unparseable_probe_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A version-skewed or half-written remote response must degrade to a
+    refusal, not a `JSONDecodeError` escaping into the sweep."""
+    _scripted(monkeypatch, _ScriptedProcess(returncode=0, stdout=b"not json at all\n"))
+
+    response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
+
+    assert response["kind"] == "ProbeError"
+    assert "unparseable probe response" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_rejects_probe_output_that_is_not_a_json_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Valid JSON of the wrong shape (a bare list): callers index the
+    result by key, so a non-dict is refused here rather than becoming a
+    TypeError one frame later."""
+    _scripted(monkeypatch, _ScriptedProcess(returncode=0, stdout=b'["not", "a", "dict"]\n'))
+
+    response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
+
+    assert response["kind"] == "ProbeError"
+    assert "not a JSON object" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_with_empty_probe_output_returns_a_probe_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exit 0 with nothing on stdout: `splitlines()[0]` is what would
+    raise, so the IndexError arm of that guard needs its own case."""
+    _scripted(monkeypatch, _ScriptedProcess(returncode=0, stdout=b""))
+
+    response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
+
+    assert response["kind"] == "ProbeError"

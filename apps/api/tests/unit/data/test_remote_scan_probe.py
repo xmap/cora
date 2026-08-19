@@ -15,6 +15,7 @@ verdict `_response_to_result` on the client side can round-trip.
 # end-to-end check), so importing `_handle` is deliberate, not a leak.
 # pyright: reportPrivateUsage=false
 
+import io
 from pathlib import Path
 
 import h5py
@@ -130,3 +131,102 @@ async def test_unknown_op_returns_a_probe_error_not_an_exception() -> None:
 async def test_malformed_request_returns_a_probe_error() -> None:
     response = await _handle({"op": "describe"})
     assert response["kind"] == "ProbeError"
+
+
+async def test_describe_op_on_hdf5_without_the_exchange_layout_returns_unrecognized(
+    tmp_path: Path,
+) -> None:
+    """Readable HDF5 that is not a data-exchange scan is `Unrecognized`,
+    a distinct verdict from `Unreadable` (refused, absent, or not HDF5
+    at all), and the two serialize down different arms."""
+    other_hdf5 = tmp_path / "other.h5"
+    with h5py.File(other_hdf5, "w") as f:
+        f.create_dataset("something/else", data=np.zeros((2, 2), dtype=np.uint16))
+
+    response = await _handle(
+        {
+            "op": "describe",
+            "locator_uri": other_hdf5.as_uri(),
+            "allowed_roots": [str(tmp_path)],
+        }
+    )
+
+    assert response["kind"] == "Unrecognized"
+
+
+async def test_checksum_op_outside_allowed_roots_returns_unreachable(tmp_path: Path) -> None:
+    scan_path = tmp_path / "scan.h5"
+    scan_path.write_bytes(b"x")
+
+    response = await _handle(
+        {
+            "op": "checksum",
+            "locator_uri": scan_path.as_uri(),
+            "allowed_roots": ["/somewhere/else"],
+            "supply_id": "01900000-0000-7000-8000-000000000001",
+        }
+    )
+
+    assert response["kind"] == "Unreachable"
+
+
+async def test_main_emits_exactly_one_json_line_for_one_stdin_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The actual contract with the SSH client, which reads
+    `stdout.splitlines()[0]`: one request line in, exactly one JSON line
+    out. Asserted here rather than left to inspection because a stray
+    print or a second line would silently corrupt every response."""
+    import json
+
+    from cora.data._remote_scan_probe import _main
+
+    scan_path = tmp_path / "scan.h5"
+    _write_scan(scan_path)
+    request = json.dumps(
+        {
+            "op": "describe",
+            "locator_uri": scan_path.as_uri(),
+            "allowed_roots": [str(tmp_path)],
+        }
+    )
+    monkeypatch.setattr("sys.stdin", io.StringIO(request + "\n"))
+
+    await _main()
+
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0])["kind"] == "Description"
+
+
+async def test_main_turns_unparseable_stdin_into_a_probe_error_line(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Truncated or garbled stdin must still produce one JSON line and a
+    zero exit: a traceback on stderr with nothing on stdout is what the
+    client reports as an unparseable response, losing the real reason."""
+    import json
+
+    from cora.data._remote_scan_probe import _main
+
+    monkeypatch.setattr("sys.stdin", io.StringIO("{not json\n"))
+
+    await _main()
+
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0])["kind"] == "ProbeError"
+
+
+async def test_main_rejects_a_json_request_that_is_not_an_object(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json
+
+    from cora.data._remote_scan_probe import _main
+
+    monkeypatch.setattr("sys.stdin", io.StringIO('["a", "list"]\n'))
+
+    await _main()
+
+    assert json.loads(capsys.readouterr().out.splitlines()[0])["kind"] == "ProbeError"
