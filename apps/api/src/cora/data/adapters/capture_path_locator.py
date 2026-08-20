@@ -164,6 +164,15 @@ def mint_capture_path_locator(
     that itself contains personal data (an experiment folder). A root
     misconfigured to the latter would leak that data into the locator's
     supposedly-safe tier segment, defeating this module's whole purpose.
+
+    At 2-BM this is a live hazard rather than a hypothetical: alongside
+    the beamline tree at `<tier>/2BM/`, the analysis tiers carry
+    per-person workspaces directly at their root (`/data3/vnikitin`,
+    `/data3/sboyer`), so a root pointed at one of those would embed a
+    username. The correct roots there are `<tier>/2BM` exactly. How
+    many levels sit below that root is irrelevant here, which is just
+    as well, because it varies: the experiment folder is nested under a
+    year-month on `/data2` and flat on `/local2`.
     """
     matched_root = next(
         (root for root in roots if _under_root(observed_path, root)),
