@@ -256,3 +256,41 @@ which is what lets a reader see that two verdicts concern the same Run rather th
 Because one process binds one adapter, the corpus is walked twice: arm the first provider, walk it, change
 `LLM_PROVIDER`, restart, walk it again with the other Agent. Both passes debit the same envelope, at each entry's
 catalog rate, which is the property this comparison exists to demonstrate.
+
+### Walking it again after a code change
+
+A second walk over the same corpus is not the same request twice, and three things about it are easy to get
+wrong. Each one produces a full, fast, plausible result rather than an error.
+
+**Use a fresh idempotency key.** Every call in a walk carries one. Re-using the previous walk's keys returns that
+walk's *stored responses* without reaching the model at all, so the run finishes quickly, answers 201 throughout,
+and measures the code you replaced. Vary the key with the walk, not just with the Run.
+
+**Confirm the process is serving the commit you mean to measure.** Settings are read once at boot, and so is the
+code. A process left running across a `git pull` serves the old build. The cheap check is a record one: re-debrief
+a single Run and confirm the new inference row carries `request_temperature`. Nothing wrote that column before
+sampling provenance shipped, so a blank one means the restart did not happen.
+
+**Separate the new decisions from the old ones by position, not by content.** The record only appends, so both
+walks are in there. Capture `max(position)` from `events` before starting; everything above it is this walk. Do
+not identify the new rows by the field under examination (the recorded temperature, say), because then every
+measurement of that field agrees with itself and shows nothing.
+
+Reaching the inference rows from the event log goes through `decision_id`. Inference entries are the record's
+second tier and are never rows in `events`; an entry's own `event_id` is a derived dedup key, so joining the two
+`event_id` columns matches nothing on a perfectly healthy deployment.
+
+```sql
+WITH tier AS (
+  SELECT (payload->>'decision_id')::uuid AS decision_id, position > :boundary AS is_new
+  FROM events WHERE event_type = 'DecisionRegistered'
+)
+SELECT t.is_new, count(*) AS inference_rows, count(i.request_temperature) AS with_temperature
+FROM entries_decision_inferences i JOIN tier t USING (decision_id)
+GROUP BY 1 ORDER BY 1;
+```
+
+What a re-walk is worth reading for, beyond the arm comparison: whether the verdict for a Run changed against the
+previous walk, and whether the free-text `reasoning` held up. Pinned sampling narrows the spread but can flatten
+prose, and prose is what a beamline scientist actually reads. Counting characters detects a collapse; it cannot
+tell good reasoning from long reasoning, so read a handful.
