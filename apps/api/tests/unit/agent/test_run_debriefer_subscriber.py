@@ -32,6 +32,9 @@ from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
+    extract_capture_progress as _extract_capture_progress,
+)
+from cora.agent.subscribers._terminal_run_helpers import (
     extract_interrupted_at as _extract_interrupted_at,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
@@ -1240,6 +1243,47 @@ def test_extract_interrupted_at_returns_iso_string_for_truncated() -> None:
     extracted = _extract_interrupted_at(event)
     assert extracted is not None
     assert extracted.startswith("2026-05-17")
+
+
+def _progress_event(snapshot: dict[str, object]) -> StoredEvent:
+    """A terminal event whose progress snapshot is built by hand.
+
+    The typed `CaptureProgressSnapshot` cannot express a missing or
+    unparseable timestamp, so the payload is assembled directly. That is
+    the case these branches exist for: an event written before the
+    snapshot carried timestamps, or a row a migration touched.
+    """
+    return StoredEvent(
+        position=1,
+        event_id=UUID("01900000-0000-7000-8000-00000000ee02"),
+        stream_type="Run",
+        stream_id=uuid4(),
+        version=2,
+        event_type="RunCompleted",
+        schema_version=1,
+        payload={
+            "capture_progress_snapshot": snapshot,
+            "observed_at": "2026-05-17T14:00:00+00:00",
+        },
+        correlation_id=_CORRELATION_ID,
+        causation_id=None,
+        occurred_at=_LATER,
+        recorded_at=_LATER,
+    )
+
+
+@pytest.mark.unit
+def test_extract_capture_progress_omits_reading_age_when_saved_at_absent() -> None:
+    tallies = _extract_capture_progress(_progress_event({"saved_count": 1530, "saved_total": 1541}))
+    assert tallies == {"frames_saved": 1530, "frames_saved_expected": 1541}
+
+
+@pytest.mark.unit
+def test_extract_capture_progress_omits_reading_age_when_saved_at_unparseable() -> None:
+    tallies = _extract_capture_progress(
+        _progress_event({"saved_count": 1530, "saved_total": 1541, "saved_at": "not-a-timestamp"})
+    )
+    assert tallies == {"frames_saved": 1530, "frames_saved_expected": 1541}
 
 
 # ---------- Secret redaction ----------

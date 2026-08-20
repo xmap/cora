@@ -156,6 +156,7 @@ from cora.agent.seed import (
 )
 from cora.agent.subscribers._terminal_run_helpers import (
     TERMINAL_RUN_EVENTS,
+    extract_capture_progress,
     extract_interrupted_at,
     extract_reason,
 )
@@ -528,6 +529,7 @@ class RunDebrieferSubscriber:
                 run.last_adjusted_at.isoformat() if run.last_adjusted_at is not None else None
             ),
             interrupted_at=interrupted_at,
+            capture_progress=extract_capture_progress(event),
         )
         # The Agent's declared model, not the module default: that
         # declaration is what `define_agent` gated against the approved

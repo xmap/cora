@@ -217,7 +217,40 @@ Pick ONE of these six values; do not invent your own.
   NEVER select this value. The system uses it when the LLM call itself fails.
 
 If the terminal event is `RunCompleted` and you see no signs of distress in
-the snapshot, pick `NominalCompletion` with high confidence. If the terminal
+the snapshot, pick `NominalCompletion` with high confidence.
+
+`capture_progress` reports the last frame counts that reached the record before
+the Run ended. It holds TWO INDEPENDENT PAIRS, and a count is only ever
+comparable with its own `_expected`:
+
+- `frames_saved` against `frames_saved_expected`
+- `frames_collected` against `frames_collected_expected`
+
+Never compare a saved count with a collected count. They come from different
+instruments and their totals are not the same quantity, so a difference between
+them means nothing.
+
+The SAVED pair is the one that reports what was written. When `frames_saved` is
+short of `frames_saved_expected`, REPORT THE SHORTFALL: say how many frames
+short, and select `DataSuspect` unless a stronger terminal condition already
+applies. A Run can reach `RunCompleted` and still be short.
+
+`frames_collected` slightly below `frames_collected_expected` is the NORMAL
+ending of a healthy scan, typically by about one poll interval, and is not
+evidence of anything. Do not report it.
+
+Do not explain a shortfall away. In particular, do not attribute it to slow or
+stale reporting, and do not treat a large
+`reading_age_seconds_before_terminal` as evidence that the frames exist. That
+reasoning was tried against this beamline's own files and was wrong: a window
+of Runs whose counters read 11 frames short turned out to be 11 frames short on
+disk, having collected half their flat fields. The staleness figure is context
+for the reader, never an acquittal.
+
+Equally, do not assert that data is lost. You are reading a counter, not the
+files. State what the record shows, that the shortfall warrants checking the
+data, and stop there. When `capture_progress` is absent, draw no conclusion
+from its absence. If the terminal
 event is `RunAborted` and the reason is ambiguous, prefer `EquipmentAbort` over
 `OperatorAbort` when the reason mentions hardware vocabulary (interlock, fault,
 loss, error, trip, offline, disconnect, timeout), otherwise prefer
@@ -324,6 +357,27 @@ class RunDebriefPayload:
     distinct from `terminal_event_occurred_at` which is when the
     truncate command was processed).
 
+    `capture_progress` carries the terminal snapshot's frame tallies
+    plus `reading_age_seconds_before_terminal`, or `None` for a Run with
+    no snapshot. Before it existed the payload said nothing about frame
+    counts, so a debrief could not reach `DataSuspect` on the "missing
+    frames" ground the choice set has always listed.
+
+    The staleness figure travels with the tallies as context, and its
+    limits are worth stating because they were learned the hard way. On
+    2-BM's record a 14.5-hour window carried a consistent 11-frame
+    shortfall alongside reading lag rising from 12 s to 70 s. That
+    correlation invited the conclusion that telemetry had gone quiet
+    while acquisition continued, and an earlier version of this prompt
+    said so. Counting frames in the files refuted it: the affected scans
+    hold 1530 frames against 1541, having collected 10 flat fields
+    instead of 20. The counter was right and the inference was wrong.
+
+    Hence the guidance below tells the model to report a shortfall and
+    neither explain it away nor upgrade it to a claim about the files.
+    A debrief reads counters; only the files settle what the files
+    contain.
+
     Deferred to v2 (broader read scope; trigger per design memo:
     operators rate v1 as `misleading` citing absent context):
     `method_id` (requires Plan load), `acknowledged_cautions`
@@ -345,6 +399,7 @@ class RunDebriefPayload:
     adjustment_count: int
     last_adjusted_at: str | None  # ISO-8601 or None
     interrupted_at: str | None  # ISO-8601 (RunTruncated only)
+    capture_progress: dict[str, int] | None = None
 
 
 def build_run_debrief_chat_request(
@@ -406,6 +461,7 @@ def _payload_to_json_safe(payload: RunDebriefPayload) -> dict[str, Any]:
         "adjustment_count": payload.adjustment_count,
         "last_adjusted_at": payload.last_adjusted_at,
         "interrupted_at": payload.interrupted_at,
+        "capture_progress": payload.capture_progress,
     }
 
 
