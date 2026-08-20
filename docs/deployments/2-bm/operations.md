@@ -47,12 +47,23 @@ deployment aggregate). The confirmed pipeline (DATA-1 through DATA-7): the detec
 once, so treat any value on this page as a reading rather than a constant, and re-read
 `2bmb:TomoScan:DetectorTopDir` before relying on it), tomoscan auto-uploads each scan to the analysis tier
 (`/data2` or `/data3`), tomocupy reconstructs there (`..._rec/` beside the raw), and an operator copies the
-experiment to its canonical home on Sojourner
+experiment to its canonical home on APS Data Management
 (`/gdata/dm/2BM/<yyyy-mm>/<exp>/{data,analysis,system}/`), shared to proposal and ESAF users through
 the Globus collection `APS:DM:2BM` and archived to tape on a per-experiment timer (default one year). The
-upstream tiers are transient, capacity-purged with no fixed schedule, so a dataset is briefly multi-homed and
-then collapses to the Sojourner copy; there is no continuous beamtime-long sync. The reconstruction compute
-resource itself is not yet pinned to a specific host or pool.
+beamline names this tier two ways, DM on its current pages and Sojourner on older ones; both mean the same
+`/gdata` mount, which is the stable thing to match on. The upstream tiers are transient, capacity-purged with
+no fixed schedule, so a dataset is briefly multi-homed and then collapses to the DM copy; there is no
+continuous beamtime-long sync. The reconstruction compute resource itself is not yet pinned to a specific
+host or pool.
+
+Transient understates what can happen upstream. On 2026-08-14 the `tomodata2` array failed and `/data2` was
+lost outright, taking every dataset on it that DM did not already hold; the beamline's
+[archival status page](https://docs2bm.readthedocs.io/en/latest/source/data_management.html) records "DM is
+authoritative" against the rows that survived, and clearing a local copy DM already holds is gated on an
+emailed approval rather than a schedule. The tiers are therefore not equally durable, which matters to CORA
+more than the copy order does: a location on `/local1`, `/local2`, `/data2` or `/data3` is a reading of where
+the bytes are today, while the DM path is the one that outlives the beamtime. `2026-08-Haridy-1015116` is
+already past that transition and is held only under `/gdata/dm/2BM/2026-08/`.
 
 ### Inside the scan file
 
