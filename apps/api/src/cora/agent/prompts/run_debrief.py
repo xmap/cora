@@ -113,26 +113,38 @@ _CHOICE_VALUES = tuple(sorted(RUN_DEBRIEF_CHOICES - {"DebriefConflicted"}))
 # Structured-output JSON Schema fed to the Anthropic adapter's
 # tool-use-as-structured-output convention. Frozen as a module-level
 # dict; the adapter copies it per call.
-# Sampling is pinned rather than left to the provider, and the value
-# travels onto the inference record with the call.
+# Sampling is deliberately NOT set, and this is load-bearing rather
+# than an omission.
 #
-# This task picks from a fixed verdict set under a schema the provider
-# already enforces, so sampling variance buys nothing and costs
-# consistency: a Run judged one way should not come back judged another
-# on a re-run against identical evidence.
+# It was briefly pinned to 0.0, on the reasoning that this task picks
+# from a fixed verdict set so sampling variance buys nothing. That
+# reasoning still holds; the parameter is what does not. Anthropic has
+# deprecated `temperature`, and a request carrying it is refused
+# outright by the current generation. Measured against the Argo gateway
+# on 2026-08-20:
 #
-# Zero is NOT determinism and must not be read as such. The Anthropic
-# API exposes no seed at all, and batching on a shared GPU perturbs the
-# in-house path, so a replay can still differ. What pinning buys is
-# lower variance plus a number the record can state because we chose it,
-# rather than a provider default we would have had to guess at in order
-# to write anything down.
+#     Sonnet 4.5, Haiku 4.5, Sonnet 4.6, Opus 4.6   accept it
+#     Opus 4.7, Sonnet 5, Opus 5                    400, "`temperature`
+#                                                   is deprecated for
+#                                                   this model"
 #
-# The free-text `reasoning` field is the thing to watch: low temperature
-# can flatten prose, and that field is what a beamline scientist reads.
-# Raise this if a validation pass shows the reasoning degrading. The
-# recorded value moves with it, which is the point.
-_SAMPLING_TEMPERATURE = 0.0
+# So pinning it does not degrade a modern model's answer, it prevents
+# one. Worse, it fails silently in the shape that matters least: the
+# refusal arrives as an invalid-request error, the debrief defers, and
+# nothing in the deferral names sampling as the cause. Every agent
+# shipped today declares a model on the accepting side of that line, so
+# the pin broke nothing in place and quietly foreclosed every upgrade.
+#
+# The port still carries `temperature` and `top_p`, and the record still
+# writes whatever a caller sets. What changed is the judgement that this
+# task should set one. A caller that sets nothing records nothing, which
+# is honest, and honest is the whole point of that column.
+#
+# There is a broader lesson here for the provenance argument: what can
+# be recorded about how a model was asked is bounded by what the vendor
+# still allows to be specified, and that surface is contracting as
+# sampling knobs give way to adaptive reasoning.
+_SAMPLING_TEMPERATURE = None
 
 
 RUN_DEBRIEF_OUTPUT_SCHEMA: dict[str, Any] = {

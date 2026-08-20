@@ -84,26 +84,18 @@ _VERDICT_VALUES = tuple(sorted(v.value for v in SteeringVerdict))
 # Structured-output JSON Schema fed to the Anthropic adapter's
 # tool-use-as-structured-output convention. Frozen module-level dict;
 # the adapter copies it per call.
-# Sampling is pinned rather than left to the provider, and the value
-# travels onto the inference record with the call.
+# Sampling is deliberately NOT set. Anthropic has deprecated
+# `temperature`, and the current generation refuses a request carrying
+# it (measured 2026-08-20: Opus 4.7, Sonnet 5 and Opus 5 answer 400
+# "`temperature` is deprecated for this model", while 4.6 and older
+# accept it). Pinning it therefore prevents a modern model's answer
+# rather than steadying it, and the refusal surfaces as a deferred
+# decision that names nothing about sampling.
 #
-# This task picks from a fixed verdict set under a schema the provider
-# already enforces, so sampling variance buys nothing and costs
-# consistency: a Run judged one way should not come back judged another
-# on a re-run against identical evidence.
-#
-# Zero is NOT determinism and must not be read as such. The Anthropic
-# API exposes no seed at all, and batching on a shared GPU perturbs the
-# in-house path, so a replay can still differ. What pinning buys is
-# lower variance plus a number the record can state because we chose it,
-# rather than a provider default we would have had to guess at in order
-# to write anything down.
-#
-# The free-text `reasoning` field is the thing to watch: low temperature
-# can flatten prose, and that field is what a beamline scientist reads.
-# Raise this if a validation pass shows the reasoning degrading. The
-# recorded value moves with it, which is the point.
-_SAMPLING_TEMPERATURE = 0.0
+# The port still carries the dials and the record still writes whatever
+# a caller sets. Setting nothing records nothing, which is the honest
+# state. See `cora.agent.prompts.run_debrief` for the full rationale.
+_SAMPLING_TEMPERATURE = None
 
 
 LLM_DECIDE_OUTPUT_SCHEMA: dict[str, Any] = {
