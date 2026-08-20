@@ -67,6 +67,7 @@ from cora.agent.aggregates.agent import (
     AgentKindMismatchError,
     AgentNotFoundError,
     AgentNotSeededError,
+    AgentNotVersionedError,
     AgentStatus,
     AgentSuspendedError,
     load_agent,
@@ -221,21 +222,16 @@ def bind(deps: Kernel) -> Handler:
         if not actor.active:
             raise AgentDeactivatedError(debriefer_agent_id)
 
-        # Suspension gate: the reversible operator pause means the agent
-        # takes no actions, and an on-demand regenerate must not defeat
-        # it; the operator resumes first. The BUDGET gate is deliberately
-        # absent here: an operator-triggered regenerate is a conscious,
-        # human-accountable spend (the coarse post-hoc tier targets the
-        # autonomous subscribers), and the call still debits the ledger.
         agent = await load_agent(deps.event_store, debriefer_agent_id)
-        if agent is not None and agent.status is AgentStatus.SUSPENDED:
-            raise AgentSuspendedError(debriefer_agent_id)
 
-        # An operator-named agent has to exist as an Agent, not merely as
-        # an Actor, and has to be a RunDebriefer. The seeded default is
-        # exempt from the existence half because the apply path already
-        # tolerates an Actor-only deployment; an explicitly named one is
-        # a deliberate choice and gets checked.
+        # Identity before authorization. An operator-named agent has to
+        # exist as an Agent, not merely as an Actor, and has to be a
+        # RunDebriefer. The seeded default is exempt from the existence
+        # half because the apply path already tolerates an Actor-only
+        # deployment; an explicitly named one is a deliberate choice and
+        # gets checked. This runs FIRST so that naming the wrong agent
+        # says so, rather than telling the operator to promote an agent
+        # that would still be the wrong one afterwards.
         if command.agent_id is not None:
             if agent is None:
                 raise AgentNotFoundError(debriefer_agent_id)
@@ -245,6 +241,19 @@ def bind(deps: Kernel) -> Handler:
                     RUN_DEBRIEFER_AGENT_KIND,
                     agent.kind.value,
                 )
+
+        # Lifecycle gate, matching the subscribers': only a Versioned
+        # agent acts. Suspension is split out because its remedy is
+        # resume_agent while the rest is version_agent, and a missing
+        # Agent stream stays permissive exactly as it does there. The
+        # BUDGET gate is deliberately absent here: an operator-triggered
+        # regenerate is a conscious, human-accountable spend (the coarse
+        # post-hoc tier targets the autonomous subscribers), and the call
+        # still debits the ledger.
+        if agent is not None and agent.status is AgentStatus.SUSPENDED:
+            raise AgentSuspendedError(debriefer_agent_id)
+        if agent is not None and agent.status is not AgentStatus.VERSIONED:
+            raise AgentNotVersionedError(debriefer_agent_id, agent.status)
 
         # Pre-load parent Decision when ref set; enforce same-agent +
         # same-Run scope.

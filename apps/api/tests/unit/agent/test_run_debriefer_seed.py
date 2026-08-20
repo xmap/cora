@@ -1,10 +1,11 @@
 """Unit tests for the RunDebriefer Agent bootstrap seed."""
 
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 
-from cora.agent.aggregates.agent import load_agent
+from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import RUN_DEBRIEF_PROMPT_TEMPLATE_ID
 from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
@@ -17,6 +18,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
+from tests.unit.agent._helpers import seed_defined_agent
 
 
 @pytest.mark.unit
@@ -87,10 +89,44 @@ async def test_seed_is_idempotent_across_calls() -> None:
     # Still exactly one agent at the pinned id.
     agent = await load_agent(kernel.event_store, RUN_DEBRIEFER_AGENT_ID)
     assert agent is not None
-    # Stream version is still 1 (one event), not 3.
+    # Stream version is still 2 (define + promote), not 6: the repeat
+    # calls were no-ops, not a second bootstrap.
     events, version = await kernel.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
-    assert version == 1
-    assert len(events) == 1
+    assert version == 2
+    assert len(events) == 2
+    assert agent.status is AgentStatus.VERSIONED
+
+
+@pytest.mark.unit
+async def test_seed_warns_when_an_already_seeded_agent_is_not_promoted(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A deployment seeded before the bootstrap promoted must not stay silent.
+
+    This is the shape that stranded the whole 2-BM fleet: seeded, inert,
+    and indistinguishable from healthy in the log.
+    """
+    kernel = _kernel()
+    await seed_defined_agent(
+        kernel.event_store,  # type: ignore[arg-type]
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=uuid4(),
+        principal_id=uuid4(),
+        occurred_at=datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC),
+    )
+
+    await seed_run_debriefer_agent(kernel)
+
+    # structlog writes to stdout here rather than through stdlib logging,
+    # so capsys is the capture that sees it (caplog does not).
+    emitted = capsys.readouterr().out
+    assert "agent_seed.not_promoted" in emitted
+    assert "version_agent" in emitted
+
+    agent = await load_agent(kernel.event_store, RUN_DEBRIEFER_AGENT_ID)
+    assert agent is not None
+    assert agent.status is AgentStatus.DEFINED, "the warning must not silently promote"
 
 
 @pytest.mark.unit
@@ -125,5 +161,5 @@ async def test_seed_uses_system_principal_id_not_agent_self_reference() -> None:
     assert actor_events[0].principal_id != RUN_DEBRIEFER_AGENT_ID
 
     agent_events, _ = await kernel.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
-    assert len(agent_events) == 1
-    assert agent_events[0].principal_id == SYSTEM_PRINCIPAL_ID
+    assert len(agent_events) == 2
+    assert all(event.principal_id == SYSTEM_PRINCIPAL_ID for event in agent_events)

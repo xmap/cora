@@ -81,7 +81,7 @@ async def test_seed_is_idempotent() -> None:
     await seed_experiment_steerer_agent(kernel)
 
     events, _ = await kernel.event_store.load("Agent", EXPERIMENT_STEERER_AGENT_ID)
-    assert len(events) == 1
+    assert len(events) == 2, "one bootstrap writes define + promote; a repeat writes nothing"
 
 
 @pytest.mark.unit

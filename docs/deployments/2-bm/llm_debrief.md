@@ -75,6 +75,48 @@ Keep both `agent_id` values. They are what selects an arm when re-debriefing, an
 them yet. `kind` must be `RunDebriefer` on both: `regenerate_run_debrief` refuses any other kind rather than
 attributing a RunDebrief-context Decision to an agent that does not debrief.
 
+### Promote each arm before using it
+
+`POST /agents` leaves an Agent `Defined`, which means registered as config and **not** cleared to act. Both the
+automatic subscriber and `regenerate_run_debrief` refuse anything but `Versioned`, so an unpromoted arm is refused
+at every seam:
+
+```
+POST /agents/{agent_id}/version
+```
+
+Run it once per arm. Skipping it produces a refusal, not a wrong answer, but the refusal is easy to misread as a
+model or credential problem, so promote both arms before the verification below rather than after a confusing
+failure.
+
+### Promote the deployment's built-in agents once
+
+Separately from the two arms: a deployment first seeded before built-in agents shipped promoted carries its whole
+built-in fleet at `Defined`. That fleet includes the automatic `RunDebriefer` and `CautionDrafter` subscribers, so
+until it is promoted **no Run debriefs itself**, and nothing says so: a subscriber that skips an unpromoted agent
+returns without writing a Decision or a log line.
+
+2-BM is such a deployment. Check the boot log for `agent_seed.not_promoted`, which names each stranded agent and
+fires once per boot.
+
+The remedy is one operator gesture, and it is not automatic on restart: appending governance events to a record
+with no edit path should be something a person chose. Preview it first, then run it:
+
+```python
+from cora.agent.promote_seeded_fleet import promote_seeded_fleet
+
+summary = await promote_seeded_fleet(
+    kernel,
+    principal_id=<operator principal>,
+    correlation_id=<any uuid>,
+    dry_run=True,          # reports the identical summary and writes nothing
+)
+```
+
+The summary reports every fleet member, not just the changed ones, as `promoted`, `already_ready`, `skipped`
+(Suspended or Deprecated, deliberately left alone) or `absent`. Re-running is safe: a second pass reports the
+earlier promotions as `already_ready` and writes nothing.
+
 ## Settings, in this order
 
 Nothing below takes effect until the process restarts: `LLM_PROVIDER` and the provider-specific settings are read
