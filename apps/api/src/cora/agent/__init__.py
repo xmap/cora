@@ -29,7 +29,7 @@ Public surface re-exported here:
 
 from cora.agent._pricing_bridge import refresh_language_model_pricing
 from cora.agent._projections import register_agent_projections
-from cora.agent._subscribers import register_agent_subscribers
+from cora.agent._subscribers import register_agent_subscribers, report_designated_agents
 from cora.agent.aggregates.agent import load_agent
 from cora.agent.build_llm import build_llm
 from cora.agent.errors import (
@@ -135,6 +135,7 @@ __all__ = [
     "register_agent_routes",
     "register_agent_subscribers",
     "register_agent_tools",
+    "report_designated_agents",
     "seed_authority_revocation_holder_agent",
     "seed_calibration_watcher_agent",
     "seed_campaign_watcher_agent",

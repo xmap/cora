@@ -24,6 +24,9 @@ from cora.access.aggregates.actor import (
 )
 from cora.access.aggregates.actor import event_type_name as actor_event_type_name
 from cora.access.aggregates.actor import to_payload as actor_to_payload
+from cora.agent.aggregates.agent import ModelRef as AgentModelRef
+from cora.agent.prompts.caution_drafter import DEFAULT_CAUTION_DRAFTER_MODEL
+from cora.agent.seed import RUN_DEBRIEFER_AGENT_KIND
 from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_ID,
     CAUTION_DRAFTER_AGENT_KIND,
@@ -70,6 +73,7 @@ from tests.unit.agent._helpers import (
     FakeAllocationLookup,
     FakeInferenceRecorder,
     FakeSpendLookup,
+    seed_defined_agent,
     seed_suspended_agent,
     seed_versioned_agent,
 )
@@ -78,6 +82,7 @@ _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000099001")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000009900a")
+_DESIGNATED_AGENT_ID = UUID("01900000-0000-7000-8000-0000cccc0002")
 
 # A canned Plan id (Plan must exist for the subscriber to proceed).
 _PLAN_ID = UUID("01900000-0000-7000-8000-00000000aaaa")
@@ -94,9 +99,11 @@ _ASSET_ID = UUID("01900000-0000-7000-8000-00000000dddd")
 async def _seed_caution_drafter_actor(
     store: InMemoryEventStore,
     *,
+    agent_id: UUID = CAUTION_DRAFTER_AGENT_ID,
     deactivated: bool = False,
 ) -> None:
-    """Write the minimum Actor for the seeded CautionDrafter agent.
+    """Write the minimum Actor for a CautionDrafter agent (the seeded
+    singleton by default, or a designated id when `agent_id` is passed).
 
     PII vault: V2 payload carries no `name`; display name lives in
     `actor_profile`. Subscriber tests don't read the display
@@ -104,7 +111,7 @@ async def _seed_caution_drafter_actor(
     """
     _ = CAUTION_DRAFTER_AGENT_NAME
     event = ActorRegistered(
-        actor_id=CAUTION_DRAFTER_AGENT_ID,
+        actor_id=agent_id,
         occurred_at=_NOW,
         kind=ActorKind.AGENT,
     )
@@ -120,7 +127,7 @@ async def _seed_caution_drafter_actor(
     )
     await store.append(
         stream_type="Actor",
-        stream_id=CAUTION_DRAFTER_AGENT_ID,
+        stream_id=agent_id,
         expected_version=0,
         events=[new_event],
     )
@@ -128,7 +135,7 @@ async def _seed_caution_drafter_actor(
         from cora.access.aggregates.actor import ActorDeactivated
 
         d_event = ActorDeactivated(
-            actor_id=CAUTION_DRAFTER_AGENT_ID,
+            actor_id=agent_id,
             occurred_at=_NOW,
         )
         d_new_event = to_new_event(
@@ -143,7 +150,7 @@ async def _seed_caution_drafter_actor(
         )
         await store.append(
             stream_type="Actor",
-            stream_id=CAUTION_DRAFTER_AGENT_ID,
+            stream_id=agent_id,
             expected_version=1,
             events=[d_new_event],
         )
@@ -249,6 +256,7 @@ async def _build_subscriber(
     inference_recorder: FakeInferenceRecorder | None = None,
     spend_lookup: FakeSpendLookup | None = None,
     allocation_lookup: FakeAllocationLookup | None = None,
+    agent_id: UUID = CAUTION_DRAFTER_AGENT_ID,
 ) -> CautionDrafterSubscriber:
     return CautionDrafterSubscriber(
         event_store=event_store,
@@ -257,6 +265,7 @@ async def _build_subscriber(
         inference_recorder=inference_recorder,
         spend_lookup=spend_lookup,
         allocation_lookup=allocation_lookup,
+        agent_id=agent_id,
     )
 
 
@@ -1602,3 +1611,198 @@ async def test_apply_coexists_with_run_debriefer_on_same_terminal_event() -> Non
     assert caution_decision is not None
     assert caution_decision.choice.value == "NoAction"
     assert len(caution_llm.received) == 1
+
+
+# ---------------------------------------------------------------------------
+# Subscriber agent designation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_default_agent_id_is_the_seeded_singleton() -> None:
+    """Unset means the seeded singleton, so nothing changes on upgrade."""
+    subscriber = CautionDrafterSubscriber(
+        event_store=InMemoryEventStore(),
+        llm=FakeLLM(),
+        caution_lookup=AlwaysQuietCautionLookup(),
+    )
+    assert subscriber._agent_id == CAUTION_DRAFTER_AGENT_ID
+
+
+@pytest.mark.unit
+async def test_apply_designation_honoured_on_actor_id_lease_and_inference_trace() -> None:
+    """A designated Agent's id lands on the Decision's actor_id, on the
+    lease event_id seed, and on the inference trace -- the three places
+    getting this wrong would be silent."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_PROPOSE_CAUTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        kind=CAUTION_DRAFTER_AGENT_KIND,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(
+        event_type="RunAborted",
+        run_id=run_id,
+        reason="rotary stage encoder offline; interlock fired",
+    )
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.decided_by == _DESIGNATED_AGENT_ID
+
+    stored, _version = await store.load("Run", run_id)
+    leases = [s for s in stored if s.event_type == "DecisionDebriefRequested"]
+    assert len(leases) == 1
+    assert leases[0].payload["debriefer_agent_id"] == str(_DESIGNATED_AGENT_ID)
+
+    assert len(recorder.calls) == 1
+    assert recorder.calls[0].trace.agent_id == str(_DESIGNATED_AGENT_ID)
+
+
+@pytest.mark.unit
+async def test_apply_designation_serves_the_designated_agents_declared_model() -> None:
+    """The designated Agent's declared `model_ref` reaches the LLM port,
+    not the prompt module default. This is the regression `caution_drafter.py`
+    had (unlike `run_debriefer.py`, which already served the Agent's
+    declared model): designating a CautionDrafter Agent that declares an
+    Argo model must actually change what gets served."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        kind=CAUTION_DRAFTER_AGENT_KIND,
+        model_ref=AgentModelRef(provider="argo", model="claude-sonnet-4-6"),
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    served = llm.received[0].model_ref
+    assert served.provider == "argo"
+    assert served.model == "claude-sonnet-4-6"
+    assert served.provider != DEFAULT_CAUTION_DRAFTER_MODEL.provider
+
+
+@pytest.mark.unit
+async def test_apply_falls_back_to_the_default_model_when_no_agent_is_seeded() -> None:
+    """An Actor-only deployment (seeded default, un-designated) keeps
+    working: the module default stands in when the Agent stream doesn't
+    exist."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received[0].model_ref == DEFAULT_CAUTION_DRAFTER_MODEL
+
+
+@pytest.mark.unit
+async def test_apply_skips_when_designated_agent_stream_missing() -> None:
+    """Designated but the Agent stream does not exist (Actor-only): skip.
+    The seeded default is exempt from this check; an explicitly named
+    Agent is a deliberate choice and gets checked."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received == []
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+
+
+@pytest.mark.unit
+async def test_apply_skips_when_designated_agent_wrong_kind() -> None:
+    """Designated Agent's kind isn't CautionDrafter: skip. Attributing a
+    CautionProposal-context Decision to an agent that doesn't draft
+    cautions would make the audit trail unreadable."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        kind=RUN_DEBRIEFER_AGENT_KIND,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received == []
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+
+
+@pytest.mark.unit
+async def test_apply_skips_when_designated_agent_not_versioned() -> None:
+    """Designated but not Versioned: skip via the existing lifecycle
+    gate, now reading whichever id is threaded in."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_defined_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+        kind=CAUTION_DRAFTER_AGENT_KIND,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received == []
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None

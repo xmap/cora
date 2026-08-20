@@ -164,6 +164,19 @@ def test_settings_run_initiator_plan_id_defaults_none_and_parses_uuid(
 
 
 @pytest.mark.unit
+def test_settings_subscriber_agent_designations_default_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unset means the seeded singleton for both LLM subscribers, so
+    nothing changes on upgrade."""
+    monkeypatch.delenv("RUN_DEBRIEFER_AGENT_ID", raising=False)
+    monkeypatch.delenv("CAUTION_DRAFTER_AGENT_ID", raising=False)
+    settings = Settings()
+    assert settings.run_debriefer_agent_id is None
+    assert settings.caution_drafter_agent_id is None
+
+
+@pytest.mark.unit
 def test_settings_require_authenticated_principal_defaults_to_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

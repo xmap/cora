@@ -226,6 +226,7 @@ async def seed_versioned_agent(
     monthly_usd_cap: float | None = None,
     daily_token_cap: int | None = None,
     model_ref: ModelRef | None = None,
+    kind: str = "RunDebriefer",
 ) -> None:
     """Seed Defined then Versioned, leaving the Agent at stream version 2."""
     await seed_defined_agent(
@@ -238,6 +239,7 @@ async def seed_versioned_agent(
         monthly_usd_cap=monthly_usd_cap,
         daily_token_cap=daily_token_cap,
         model_ref=model_ref,
+        kind=kind,
     )
     versioned = AgentVersioned(agent_id=agent_id, version="v1", occurred_at=versioned_at)
     await store.append(

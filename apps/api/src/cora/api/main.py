@@ -58,6 +58,7 @@ from cora.agent import (
     register_agent_routes,
     register_agent_subscribers,
     register_agent_tools,
+    report_designated_agents,
     seed_authority_revocation_holder_agent,
     seed_calibration_watcher_agent,
     seed_campaign_watcher_agent,
@@ -1054,6 +1055,12 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_run_debriefer_agent(deps)
             # same shape for CautionDrafter.
             await seed_caution_drafter_agent(deps)
+            # Report which Agent each LLM subscriber will act as (the
+            # seeded singleton, or a deployment designation) and warn on
+            # a provider mismatch. Must run AFTER both seeds above so the
+            # default (unset designation) case always resolves an Agent;
+            # a report, never a gate, so it never refuses boot.
+            await report_designated_agents(deps)
             # LanguageModel catalog entries for the fleet's three default
             # models, born Defined AND Approved so the define_agent gate
             # never refuses the shipped fleet on a fresh deployment.

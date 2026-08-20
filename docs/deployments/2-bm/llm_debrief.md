@@ -128,19 +128,28 @@ once at boot (`cora.agent.build_llm.build_llm`), not hot-reloaded.
    two separate passes over the corpus with a config change and restart between them, not two routes live at once;
    `kernel.llm` is a single bound adapter.
 
-    !!! warning "The live subscriber defers while an arm is armed"
+    !!! warning "The live subscriber defers while an arm is armed, unless you designate it"
 
-        `LLM_PROVIDER` binds one adapter for the whole process, and the automatic RunDebriefer subscriber uses the
-        **seeded singleton** Agent, which declares `anthropic`. With `LLM_PROVIDER=argo` or `local`, that
-        singleton's declared provider no longer matches the bound adapter, the adapter refuses the call, and every
-        newly completed Run debriefs to `DebriefDeferred` until the setting is put back.
+        `LLM_PROVIDER` binds one adapter for the whole process, and the automatic RunDebriefer subscriber acts as
+        the **seeded singleton** Agent by default, which declares `anthropic`. With `LLM_PROVIDER=argo` or
+        `local`, that singleton's declared provider no longer matches the bound adapter, the adapter refuses the
+        call, and every newly completed Run debriefs to `DebriefDeferred` until the setting is put back.
 
         The refusal is deliberate: cost resolves from the Agent's declared `(provider, model)` while the route
         comes from configuration, so serving a call through one and pricing it as the other would silently
         misattribute spend. Failing loudly is the better trade.
 
-        Practically: run the comparison in a no-beam window, when no Runs are completing. If beam is live, either
-        accept deferred automatic debriefs for the duration, or do not arm an alternate provider at all.
+        `RUN_DEBRIEFER_AGENT_ID` (and `CAUTION_DRAFTER_AGENT_ID` for the sibling subscriber) resolves this without
+        accepting deferred debriefs: set it to the arm's `agent_id` from [One Agent per
+        arm](#one-agent-per-arm) and the automatic subscriber acts as that Agent instead of the seeded singleton,
+        so its declared provider matches the bound adapter. This is exactly 2-BM's situation, not just this
+        comparison's: `api.anthropic.com` is unreachable from the controls network, so the seeded singleton can
+        never serve a live call there, and the automatic path stays structurally dead until an Argo- or
+        in-house-declaring Agent is designated. Restart is still required (settings are read once at boot).
+
+        Without a designation, run the comparison in a no-beam window, when no Runs are completing. If beam is
+        live, either accept deferred automatic debriefs for the duration, or do not arm an alternate provider at
+        all.
 3. Provider-specific settings, matching the `LLM_PROVIDER` chosen in step 2:
 
    **Argo arm:**
@@ -166,6 +175,13 @@ once at boot (`cora.agent.build_llm.build_llm`), not hot-reloaded.
      Allocation envelope; in-house serving is metered-free by design, and what debits the envelope is the catalog
      entry's token rate (zero, for this entry).
    - `LOCAL_LLM_DEVICE_ID`: labels the served device in the GPU occupancy meter (default `gpu0`).
+4. **`RUN_DEBRIEFER_AGENT_ID`** / **`CAUTION_DRAFTER_AGENT_ID`** (optional): set either to the corresponding arm's
+   `agent_id` from [One Agent per arm](#one-agent-per-arm) so the automatic subscriber acts as that Agent instead
+   of the seeded singleton (see the warning under step 2). Unset means the seeded singleton, so this step is
+   skippable if the comparison only needs the on-demand `regenerate_run_debrief` path used in [Running the
+   comparison](#running-the-comparison) below. Boot logs one INFO line per subscriber naming the effective Agent
+   and warns if its declared provider disagrees with `LLM_PROVIDER`; that warning is a report, not a refusal to
+   boot.
 
 ## Grant and activate the envelope
 
