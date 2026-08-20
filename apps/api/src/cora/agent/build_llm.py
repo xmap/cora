@@ -37,6 +37,8 @@ internal-caller guard, not a request-reachable path.
 so a deployment may defer Agent rollout without refusing to boot.)
 """
 
+from pydantic import SecretStr
+
 from cora.agent._gpu_metrics import make_gpu_usage_sink
 from cora.agent.adapters.anthropic_llm import AnthropicLLM
 from cora.agent.adapters.argo_llm import ArgoLLM
@@ -45,6 +47,50 @@ from cora.agent.adapters.openai_compatible_backend import OpenAICompatibleBacken
 from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import LLM
 from cora.infrastructure.ports.clock import SystemMonotonicClock
+
+
+def _anthropic_credential(settings: Settings) -> SecretStr | None:
+    """The Anthropic API key, or None when it is not configured."""
+    return settings.anthropic_api_key
+
+
+def _argo_identity(settings: Settings) -> SecretStr | None:
+    """The ANL domain identity the Argo gateway authenticates, or None."""
+    return settings.argo_username
+
+
+def _local_endpoint(settings: Settings) -> tuple[str, str] | None:
+    """The (base_url, model) a served local endpoint needs, or None when
+    either half is missing."""
+    if settings.local_llm_base_url is None or settings.local_llm_model is None:
+        return None
+    return settings.local_llm_base_url, settings.local_llm_model
+
+
+def llm_provider_configured(settings: Settings) -> bool:
+    """Whether the SELECTED provider has its own configuration present.
+
+    Ignores `llm_enabled` on purpose; the switch is a separate,
+    provider-independent gate that both callers below check for
+    themselves. This is the one place that matches
+    `settings.llm_provider` against the credential each provider
+    actually reads, via the same `_anthropic_credential` /
+    `_argo_identity` / `_local_endpoint` extractors `build_llm` uses to
+    construct the adapter. `build_llm` and `derive_llm` (in
+    `cora.api._readiness`) both consult this instead of restating the
+    match, so they cannot drift on what "configured" means for a given
+    provider.
+
+    They used to drift: `derive_llm` checked `anthropic_api_key` alone,
+    so a deployment running the argo or local arm booted its own log
+    line reporting the LLM as `off`, seconds before serving hundreds of
+    calls through it.
+    """
+    if settings.llm_provider == "argo":
+        return _argo_identity(settings) is not None
+    if settings.llm_provider == "local":
+        return _local_endpoint(settings) is not None
+    return _anthropic_credential(settings) is not None
 
 
 def build_llm(settings: Settings) -> LLM | None:
@@ -84,9 +130,10 @@ def build_llm(settings: Settings) -> LLM | None:
         return _build_argo_llm(settings)
     if settings.llm_provider == "local":
         return _build_local_llm(settings)
-    if settings.anthropic_api_key is None:
+    credential = _anthropic_credential(settings)
+    if credential is None:
         return None
-    return AnthropicLLM(api_key=settings.anthropic_api_key.get_secret_value())
+    return AnthropicLLM(api_key=credential.get_secret_value())
 
 
 def _build_argo_llm(settings: Settings) -> LLM | None:
@@ -96,12 +143,10 @@ def _build_argo_llm(settings: Settings) -> LLM | None:
     API key, so the absent-identity case looks the same as the
     absent-key case and returns None the same way.
     """
-    if settings.argo_username is None:
+    identity = _argo_identity(settings)
+    if identity is None:
         return None
-    return ArgoLLM(
-        username=settings.argo_username.get_secret_value(),
-        base_url=settings.argo_base_url,
-    )
+    return ArgoLLM(username=identity.get_secret_value(), base_url=settings.argo_base_url)
 
 
 def _build_local_llm(settings: Settings) -> LLM | None:
@@ -114,13 +159,12 @@ def _build_local_llm(settings: Settings) -> LLM | None:
     serving engine is stood up out of band; this only needs its base URL
     and served model name.
     """
-    if settings.local_llm_base_url is None or settings.local_llm_model is None:
+    endpoint = _local_endpoint(settings)
+    if endpoint is None:
         return None
+    base_url, model = endpoint
     return LocalLLM(
-        backend=OpenAICompatibleBackend(
-            base_url=settings.local_llm_base_url,
-            model=settings.local_llm_model,
-        ),
+        backend=OpenAICompatibleBackend(base_url=base_url, model=model),
         monotonic_clock=SystemMonotonicClock(),
         on_measure=make_gpu_usage_sink(settings.local_llm_gpu_usd_per_hour),
         device_id=settings.local_llm_device_id,
@@ -168,4 +212,4 @@ def llm_unwired_reason(settings: Settings) -> str:
     )
 
 
-__all__ = ["build_llm", "llm_unwired_reason"]
+__all__ = ["build_llm", "llm_provider_configured", "llm_unwired_reason"]
