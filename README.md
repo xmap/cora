@@ -1535,7 +1535,7 @@
 | src/cora/infrastructure/postgres/\_\_init\_\_.py                                         |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/postgres/pool.py                                                 |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/\_\_init\_\_.py                                       |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/projection/bookmark.py                                           |       27 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/infrastructure/projection/bookmark.py                                           |       32 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/cursor.py                                             |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/drain.py                                              |       34 |        1 |        8 |        1 |     95.2% |       120 |
 | src/cora/infrastructure/projection/handler.py                                            |       13 |        0 |        0 |        0 |    100.0% |           |
@@ -2665,7 +2665,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59354** | **1364** | **8870** |  **405** | **97.2%** |           |
+| **TOTAL**                                                                                | **59359** | **1364** | **8872** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
