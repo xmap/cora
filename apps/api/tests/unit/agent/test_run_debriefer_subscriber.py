@@ -1694,10 +1694,11 @@ async def test_apply_records_inference_on_success() -> None:
     assert call.trace.cost_usd == pytest.approx(0.00128 + 0.00107)
     assert call.trace.finish_reasons == ("tool_use",)
     assert call.trace.request_max_tokens == 1024
-    # The sampling the call actually used reaches the durable record.
-    # Before this landed the column existed and every row left it null,
-    # so a verdict carried no statement of how it had been sampled.
-    assert call.trace.request_temperature == 0.0
+    # This task sets no sampling, so the record states none. Writing a
+    # value here would be a claim no caller made, and `temperature` is
+    # refused outright by models newer than 4.6, so setting one would
+    # also defer every debrief served by a current model.
+    assert call.trace.request_temperature is None
     assert call.trace.agent_id == str(RUN_DEBRIEFER_AGENT_ID)
     assert call.trace.agent_name == RUN_DEBRIEFER_AGENT_NAME
     assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
