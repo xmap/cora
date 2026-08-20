@@ -1,6 +1,7 @@
 """Unit tests for the RunDebriefer Agent bootstrap seed."""
 
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 
@@ -17,6 +18,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
+from tests.unit.agent._helpers import seed_defined_agent
 
 
 @pytest.mark.unit
@@ -93,6 +95,38 @@ async def test_seed_is_idempotent_across_calls() -> None:
     assert version == 2
     assert len(events) == 2
     assert agent.status is AgentStatus.VERSIONED
+
+
+@pytest.mark.unit
+async def test_seed_warns_when_an_already_seeded_agent_is_not_promoted(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A deployment seeded before the bootstrap promoted must not stay silent.
+
+    This is the shape that stranded the whole 2-BM fleet: seeded, inert,
+    and indistinguishable from healthy in the log.
+    """
+    kernel = _kernel()
+    await seed_defined_agent(
+        kernel.event_store,  # type: ignore[arg-type]
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=uuid4(),
+        principal_id=uuid4(),
+        occurred_at=datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC),
+    )
+
+    await seed_run_debriefer_agent(kernel)
+
+    # structlog writes to stdout here rather than through stdlib logging,
+    # so capsys is the capture that sees it (caplog does not).
+    emitted = capsys.readouterr().out
+    assert "agent_seed.not_promoted" in emitted
+    assert "version_agent" in emitted
+
+    agent = await load_agent(kernel.event_store, RUN_DEBRIEFER_AGENT_ID)
+    assert agent is not None
+    assert agent.status is AgentStatus.DEFINED, "the warning must not silently promote"
 
 
 @pytest.mark.unit

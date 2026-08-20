@@ -53,10 +53,12 @@ from cora.agent.aggregates.agent import (
     AgentDescription,
     AgentKind,
     AgentName,
+    AgentStatus,
     AgentVersion,
     AgentVersioned,
     ModelRef,
     event_type_name,
+    load_agent,
     to_payload,
 )
 from cora.infrastructure.logging import get_logger
@@ -210,6 +212,24 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
             ]
         )
     except ConcurrencyError:
+        existing = await load_agent(kernel.event_store, identity.agent_id)
+        if existing is not None and existing.status is not AgentStatus.VERSIONED:
+            # Seeded before this module promoted on bootstrap, so this
+            # deployment's agent is stranded: the subscribers refuse
+            # anything but Versioned and say nothing when they do, which
+            # is how a fleet of agents can sit inert for months looking
+            # healthy. Say it out loud, once per boot, and name the verb.
+            _log.warning(
+                "agent_seed.not_promoted",
+                agent_id=str(identity.agent_id),
+                agent_name=identity.name,
+                agent_status=existing.status.value,
+                remedy=(
+                    "this agent cannot act until promoted; run version_agent "
+                    "on it, or promote the seeded fleet in one operator step"
+                ),
+            )
+            return
         _log.info(
             "agent_seed.already_present",
             agent_id=str(identity.agent_id),
