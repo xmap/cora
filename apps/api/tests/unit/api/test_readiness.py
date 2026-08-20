@@ -19,6 +19,7 @@ import asyncpg
 import pytest
 from pydantic import SecretStr
 
+from cora.agent.build_llm import build_llm
 from cora.api._readiness import (
     derive_actuation,
     derive_llm,
@@ -305,3 +306,115 @@ def test_readiness_body_never_carries_the_api_key() -> None:
     """The body is unauthenticated; a credential must not ride in it."""
     body = readiness_body("ok", _llm_settings(enabled=True, key="sk-ant-secret-VALUE"))
     assert "sk-ant-secret-VALUE" not in str(body)
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_live_for_argo_when_configured() -> None:
+    settings = Settings(  # type: ignore[call-arg]
+        app_env="test",
+        llm_enabled=True,
+        llm_provider="argo",
+        argo_username=SecretStr("svcbeamline"),
+    )
+    assert derive_llm(settings) == "live"
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_off_for_argo_without_a_username() -> None:
+    settings = Settings(  # type: ignore[call-arg]
+        app_env="test", llm_enabled=True, llm_provider="argo", argo_username=None
+    )
+    assert derive_llm(settings) == "off"
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_live_for_local_when_configured() -> None:
+    settings = Settings(  # type: ignore[call-arg]
+        app_env="test",
+        llm_enabled=True,
+        llm_provider="local",
+        local_llm_base_url="http://gpu-host:8000",
+        local_llm_model="llama-3.3-70b",
+    )
+    assert derive_llm(settings) == "live"
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_off_for_local_without_an_endpoint() -> None:
+    settings = Settings(  # type: ignore[call-arg]
+        app_env="test",
+        llm_enabled=True,
+        llm_provider="local",
+        local_llm_base_url=None,
+        local_llm_model=None,
+    )
+    assert derive_llm(settings) == "off"
+
+
+@pytest.mark.unit
+def test_derive_llm_ignores_an_absent_anthropic_key_when_argo_is_selected() -> None:
+    """The bug this whole change fixes: derive_llm used to check only
+    `anthropic_api_key`, so a deployment running the argo arm with no
+    Anthropic key configured (the normal case) read `off` at boot while
+    serving every call through the gateway."""
+    settings = Settings(  # type: ignore[call-arg]
+        app_env="test",
+        llm_enabled=True,
+        llm_provider="argo",
+        anthropic_api_key=None,
+        argo_username=SecretStr("svcbeamline"),
+    )
+    assert derive_llm(settings) == "live"
+
+
+def _provider_matrix() -> list[tuple[str, dict[str, object]]]:
+    """One entry per (provider, credential-shape) combination that
+    `llm_provider_configured` must classify; `enabled` is applied on top
+    of each by the differential test below."""
+    return [
+        (
+            "anthropic-with-key",
+            {"llm_provider": "anthropic", "anthropic_api_key": SecretStr("sk-test-fake")},
+        ),
+        ("anthropic-without-key", {"llm_provider": "anthropic", "anthropic_api_key": None}),
+        ("argo-with-username", {"llm_provider": "argo", "argo_username": SecretStr("svcbeamline")}),
+        ("argo-without-username", {"llm_provider": "argo", "argo_username": None}),
+        (
+            "local-fully-configured",
+            {
+                "llm_provider": "local",
+                "local_llm_base_url": "http://gpu-host:8000",
+                "local_llm_model": "llama-3.3-70b",
+            },
+        ),
+        (
+            "local-missing-model",
+            {
+                "llm_provider": "local",
+                "local_llm_base_url": "http://gpu-host:8000",
+                "local_llm_model": None,
+            },
+        ),
+        (
+            "local-unconfigured",
+            {"llm_provider": "local", "local_llm_base_url": None, "local_llm_model": None},
+        ),
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "label,provider_kwargs", _provider_matrix(), ids=[m[0] for m in _provider_matrix()]
+)
+@pytest.mark.parametrize("enabled", [True, False], ids=["enabled", "disabled"])
+def test_build_llm_and_derive_llm_agree_on_every_configuration(
+    label: str, provider_kwargs: dict[str, object], enabled: bool
+) -> None:
+    """The differential invariant this fix exists to hold: whatever
+    `build_llm` actually constructs, `derive_llm` must report `live`, and
+    nothing else. A predicate that merely looks correct can still drift
+    from `build_llm`; comparing the two outcomes directly is the only
+    thing that would catch that drift."""
+    del label
+    settings = Settings(app_env="test", llm_enabled=enabled, **provider_kwargs)  # type: ignore[arg-type]
+    assert (build_llm(settings) is not None) == (derive_llm(settings) == "live")

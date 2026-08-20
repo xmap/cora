@@ -49,6 +49,8 @@ from typing import TYPE_CHECKING, Literal
 
 import asyncpg
 
+from cora.agent.build_llm import llm_provider_configured
+
 if TYPE_CHECKING:
     from cora.infrastructure.config import Settings
     from cora.infrastructure.schema_version import SchemaPosture
@@ -59,15 +61,18 @@ deployment has no pool at all (the in-memory kernel), so there is
 nothing to report rather than nothing wrong."""
 
 LlmReach = Literal["off", "live"]
-"""Whether this deployment calls an external language model.
+"""Whether this deployment calls a language model on any serving route.
 
-`live` means both the switch (`llm_enabled`) and the credential
-(`anthropic_api_key`) are present, so the LLM-backed subscribers are
-registered and will call out on every terminal Run. `off` means no
-external model is called through this seam.
+`live` means both the switch (`llm_enabled`) and the SELECTED provider's
+own configuration (`anthropic_api_key`, `argo_username`, or the local
+base URL and model, matched by `llm_provider_configured`) are present,
+so the LLM-backed subscribers are registered and will call out on every
+terminal Run. `off` means no model is called through this seam by any
+provider.
 
 Named `llm`, NOT `egress`, and the distinction is the honest part. This
-reports ONE outbound path. It is not a claim that nothing leaves the
+reports ONE outbound path, and for the `local` provider it is not even
+outbound past the facility. It is not a claim that nothing leaves the
 deployment: `HttpRangeChecksumAdapter` is wired unconditionally for
 http/https Distributions (`cora.data.wire`), so CORA can make outbound
 requests with the LLM entirely off. Calling this field `egress` would
@@ -213,19 +218,29 @@ def derive_actuation(settings: Settings) -> ActuationReach:
 
 
 def derive_llm(settings: Settings) -> LlmReach:
-    """Report whether an external language model gets called.
+    """Report whether a language model gets called, on whichever
+    provider is selected.
 
-    `live` requires BOTH the switch and the credential, mirroring
-    `build_llm`'s two guards, so this answers the question an operator
-    actually has ("is CORA phoning out and spending?") rather than
-    restating one flag. A deployment that sets `llm_enabled` and forgets
-    the key reads `off`, which is the truth: nothing is called.
+    `live` requires BOTH the switch and `llm_provider_configured`,
+    mirroring `build_llm`'s two guards by calling the SAME predicate
+    rather than restating the per-provider match, so this answers the
+    question an operator actually has ("is CORA running a model and
+    spending?") for whichever of the three providers is selected, not
+    only `anthropic`. A deployment that sets `llm_enabled` and forgets
+    the credential its selected provider needs reads `off`, which is the
+    truth: nothing is called. Before this shared predicate existed, this
+    function checked `anthropic_api_key` alone, so an `argo` or `local`
+    deployment reported `off` at boot while serving every call.
 
     Like `derive_actuation` this is a REPORT, not a gate. It decides
-    nothing; `build_llm` is the thing that refuses. And it is scoped to
-    the LLM seam alone, not to egress in general (see `LlmReach`).
+    nothing; `build_llm` is the thing that refuses. It calls
+    `llm_provider_configured` rather than `build_llm` itself: `build_llm`
+    constructs a live adapter with real credentials and, for `local`, an
+    HTTP client, and a probe endpoint must not do that on every read of
+    `/readyz`. And it is scoped to the LLM seam alone, not to egress in
+    general (see `LlmReach`).
     """
-    return "live" if settings.llm_enabled and settings.anthropic_api_key is not None else "off"
+    return "live" if settings.llm_enabled and llm_provider_configured(settings) else "off"
 
 
 def readiness_body(
