@@ -243,9 +243,28 @@ class LLMChatRequest:
     """Bundled `chat()` arguments.
 
     Carried as a dataclass (rather than expanded keyword args on the
-    Protocol) so future fields (`tools`, `temperature`, etc.) are
-    additive without breaking the Protocol signature, and so the
-    test stubs can pattern-match on the whole request shape.
+    Protocol) so future fields (`tools`, etc.) are additive without
+    breaking the Protocol signature, and so the test stubs can
+    pattern-match on the whole request shape.
+
+    ## Sampling, and why it is recorded rather than left to the provider
+
+    `temperature` and `top_p` are the sampling dials. They are optional
+    and default to `None`, meaning "whatever the provider does", which
+    is what every call did before they existed.
+
+    The reason they exist is provenance, not tuning. The durable
+    inference record has carried `request_temperature` and
+    `request_top_p` columns since it was built, named for the
+    OpenTelemetry GenAI convention, and no producer ever filled them:
+    on the pilot record, 583 of 583 calls recorded their max-token
+    bound and 0 of 583 recorded how they were sampled. A verdict whose
+    sampling is unknown cannot be re-run, and the catalog's
+    archivability tier was claiming otherwise.
+
+    A caller that sets neither still records nothing, which is honest.
+    A caller that sets them gets what it asked for written down beside
+    the model and the cost.
     """
 
     system: LLMSystemPrompt
@@ -253,6 +272,8 @@ class LLMChatRequest:
     structured_output_schema: Mapping[str, Any]
     model_ref: ModelRef
     max_output_tokens: int = 1024
+    temperature: float | None = None
+    top_p: float | None = None
 
 
 class LLM(Protocol):

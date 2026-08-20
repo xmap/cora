@@ -115,6 +115,7 @@ class OpenAICompatibleBackend:
                 {"role": "user", "content": request.user_message.text},
             ],
             "max_tokens": request.max_output_tokens,
+            **_sampling_fields(request),
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
@@ -140,6 +141,23 @@ class OpenAICompatibleBackend:
             model_id=str(body.get("model") or self._model),
             stop_reason=str(choice.get("finish_reason") or "stop"),
         )
+
+
+def _sampling_fields(request: LLMChatRequest) -> dict[str, Any]:
+    """Only send a dial the caller actually set (see `anthropic_llm`).
+
+    vLLM does accept a `seed`, unlike the Anthropic API, so the build
+    path is the one where replay could eventually be real. The port
+    carries no seed yet, so this does not send one; recording a seed is
+    the piece a future slice would add, and it would only ever make the
+    facility-served path reproducible, never a vendor call.
+    """
+    fields: dict[str, Any] = {}
+    if request.temperature is not None:
+        fields["temperature"] = request.temperature
+    if request.top_p is not None:
+        fields["top_p"] = request.top_p
+    return fields
 
 
 def _raise_for_status(response: httpx.Response) -> None:

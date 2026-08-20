@@ -538,6 +538,8 @@ class CautionDrafterSubscriber:
             output_tokens=response.usage.output_tokens,
             cost_usd=compute_cost_usd(request.model_ref, response.usage),
             request_max_tokens=request.max_output_tokens,
+            request_temperature=request.temperature,
+            request_top_p=request.top_p,
             agent_id=str(CAUTION_DRAFTER_AGENT_ID),
             agent_name=CAUTION_DRAFTER_AGENT_NAME,
         )

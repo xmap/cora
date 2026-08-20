@@ -1285,7 +1285,7 @@
         "type": "object"
       },
       "ArchivabilityTier": {
-        "description": "Whether this model's identity outlives the vendor's lifecycle.\n\n- `Pinned` -- weights the facility holds and can serve\n              indefinitely; results stay re-executable.\n- `Alias`  -- an identity the provider may move onto new weights\n              or retire; results degrade to attributable-only\n              when it does.",
+        "description": "Whether this model's identity outlives the vendor's lifecycle.\n\nGrades availability, not reproducibility: whether the model can\nstill be CALLED, never that calling it answers as it did before.\n\n- `Pinned` -- weights the facility holds and can serve\n              indefinitely; the identity stays invocable.\n- `Alias`  -- an identity the provider may move onto new weights\n              or retire; results degrade to attributable-only\n              when it does.",
         "enum": [
           "Pinned",
           "Alias"

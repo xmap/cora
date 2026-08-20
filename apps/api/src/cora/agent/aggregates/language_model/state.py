@@ -54,9 +54,9 @@ administratively-set internal conversion of the design).
 `DataSensitivityTier` is the R3 axis (which data classes may reach this
 model), a deliberately small v1 enum mirroring facility practice
 (public / prudent-to-protect and pre-publication / approved-plan data).
-`ArchivabilityTier` is the orthogonal reproducibility axis: `Pinned`
+`ArchivabilityTier` is the orthogonal availability axis: `Pinned`
 means the facility holds the weights and can serve them indefinitely
-(results stay re-executable); `Alias` means the provider may move or
+(the identity stays INVOCABLE); `Alias` means the provider may move or
 retire the identity (results degrade to attributable-only when it
 does). The at-risk-results projection grades by this axis.
 """
@@ -136,11 +136,28 @@ class DataSensitivityTier(StrEnum):
     SENSITIVE = "Sensitive"
 
 
+# This docstring is published verbatim as the `ArchivabilityTier`
+# description in openapi.json, so its wording is an API claim and not
+# just a note to maintainers. It used to read "results stay
+# re-executable", which promised replay: same call, same answer.
+#
+# That was false and remains false however the tier is set. Replay needs
+# the sampling settings, which the record carries only when a caller
+# sets them, plus a seed, which nothing records and which the Anthropic
+# API does not accept at any price. A vendor call can never be replayed
+# bit-for-bit; a facility-held one only approaches it.
+#
+# The tier grades AVAILABILITY. It is the difference the reproducibility
+# ladder already draws between a result being re-invocable and being
+# scientifically reproducible, and this secures only the former.
 class ArchivabilityTier(StrEnum):
     """Whether this model's identity outlives the vendor's lifecycle.
 
+    Grades availability, not reproducibility: whether the model can
+    still be CALLED, never that calling it answers as it did before.
+
     - `Pinned` -- weights the facility holds and can serve
-                  indefinitely; results stay re-executable.
+                  indefinitely; the identity stays invocable.
     - `Alias`  -- an identity the provider may move onto new weights
                   or retire; results degrade to attributable-only
                   when it does.

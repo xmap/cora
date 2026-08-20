@@ -2,7 +2,11 @@
 
 The catalog's flagship read: when a vendor announces a model's
 retirement, enumerate every Decision whose recorded LLM calls used
-that model, graded by whether the result stays re-executable.
+that model, graded by whether the model stays INVOCABLE.
+
+Invocable, not reproducible: the grade says the call could be made
+again, never that it would answer the same way (see
+`ArchivabilityTier`).
 
 Workflow:
 
