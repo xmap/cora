@@ -74,7 +74,7 @@
 | src/cora/agent/adapters/anthropic\_llm.py                                                |       99 |        0 |       26 |        0 |    100.0% |           |
 | src/cora/agent/adapters/argo\_llm.py                                                     |       44 |        1 |        6 |        0 |     98.0% |       234 |
 | src/cora/agent/adapters/budget\_spend\_guard.py                                          |       40 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/agent/adapters/local\_llm.py                                                    |       57 |        2 |        4 |        1 |     95.1% |   180-181 |
+| src/cora/agent/adapters/local\_llm.py                                                    |       66 |        2 |        6 |        1 |     95.8% |   243-244 |
 | src/cora/agent/adapters/openai\_compatible\_backend.py                                   |       65 |        7 |       10 |        1 |     86.7% |81-82, 95-98, 159 |
 | src/cora/agent/adapters/postgres\_language\_model\_lookup.py                             |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/agent/aggregates/\_\_init\_\_.py                                                |        0 |        0 |        0 |        0 |    100.0% |           |
@@ -2665,7 +2665,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59359** | **1364** | **8872** |  **405** | **97.2%** |           |
+| **TOTAL**                                                                                | **59368** | **1364** | **8874** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
