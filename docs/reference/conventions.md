@@ -221,9 +221,11 @@ The collapsed shape was tried under the name `VisitCannotTransitionError` and sp
 
 Carve-out: when the aggregate has only ONE such verb (and no foreseeable second), a bare `<Aggregate>CannotTransitionError` is acceptable. Promote to per-verb the moment a second transition slice lands.
 
-### Supply uses `Marked<Status>` for operator-driven transitions
+### `Marked<Status>` events carry an asserted status, with `trigger` naming the source
 
-Event classes follow `<Aggregate><PastParticiple>` everywhere except Supply's operator-observation events: `SupplyMarkedAvailable`, `SupplyMarkedUnavailable`, `SupplyMarkedRecovering`. The `Marked` prefix encodes the audit distinction "operator observation, not monitor measurement" that motivates Supply's 5-state FSM. A future automated monitor would emit bare past-participle events (`SupplyObservedAvailable`, `SupplyObservedRecovering`); the prefix is the discriminator.
+Event classes follow `<Aggregate><PastParticiple>` except where a status is asserted rather than achieved: `SupplyMarkedAvailable`, `SupplyMarkedUnavailable`, `SupplyMarkedRecovering`, `DistributionMarkedStale`. The `Marked` prefix says a status was asserted; who or what asserted it is the `trigger` payload field (`TriggerSource`: `Operator`, `Monitor`, `Auto`), not the class name.
+
+The monitor path reuses the same classes rather than a parallel family: `observe_supply_status` emits `SupplyMarkedUnavailable` / `SupplyMarkedRecovering` with `trigger=Monitor`. No `SupplyObserved*` class exists anywhere in the tree, and a new one should not be introduced for a monitor-driven source.
 
 ### Reversible-pause verbs split by entity kind
 
