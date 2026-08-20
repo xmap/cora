@@ -89,7 +89,7 @@
 | src/cora/agent/aggregates/language\_model/evolver.py                                     |       29 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/agent/aggregates/language\_model/read.py                                        |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/aggregates/language\_model/state.py                                       |      116 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/agent/build\_llm.py                                                             |       35 |        0 |       18 |        0 |    100.0% |           |
+| src/cora/agent/build\_llm.py                                                             |       54 |        0 |       24 |        0 |    100.0% |           |
 | src/cora/agent/errors.py                                                                 |       51 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/\_\_init\_\_.py                                                  |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/announce\_language\_model\_retirement/\_\_init\_\_.py            |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -262,7 +262,7 @@
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_procedure\_watcher.py                                                     |       78 |        0 |       22 |        0 |    100.0% |           |
-| src/cora/api/\_readiness.py                                                              |       38 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/api/\_readiness.py                                                              |       39 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/api/\_run\_initiator.py                                                         |      151 |       14 |       30 |        5 |     88.4% |157-158, 187-188, 233, 253, 300, 305-306, 327-\>316, 391-392, 399-406 |
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
 | src/cora/api/\_run\_supervisor.py                                                        |      450 |       22 |      172 |       16 |     93.6% |250, 591-592, 736-737, 794, 820, 823, 829, 831, 857-858, 1031-\>1041, 1201, 1204, 1207, 1210, 1212-1213, 1216, 1219, 1376-\>1345, 1456, 1479 |
@@ -2673,7 +2673,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59597** | **1364** | **8910** |  **405** | **97.2%** |           |
+| **TOTAL**                                                                                | **59617** | **1364** | **8916** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
