@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cora.agent.aggregates.agent import load_agent
+from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import RUN_DEBRIEF_PROMPT_TEMPLATE_ID
 from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
@@ -87,10 +87,12 @@ async def test_seed_is_idempotent_across_calls() -> None:
     # Still exactly one agent at the pinned id.
     agent = await load_agent(kernel.event_store, RUN_DEBRIEFER_AGENT_ID)
     assert agent is not None
-    # Stream version is still 1 (one event), not 3.
+    # Stream version is still 2 (define + promote), not 6: the repeat
+    # calls were no-ops, not a second bootstrap.
     events, version = await kernel.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
-    assert version == 1
-    assert len(events) == 1
+    assert version == 2
+    assert len(events) == 2
+    assert agent.status is AgentStatus.VERSIONED
 
 
 @pytest.mark.unit
@@ -125,5 +127,5 @@ async def test_seed_uses_system_principal_id_not_agent_self_reference() -> None:
     assert actor_events[0].principal_id != RUN_DEBRIEFER_AGENT_ID
 
     agent_events, _ = await kernel.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
-    assert len(agent_events) == 1
-    assert agent_events[0].principal_id == SYSTEM_PRINCIPAL_ID
+    assert len(agent_events) == 2
+    assert all(event.principal_id == SYSTEM_PRINCIPAL_ID for event in agent_events)

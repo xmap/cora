@@ -2,11 +2,30 @@
 
 Both `seed.py` (RunDebriefer) and `seed_caution_drafter.py`
 (CautionDrafter) share an identical scaffolding: build the
-`AgentDefined` + `ActorRegistered` envelope pair, upsert the PII
-vault display name, write atomically via
+`AgentDefined` + `AgentVersioned` + `ActorRegistered` envelope set,
+upsert the PII vault display name, write atomically via
 `event_store.append_streams` with `expected_version=0` on BOTH
 streams, and treat `ConcurrencyError` as a no-op for restart
 idempotency. Only the per-agent identity constants differ.
+
+## Why the seed promotes, and why only here
+
+`Defined` means registered as config but NOT ready for invocation, and
+the LLM subscribers refuse to act on anything less than `Versioned`.
+A seeded agent is not operator-authored config awaiting review: it ships
+with the product, already chosen by whoever shipped it, so leaving the
+whole built-in fleet unpromoted meant every automatic agent in every
+deployment was inert with no error and nothing in the log. Measured on
+the 2-BM pilot: 17 seeded agents, all `Defined`, and not one automatic
+Decision in three months of real operation. Every Decision on that
+record came from an operator calling the on-demand endpoint by hand.
+
+Promotion is written here only for a FRESH stream, in the same atomic
+append as the definition. It is deliberately NOT a self-heal: a
+deployment whose agents are already seeded and stuck at `Defined` is
+promoted by an explicit operator command, never as a side effect of a
+restart, because appending governance events to an existing
+append-only record is an act someone should choose.
 
 This module hoists the shared body into `seed_agent(kernel, identity)`
 after the rule of three (RunDebriefer + CautionDrafter; third agent
@@ -20,7 +39,8 @@ the prior convention).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
+from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import (
     ActorKind,
@@ -34,6 +54,7 @@ from cora.agent.aggregates.agent import (
     AgentKind,
     AgentName,
     AgentVersion,
+    AgentVersioned,
     ModelRef,
     event_type_name,
     to_payload,
@@ -44,12 +65,26 @@ from cora.infrastructure.ports.event_store import StreamAppend
 from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from cora.infrastructure.kernel import Kernel
 
 
 _log = get_logger(__name__)
+
+# Fixed UUID5 namespace for ids derived inside the seed. Generated once
+# at lock-time as `uuid5(NAMESPACE_DNS, 'cora.agent-seed')`. Hardcoded so
+# re-derivation is deterministic (mirrors LANGUAGE_MODEL_SEED_NAMESPACE).
+AGENT_SEED_NAMESPACE: Final[UUID] = UUID("1cab27d8-02c8-5562-b89c-4f4fc40e3723")
+
+
+def agent_promotion_event_id(agent_id: UUID) -> UUID:
+    """Deterministic event id for a seeded Agent's promotion.
+
+    Derived rather than declared per agent because every seed module
+    would otherwise need a third hand-picked constant, and a hand-picked
+    id that collides with a sibling's is a bootstrap failure that only
+    shows up as a contract-test 409.
+    """
+    return uuid5(AGENT_SEED_NAMESPACE, f"{agent_id}/versioned")
 
 
 @dataclass(frozen=True)
@@ -105,6 +140,11 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
         capabilities=frozenset(),
         occurred_at=now,
     )
+    promotion_event = AgentVersioned(
+        agent_id=identity.agent_id,
+        version=version.value,
+        occurred_at=now,
+    )
     actor_event = ActorRegistered(
         actor_id=identity.agent_id,
         occurred_at=now,
@@ -131,6 +171,16 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
         causation_id=None,
         principal_id=SYSTEM_PRINCIPAL_ID,
     )
+    promotion_new_event = to_new_event(
+        event_type=event_type_name(promotion_event),
+        payload=to_payload(promotion_event),
+        occurred_at=now,
+        event_id=agent_promotion_event_id(identity.agent_id),
+        command_name=identity.command_name,
+        correlation_id=identity.correlation_id,
+        causation_id=agent_new_event.event_id,
+        principal_id=SYSTEM_PRINCIPAL_ID,
+    )
     actor_new_event = to_new_event(
         event_type=actor_event_type_name(actor_event),
         payload=actor_to_payload(actor_event),
@@ -155,7 +205,7 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
                     stream_type="Agent",
                     stream_id=identity.agent_id,
                     expected_version=0,
-                    events=[agent_new_event],
+                    events=[agent_new_event, promotion_new_event],
                 ),
             ]
         )

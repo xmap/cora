@@ -499,6 +499,33 @@ class AgentSuspendedError(Exception):
         self.agent_id = agent_id
 
 
+class AgentNotVersionedError(Exception):
+    """Cross-aggregate state-gate failure: the Agent is not `Versioned`.
+
+    `Defined` means registered as config but not yet promoted for
+    invocation, and `Deprecated` is terminal. Neither may act.
+
+    This gate exists on the subscriber path and did not exist here, and
+    the disagreement was not academic. Every Decision on the 2-BM pilot
+    record came through the on-demand path, which served a `Defined`
+    agent happily, while the subscribers refused the same agent and
+    recorded nothing at all. Whichever answer is right, the two paths
+    cannot give different ones about the same agent.
+
+    `Suspended` raises `AgentSuspendedError` instead, because its remedy
+    is a different verb (`resume_agent`, not `version_agent`) and
+    collapsing them would send an operator to the wrong one.
+    """
+
+    def __init__(self, agent_id: UUID, status: AgentStatus) -> None:
+        super().__init__(
+            f"Agent {agent_id} is {status.value}, not {AgentStatus.VERSIONED.value}; "
+            "promote it via version_agent before invoking"
+        )
+        self.agent_id = agent_id
+        self.status = status
+
+
 # ---------------------------------------------------------------------------
 # Bounded-text value objects
 # ---------------------------------------------------------------------------

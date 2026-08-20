@@ -122,8 +122,6 @@ from cora.agent.features.suspend_agent import SuspendAgent
 from cora.agent.features.suspend_agent import bind as bind_suspend_agent
 from cora.agent.features.update_agent_budget import UpdateAgentBudget
 from cora.agent.features.update_agent_budget import bind as bind_update_budget
-from cora.agent.features.version_agent import VersionAgent
-from cora.agent.features.version_agent import bind as bind_version_agent
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, seed_run_debriefer_agent
 from tests.integration._helpers import build_postgres_deps
 from tests.integration.scenarios._facility_fixture import operator_for
@@ -166,30 +164,27 @@ def _id_queue() -> list[UUID]:
 async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Seed RunDebriefer Agent, promote Defined -> Versioned, set
-    initial budget, suspend (with cost-overrun reason), tighten
-    budget, resume. Assert FSM cycled Versioned -> Suspended ->
-    Versioned and both budget updates landed on the aggregate."""
+    """Seed RunDebriefer Agent, set initial budget, suspend (with
+    cost-overrun reason), tighten budget, resume. Assert FSM cycled
+    Versioned -> Suspended -> Versioned and both budget updates landed
+    on the aggregate.
+
+    The scenario used to open by promoting the seeded agent from
+    Defined, because the seed left it there. It no longer does: a
+    built-in agent ships ready to act, since leaving the shipped fleet
+    unpromoted meant no automatic agent could ever act and nothing said
+    so. `version_agent` itself stays covered by its own handler tests;
+    what this scenario is about is the suspend/resume cycle around a
+    spend breach, which is unchanged.
+    """
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
 
-    # ----- Bootstrap: seed RunDebriefer Agent (lands in Defined) -----
-    # Writes 2 events: ActorRegistered (Access BC) + AgentDefined
-    # (Agent BC) via cross-BC atomic append_streams. Uses pinned ids
-    # outside our scenario id queue.
+    # ----- Bootstrap: seed RunDebriefer Agent (lands ready to act) -----
+    # Writes 3 events: ActorRegistered (Access BC) + AgentDefined and
+    # AgentVersioned (Agent BC) via cross-BC atomic append_streams. Uses
+    # pinned ids outside our scenario id queue.
 
     await seed_run_debriefer_agent(deps)
-
-    seeded = await load_agent(deps.event_store, RUN_DEBRIEFER_AGENT_ID)
-    assert seeded is not None
-    assert seeded.status is AgentStatus.DEFINED
-
-    # ----- Promote Defined -> Versioned (operator ready signal) -----
-
-    await bind_version_agent(deps)(
-        VersionAgent(agent_id=RUN_DEBRIEFER_AGENT_ID),
-        principal_id=_PRINCIPAL_ID,
-        correlation_id=_CORRELATION_ID,
-    )
 
     versioned = await load_agent(deps.event_store, RUN_DEBRIEFER_AGENT_ID)
     assert versioned is not None

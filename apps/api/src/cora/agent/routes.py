@@ -43,6 +43,7 @@ from cora.agent.aggregates.agent import (
     AgentKindMismatchError,
     AgentNotFoundError,
     AgentNotSeededError,
+    AgentNotVersionedError,
     AgentSuspendedError,
     InvalidAgentBudgetError,
     InvalidAgentCanonicalUriError,
@@ -220,6 +221,7 @@ def register_agent_routes(app: FastAPI) -> None:
         AgentKindMismatchError,
         AgentDeactivatedError,
         AgentSuspendedError,
+        AgentNotVersionedError,
         # promote_caution_proposal validation errors.
         DecisionNotCautionProposalError,
         CautionProposalNotActionableError,

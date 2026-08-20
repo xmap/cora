@@ -27,6 +27,7 @@ from cora.agent.aggregates.agent import (
     AgentKindMismatchError,
     AgentNotFoundError,
     AgentNotSeededError,
+    AgentNotVersionedError,
     AgentSuspendedError,
 )
 from cora.agent.aggregates.agent import ModelRef as AgentModelRef
@@ -964,6 +965,41 @@ async def test_handler_refuses_a_named_agent_of_the_wrong_kind() -> None:
             correlation_id=_CORRELATION_ID,
         )
     assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_handler_refuses_a_named_agent_that_is_not_versioned() -> None:
+    """Defined means registered as config, not cleared to act.
+
+    The subscribers have always refused a Defined agent; this path used
+    to serve one, which is how every Decision on the pilot record came
+    to be written by an agent the automatic path would not touch.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_actor_at(store, _OTHER_DEBRIEFER_ID)
+    await seed_defined_agent(
+        store,
+        agent_id=_OTHER_DEBRIEFER_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+        kind="RunDebriefer",
+    )
+    await _seed_run(store, run_id)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    with pytest.raises(AgentNotVersionedError):
+        await handler(
+            RegenerateRunDebrief(run_id=run_id, agent_id=_OTHER_DEBRIEFER_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert llm.received == [], "a refused agent must not reach the model"
 
 
 @pytest.mark.unit
