@@ -145,6 +145,38 @@ class AccessProtocol(StrEnum):
     OAI_PMH = "OAI_PMH"
 
 
+# ----------------------------------------------------------------------
+# TriggerSource enum (closed; 3 values day-one, W1 of
+# [[project-data-distribution-design]] resolved in
+# [[project-data-distribution-mark-stale-design]])
+# ----------------------------------------------------------------------
+
+
+class TriggerSource(StrEnum):
+    """The origin of a Distribution status-transition event.
+
+    Data-BC-local by design, NOT an import of Supply's identically
+    shaped `TriggerSource`. W1 of [[project-data-distribution-design]]
+    names hoisting to `cora.shared.triggers` as the likely outcome at
+    the rule of three (Supply + Distribution + one more); this is the
+    SECOND use, so the rule has not fired and a cross-BC import here
+    would be a dependency taken to save a nine-line enum.
+
+    Only `Operator` is emitted today: `mark_distribution_stale` is an
+    operator-facing slice and its decider hardcodes the value, mirroring
+    Supply's operator slices. `Monitor` and `Auto` are locked day one so
+    the reconciliation sweep that eventually re-probes Distributions can
+    land additively without an enum migration.
+
+    Member name SCREAMING_SNAKE per PEP 8; string value PascalCase per
+    CORA's closed-StrEnum convention.
+    """
+
+    OPERATOR = "Operator"
+    MONITOR = "Monitor"
+    AUTO = "Auto"
+
+
 #: Closed lookup mapping URI schemes (lowercase, per RFC 3986) to
 #: AccessProtocol values. Used by the Slice 2 backfill (per L24) to
 #: derive `access_protocol` from existing `Dataset.uri` rows. NO
@@ -341,6 +373,51 @@ class DistributionCannotDiscardError(Exception):
         super().__init__(
             f"Distribution {distribution_id} cannot be discarded: currently in status "
             f"{current_status.value}"
+        )
+        self.distribution_id = distribution_id
+        self.current_status = current_status
+
+
+class InvalidDistributionMarkStaleReasonError(ValueError):
+    """The supplied mark-stale reason is empty, whitespace-only, or too long.
+
+    Validated at the API boundary via Pydantic min_length / max_length,
+    AND defensively at the decider via this error. Mirrors
+    InvalidDistributionDiscardReasonError; free-form ``str`` (1-500
+    chars) with the same future-additive structured-taxonomy posture.
+
+    Mapped to HTTP 400.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Distribution mark-stale reason must be 1-{REASON_MAX_LENGTH} chars after "
+            f"trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class DistributionCannotMarkStaleError(Exception):
+    """Attempted to mark a Distribution copy Stale while it is already Discarded.
+
+    Marking stale records a fact about the world that already happened
+    (the bytes at this location are gone or no longer trusted); unlike
+    discard, it is not a deliberate act CORA is entitled to refuse. The
+    only guard is structural: Discarded is terminal, so a Discarded copy
+    cannot be marked Stale. There is no redundancy guard and no
+    parent-Dataset guard; that asymmetry against discard, and the
+    widening of the locked `{Registered, Verified} -> Stale` transition
+    set to accept an already-Stale target, are both argued in
+    [[project-data-distribution-mark-stale-design]], the design memo W1
+    of [[project-data-distribution-design]] assigns to this slice.
+
+    Mapped to HTTP 409.
+    """
+
+    def __init__(self, distribution_id: UUID, current_status: "DistributionStatus") -> None:
+        super().__init__(
+            f"Distribution {distribution_id} cannot be marked Stale: currently in status "
+            f"{current_status.value} (Discarded is terminal)"
         )
         self.distribution_id = distribution_id
         self.current_status = current_status
@@ -567,6 +644,26 @@ class DistributionDiscardReason:
             self.value,
             max_length=REASON_MAX_LENGTH,
             error_class=InvalidDistributionDiscardReasonError,
+        )
+        object.__setattr__(self, "value", trimmed)
+
+
+@dataclass(frozen=True)
+class DistributionMarkStaleReason:
+    """Free-form mark-stale reason. Trimmed; 1-500 chars.
+
+    Mirrors DistributionDiscardReason in shape. The on-the-wire
+    representation in ``DistributionMarkedStale.reason`` is ``str``
+    (post-trim); the VO exists at decider-input time only.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=REASON_MAX_LENGTH,
+            error_class=InvalidDistributionMarkStaleReasonError,
         )
         object.__setattr__(self, "value", trimmed)
 

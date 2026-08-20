@@ -6,19 +6,30 @@ consumers per [[project_data_distribution_design]] L27 +
 [[project_data_attestation_design]] L7 / Slice C.
 
 Subscribed events:
-  - DistributionRegistered  -> INSERT (status='Registered', registered_at,
-                                       registered_by, all 8 intrinsic /
-                                       binding fields from genesis payload)
-  - AttestationRecorded     -> UPDATE (kind=ChecksumVerified projection-only
-                                       status flip: Match -> 'Verified',
-                                       Mismatch -> 'Stale', Unreachable ->
-                                       no-op, other kinds -> no-op).
-  - DistributionDiscarded   -> UPDATE (status='Discarded' by distribution_id;
-                                       terminal, no status guard so the row
-                                       reaches Discarded from any prior status).
+  - DistributionRegistered   -> INSERT (status='Registered', registered_at,
+                                        registered_by, all 8 intrinsic /
+                                        binding fields from genesis payload)
+  - AttestationRecorded      -> UPDATE (kind=ChecksumVerified projection-only
+                                        status flip: Match -> 'Verified',
+                                        Mismatch -> 'Stale', Unreachable ->
+                                        no-op, other kinds -> no-op).
+  - DistributionMarkedStale  -> UPDATE (status='Stale' by distribution_id,
+                                        guarded WHERE status != 'Discarded'
+                                        so a Discarded row is never
+                                        resurrected; the mark_distribution_stale
+                                        slice's guarded primitive, a SECOND
+                                        independent path to Stale alongside
+                                        the AttestationRecorded Mismatch flip).
+  - DistributionDiscarded    -> UPDATE (status='Discarded' by distribution_id;
+                                        terminal, no status guard so the row
+                                        reaches Discarded from any prior status).
 
-The Verified / Stale flip per [[project_data_attestation_design]] Slice
-C is projection-only (NO Distribution-stream event is emitted). The
+The Verified flip per [[project_data_attestation_design]] Slice C is
+projection-only (NO Distribution-stream event is emitted). The Stale flip
+has two independent paths: the same projection-only AttestationRecorded
+Mismatch flip, AND the mark_distribution_stale slice's
+DistributionMarkedStale Distribution-stream event (an operator-asserted
+fact, e.g. a storage array failure, with no checksum probe involved). The
 Discarded transition IS a Distribution-stream event (the
 discard_distribution slice's guarded primitive); this writer folds it
 into the read model.
@@ -108,7 +119,12 @@ class DistributionSummaryProjection:
 
     name = "proj_data_distribution_summary"
     subscribed_event_types = frozenset(
-        {"DistributionRegistered", "AttestationRecorded", "DistributionDiscarded"}
+        {
+            "DistributionRegistered",
+            "AttestationRecorded",
+            "DistributionMarkedStale",
+            "DistributionDiscarded",
+        }
     )
 
     async def apply(
@@ -121,6 +137,8 @@ class DistributionSummaryProjection:
                 await self._apply_registered(event, conn)
             case "AttestationRecorded":
                 await self._apply_attestation(event, conn)
+            case "DistributionMarkedStale":
+                await self._apply_marked_stale(event, conn)
             case "DistributionDiscarded":
                 await self._apply_discarded(event, conn)
             case _:
@@ -196,6 +214,32 @@ class DistributionSummaryProjection:
                 attestation_id=str(attestation_id),
                 distribution_id=str(distribution_id),
                 intended_status=target_status,
+            )
+
+    async def _apply_marked_stale(self, event: StoredEvent, conn: ConnectionLike) -> None:
+        """Fold `DistributionMarkedStale`, the mark_distribution_stale
+        slice's Distribution-stream event, into the same guarded status
+        UPDATE the AttestationRecorded Mismatch flip uses. The WHERE
+        `status != 'Discarded'` guard on `_UPDATE_DISTRIBUTION_STATUS_SQL`
+        means a Discarded row is never resurrected to Stale by either
+        path, matching the terminal-status contract the Discarded UPDATE
+        establishes."""
+        payload = event.payload
+        distribution_id = UUID(payload["distribution_id"])
+        result = await conn.execute(
+            _UPDATE_DISTRIBUTION_STATUS_SQL,
+            "Stale",
+            distribution_id,
+        )
+        if _rowcount_zero(result):
+            # Distribution projection writer hasn't materialized the row
+            # yet (projection lag), or the row is Discarded (guard fired).
+            # Log and continue; the bookmark advances. Mirrors the
+            # AttestationRecorded and DistributionDiscarded rowcount-zero
+            # policies.
+            _log.warning(
+                "distribution_summary.mark_stale_update_skipped",
+                distribution_id=str(distribution_id),
             )
 
     async def _apply_discarded(self, event: StoredEvent, conn: ConnectionLike) -> None:

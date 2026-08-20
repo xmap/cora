@@ -53,6 +53,7 @@ from cora.data.features import (
     get_dataset,
     ingest_scan,
     list_datasets,
+    mark_distribution_stale,
     promote_dataset,
     publish_edition,
     record_acquisition,
@@ -99,6 +100,7 @@ class DataHandlers:
     ingest_scan: ingest_scan.IdempotentHandler
     register_distribution: register_distribution.IdempotentHandler
     discard_distribution: discard_distribution.Handler
+    mark_distribution_stale: mark_distribution_stale.Handler
     register_edition: register_edition.IdempotentHandler
     add_dataset_to_edition: add_dataset_to_edition.Handler
     remove_dataset_from_edition: remove_dataset_from_edition.Handler
@@ -352,6 +354,11 @@ def wire_data(deps: Kernel) -> DataHandlers:
         discard_distribution=with_tracing(
             discard_distribution.bind(deps),
             command_name="DiscardDistribution",
+            bc=_BC,
+        ),
+        mark_distribution_stale=with_tracing(
+            mark_distribution_stale.bind(deps),
+            command_name="MarkDistributionStale",
             bc=_BC,
         ),
         register_edition=with_tracing(

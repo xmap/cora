@@ -6,12 +6,12 @@ error if a new event type is added to ``DistributionEvent`` without
 a matching match arm here.
 
 Status mapping per event type (current):
-  - ``DistributionRegistered`` -> ``REGISTERED`` (genesis)
-  - ``DistributionDiscarded``  -> ``DISCARDED``  (terminal transition)
+  - ``DistributionRegistered``  -> ``REGISTERED`` (genesis)
+  - ``DistributionMarkedStale`` -> ``STALE``      (non-terminal transition)
+  - ``DistributionDiscarded``   -> ``DISCARDED``  (terminal transition)
 
 Future-slice mappings (NAMED only):
   - ``DistributionVerified`` -> ``VERIFIED``
-  - ``DistributionMarkedStale`` -> ``STALE``
 
 The mapping is hardcoded per match arm; the event type IS the
 state-change indicator (no status field in event payloads). Same
@@ -21,11 +21,12 @@ precedent as Dataset.
 MUST carry every Distribution field through from prior state.
 Constructing ``Distribution(id=..., dataset_id=..., ...)`` without
 explicitly passing the 9 core + 7 nullable attribution fields would
-silently WIPE them to defaults. The ``DistributionDiscarded`` arm uses
-``dataclasses.replace`` over the prior state so all 17 fields carry
-forward and only the four discard-related fields change. Use
-``require_state`` per the Dataset pattern to guard against a transition
-event applied to an empty stream (a malformed stream).
+silently WIPE them to defaults. The ``DistributionMarkedStale`` and
+``DistributionDiscarded`` arms use ``dataclasses.replace`` over the
+prior state so all 17 fields carry forward and only the relevant
+transition fields change. Use ``require_state`` per the Dataset
+pattern to guard against a transition event applied to an empty
+stream (a malformed stream).
 """
 
 from collections.abc import Sequence
@@ -35,6 +36,7 @@ from typing import assert_never
 from cora.data.aggregates.distribution.events import (
     DistributionDiscarded,
     DistributionEvent,
+    DistributionMarkedStale,
     DistributionRegistered,
 )
 from cora.data.aggregates.distribution.state import (
@@ -83,6 +85,19 @@ def evolve(state: Distribution | None, event: DistributionEvent) -> Distribution
                 discarded_at=None,
                 discarded_by=None,
                 discard_reason=None,
+            )
+        case DistributionMarkedStale(
+            reason=reason,
+            occurred_at=occurred_at,
+            marked_stale_by=marked_stale_by,
+        ):
+            _ = reason  # No dedicated stale_reason field on Distribution today.
+            prior = require_state(state, "DistributionMarkedStale")
+            return replace(
+                prior,
+                status=DistributionStatus.STALE,
+                marked_stale_at=occurred_at,
+                marked_stale_by=marked_stale_by,
             )
         case DistributionDiscarded(
             reason=reason,

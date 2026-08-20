@@ -18,6 +18,7 @@ from cora.data.features.discard_distribution import tool as discard_distribution
 from cora.data.features.get_dataset import tool as get_dataset_tool
 from cora.data.features.ingest_scan import tool as ingest_scan_tool
 from cora.data.features.list_datasets import tool as list_datasets_tool
+from cora.data.features.mark_distribution_stale import tool as mark_distribution_stale_tool
 from cora.data.features.promote_dataset import tool as promote_dataset_tool
 from cora.data.features.publish_edition import tool as publish_edition_tool
 from cora.data.features.record_acquisition import tool as record_acquisition_tool
@@ -78,6 +79,10 @@ def register_data_tools(
     discard_distribution_tool.register(
         mcp,
         get_handler=lambda: get_handlers().discard_distribution,
+    )
+    mark_distribution_stale_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().mark_distribution_stale,
     )
     register_edition_tool.register(
         mcp,
