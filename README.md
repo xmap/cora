@@ -250,7 +250,7 @@
 | src/cora/api/\_capture\_experiment\_identity\_reader.py                                  |       68 |        2 |       14 |        0 |     97.6% |  189, 218 |
 | src/cora/api/\_capture\_observer.py                                                      |      186 |        4 |       52 |        1 |     97.1% |203-204, 421-422 |
 | src/cora/api/\_capture\_progress\_feeder.py                                              |       78 |        6 |       16 |        0 |     93.6% |226, 268, 289-292 |
-| src/cora/api/\_capture\_scan\_ingestor.py                                                |      140 |        0 |       20 |        0 |    100.0% |           |
+| src/cora/api/\_capture\_scan\_ingestor.py                                                |      147 |        0 |       22 |        0 |    100.0% |           |
 | src/cora/api/\_clearance\_expirer.py                                                     |      109 |        1 |       14 |        0 |     99.2% |       297 |
 | src/cora/api/\_clearance\_watcher.py                                                     |       79 |        1 |       22 |        1 |     98.0% |       162 |
 | src/cora/api/\_conduct\_run\_route.py                                                    |       88 |        3 |       16 |        3 |     94.2% |208, 211, 260 |
@@ -266,7 +266,7 @@
 | src/cora/api/\_run\_initiator.py                                                         |      151 |       14 |       30 |        5 |     88.4% |157-158, 187-188, 233, 253, 300, 305-306, 327-\>316, 391-392, 399-406 |
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
 | src/cora/api/\_run\_supervisor.py                                                        |      450 |       22 |      172 |       16 |     93.6% |250, 591-592, 736-737, 794, 820, 823, 829, 831, 857-858, 1031-\>1041, 1201, 1204, 1207, 1210, 1212-1213, 1216, 1219, 1376-\>1345, 1456, 1479 |
-| src/cora/api/\_run\_witness.py                                                           |      343 |       22 |      110 |        5 |     93.6% |511, 679-683, 702, 758, 789, 823, 840, 842, 867, 889, 965, 1060, 1124-1126, 1131, 1142-1145, 1150 |
+| src/cora/api/\_run\_witness.py                                                           |      347 |       22 |      110 |        5 |     93.7% |513, 681-685, 704, 760, 791, 825, 842, 844, 869, 891, 977, 1072, 1136-1138, 1143, 1154-1157, 1162 |
 | src/cora/api/capture\_watch\_preflight.py                                                |      173 |        2 |       58 |        0 |     99.1% |   397-398 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                                     |      395 |        7 |       52 |        4 |     97.5% |384-\>383, 738-739, 1196-1208, 1321-\>1326, 1328-\>1331 |
@@ -518,7 +518,7 @@
 | src/cora/data/adapters/\_\_init\_\_.py                                                   |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/adapters/\_file\_uri.py                                                    |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/adapters/\_ssh\_probe.py                                                   |       59 |        0 |       14 |        0 |    100.0% |           |
-| src/cora/data/adapters/capture\_path\_locator.py                                         |       32 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/data/adapters/capture\_path\_locator.py                                         |       36 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/data/adapters/data\_exchange\_scan\_reader.py                                   |      136 |       15 |       30 |        2 |     89.8% |138-147, 164-165, 268-269, 307-308, 312, 316-317, 320, 347-348 |
 | src/cora/data/adapters/http\_range\_checksum.py                                          |       62 |       11 |       16 |        5 |     79.5% |97, 100-101, 105, 110, 121-129, 131, 136, 145 |
 | src/cora/data/adapters/in\_memory\_distribution\_lookup.py                               |       18 |        0 |        2 |        0 |    100.0% |           |
@@ -2038,7 +2038,7 @@
 | src/cora/run/adapters/sim\_observation\_feeder.py                                        |       37 |        0 |        2 |        1 |     97.4% |  97-\>116 |
 | src/cora/run/aggregates/\_\_init\_\_.py                                                  |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/\_\_init\_\_.py                                              |       13 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/run/aggregates/run/capture\_path.py                                             |       40 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/run/aggregates/run/capture\_path.py                                             |       56 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/capture\_probes.py                                           |       26 |        1 |        2 |        1 |     92.9% |       167 |
 | src/cora/run/aggregates/run/entries.py                                                   |       28 |        1 |        4 |        1 |     93.8% |       162 |
 | src/cora/run/aggregates/run/events.py                                                    |      187 |        0 |       58 |        0 |    100.0% |           |
@@ -2299,6 +2299,7 @@
 | src/cora/shared/reach.py                                                                 |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/scope\_markers.py                                                        |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/steering.py                                                              |       22 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/storage\_root.py                                                         |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/text\_bounds.py                                                          |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_\_init\_\_.py                                                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_bootstrap.py                                                          |        2 |        2 |        0 |        0 |      0.0% |     13-15 |
@@ -2673,7 +2674,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59617** | **1364** | **8916** |  **405** | **97.2%** |           |
+| **TOTAL**                                                                                | **59655** | **1364** | **8922** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
