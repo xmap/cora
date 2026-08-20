@@ -113,6 +113,28 @@ _CHOICE_VALUES = tuple(sorted(RUN_DEBRIEF_CHOICES - {"DebriefConflicted"}))
 # Structured-output JSON Schema fed to the Anthropic adapter's
 # tool-use-as-structured-output convention. Frozen as a module-level
 # dict; the adapter copies it per call.
+# Sampling is pinned rather than left to the provider, and the value
+# travels onto the inference record with the call.
+#
+# This task picks from a fixed verdict set under a schema the provider
+# already enforces, so sampling variance buys nothing and costs
+# consistency: a Run judged one way should not come back judged another
+# on a re-run against identical evidence.
+#
+# Zero is NOT determinism and must not be read as such. The Anthropic
+# API exposes no seed at all, and batching on a shared GPU perturbs the
+# in-house path, so a replay can still differ. What pinning buys is
+# lower variance plus a number the record can state because we chose it,
+# rather than a provider default we would have had to guess at in order
+# to write anything down.
+#
+# The free-text `reasoning` field is the thing to watch: low temperature
+# can flatten prose, and that field is what a beamline scientist reads.
+# Raise this if a validation pass shows the reasoning degrading. The
+# recorded value moves with it, which is the point.
+_SAMPLING_TEMPERATURE = 0.0
+
+
 RUN_DEBRIEF_OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
@@ -435,6 +457,7 @@ def build_run_debrief_chat_request(
         ),
         user_message=LLMContentBlock(text=user_body),
         structured_output_schema=RUN_DEBRIEF_OUTPUT_SCHEMA,
+        temperature=_SAMPLING_TEMPERATURE,
         model_ref=model_ref,
         max_output_tokens=max_output_tokens,
     )

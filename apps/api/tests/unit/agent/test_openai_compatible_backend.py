@@ -1,5 +1,7 @@
 """Contract tests for OpenAICompatibleBackend against a fake OpenAI server."""
 
+from dataclasses import replace
+
 import pytest
 from pytest_httpserver import HTTPServer
 
@@ -61,6 +63,44 @@ async def test_sends_the_openai_structured_output_request(httpserver: HTTPServer
     assert body["response_format"]["json_schema"]["schema"]["type"] == "object"
     roles = [m["role"] for m in body["messages"]]
     assert roles == ["system", "user"]
+
+
+@pytest.mark.unit
+async def test_omits_sampling_from_the_wire_when_the_caller_sets_none(
+    httpserver: HTTPServer,
+) -> None:
+    """Silence is the honest default.
+
+    Inventing a value would put a sampling claim on the provenance
+    record that no caller ever made.
+    """
+    httpserver.expect_request("/v1/chat/completions", method="POST").respond_with_json(
+        {"choices": [{"message": {"content": "{}"}}], "usage": {}}
+    )
+
+    await _backend(httpserver).complete(_request())
+
+    body = httpserver.log[0][0].get_json()
+    assert "temperature" not in body
+    assert "top_p" not in body
+
+
+@pytest.mark.unit
+async def test_sends_the_sampling_the_caller_set(httpserver: HTTPServer) -> None:
+    """Zero must reach the wire, not be swallowed as falsy.
+
+    Zero is exactly the value the debrief tasks pin, so a truthiness
+    check here would silently drop the only setting anyone uses.
+    """
+    httpserver.expect_request("/v1/chat/completions", method="POST").respond_with_json(
+        {"choices": [{"message": {"content": "{}"}}], "usage": {}}
+    )
+
+    await _backend(httpserver).complete(replace(_request(), temperature=0.0, top_p=0.9))
+
+    body = httpserver.log[0][0].get_json()
+    assert body["temperature"] == 0.0
+    assert body["top_p"] == 0.9
 
 
 @pytest.mark.unit

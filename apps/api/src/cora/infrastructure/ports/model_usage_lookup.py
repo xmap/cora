@@ -3,8 +3,9 @@
 Consumed by the Agent BC's `list_at_risk_results` read slice, the
 catalog's flagship question: when a vendor announces a model's
 retirement, enumerate every Decision whose recorded LLM calls used
-that model, so the slice can grade each result by whether it stays
-re-executable (the entry's `ArchivabilityTier` axis).
+that model, so the slice can grade each result by whether the model
+stays invocable (the entry's `ArchivabilityTier` axis, which grades
+availability and not reproducibility).
 
 The `ModelUsage` prefix (not `LanguageModelUsage`) is deliberate: the
 columns this port reads are the OTel `request_model` /

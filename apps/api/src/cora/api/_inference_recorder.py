@@ -58,6 +58,8 @@ class DelegatingInferenceRecorder:
                     request_model=trace.request_model,
                     response_model=trace.response_model,
                     request_max_tokens=trace.request_max_tokens,
+                    request_temperature=trace.request_temperature,
+                    request_top_p=trace.request_top_p,
                     finish_reasons=trace.finish_reasons,
                     input_tokens=trace.input_tokens,
                     output_tokens=trace.output_tokens,

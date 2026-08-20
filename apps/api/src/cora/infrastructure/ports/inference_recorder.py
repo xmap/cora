@@ -76,6 +76,8 @@ class AgentInferenceTrace:
     output_tokens: int | None = None
     cost_usd: float | None = None
     request_max_tokens: int | None = None
+    request_temperature: float | None = None
+    request_top_p: float | None = None
     agent_id: str | None = None
     agent_name: str | None = None
 

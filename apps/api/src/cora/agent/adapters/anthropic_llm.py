@@ -154,6 +154,27 @@ _EXTENDED_CACHE_TTL_BETA = "extended-cache-ttl-2025-04-11"
 _tracer = trace.get_tracer("cora.agent.llm")
 
 
+def _or_omit(value: float | None) -> float | anthropic.Omit:
+    """Pass a dial through, or the SDK's own "not sent" sentinel.
+
+    `anthropic.omit` rather than a `**kwargs` splat: splatting defeats
+    pyright's overload matching on `messages.create`, which then reports
+    the float against every unrelated keyword the method accepts.
+
+    Omitting is not the same as sending the provider's documented
+    default: the SDK's default may differ from the docs, and a value we
+    guessed would be recorded as provenance we never chose. A caller
+    that sets nothing gets the provider's behaviour and makes no claim
+    about it.
+
+    There is no `seed` here because the Anthropic Messages API has none.
+    That is the ceiling on replaying a vendor call however the dials are
+    set, and it is why the catalog can promise an invocable identity but
+    never an identical answer.
+    """
+    return anthropic.omit if value is None else value
+
+
 class AnthropicLLM:
     """Production `LLM` implementation backed by `anthropic.AsyncAnthropic`.
 
@@ -257,6 +278,8 @@ class AnthropicLLM:
                     tools=[synthetic_tool],
                     tool_choice=tool_choice,
                     extra_headers=extra_headers,
+                    temperature=_or_omit(request.temperature),
+                    top_p=_or_omit(request.top_p),
                 )
             except anthropic.AuthenticationError as exc:
                 raise LLMAuthenticationError(str(exc)) from exc
