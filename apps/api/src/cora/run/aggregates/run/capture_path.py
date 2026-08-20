@@ -49,7 +49,7 @@ and `capture_watch_preflight`, never to this authorized read.
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import asyncpg
 
@@ -66,6 +66,13 @@ class CapturePath:
     `created_at` (when this row was written).
     """
 
+    capture_path_id: UUID
+    """Surrogate key. Carried so the ordering in `get_latest` can be
+    made TOTAL and identical in both adapters: without a final
+    tiebreak, a full `(observed_at, updated_at)` tie resolves to the
+    first-inserted row in memory and to whatever the planner returns in
+    Postgres, which is not stable (the real plan sorts with quicksort)."""
+
     run_id: UUID
     observed_path: str = field(repr=False)
     """Personal data. `repr=False` so an accidental bare `_log.info(...,
@@ -75,6 +82,15 @@ class CapturePath:
     observed_at: datetime
     created_at: datetime
     updated_at: datetime
+    host: str | None = None
+    root: str | None = None
+    """Where the path was observed, recorded at observation time and
+    never re-derived from current settings. `None` on rows written
+    before the vault tracked location, and on rows whose observed path
+    matched no configured root (the same condition under which
+    `mint_capture_path_locator` refuses). Not personal data: the tier
+    is a facility-level directory, which is exactly why the locator can
+    carry it in the clear while the rest of the path stays here."""
 
 
 class CapturePathStore(Protocol):
@@ -101,18 +117,43 @@ class CapturePathStore(Protocol):
         observed_path: str,
         observed_at: datetime,
         created_at: datetime,
+        host: str | None,
+        root: str | None,
     ) -> None:
-        """Insert a new row or overwrite an existing one for `run_id`.
+        """Insert a new row, or overwrite the one for this exact
+        (run_id, host, root).
 
-        Idempotent on the run_id PK: `RunWitnessRecorder` calls this at
-        most once per promotion (one terminal per Run), but retrying
-        after a partial failure replays cleanly.
+        Idempotent per LOCATION, not per Run: re-observing the same
+        file on the same tier replays cleanly, while observing the same
+        Run's file on a DIFFERENT tier adds a row rather than
+        destroying the first. That distinction is the whole point of
+        the location columns; see the migration's own comment for what
+        the old run_id-keyed upsert would have done to an already
+        minted locator.
         """
         ...
 
-    async def get(self, run_id: UUID) -> CapturePath | None:
-        """Fetch a row by run_id; `None` when absent (never observed,
-        rejected by the dual-clock guard, or recording disabled)."""
+    async def get(self, run_id: UUID, *, host: str | None, root: str | None) -> CapturePath | None:
+        """Fetch the row for one exact (run_id, host, root); `None`
+        when absent.
+
+        Deliberately does NOT fall back to another location when the
+        named one is missing: a locator naming the archive tier must
+        never resolve to acquisition-tier bytes. Absence is the correct
+        answer for a run never observed there, and for one whose row a
+        future erasure slice removed.
+        """
+        ...
+
+    async def get_latest(self, run_id: UUID) -> CapturePath | None:
+        """Fetch the most recently OBSERVED row for a run_id, across
+        every location; `None` when the run has none.
+
+        Ordered by `observed_at` rather than preferring a tier, because
+        the display consumer wants the copy most likely to still exist.
+        Preferring the acquisition tier would point at exactly the copy
+        that gets capacity-purged first.
+        """
         ...
 
 
@@ -124,34 +165,60 @@ async def load_run_capture_path(store: CapturePathStore, run_id: UUID) -> str:
     inlining the `None` check. Returns `UNOBSERVED_CAPTURE_PATH` when
     no row exists, which the caller should treat as "not yet observed
     or rejected by the dual-clock guard," never as an error.
+
+    A Run may now hold one row per storage location, so this returns
+    the most recently observed of them. That is a DISPLAY convenience
+    and deliberately lossy: it answers "where was this last seen",
+    not "every place CORA has seen it". Once a slice observes the same
+    file on a second tier, a reader wanting the full set should ask
+    for it explicitly rather than widening this helper's meaning
+    underneath its existing caller.
     """
-    row = await store.get(run_id)
+    row = await store.get_latest(run_id)
     return row.observed_path if row else UNOBSERVED_CAPTURE_PATH
 
 
 _UPSERT_SQL = """
-INSERT INTO run_capture_path (run_id, observed_path, observed_at, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $4)
-ON CONFLICT (run_id) DO UPDATE
+INSERT INTO run_capture_path
+    (run_id, observed_path, observed_at, created_at, updated_at, host, root)
+VALUES ($1, $2, $3, $4, $4, $5, $6)
+ON CONFLICT (run_id, host, root) DO UPDATE
     SET observed_path = EXCLUDED.observed_path,
         observed_at = EXCLUDED.observed_at,
         updated_at = now()
 """
 
 _GET_SQL = """
-SELECT run_id, observed_path, observed_at, created_at, updated_at
+SELECT capture_path_id, run_id, observed_path, observed_at, created_at, updated_at, host, root
 FROM run_capture_path
 WHERE run_id = $1
+  -- IS NOT DISTINCT FROM, not `=`: a legacy row carries NULL host and
+  -- root, and `= NULL` is never true. The leading `run_id =` still
+  -- drives an index cond; only these two degrade to a filter, over the
+  -- handful of rows one run has. Do not "optimize" this to `=`.
+  AND host IS NOT DISTINCT FROM $2
+  AND root IS NOT DISTINCT FROM $3
+"""
+
+_LATEST_SQL = """
+SELECT capture_path_id, run_id, observed_path, observed_at, created_at, updated_at, host, root
+FROM run_capture_path
+WHERE run_id = $1
+ORDER BY observed_at DESC, updated_at DESC, capture_path_id DESC
+LIMIT 1
 """
 
 
 def _row_to_capture_path(row: asyncpg.Record) -> CapturePath:
     return CapturePath(
+        capture_path_id=row["capture_path_id"],
         run_id=row["run_id"],
         observed_path=row["observed_path"],
         observed_at=row["observed_at"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+        host=row["host"],
+        root=row["root"],
     )
 
 
@@ -168,13 +235,22 @@ class PostgresCapturePathStore:
         observed_path: str,
         observed_at: datetime,
         created_at: datetime,
+        host: str | None,
+        root: str | None,
     ) -> None:
         async with self._pool.acquire() as conn:
-            await conn.execute(_UPSERT_SQL, run_id, observed_path, observed_at, created_at)
+            await conn.execute(
+                _UPSERT_SQL, run_id, observed_path, observed_at, created_at, host, root
+            )
 
-    async def get(self, run_id: UUID) -> CapturePath | None:
+    async def get(self, run_id: UUID, *, host: str | None, root: str | None) -> CapturePath | None:
         async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(_GET_SQL, run_id)
+            row = await conn.fetchrow(_GET_SQL, run_id, host, root)
+        return _row_to_capture_path(row) if row is not None else None
+
+    async def get_latest(self, run_id: UUID) -> CapturePath | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_LATEST_SQL, run_id)
         return _row_to_capture_path(row) if row is not None else None
 
 
@@ -190,7 +266,7 @@ class InMemoryCapturePathStore:
     """
 
     def __init__(self) -> None:
-        self._rows: dict[UUID, CapturePath] = {}
+        self._rows: dict[tuple[UUID, str | None, str | None], CapturePath] = {}
 
     async def upsert(
         self,
@@ -199,27 +275,53 @@ class InMemoryCapturePathStore:
         observed_path: str,
         observed_at: datetime,
         created_at: datetime,
+        host: str | None,
+        root: str | None,
     ) -> None:
-        existing = self._rows.get(run_id)
+        key = (run_id, host, root)
+        existing = self._rows.get(key)
         if existing is None:
-            self._rows[run_id] = CapturePath(
+            self._rows[key] = CapturePath(
+                capture_path_id=uuid4(),
                 run_id=run_id,
                 observed_path=observed_path,
                 observed_at=observed_at,
                 created_at=created_at,
                 updated_at=created_at,
+                host=host,
+                root=root,
             )
         else:
-            self._rows[run_id] = CapturePath(
+            self._rows[key] = CapturePath(
+                # Preserved, mirroring the real ON CONFLICT DO UPDATE,
+                # which never touches the surrogate key.
+                capture_path_id=existing.capture_path_id,
                 run_id=run_id,
                 observed_path=observed_path,
                 observed_at=observed_at,
                 created_at=existing.created_at,
                 updated_at=datetime.now(tz=UTC),
+                host=host,
+                root=root,
             )
 
-    async def get(self, run_id: UUID) -> CapturePath | None:
-        return self._rows.get(run_id)
+    async def get(self, run_id: UUID, *, host: str | None, root: str | None) -> CapturePath | None:
+        return self._rows.get((run_id, host, root))
+
+    async def get_latest(self, run_id: UUID) -> CapturePath | None:
+        """Mirrors `_LATEST_SQL` exactly, including its final
+        `capture_path_id DESC` tiebreak. That third key is what makes
+        the two adapters agree on a full `(observed_at, updated_at)`
+        tie: without it this returns the first-inserted row while
+        Postgres returns whatever its sort produced, and no test could
+        pin the difference."""
+        candidates = [row for (rid, _, _), row in self._rows.items() if rid == run_id]
+        if not candidates:
+            return None
+        return max(
+            candidates,
+            key=lambda r: (r.observed_at, r.updated_at, r.capture_path_id),
+        )
 
 
 __all__ = [

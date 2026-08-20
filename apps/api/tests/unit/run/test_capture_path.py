@@ -33,9 +33,11 @@ async def test_upsert_then_get_roundtrips() -> None:
         observed_path="/data/2026-01-Smith-12345/scan_001.h5",
         observed_at=_at(0),
         created_at=_at(1),
+        host=None,
+        root=None,
     )
 
-    row = await store.get(run_id)
+    row = await store.get(run_id, host=None, root=None)
     assert row is not None
     assert row.run_id == run_id
     assert row.observed_path == "/data/2026-01-Smith-12345/scan_001.h5"
@@ -47,7 +49,7 @@ async def test_upsert_then_get_roundtrips() -> None:
 @pytest.mark.unit
 async def test_get_absent_run_id_returns_none() -> None:
     store = InMemoryCapturePathStore()
-    assert await store.get(uuid4()) is None
+    assert await store.get(uuid4(), host=None, root=None) is None
 
 
 @pytest.mark.unit
@@ -65,15 +67,25 @@ async def test_upsert_overwrites_and_preserves_created_at() -> None:
     store = InMemoryCapturePathStore()
     run_id = uuid4()
     await store.upsert(
-        run_id=run_id, observed_path="/data/first.h5", observed_at=_at(0), created_at=_at(0)
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=_at(0),
+        created_at=_at(0),
+        host=None,
+        root=None,
     )
     before_second_upsert = datetime.now(tz=UTC)
 
     await store.upsert(
-        run_id=run_id, observed_path="/data/second.h5", observed_at=_at(5), created_at=_at(5)
+        run_id=run_id,
+        observed_path="/data/second.h5",
+        observed_at=_at(5),
+        created_at=_at(5),
+        host=None,
+        root=None,
     )
 
-    row = await store.get(run_id)
+    row = await store.get(run_id, host=None, root=None)
     assert row is not None
     assert row.observed_path == "/data/second.h5"
     assert row.observed_at == _at(5)
@@ -86,7 +98,12 @@ async def test_load_run_capture_path_returns_the_real_path_when_present() -> Non
     store = InMemoryCapturePathStore()
     run_id = uuid4()
     await store.upsert(
-        run_id=run_id, observed_path="/data/a.h5", observed_at=_at(0), created_at=_at(0)
+        run_id=run_id,
+        observed_path="/data/a.h5",
+        observed_at=_at(0),
+        created_at=_at(0),
+        host=None,
+        root=None,
     )
 
     assert await load_run_capture_path(store, run_id) == "/data/a.h5"
@@ -99,3 +116,79 @@ async def test_load_run_capture_path_falls_back_when_absent() -> None:
     fallback shape is the same as `load_actor_display_name`'s."""
     store = InMemoryCapturePathStore()
     assert await load_run_capture_path(store, uuid4()) == UNOBSERVED_CAPTURE_PATH
+
+
+@pytest.mark.unit
+async def test_get_latest_returns_the_most_recently_observed_row_across_locations() -> None:
+    """Deliberately the SAME scenario as the Postgres integration test
+    of the same name, so the two adapters are checked against one
+    scenario rather than each against itself. The winner is inserted
+    first and carries the earlier `created_at`, so only `observed_at`
+    ordering can produce it."""
+    store = InMemoryCapturePathStore()
+    run_id = uuid4()
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/gdata/dm/2BM/2026-08/exp/data/scan_005.h5",
+        observed_at=_at(5),
+        created_at=_at(0),
+        host="tomdet",
+        root="/gdata/dm/2BM",
+    )
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/local1/2BM/exp/scan_005.h5",
+        observed_at=_at(0),
+        created_at=_at(5),
+        host="tomdet",
+        root="/local1/2BM",
+    )
+
+    row = await store.get_latest(run_id)
+
+    assert row is not None
+    assert row.observed_path.startswith("/gdata/")
+
+
+@pytest.mark.unit
+async def test_get_latest_never_returns_another_runs_row() -> None:
+    store = InMemoryCapturePathStore()
+    mine, theirs = uuid4(), uuid4()
+    await store.upsert(
+        run_id=theirs,
+        observed_path="/data/theirs.h5",
+        observed_at=_at(9),
+        created_at=_at(9),
+        host="tomdet",
+        root="/data",
+    )
+
+    assert await store.get_latest(mine) is None
+
+
+@pytest.mark.unit
+async def test_get_latest_breaks_a_full_tie_deterministically() -> None:
+    """Two rows identical on `observed_at` AND `updated_at` is not an
+    exotic shape: it is what two upserts sharing one clock read produce.
+    `_LATEST_SQL` breaks the tie on `capture_path_id DESC` and this
+    adapter must agree, or a test that is deterministic here is flaky in
+    CI."""
+    store = InMemoryCapturePathStore()
+    run_id = uuid4()
+    for root in ("/a", "/b"):
+        await store.upsert(
+            run_id=run_id,
+            observed_path=f"{root}/scan.h5",
+            observed_at=_at(0),
+            created_at=_at(0),
+            host="tomdet",
+            root=root,
+        )
+    rows = [
+        await store.get(run_id, host="tomdet", root="/a"),
+        await store.get(run_id, host="tomdet", root="/b"),
+    ]
+    winner = await store.get_latest(run_id)
+
+    assert winner is not None
+    assert winner.capture_path_id == max(r.capture_path_id for r in rows if r is not None)

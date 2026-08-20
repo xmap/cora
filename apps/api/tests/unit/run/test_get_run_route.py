@@ -84,6 +84,8 @@ async def test_get_run_route_resolves_the_real_path_when_the_vault_has_a_row() -
         run_id=run_id,
         observed_path="/data/2026-01-Smith-12345/scan_001.h5",
         observed_at=_NOW,
+        host=None,
+        root=None,
         created_at=_NOW,
     )
     handler = get_run.bind(

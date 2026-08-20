@@ -275,6 +275,7 @@ from cora.api._capture_baseline_reader import CaptureBaselineReader
 from cora.api._capture_experiment_identity_reader import CaptureExperimentIdentityReader
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
+from cora.data.adapters.capture_path_locator import active_scan_transport
 from cora.infrastructure.logging import get_logger
 from cora.run.aggregates.run.capture_probes import CaptureProbe
 from cora.run.aggregates.run.state import (
@@ -296,6 +297,7 @@ from cora.run.ports.capture_observer import (
     CaptureProgressObservation,
 )
 from cora.shared.identity import MonitorSourceId
+from cora.shared.storage_root import matched_storage_root
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
@@ -954,12 +956,22 @@ class RunWitnessRecorder:
             )
             return
         observed_path, observed_at = resolved
+        host, roots = active_scan_transport(self._deps)
+        matched_root = matched_storage_root(observed_path, roots)
         try:
             await self._capture_path_store.upsert(
                 run_id=run_id,
                 observed_path=observed_path,
                 observed_at=observed_at,
                 created_at=self._deps.clock.now(),
+                # Both NULL when the observed path falls under no
+                # configured root: the same condition under which
+                # `mint_capture_path_locator` refuses to mint. Recording
+                # the path with an unknown location is honest and keeps
+                # the display read working; what must not happen is
+                # inventing a tier the reading does not support.
+                host=host if matched_root is not None else None,
+                root=matched_root,
             )
         except asyncio.CancelledError:
             raise
