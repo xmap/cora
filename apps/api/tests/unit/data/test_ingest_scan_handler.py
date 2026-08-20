@@ -192,10 +192,15 @@ async def test_ingest_through_an_indirect_locator_records_the_indirect_form() ->
     run_id = uuid4()
     capture_path_store = InMemoryCapturePathStore()
     await capture_path_store.upsert(
-        run_id=run_id, observed_path=real_path, observed_at=_NOW, created_at=_NOW
+        run_id=run_id,
+        observed_path=real_path,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host="tomdet",
+        root="/local1/2BM",
     )
     indirect_locator = mint_capture_path_locator(
-        observed_path=real_path, run_id=run_id, host="tomdet", roots=("/local1/2BM",)
+        observed_path=real_path, run_id=run_id, host="tomdet", root="/local1/2BM"
     )
     assert indirect_locator is not None
     resolved_locator = "file://" + real_path
@@ -228,7 +233,7 @@ async def test_ingest_through_an_indirect_locator_with_no_vault_row_raises() -> 
         observed_path="/local1/2BM/2026-08-Haridy-1015116/scan_005.h5",
         run_id=run_id,
         host="tomdet",
-        roots=("/local1/2BM",),
+        root="/local1/2BM",
     )
     assert indirect_locator is not None
 
@@ -258,10 +263,15 @@ async def test_ingest_through_an_indirect_locator_never_echoes_the_real_path_on_
     run_id = uuid4()
     capture_path_store = InMemoryCapturePathStore()
     await capture_path_store.upsert(
-        run_id=run_id, observed_path=real_path, observed_at=_NOW, created_at=_NOW
+        run_id=run_id,
+        observed_path=real_path,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host="tomdet",
+        root="/local1/2BM",
     )
     indirect_locator = mint_capture_path_locator(
-        observed_path=real_path, run_id=run_id, host="tomdet", roots=("/local1/2BM",)
+        observed_path=real_path, run_id=run_id, host="tomdet", root="/local1/2BM"
     )
     assert indirect_locator is not None
     resolved_locator = "file://" + real_path

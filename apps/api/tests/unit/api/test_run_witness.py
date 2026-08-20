@@ -38,6 +38,8 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
+    CapturePath,
+    CapturePathStore,
     ConductMode,
     InMemoryCapturePathStore,
     InMemoryCaptureProbeStore,
@@ -573,6 +575,7 @@ def _recorder(
     capture_baseline_recording_enabled: bool = False,
     capture_path_store: object | None = None,
     capture_path_recording_enabled: bool = False,
+    scan_roots: tuple[str, ...] = (),
     experiment_identity_reader: object | None = None,
     capture_experiment_identity_recording_enabled: bool = False,
     capture_probe_store: object | None = None,
@@ -592,6 +595,19 @@ def _recorder(
     outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
     truncate = truncate_run or _FakeTruncateRun()
     deps = build_deps(ids=[uuid4() for _ in range(10)])
+    if scan_roots:
+        # The recorder reads the TRANSPORT off `deps.settings` but the
+        # kill switches off its own `settings` argument. In production
+        # those are one object; here they are two, so configuring roots
+        # has to happen on deps or the matched-root branch stays dead.
+        deps = dataclasses.replace(
+            deps,
+            settings=Settings(
+                app_env="test",
+                trust_policy_id=deps.settings.trust_policy_id,
+                posix_checksum_roots=scan_roots,
+            ),
+        )
     if schema_posture != "matched":
         deps = dataclasses.replace(deps, schema_posture=schema_posture)  # type: ignore[arg-type]
     return RunWitnessRecorder(
@@ -1051,15 +1067,36 @@ _T1 = datetime(2026, 8, 13, 12, 5, 0, tzinfo=UTC)
 
 class _FakeCapturePathStore:
     """Records every `upsert()` call, or raises a configured exception
-    instead. `get()` mirrors `InMemoryCapturePathStore` for tests that
-    need to read back what was (or wasn't) written."""
+    instead.
+
+    Reads delegate to a real `InMemoryCapturePathStore` rather than
+    being stubbed out, so this class satisfies the whole
+    `CapturePathStore` Protocol instead of the fraction one test
+    happens to call. The conformance binding below turns that into a
+    pyright error the moment it stops being true, which matters because
+    `_recorder` takes this through an `object`-typed parameter and
+    nothing else would notice."""
 
     def __init__(self, *, raises: Exception | None = None) -> None:
         self.calls: list[dict[str, Any]] = []
         self._raises = raises
+        self._delegate = InMemoryCapturePathStore()
+
+    async def get(self, run_id: UUID, *, host: str | None, root: str | None) -> CapturePath | None:
+        return await self._delegate.get(run_id, host=host, root=root)
+
+    async def get_latest(self, run_id: UUID) -> CapturePath | None:
+        return await self._delegate.get_latest(run_id)
 
     async def upsert(
-        self, *, run_id: UUID, observed_path: str, observed_at: datetime, created_at: datetime
+        self,
+        *,
+        run_id: UUID,
+        observed_path: str,
+        observed_at: datetime,
+        created_at: datetime,
+        host: str | None,
+        root: str | None,
     ) -> None:
         self.calls.append(
             {
@@ -1067,10 +1104,27 @@ class _FakeCapturePathStore:
                 "observed_path": observed_path,
                 "observed_at": observed_at,
                 "created_at": created_at,
+                "host": host,
+                "root": root,
             }
         )
         if self._raises is not None:
             raise self._raises
+        await self._delegate.upsert(
+            run_id=run_id,
+            observed_path=observed_path,
+            observed_at=observed_at,
+            created_at=created_at,
+            host=host,
+            root=root,
+        )
+
+
+#: Structural conformance check, not a fixture. `_FakeCapturePathStore`
+#: reaches the recorder through an `object`-typed parameter, so nothing
+#: else would flag it when `CapturePathStore` grows a method. This line
+#: turns that into a pyright error at the definition site.
+_capture_path_store_conformance: CapturePathStore = _FakeCapturePathStore()
 
 
 @pytest.mark.unit
@@ -1093,7 +1147,7 @@ async def test_capture_path_recorded_when_observed_after_begun() -> None:
     recorder.observe_capture_path(_path_obs(observed_at=_T1))
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
 
-    row = await store.get(run_id)
+    row = await store.get_latest(run_id)
     assert row is not None
     assert row.observed_path == "/data/2026-01-Smith-12345/scan_001.h5"
     assert row.observed_at == _T1
@@ -1122,7 +1176,7 @@ async def test_capture_path_not_recorded_when_observed_before_begun() -> None:
     recorder.observe_capture_path(_path_obs(observed_at=_T0))
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
 
-    assert await store.get(run_id) is None
+    assert await store.get_latest(run_id) is None
 
 
 @pytest.mark.unit
@@ -1141,7 +1195,7 @@ async def test_capture_path_not_recorded_when_never_observed() -> None:
     await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
 
-    assert await store.get(run_id) is None
+    assert await store.get_latest(run_id) is None
 
 
 @pytest.mark.unit
@@ -1163,7 +1217,7 @@ async def test_capture_path_not_recorded_when_the_kill_switch_is_off() -> None:
     recorder.observe_capture_path(_path_obs(observed_at=_T1))
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
 
-    assert await store.get(run_id) is None
+    assert await store.get_latest(run_id) is None
 
 
 @pytest.mark.unit
@@ -1205,7 +1259,7 @@ async def test_capture_path_retention_does_not_carry_into_the_next_promotion() -
     )
     recorder.observe_capture_path(_path_obs(observed_at=_T1))
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
-    assert await store.get(first_run_id) is not None
+    assert await store.get_latest(first_run_id) is not None
 
     genesis.run_id = second_run_id
     await recorder.observe_capture(
@@ -1213,7 +1267,61 @@ async def test_capture_path_retention_does_not_carry_into_the_next_promotion() -
     )
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
 
-    assert await store.get(second_run_id) is None
+    assert await store.get_latest(second_run_id) is None
+
+
+@pytest.mark.unit
+async def test_capture_path_records_the_root_it_was_observed_under() -> None:
+    """The recorder's location write, which nothing exercised before:
+    every other test in this file leaves `posix_checksum_roots` empty,
+    so `matched_storage_root` returned None and only the NULL branch
+    ever ran. Asserted through the LOCATION KEY rather than
+    `get_latest`, because `get_latest` ignores host and root by design
+    and would pass no matter what the recorder wrote."""
+    genesis = _FakeRecordWitnessedRun()
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+        scan_roots=("/data",),
+    )
+    run_id = genesis.run_id
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    row = await store.get(run_id, host="localhost", root="/data")
+    assert row is not None
+    assert row.observed_path == "/data/2026-01-Smith-12345/scan_001.h5"
+
+
+@pytest.mark.unit
+async def test_capture_path_records_a_null_location_when_under_no_configured_root() -> None:
+    """Both columns go NULL together. The second assertion is the one
+    that pins the conditional: a recorder that wrote the host anyway
+    would still satisfy a bare "the NULL/NULL row exists" check."""
+    genesis = _FakeRecordWitnessedRun()
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+        scan_roots=("/somewhere/else",),
+    )
+    run_id = genesis.run_id
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert await store.get(run_id, host=None, root=None) is not None
+    assert await store.get(run_id, host="localhost", root=None) is None
 
 
 @pytest.mark.unit
@@ -1296,7 +1404,7 @@ async def test_capture_path_with_no_substrate_time_is_never_recorded() -> None:
         _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
     )  # must not raise (no None < datetime comparison)
 
-    assert await store.get(run_id) is None
+    assert await store.get_latest(run_id) is None
 
 
 @pytest.mark.unit

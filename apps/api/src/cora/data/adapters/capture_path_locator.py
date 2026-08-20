@@ -29,19 +29,27 @@ tier stay visible because neither is personal data and both are real
 provenance a reader benefits from, unlike a fully opaque
 `cora-capture-path://<uuid>`.
 
-Two consequences of keeping them structured rather than deriving them
-from an independent source: `_filename_of` (ingest_scan's own Dataset-
-naming helper) keeps working unmodified, because the locator's last
-path segment is still a real filename; and `resolve_capture_path_locator`
-does NOT re-verify host or tier against anything, because both were
-chosen unilaterally at mint time from the SAME settings a resolve-time
-check would compare against -- a check against your own output is
-decorative, not independent (see [[project_independent_check_principle]]).
-The one comparison this module DOES make -- the locator's filename
-segment against the vault row's actual basename -- is a genuine
-cross-check: the two sides come from separate reads (the candidate
-query at mint time, a fresh `get(run_id)` at resolve time), so a drift
-between them is a real signal, not decoration.
+Keeping them structured has two consequences. `_filename_of`
+(ingest_scan's own Dataset-naming helper) keeps working unmodified,
+because the locator's last path segment is still a real filename. And
+host and tier are LOAD-BEARING at resolve time: they are the key this
+module looks the vault row up by, since a Run may hold one row per
+storage location (acquisition tier, archive tier) and a locator naming
+one must never resolve to the other's bytes.
+
+That is a change from this module's first version, which keyed the
+lookup on `run_id` alone and argued that re-verifying host and tier
+would be decorative -- correctly, at the time: both had been chosen
+unilaterally at mint time from the same settings a resolve-time check
+would have compared against, and a check against your own output is
+not independent (see [[project_independent_check_principle]]). Once the
+vault holds more than one row per Run, they stop being a self-comparison
+and become a genuine selector against independently written rows.
+
+The filename comparison remains the module's other real cross-check:
+its two sides come from separate reads (the candidate query at mint
+time, a fresh `get` at resolve time), so a drift between them is a
+signal rather than decoration.
 
 ## Scope
 
@@ -98,9 +106,15 @@ if TYPE_CHECKING:
 class CapturePathLookup(Protocol):
     """The one method this module ever calls on Run BC's `CapturePathStore`.
 
-    Narrowed here per the port-shaped-by-consumer convention
-    (`ClearanceLookup`/`SupplyLookup`/`DatasetDistributionLookup`: the
-    CONSUMER shapes the surface it actually uses) even though `cora.data`
+    A consumer-local narrowing, in the spirit of the
+    port-shaped-by-consumer convention though not the same shape as it:
+    `ClearanceLookup`/`SupplyLookup`/`DatasetDistributionLookup` are
+    Kernel-injected cross-BC ports in `cora.infrastructure.ports`,
+    satisfied by an adapter in the owning BC. This is narrower than
+    that, a Protocol declared where it is consumed over a concrete
+    class, and hoisting it for one consumer would be premature. The
+    principle it borrows is only that the CONSUMER shapes the surface
+    it actually uses, even though `cora.data`
     is separately sanctioned to import the full `CapturePathStore`
     Protocol directly (`tach.toml` already permits `cora.data` ->
     `cora.run.aggregates`). That sanctioned IMPORT PATH is not a license
@@ -111,7 +125,9 @@ class CapturePathLookup(Protocol):
     satisfy this structurally, unchanged.
     """
 
-    async def get(self, run_id: UUID) -> CapturePath | None: ...
+    async def get(
+        self, run_id: UUID, *, host: str | None, root: str | None
+    ) -> CapturePath | None: ...
 
 
 CAPTURE_PATH_SCHEME = "cora-capture-path"
@@ -139,17 +155,25 @@ def mint_capture_path_locator(
     *,
     observed_path: str,
     run_id: UUID,
-    host: str,
-    roots: tuple[str, ...],
+    host: str | None,
+    root: str | None,
 ) -> str | None:
     """Build an indirect `cora-capture-path://` locator for `observed_path`.
 
-    Returns `None` when `observed_path` matches none of `roots`: the
-    deployment's allowlist and the vault's own observed path have
-    drifted, and minting a locator with a fabricated tier segment
-    would be more misleading than refusing outright. The caller (only
-    `CaptureScanIngestor` today) treats `None` as this candidate is
-    stuck, mirroring its existing missing-binding SKIP.
+    `host` and `root` are the location the VAULT ROW RECORDED at
+    observation time, not a fresh match against current settings. That
+    is the point: `resolve` looks the row up by exactly these two
+    values, so deriving them here from settings that may have moved
+    since the row was written would mint a locator that resolves to
+    nothing, silently. Passing the row's own location makes the two
+    sides the same fact rather than two reads of a mutable one.
+
+    Returns `None` when either is `None`, which is how a row observed
+    under no configured root (or written before the vault recorded
+    location at all) declines to produce a locator instead of getting a
+    fabricated one. The caller (only `CaptureScanIngestor` today)
+    treats `None` as this candidate is stuck, mirroring its existing
+    missing-binding SKIP.
 
     The personal segment is never inspected: everything strictly
     between the matched root and the filename is discarded, regardless
@@ -157,11 +181,12 @@ def mint_capture_path_locator(
     what makes the scheme correct for any facility's layout, not just
     2-BM's `{PIlastname}-{GUP#}` convention.
 
-    CAUTION for whoever configures `roots`: the matched root itself is
+    CAUTION for whoever configures the storage roots: `root` is
     embedded in the locator VERBATIM, trusted as safe with no way for
-    this function to verify that from the string alone. `roots` MUST
-    name the facility-level storage tier (`/local1/2BM`), never a path
-    that itself contains personal data (an experiment folder). A root
+    this function to verify that from the string alone. Configured
+    roots MUST name the facility-level storage tier (`/local1/2BM`),
+    never a path that itself contains personal data (an experiment
+    folder). A root
     misconfigured to the latter would leak that data into the locator's
     supposedly-safe tier segment, defeating this module's whole purpose.
 
@@ -174,20 +199,10 @@ def mint_capture_path_locator(
     as well, because it varies: the experiment folder is nested under a
     year-month on `/data2` and flat on `/local2`.
     """
-    matched_root = next(
-        (root for root in roots if _under_root(observed_path, root)),
-        None,
-    )
-    if matched_root is None:
+    if host is None or root is None:
         return None
     filename = Path(observed_path).name
-    tier = matched_root.rstrip("/")
-    return f"{CAPTURE_PATH_SCHEME}://{host}{tier}/{_RUN_SEGMENT_PREFIX}{run_id}/{quote(filename)}"
-
-
-def _under_root(path: str, root: str) -> bool:
-    stripped = root.rstrip("/")
-    return path == stripped or path.startswith(stripped + "/")
+    return f"{CAPTURE_PATH_SCHEME}://{host}{root}/{_RUN_SEGMENT_PREFIX}{run_id}/{quote(filename)}"
 
 
 async def resolve_capture_path_locator(
@@ -204,7 +219,8 @@ async def resolve_capture_path_locator(
     that only the automated sweep mints indirect locators.
 
     Returns `None` -- never a reason string -- on every failure mode
-    (malformed locator, no vault row, filename mismatch), so a caller
+    (malformed locator; no vault row at all; a row that exists but not
+    at the location the locator names; filename mismatch), so a caller
     cannot accidentally log or surface anything that touches
     `observed_path`. The vault row's absence is treated the same as a
     malformed locator: this is also what an erasure would look like
@@ -220,6 +236,8 @@ async def resolve_capture_path_locator(
     if len(segments) < 2:
         return None
     run_segment, filename_segment = segments[-2], segments[-1]
+    host = parsed.netloc
+    root = "/" + "/".join(segments[:-2]) if len(segments) > 2 else ""
     if not run_segment.startswith(_RUN_SEGMENT_PREFIX):
         return None
     try:
@@ -227,14 +245,15 @@ async def resolve_capture_path_locator(
     except ValueError:
         return None
 
-    row = await capture_path_store.get(run_id)
+    row = await capture_path_store.get(run_id, host=host, root=root)
     if row is None:
         return None
 
     # The one genuine cross-check this module makes: the filename
     # minted into the locator (read from the vault at candidate-lookup
     # time) against the vault's OWN current basename (a fresh read).
-    # Host and tier are not compared here -- see the module docstring.
+    # Host and tier are the LOOKUP KEY above, not a post-hoc
+    # comparison; see the module docstring.
     if Path(row.observed_path).name != unquote(filename_segment):
         return None
 

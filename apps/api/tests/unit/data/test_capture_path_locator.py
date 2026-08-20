@@ -6,8 +6,9 @@ except `cora-capture-path` unchanged (the manual POST route / MCP tool are
 never touched by this module); resolution refuses on a malformed
 locator, an absent vault row (the erasure case), and a filename that
 disagrees with the vault's own current value (the one genuine
-cross-check this module makes -- see the module docstring for why host
-and tier are NOT re-verified); and the mint/resolve round trip recovers
+cross-check this module makes, alongside host and tier, which are now
+the LOOKUP KEY rather than something re-verified after the fact); and
+the mint/resolve round trip recovers
 the exact real path, matching `_file_uri.py`'s expected `file://` form.
 """
 
@@ -33,12 +34,19 @@ _RUN_ID = UUID("01900000-0000-7000-8000-000000009001")
 _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
 _OBSERVED_PATH = f"/local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5"
 _NOW = datetime(2026, 8, 19, 12, 0, 0, tzinfo=UTC)
+_HOST = "tomdet"
+_ROOT = "/local1/2BM"
 
 
 async def _seeded_store(*, run_id: UUID = _RUN_ID, observed_path: str = _OBSERVED_PATH):
     store = InMemoryCapturePathStore()
     await store.upsert(
-        run_id=run_id, observed_path=observed_path, observed_at=_NOW, created_at=_NOW
+        run_id=run_id,
+        observed_path=observed_path,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=_HOST,
+        root=_ROOT,
     )
     return store
 
@@ -48,63 +56,13 @@ def test_mint_produces_a_locator_carrying_no_personal_path_fragment() -> None:
         observed_path=_OBSERVED_PATH,
         run_id=_RUN_ID,
         host="tomdet",
-        roots=("/local1/2BM",),
+        root="/local1/2BM",
     )
 
     assert locator is not None
     assert _PERSONAL_PATH_FRAGMENT not in locator
     assert locator.startswith(f"{CAPTURE_PATH_SCHEME}://tomdet/local1/2BM/run-{_RUN_ID}/")
     assert locator.endswith("scan_005.h5")
-
-
-def test_mint_matches_the_second_root_when_the_first_does_not_apply() -> None:
-    """The "both is fine" allowlist decision (2026-08-19): a path under
-    the SECOND configured root must not be refused just because the
-    first root in the tuple doesn't match it."""
-    locator = mint_capture_path_locator(
-        observed_path=_OBSERVED_PATH,
-        run_id=_RUN_ID,
-        host="tomdet",
-        roots=("/local2/2BM", "/local1/2BM"),
-    )
-
-    assert locator is not None
-    assert "/local1/2BM/" in locator
-
-
-def test_mint_refuses_a_path_outside_every_configured_root() -> None:
-    """A misconfigured or drifted allowlist must not produce a locator
-    with a fabricated tier segment; the caller treats this as SKIP."""
-    locator = mint_capture_path_locator(
-        observed_path=_OBSERVED_PATH,
-        run_id=_RUN_ID,
-        host="tomdet",
-        roots=("/somewhere/else",),
-    )
-
-    assert locator is None
-
-
-def test_mint_does_not_treat_a_sibling_directory_as_under_the_root() -> None:
-    """`/local1/2BM` must not prefix-match `/local1/2BMX/...`."""
-    locator = mint_capture_path_locator(
-        observed_path="/local1/2BMX/2026-08-Smith-1/scan.h5",
-        run_id=_RUN_ID,
-        host="tomdet",
-        roots=("/local1/2BM",),
-    )
-
-    assert locator is None
-
-
-def test_mint_refuses_every_path_when_roots_is_empty() -> None:
-    """An unconfigured deployment (no roots at all) must SKIP every
-    candidate, not treat an empty tuple as "anything matches"."""
-    locator = mint_capture_path_locator(
-        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", roots=()
-    )
-
-    assert locator is None
 
 
 def test_mint_embeds_the_whole_matched_root_verbatim_including_its_own_last_segment() -> None:
@@ -125,7 +83,7 @@ def test_mint_embeds_the_whole_matched_root_verbatim_including_its_own_last_segm
     `mint_capture_path_locator`'s own docstring, which states this
     requirement explicitly."""
     locator = mint_capture_path_locator(
-        observed_path="/local1/2BM", run_id=_RUN_ID, host="tomdet", roots=("/local1/2BM",)
+        observed_path="/local1/2BM", run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
     )
 
     assert locator == f"cora-capture-path://tomdet/local1/2BM/run-{_RUN_ID}/2BM"
@@ -137,10 +95,15 @@ async def test_mint_and_resolve_round_trip_a_filename_with_spaces() -> None:
     observed_path = f"/local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan 005 (copy).h5"
     store = InMemoryCapturePathStore()
     await store.upsert(
-        run_id=_RUN_ID, observed_path=observed_path, observed_at=_NOW, created_at=_NOW
+        run_id=_RUN_ID,
+        observed_path=observed_path,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=_HOST,
+        root=_ROOT,
     )
     locator = mint_capture_path_locator(
-        observed_path=observed_path, run_id=_RUN_ID, host="tomdet", roots=("/local1/2BM",)
+        observed_path=observed_path, run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
     )
     assert locator is not None
 
@@ -164,7 +127,7 @@ async def test_resolve_passes_through_a_non_vault_scheme_unchanged() -> None:
 async def test_resolve_recovers_the_real_path_as_a_file_uri() -> None:
     store = await _seeded_store()
     locator = mint_capture_path_locator(
-        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", roots=("/local1/2BM",)
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
     )
     assert locator is not None
 
@@ -180,7 +143,7 @@ async def test_resolve_refuses_when_the_vault_row_is_absent() -> None:
     erased run, not a placeholder for it."""
     store = InMemoryCapturePathStore()
     locator = mint_capture_path_locator(
-        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", roots=("/local1/2BM",)
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
     )
     assert locator is not None
 
@@ -199,10 +162,15 @@ async def test_resolve_rejects_a_filename_that_drifted_since_mint_time() -> None
     not a mismatch fabricated by editing the locator string itself."""
     store = InMemoryCapturePathStore()
     await store.upsert(
-        run_id=_RUN_ID, observed_path=_OBSERVED_PATH, observed_at=_NOW, created_at=_NOW
+        run_id=_RUN_ID,
+        observed_path=_OBSERVED_PATH,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=_HOST,
+        root=_ROOT,
     )
     locator = mint_capture_path_locator(
-        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", roots=("/local1/2BM",)
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
     )
     assert locator is not None
     # The vault row for the SAME run_id is upserted again with a
@@ -213,11 +181,151 @@ async def test_resolve_rejects_a_filename_that_drifted_since_mint_time() -> None
         observed_path=f"/local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_006.h5",
         observed_at=_NOW,
         created_at=_NOW,
+        # SAME location, so this genuinely overwrites the row the
+        # locator was minted from. A different host/root would insert a
+        # second row instead, leaving the original intact and testing
+        # nothing.
+        host=_HOST,
+        root=_ROOT,
     )
 
     resolved = await resolve_capture_path_locator(locator, capture_path_store=store)
 
+    # `resolve` returns None for six distinct reasons. Pin that THIS
+    # None is the filename cross-check firing, by showing the row really
+    # was replaced rather than the lookup simply missing it.
+    stored = await store.get(_RUN_ID, host=_HOST, root=_ROOT)
+    assert stored is not None
+    assert stored.observed_path.endswith("scan_006.h5")
     assert resolved is None
+
+
+async def test_two_locations_for_one_run_each_resolve_to_their_own_path() -> None:
+    """The reason the vault is keyed by location at all. A Run's file
+    observed on BOTH the acquisition tier and the archive tier is two
+    rows, and each tier's locator resolves to that tier's real path.
+    Under the old run_id-only key the second observation overwrote the
+    first, and the first tier's already-minted locator resolved to the
+    wrong bytes or to nothing at all."""
+    archive_root = "/gdata/dm/2BM"
+    archive_path = f"{archive_root}/2026-08/2026-08-{_PERSONAL_PATH_FRAGMENT}/data/scan_005.h5"
+    store = InMemoryCapturePathStore()
+    await store.upsert(
+        run_id=_RUN_ID,
+        observed_path=_OBSERVED_PATH,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=_HOST,
+        root=_ROOT,
+    )
+    await store.upsert(
+        run_id=_RUN_ID,
+        observed_path=archive_path,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=_HOST,
+        root=archive_root,
+    )
+    acquisition_locator = mint_capture_path_locator(
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host=_HOST, root=_ROOT
+    )
+    archive_locator = mint_capture_path_locator(
+        observed_path=archive_path, run_id=_RUN_ID, host=_HOST, root=archive_root
+    )
+    assert acquisition_locator is not None
+    assert archive_locator is not None
+    assert acquisition_locator != archive_locator
+
+    assert (
+        await resolve_capture_path_locator(acquisition_locator, capture_path_store=store)
+        == "file://" + _OBSERVED_PATH
+    )
+    assert (
+        await resolve_capture_path_locator(archive_locator, capture_path_store=store)
+        == "file://" + archive_path
+    )
+
+
+async def test_resolve_refuses_a_location_the_run_was_never_observed_on() -> None:
+    """A locator naming the archive tier must NOT fall back to the
+    acquisition-tier row when no archive row exists. Falling back would
+    hand back bytes from a different copy than the one named, which is
+    worse than refusing."""
+    store = await _seeded_store()
+    archive_locator = mint_capture_path_locator(
+        observed_path="/gdata/dm/2BM/2026-08/exp/data/scan_005.h5",
+        run_id=_RUN_ID,
+        host=_HOST,
+        root="/gdata/dm/2BM",
+    )
+    assert archive_locator is not None
+
+    assert await resolve_capture_path_locator(archive_locator, capture_path_store=store) is None
+
+
+async def test_resolve_refuses_a_locator_naming_a_different_host() -> None:
+    """The host half of the (run_id, host, root) key, which nothing
+    else exercises: every other test holds host constant, so deleting
+    `AND host IS NOT DISTINCT FROM $2` from the lookup left the whole
+    suite green. It matters because `active_scan_transport` flips host
+    between the SSH host and localhost WITHOUT changing the root, so
+    host is the only thing separating those two locations."""
+    store = await _seeded_store()
+    other_host_locator = mint_capture_path_locator(
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="localhost", root=_ROOT
+    )
+    assert other_host_locator is not None
+
+    resolved = await resolve_capture_path_locator(other_host_locator, capture_path_store=store)
+
+    assert resolved is None
+    # Positive control: the same store DOES resolve the right host, so
+    # the refusal above is about the host and not a store that returns
+    # None for everything.
+    right_host_locator = mint_capture_path_locator(
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host=_HOST, root=_ROOT
+    )
+    assert right_host_locator is not None
+    assert (
+        await resolve_capture_path_locator(right_host_locator, capture_path_store=store)
+        == "file://" + _OBSERVED_PATH
+    )
+
+
+async def test_resolve_refuses_a_legacy_row_whose_location_was_never_recorded() -> None:
+    """Rows predating the location columns carry NULL host and root.
+    `resolve` derives both from the locator and can never produce NULL,
+    so such a row is unreachable by any locator. That is deliberate, and
+    `_CANDIDATE_SQL` excludes those rows so the sweep never mints for
+    them, but it is worth pinning: the empty-string default in the parse
+    is load-bearing, and turning it into None would make every legacy
+    row reachable from a bare locator."""
+    store = InMemoryCapturePathStore()
+    await store.upsert(
+        run_id=_RUN_ID,
+        observed_path=_OBSERVED_PATH,
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+    locator = mint_capture_path_locator(
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host=_HOST, root=_ROOT
+    )
+    assert locator is not None
+
+    assert await resolve_capture_path_locator(locator, capture_path_store=store) is None
+
+
+def test_mint_declines_when_the_row_recorded_no_location() -> None:
+    """A NULL-location row produces no locator at all, rather than one
+    built from a guessed tier."""
+    assert (
+        mint_capture_path_locator(
+            observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host=None, root=None
+        )
+        is None
+    )
 
 
 async def test_resolve_rejects_a_locator_with_too_few_path_segments() -> None:

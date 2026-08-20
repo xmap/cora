@@ -141,9 +141,15 @@ def _candidate(
     run_id: UUID = _RUN_ID,
     capture_code: str = "2bmb-tomoscan",
     observed_path: str = f"/local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+    host: str = "localhost",
+    root: str = "/local1/2BM",
 ) -> ScanIngestCandidate:
     return ScanIngestCandidate(
-        run_id=run_id, capture_code=capture_code, observed_path=observed_path
+        run_id=run_id,
+        capture_code=capture_code,
+        observed_path=observed_path,
+        host=host,
+        root=root,
     )
 
 

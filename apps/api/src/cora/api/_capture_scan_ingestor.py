@@ -112,6 +112,7 @@ from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
 from cora.data.features.ingest_scan.command import IngestScan
 from cora.infrastructure.logging import get_logger
+from cora.shared.storage_root import normalize_storage_root
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
@@ -134,11 +135,19 @@ _LOG_PREFIX = "capture_scan_ingestor"
 _MAX_CANDIDATES_PER_TICK = 10
 
 _CANDIDATE_SQL = """
-SELECT rcp.run_id, rcp.observed_path, prs.capture_code
+SELECT rcp.run_id, rcp.observed_path, rcp.host, rcp.root, prs.capture_code
 FROM run_capture_path rcp
 JOIN proj_run_summary prs ON prs.run_id = rcp.run_id
 WHERE prs.capture_code IS NOT NULL
   AND prs.status IN ('Completed', 'Aborted')
+  -- A row whose location was never recorded cannot produce a
+  -- resolvable locator: `mint` declines, and `resolve` keys on
+  -- (run_id, host, root) with no fallback. Excluding it here turns a
+  -- candidate that would be re-selected and SKIPped on every tick,
+  -- forever, into an explicit non-candidate. Rows predating the
+  -- location columns are the population this covers.
+  AND rcp.host IS NOT NULL
+  AND rcp.root IS NOT NULL
   AND NOT (rcp.run_id = ANY($1::uuid[]))
   AND NOT EXISTS (
       SELECT 1 FROM proj_data_dataset_summary dds
@@ -157,6 +166,13 @@ class ScanIngestCandidate:
     run_id: UUID
     capture_code: str
     observed_path: str
+    host: str
+    root: str
+    """The location the vault RECORDED for this observation. Carried so
+    the locator is minted from the same fact `resolve` will look the row
+    up by, rather than from a second read of settings that may have
+    moved since. `_CANDIDATE_SQL` excludes NULL-location rows, so both
+    are non-null here."""
 
 
 class ScanIngestCandidateLookup(Protocol):
@@ -191,6 +207,8 @@ class PostgresScanIngestCandidateLookup:
             run_id=row["run_id"],
             capture_code=row["capture_code"],
             observed_path=row["observed_path"],
+            host=row["host"],
+            root=row["root"],
         )
 
 
@@ -215,17 +233,29 @@ def _mint_locator(candidate: ScanIngestCandidate, *, deps: Kernel) -> str | None
     would otherwise put personal data onto an immutable event, per
     `cora.data.adapters.capture_path_locator`'s module docstring.
 
-    `None` when `observed_path` matches none of the deployment's
-    configured roots: a misconfiguration, not this candidate's fault,
-    but not safe to mint a locator for either. Treated as SKIP by the
-    caller, mirroring the missing-binding case.
+    The locator is built from the location the VAULT ROW recorded, not
+    from a fresh match against current settings. `resolve` looks the row
+    up by exactly that pair, so re-deriving it here would mean two reads
+    of a mutable setting at two different times (the Run's terminal, and
+    this tick, arbitrarily later); any change between them mints a
+    locator that resolves to nothing, silently.
+
+    Current settings still get a say, as a REFUSAL rather than a
+    re-match: a row whose recorded root is no longer in the active
+    transport's allowlist is skipped, because the probe would decline to
+    read it anyway (`resolve_confined_file_uri` gates the read on the
+    same allowlist). Refusing here makes that an explicit SKIP instead of
+    a failure several layers down.
     """
     host, roots = active_scan_transport(deps)
+    allowed = {normalize_storage_root(root) for root in roots}
+    if candidate.host != host or candidate.root not in allowed:
+        return None
     return mint_capture_path_locator(
         observed_path=candidate.observed_path,
         run_id=candidate.run_id,
-        host=host,
-        roots=roots,
+        host=candidate.host,
+        root=candidate.root,
     )
 
 

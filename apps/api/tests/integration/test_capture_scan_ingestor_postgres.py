@@ -38,17 +38,30 @@ async def _insert_run_summary(
 
 
 async def _insert_capture_path(
-    pool: asyncpg.Pool, *, run_id: UUID, observed_path: str, created_at: datetime
+    pool: asyncpg.Pool,
+    *,
+    run_id: UUID,
+    observed_path: str,
+    created_at: datetime,
+    host: str | None = "tomdet",
+    root: str | None = "/local1/2BM",
 ) -> None:
+    """Rows default to a RECORDED location, because `_CANDIDATE_SQL`
+    excludes rows without one: a locator cannot be minted for a location
+    the vault never recorded, so such a row is not a candidate. Pass
+    host=None, root=None to build the legacy shape deliberately."""
     await pool.execute(
         """
-        INSERT INTO run_capture_path (run_id, observed_path, observed_at, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $4)
+        INSERT INTO run_capture_path
+            (run_id, observed_path, observed_at, created_at, updated_at, host, root)
+        VALUES ($1, $2, $3, $4, $4, $5, $6)
         """,
         run_id,
         observed_path,
         created_at,
         created_at,
+        host,
+        root,
     )
 
 
@@ -214,3 +227,45 @@ async def test_an_aborted_run_is_a_candidate(db_pool: asyncpg.Pool) -> None:
 
     assert candidate is not None
     assert candidate.run_id == run_id
+
+
+@pytest.mark.integration
+async def test_a_run_whose_location_was_never_recorded_is_not_a_candidate(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Rows predating the location columns carry NULL host and root.
+    `resolve` derives both from the locator and can never produce NULL,
+    so no locator can ever reach such a row. Left as a candidate it
+    would be minted for, fail to resolve, and be re-selected as the
+    oldest head on every tick forever, logging a SKIP whose reason is
+    withheld for PII. Excluding it makes that an explicit non-candidate
+    instead of a silent permanent loop."""
+    lookup = PostgresScanIngestCandidateLookup(db_pool)
+    run_id = uuid4()
+    await _insert_run_summary(
+        db_pool, run_id=run_id, status="Completed", capture_code="2bmb-tomoscan"
+    )
+    await _insert_capture_path(
+        db_pool,
+        run_id=run_id,
+        observed_path="/local1/2BM/scan.h5",
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    assert await lookup.next_candidate() is None
+
+    # Positive control: the same run IS a candidate once a location is
+    # recorded, so the exclusion above is about the NULL location and
+    # not some unrelated filter in the query.
+    await _insert_capture_path(
+        db_pool,
+        run_id=run_id,
+        observed_path="/local1/2BM/scan.h5",
+        created_at=_NOW,
+    )
+    candidate = await lookup.next_candidate()
+    assert candidate is not None
+    assert candidate.run_id == run_id
+    assert candidate.root == "/local1/2BM"
