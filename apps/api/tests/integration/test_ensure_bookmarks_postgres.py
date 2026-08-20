@@ -80,12 +80,18 @@ async def test_advance_without_bookmark_raises_missing_bookmark(db_pool: asyncpg
 @pytest.mark.integration
 async def test_ensure_bookmarks_lets_the_reaction_advance(db_pool: asyncpg.Pool) -> None:
     """After ensure_bookmarks seeds the row, the same worker-path advance delivers
-    the event to the Reaction."""
+    the event to the Reaction.
+
+    The probe is appended AFTER the seeding, because a reaction's new
+    bookmark starts at head: an event that predates it is deliberately not
+    delivered (`test_reaction_bookmark_head_postgres.py`). What this pins is
+    that seeding leaves a usable cursor, not that it replays history.
+    """
     store = PostgresEventStore(db_pool)
     reaction = _RecordingReaction()
-    await _append_probe(store)
 
     await ensure_bookmarks(db_pool, frozenset({reaction.name}))
+    await _append_probe(store)
     processed = await advance_subscriber_once(db_pool, reaction)
 
     assert processed == 1
@@ -137,4 +143,6 @@ async def test_lifespan_seeds_registered_reaction_bookmark(db_pool: asyncpg.Pool
         # ensure step ran before the worker spawned). read_bookmark raises
         # MissingBookmarkError if the row is absent.
         cursor = await _read_cursor()
-    assert cursor == (0, 0)
+    last_tx, last_position = cursor
+    assert last_tx > 0, "a reaction's lifespan-seeded bookmark starts at head, not zero"
+    assert last_position == 0
