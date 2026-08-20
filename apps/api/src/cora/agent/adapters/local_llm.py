@@ -37,7 +37,7 @@ returns `parsed=None` when it could not, and the adapter raises
 `LLMSchemaValidationError` (the outer retry layer then defers), the same
 contract `AnthropicLLM` presents from forced tool-use.
 
-## Provider guard
+## Provider guard and telemetry
 
 `chat` refuses a request whose `model_ref.provider` is not `"local"`,
 mirroring `AnthropicLLM`'s guard: cost resolves from the Agent's
@@ -48,6 +48,13 @@ exists to compare. Unlike `AnthropicLLM`, the provider name here is a
 fixed constant rather than an injected constructor argument: no
 gateway composes `LocalLLM` the way `ArgoLLM` composes `AnthropicLLM`,
 so there is nothing yet that would need to override it.
+
+`chat` also emits the same OpenTelemetry GenAI signals `AnthropicLLM`
+does: `track_in_flight_call` around the backend call for the
+concurrent-calls counter, an `llm.chat` span, and `record_llm_call` on
+the success path only. The GPU occupancy meter (see Metering above)
+still opens and closes around every call unchanged; the telemetry
+context nests inside it.
 """
 
 from __future__ import annotations
@@ -55,6 +62,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
+from opentelemetry import trace
+
+from cora.infrastructure.observability.gen_ai import record_llm_call, track_in_flight_call
 from cora.infrastructure.observability.gpu_accounting import OccupancyShareMeter
 from cora.infrastructure.ports.llm import (
     LLMInvalidRequestError,
@@ -75,6 +85,8 @@ if TYPE_CHECKING:
 # ArgoLLM overrides): no facility gateway composes LocalLLM today, so
 # there is no second identity to select between.
 _PROVIDER_NAME = "local"
+
+_tracer = trace.get_tracer("cora.agent.llm")
 
 
 @dataclass(frozen=True)
@@ -159,17 +171,38 @@ class LocalLLM:
         model = request.model_ref.model
         self._meter.open(call_id, device_id=self._device_id, at_s=self._clock.now())
         try:
-            completion = await self._backend.complete(request)
-            if completion.parsed is None:
-                msg = f"local server returned no schema-valid structured output for model {model!r}"
-                raise LLMSchemaValidationError(msg)
-            return LLMResponse(
-                parsed=completion.parsed,
-                raw_text=completion.raw_text,
-                usage=completion.usage,
-                stop_reason=completion.stop_reason,
-                model_id=completion.model_id,
-            )
+            with (
+                track_in_flight_call(request.model_ref),
+                _tracer.start_as_current_span("llm.chat") as span,
+            ):
+                completion = await self._backend.complete(request)
+                if completion.parsed is None:
+                    msg = (
+                        f"local server returned no schema-valid structured "
+                        f"output for model {model!r}"
+                    )
+                    raise LLMSchemaValidationError(msg)
+
+                # record_llm_call returns the computed USD cost for telemetry
+                # only; the durable spend ledger is written by the caller
+                # from the returned LLMResponse's usage, not from here.
+                record_llm_call(
+                    span,
+                    provider_name=_PROVIDER_NAME,
+                    request_model_ref=request.model_ref,
+                    response_model_id=completion.model_id,
+                    usage=completion.usage,
+                    stop_reason=completion.stop_reason,
+                    max_tokens=request.max_output_tokens,
+                )
+
+                return LLMResponse(
+                    parsed=completion.parsed,
+                    raw_text=completion.raw_text,
+                    usage=completion.usage,
+                    stop_reason=completion.stop_reason,
+                    model_id=completion.model_id,
+                )
         finally:
             gpu_seconds = self._meter.close(call_id, at_s=self._clock.now())
             if self._on_measure is not None:
