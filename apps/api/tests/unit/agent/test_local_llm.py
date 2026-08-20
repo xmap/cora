@@ -15,6 +15,7 @@ from cora.infrastructure.ports.clock import FakeMonotonicClock
 from cora.infrastructure.ports.llm import (
     LLMChatRequest,
     LLMContentBlock,
+    LLMInvalidRequestError,
     LLMSchemaValidationError,
     LLMSystemPrompt,
     LLMUsage,
@@ -22,12 +23,16 @@ from cora.infrastructure.ports.llm import (
 )
 
 
-def _request(user_text: str = "summarize the run", model: str = "llama-3.3-70b") -> LLMChatRequest:
+def _request(
+    user_text: str = "summarize the run",
+    model: str = "llama-3.3-70b",
+    provider: str = "local",
+) -> LLMChatRequest:
     return LLMChatRequest(
         system=LLMSystemPrompt(blocks=(LLMContentBlock(text="you are a helper"),)),
         user_message=LLMContentBlock(text=user_text),
         structured_output_schema={"type": "object"},
-        model_ref=ModelRef(provider="local", model=model),
+        model_ref=ModelRef(provider=provider, model=model),
     )
 
 
@@ -143,3 +148,32 @@ async def test_two_overlapping_calls_are_occupancy_shared() -> None:
     # A: [0,10] shared with B -> 5.0 ; B: [0,10] shared (5.0) + [10,20] solo (10.0) -> 15.0
     assert seconds == [pytest.approx(5.0), pytest.approx(15.0)]
     assert sum(seconds) == pytest.approx(20.0)  # == the device's busy wall-time
+
+
+@pytest.mark.unit
+async def test_chat_rejects_a_model_ref_priced_as_another_provider() -> None:
+    """Mirrors AnthropicLLM's guard: a request declaring a different
+    provider than this adapter serves must be refused before the
+    backend, or GPU serving time, is ever touched."""
+    clock = FakeMonotonicClock()
+    backend = StubLocalBackend(clock, [StubCompletion(_ok_completion(), gpu_seconds=1.0)])
+    measures: list[GpuUsageRecord] = []
+    adapter = LocalLLM(backend=backend, monotonic_clock=clock, on_measure=measures.append)
+
+    with pytest.raises(LLMInvalidRequestError) as excinfo:
+        await adapter.chat(_request(provider="anthropic"))
+
+    assert "anthropic" in str(excinfo.value)
+    assert "local" in str(excinfo.value)
+    assert measures == []
+
+
+@pytest.mark.unit
+async def test_chat_accepts_a_matching_provider() -> None:
+    clock = FakeMonotonicClock()
+    backend = StubLocalBackend(clock, [StubCompletion(_ok_completion(), gpu_seconds=1.0)])
+    adapter = LocalLLM(backend=backend, monotonic_clock=clock)
+
+    response = await adapter.chat(_request(provider="local"))
+
+    assert response.parsed == {"summary": "ok"}

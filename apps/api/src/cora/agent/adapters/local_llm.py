@@ -36,6 +36,18 @@ server produces it via guided decoding / JSON-schema mode; the backend
 returns `parsed=None` when it could not, and the adapter raises
 `LLMSchemaValidationError` (the outer retry layer then defers), the same
 contract `AnthropicLLM` presents from forced tool-use.
+
+## Provider guard
+
+`chat` refuses a request whose `model_ref.provider` is not `"local"`,
+mirroring `AnthropicLLM`'s guard: cost resolves from the Agent's
+declared `(provider, model)` while the serving route comes from
+`LLM_PROVIDER` configuration, so a mismatched pair would silently
+misattribute spend between the bought and built arms this adapter
+exists to compare. Unlike `AnthropicLLM`, the provider name here is a
+fixed constant rather than an injected constructor argument: no
+gateway composes `LocalLLM` the way `ArgoLLM` composes `AnthropicLLM`,
+so there is nothing yet that would need to override it.
 """
 
 from __future__ import annotations
@@ -45,6 +57,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from cora.infrastructure.observability.gpu_accounting import OccupancyShareMeter
 from cora.infrastructure.ports.llm import (
+    LLMInvalidRequestError,
     LLMResponse,
     LLMSchemaValidationError,
     LLMServerError,
@@ -56,6 +69,12 @@ if TYPE_CHECKING:
 
     from cora.infrastructure.ports.clock import FakeMonotonicClock, MonotonicClock
     from cora.infrastructure.ports.llm import LLMChatRequest, LLMUsage
+
+# This adapter's own provider identity. Fixed rather than injected
+# (contrast AnthropicLLM's `provider_name` constructor argument, which
+# ArgoLLM overrides): no facility gateway composes LocalLLM today, so
+# there is no second identity to select between.
+_PROVIDER_NAME = "local"
 
 
 @dataclass(frozen=True)
@@ -124,6 +143,17 @@ class LocalLLM:
         self._call_seq = 0
 
     async def chat(self, request: LLMChatRequest) -> LLMResponse:
+        if request.model_ref.provider != _PROVIDER_NAME:
+            msg = (
+                f"model_ref names provider {request.model_ref.provider!r} but this "
+                f"adapter serves {_PROVIDER_NAME!r}. Cost resolves from the "
+                "model_ref while the serving route comes from configuration, so a "
+                "call served by one and priced as the other misattributes spend "
+                "with nothing to show for it. Price the catalog entry as "
+                f"{_PROVIDER_NAME!r}, or select the adapter that matches it."
+            )
+            raise LLMInvalidRequestError(msg)
+
         self._call_seq += 1
         call_id = f"local-{self._call_seq}"
         model = request.model_ref.model
