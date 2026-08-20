@@ -36,6 +36,11 @@ subscriber before the worker starts, creating any missing row
 idempotently. Without it a reaction's first advance raises
 `MissingBookmarkError` forever inside the worker's backoff loop and the
 reaction never fires.
+
+A reaction's new row starts at the current head rather than at zero, so
+enabling one is a go-live and not a replay of everything that already
+happened. See `ensure_bookmarks` for why the two kinds differ and why
+head is a transaction-id watermark rather than a max position.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -86,6 +91,14 @@ INSERT INTO projection_bookmarks (name)
 VALUES ($1)
 ON CONFLICT (name) DO NOTHING
 """
+
+_ENSURE_REACTION_BOOKMARK_SQL = """
+INSERT INTO projection_bookmarks (name, last_transaction_id, last_position)
+VALUES ($1, pg_snapshot_xmin(pg_current_snapshot()), 0)
+ON CONFLICT (name) DO NOTHING
+"""
+
+_PROJECTION_NAME_PREFIX = "proj_"
 
 
 class MissingBookmarkError(Exception):
@@ -166,7 +179,12 @@ async def write_bookmark_failure(
         await conn.execute(_WRITE_BOOKMARK_FAILURE_SQL, name, truncated)
 
 
-async def ensure_bookmarks(pool: asyncpg.Pool, names: frozenset[str]) -> None:
+async def ensure_bookmarks(
+    pool: asyncpg.Pool,
+    names: frozenset[str],
+    *,
+    reactions_at_head: bool = True,
+) -> None:
     """Idempotently create a bookmark row for each given subscriber name.
 
     Called once at worker startup for every registered subscriber. For a
@@ -175,10 +193,52 @@ async def ensure_bookmarks(pool: asyncpg.Pool, names: frozenset[str]) -> None:
     this creates the otherwise-missing row so its first advance can read a cursor
     instead of raising `MissingBookmarkError` forever. Ordered by name for a
     deterministic write sequence.
+
+    A reaction's new row starts at the CURRENT HEAD, not at zero, and the
+    difference is the whole point of this function having two branches.
+
+    A projection must see all history: its `proj_*` table is a fold of the
+    entire stream, so starting anywhere but zero yields a read model missing
+    everything before it. A reaction must not. It has side effects in the
+    world, so replaying history means re-performing it: buying LLM calls,
+    writing Decisions, calling out. Enabling a reaction on an existing
+    deployment would otherwise be a silent backfill rather than a
+    go-live. Measured on 2-BM's pilot record, turning the LLM subscribers
+    on for the first time would have fired them at 674 already-finished
+    Runs before they saw a single new one, and appended every verdict to a
+    record that cannot be edited.
+
+    The two kinds are structurally identical Protocols, so the discriminator
+    is the registered name: a projection is named `proj_<table>` (pinned by
+    `test_projection_table_match` and `test_projection_table_bc_prefix`),
+    a reaction is not.
+
+    HEAD is `pg_snapshot_xmin(pg_current_snapshot())` with position 0, the
+    same watermark the record exporter takes, and NOT `max(position)`.
+    Positions come from a sequence that advances on rolled-back
+    transactions and does not order commits, so a bookmark set past a
+    transaction still in flight would skip its events forever once it
+    committed. Seeding at xmin instead errs the other way: a handful of
+    events mid-commit at seed time may be delivered. That is the safe
+    direction, because reactions are already at-least-once and idempotent
+    by construction (deterministic UUIDv5 stream ids, `expected_version=0`,
+    `ConcurrencyError` treated as a no-op), while a skipped event is
+    silently gone.
+
+    Replaying history on purpose stays a separate operator gesture, and
+    `reactions_at_head=False` is the seam it will use: it seeds a reaction
+    at the origin so the worker walks the whole stream. Callers pass it
+    only when replaying is the intent, never to make a test convenient,
+    because the two are indistinguishable afterwards. This function exists
+    to keep the replay from happening by accident.
     """
     async with pool.acquire() as conn:
         for name in sorted(names):
-            await conn.execute(_ENSURE_BOOKMARK_SQL, name)
+            at_origin = name.startswith(_PROJECTION_NAME_PREFIX) or not reactions_at_head
+            if at_origin:
+                await conn.execute(_ENSURE_BOOKMARK_SQL, name)
+            else:
+                await conn.execute(_ENSURE_REACTION_BOOKMARK_SQL, name)
 
 
 __all__ = [

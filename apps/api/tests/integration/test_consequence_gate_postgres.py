@@ -141,12 +141,18 @@ async def _drain(db_pool: asyncpg.Pool, deps: Kernel) -> None:
     coverage projection's row comes from its migration, the two subscribers' rows
     from ensure_bookmarks. The bare `drain_projections` helper does not seed (only
     the lifespan does), so the test invokes the seam explicitly.
+
+    `reactions_at_head=False` because the events under test were appended
+    BEFORE this seeding runs, so the reactions must walk from the origin to
+    see them. In production the ordering is the other way round and a
+    reaction seeded at head is what stops enabling one from replaying the
+    whole record.
     """
     registry = ProjectionRegistry()
     registry.register(RatificationCoverageProjection())
     registry.register(make_ratification_hold_subscriber(deps))
     registry.register(make_ratification_release_subscriber(deps))
-    await ensure_bookmarks(db_pool, registry.names())
+    await ensure_bookmarks(db_pool, registry.names(), reactions_at_head=False)
     await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
