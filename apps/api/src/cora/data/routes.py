@@ -99,6 +99,7 @@ from cora.data.aggregates.distribution import (
     DistributionCannotDiscardError,
     DistributionCannotDiscardLastVerifiedError,
     DistributionCannotDiscardUnderDiscardedDatasetError,
+    DistributionCannotMarkStaleError,
     DistributionCannotRegisterOnDiscardedDatasetError,
     DistributionCannotRegisterOnNonStorageSupplyError,
     DistributionChecksumAlgorithmMismatchError,
@@ -110,6 +111,7 @@ from cora.data.aggregates.distribution import (
     InvalidDistributionChecksumError,
     InvalidDistributionDiscardReasonError,
     InvalidDistributionEncodingError,
+    InvalidDistributionMarkStaleReasonError,
     InvalidDistributionUriError,
     UnmappedDistributionUriSchemeError,
 )
@@ -151,6 +153,7 @@ from cora.data.features import (
     get_dataset,
     ingest_scan,
     list_datasets,
+    mark_distribution_stale,
     promote_dataset,
     publish_edition,
     record_acquisition,
@@ -270,6 +273,7 @@ def register_data_routes(app: FastAPI) -> None:
     app.include_router(ingest_scan.router)
     app.include_router(register_distribution.router)
     app.include_router(discard_distribution.router)
+    app.include_router(mark_distribution_stale.router)
     app.include_router(register_edition.router)
     app.include_router(add_dataset_to_edition.router)
     app.include_router(remove_dataset_from_edition.router)
@@ -309,6 +313,8 @@ def register_data_routes(app: FastAPI) -> None:
         DefaultStorageSupplyBootstrapError,
         # discard_distribution validation guard: free-form reason length check.
         InvalidDistributionDiscardReasonError,
+        # mark_distribution_stale validation guard: free-form reason length check.
+        InvalidDistributionMarkStaleReasonError,
         # Edition VO validation: title, kind, license, year, withdrawal
         # reason, creators (cardinality + duplicate detection +
         # affiliation length), empty-dataset-ids-at-registration. All
@@ -415,6 +421,10 @@ def register_data_routes(app: FastAPI) -> None:
         DistributionCannotDiscardError,
         DistributionCannotDiscardLastVerifiedError,
         DistributionCannotDiscardUnderDiscardedDatasetError,
+        # mark_distribution_stale guard: the only refusal is a target already
+        # Discarded (terminal). No redundancy guard, no parent-Dataset guard;
+        # marking an already-Stale copy stale again is accepted, not a 409.
+        DistributionCannotMarkStaleError,
         # Edition mutation / transition guards. All 409 with
         # `{"detail": str(exc)}`. Covers add / remove state guards,
         # state-FSM transition guards, license-required-for-kind,

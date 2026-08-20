@@ -11,9 +11,15 @@ state and event types. Slice-local cross-aggregate context VO:
 Per [[project-data-distribution-design]] L7 + territory L7:
 ``Distribution.status`` flips to ``Verified`` / ``Stale`` via the
 Distribution projection writer subscribing to ``AttestationRecorded``
-events (the Attestation projection-writer extension), NOT via Distribution-stream events.
-The Verified/Stale lifecycle is therefore expressed as ``DistributionStatus``
-StrEnum values that ship day-one but are reachable only via projection
+events (the Attestation projection-writer extension); this stays
+projection-only, with no Distribution-stream event, for BOTH the
+Verified flip and the Stale-via-checksum-mismatch flip. The
+mark_distribution_stale slice adds a SECOND, independent path to Stale:
+a ``DistributionMarkedStale`` Distribution-stream event for facts an
+operator asserts directly (a storage failure, not a checksum probe),
+with no redundancy guard or parent-Dataset guard (see
+``cora.data.features.mark_distribution_stale`` for the guarded
+primitive). The Verified lifecycle stays reachable only via projection
 denormalization today.
 """
 
@@ -24,6 +30,7 @@ from cora.data.aggregates.distribution._backfill_errors import (
 from cora.data.aggregates.distribution.events import (
     DistributionDiscarded,
     DistributionEvent,
+    DistributionMarkedStale,
     DistributionRegistered,
     event_type_name,
     from_stored,
@@ -42,11 +49,13 @@ from cora.data.aggregates.distribution.state import (
     DistributionCannotDiscardError,
     DistributionCannotDiscardLastVerifiedError,
     DistributionCannotDiscardUnderDiscardedDatasetError,
+    DistributionCannotMarkStaleError,
     DistributionCannotRegisterOnDiscardedDatasetError,
     DistributionCannotRegisterOnNonStorageSupplyError,
     DistributionChecksumAlgorithmMismatchError,
     DistributionChecksumMismatchError,
     DistributionDiscardReason,
+    DistributionMarkStaleReason,
     DistributionNotFoundError,
     DistributionStatus,
     DistributionSupplyNotFoundError,
@@ -56,7 +65,9 @@ from cora.data.aggregates.distribution.state import (
     InvalidDistributionChecksumError,
     InvalidDistributionDiscardReasonError,
     InvalidDistributionEncodingError,
+    InvalidDistributionMarkStaleReasonError,
     InvalidDistributionUriError,
+    TriggerSource,
     UnmappedDistributionUriSchemeError,
     validate_distribution_byte_size,
 )
@@ -74,6 +85,7 @@ __all__ = [
     "DistributionCannotDiscardError",
     "DistributionCannotDiscardLastVerifiedError",
     "DistributionCannotDiscardUnderDiscardedDatasetError",
+    "DistributionCannotMarkStaleError",
     "DistributionCannotRegisterOnDiscardedDatasetError",
     "DistributionCannotRegisterOnNonStorageSupplyError",
     "DistributionChecksumAlgorithmMismatchError",
@@ -81,6 +93,8 @@ __all__ = [
     "DistributionDiscardReason",
     "DistributionDiscarded",
     "DistributionEvent",
+    "DistributionMarkStaleReason",
+    "DistributionMarkedStale",
     "DistributionNotFoundError",
     "DistributionRegistered",
     "DistributionStatus",
@@ -91,7 +105,9 @@ __all__ = [
     "InvalidDistributionChecksumError",
     "InvalidDistributionDiscardReasonError",
     "InvalidDistributionEncodingError",
+    "InvalidDistributionMarkStaleReasonError",
     "InvalidDistributionUriError",
+    "TriggerSource",
     "UnmappedDistributionUriSchemeError",
     "event_type_name",
     "evolve",

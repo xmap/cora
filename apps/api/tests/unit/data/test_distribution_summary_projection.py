@@ -58,15 +58,22 @@ def _registered_payload() -> dict[str, Any]:
 
 @pytest.mark.unit
 def test_projection_metadata() -> None:
-    """Subscribed to three event types: DistributionRegistered for the
+    """Subscribed to four event types: DistributionRegistered for the
     genesis INSERT, AttestationRecorded for the projection-side
     Verified/Stale status flip (per project-data-attestation-design
-    Slice C), and DistributionDiscarded for the terminal Discard flip
-    (the discard_distribution slice's guarded primitive)."""
+    Slice C), DistributionMarkedStale for the SECOND independent path to
+    Stale (the mark_distribution_stale slice's guarded primitive), and
+    DistributionDiscarded for the terminal Discard flip (the
+    discard_distribution slice's guarded primitive)."""
     proj = DistributionSummaryProjection()
     assert proj.name == "proj_data_distribution_summary"
     assert proj.subscribed_event_types == frozenset(
-        {"DistributionRegistered", "AttestationRecorded", "DistributionDiscarded"}
+        {
+            "DistributionRegistered",
+            "AttestationRecorded",
+            "DistributionMarkedStale",
+            "DistributionDiscarded",
+        }
     )
 
 
@@ -128,17 +135,18 @@ async def test_unknown_event_type_falls_through() -> None:
 
 
 @pytest.mark.unit
-def test_subscribed_event_types_carries_genesis_attestation_and_discard() -> None:
+def test_subscribed_event_types_carries_genesis_attestation_mark_stale_and_discard() -> None:
     """Shape pin: genesis + AttestationRecorded (Verified/Stale flip) +
+    DistributionMarkedStale (the second, independent Stale path) +
     DistributionDiscarded (terminal Discard flip) are subscribed. The
-    Verified / MarkedStale STREAM events are NOT subscribed (the
-    Verified/Stale flip stays projection-only via AttestationRecorded)."""
+    Verified STREAM event is NOT subscribed (the Verified flip stays
+    projection-only via AttestationRecorded)."""
     proj = DistributionSummaryProjection()
     assert "AttestationRecorded" in proj.subscribed_event_types
     assert "DistributionRegistered" in proj.subscribed_event_types
+    assert "DistributionMarkedStale" in proj.subscribed_event_types
     assert "DistributionDiscarded" in proj.subscribed_event_types
     assert "DistributionVerified" not in proj.subscribed_event_types
-    assert "DistributionMarkedStale" not in proj.subscribed_event_types
 
 
 # ---------- DistributionDiscarded subscription (discard_distribution slice) ----------
@@ -179,6 +187,49 @@ async def test_distribution_discarded_rowcount_zero_logs_warning_does_not_raise(
     conn = AsyncMock()
     conn.execute.return_value = "UPDATE 0"
     event = _stored("DistributionDiscarded", _discarded_payload())
+    await proj.apply(event, conn)
+    conn.execute.assert_awaited()
+
+
+# ---------- DistributionMarkedStale subscription (mark_distribution_stale slice) ----------
+
+
+def _marked_stale_payload() -> dict[str, Any]:
+    return {
+        "distribution_id": str(_DISTRIBUTION_ID),
+        "reason": "storage array declared dead by operations",
+        "occurred_at": _NOW.isoformat(),
+        "marked_stale_by": str(_REGISTERED_BY),
+    }
+
+
+@pytest.mark.unit
+async def test_distribution_marked_stale_updates_status_to_stale() -> None:
+    proj = DistributionSummaryProjection()
+    conn = AsyncMock()
+    conn.execute.return_value = "UPDATE 1"
+    event = _stored("DistributionMarkedStale", _marked_stale_payload())
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "UPDATE proj_data_distribution_summary" in sql
+    # Reuses the same guarded UPDATE as the AttestationRecorded flip: a
+    # Discarded row must never be resurrected to Stale by either path.
+    assert "status != 'Discarded'" in sql
+    assert args.args[1] == "Stale"
+    assert args.args[2] == _DISTRIBUTION_ID
+
+
+@pytest.mark.unit
+async def test_distribution_marked_stale_rowcount_zero_logs_warning_does_not_raise() -> None:
+    """When the target row is missing (projection lag) or already
+    Discarded (guard fired), the writer must NOT raise; bookmark
+    advances and next tick recovers."""
+    proj = DistributionSummaryProjection()
+    conn = AsyncMock()
+    conn.execute.return_value = "UPDATE 0"
+    event = _stored("DistributionMarkedStale", _marked_stale_payload())
     await proj.apply(event, conn)
     conn.execute.assert_awaited()
 

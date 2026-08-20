@@ -820,6 +820,13 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "occurred_at": "keep:time",
         "reason": "drop:text",
     },
+    "DistributionMarkedStale": {
+        "distribution_id": "token:uuid",
+        "marked_stale_by": "token:uuid",
+        "occurred_at": "keep:time",
+        "reason": "drop:text",
+        "trigger": "drop:text",
+    },
     "DistributionRegistered": {
         "access_protocol": "keep:enum:AccessProtocol",
         "byte_size": "keep:number",

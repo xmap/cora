@@ -8754,6 +8754,23 @@
         "title": "ManufacturerResponse",
         "type": "object"
       },
+      "MarkDistributionStaleRequest": {
+        "description": "Body for `POST /distributions/{distribution_id}/mark-stale`.",
+        "properties": {
+          "reason": {
+            "description": "Free-form reason the bytes at this location are no longer trusted (1-500 chars after trimming). Today the field is unstructured; structured taxonomy is future-additive on the same triggers as the Dataset discard reason.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "MarkDistributionStaleRequest",
+        "type": "object"
+      },
       "MarkSupplyAvailableRequest": {
         "description": "Body for `POST /supplies/{supply_id}/mark-available`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining the first-observation declaration. Examples:\n\"operator walkdown confirms LN2 dewar pressure nominal\", \"control\nroom reports beam delivered after morning startup\", \"first-time\ncommissioning verified by ops\".",
         "properties": {
@@ -29861,6 +29878,106 @@
           }
         },
         "summary": "Discard a Distribution copy (any status -> Discarded)",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/distributions/{distribution_id}/mark-stale": {
+      "post": {
+        "operationId": "post_distributions_mark_stale_distributions__distribution_id__mark_stale_post",
+        "parameters": [
+          {
+            "description": "Target distribution's id.",
+            "in": "path",
+            "name": "distribution_id",
+            "required": true,
+            "schema": {
+              "description": "Target distribution's id.",
+              "format": "uuid",
+              "title": "Distribution Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkDistributionStaleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated: whitespace-only reason."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No distribution exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Mark-stale guard violated: the copy is already Discarded (Discarded is terminal); OR a concurrent write to the same Distribution stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Mark a Distribution copy Stale (record its bytes are no longer trusted)",
         "tags": [
           "data"
         ]

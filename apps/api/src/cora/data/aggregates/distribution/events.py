@@ -4,11 +4,19 @@ Mirrors the locked event-module shape: event classes, discriminated union,
 ``event_type_name``, ``to_payload``, ``from_stored``. The persistence-envelope
 construction (``NewEvent``) lives at ``cora.infrastructure.event_envelope.to_new_event``.
 
-## This module ships two events today
+## This module ships three events today
 
   - ``DistributionRegistered`` (genesis): identity + same-BC ref + cross-BC ref +
     integrity + size + encoding + transport + attribution. The status is implicit
     (``Registered``); the evolver sets it.
+  - ``DistributionMarkedStale`` (transition, non-terminal): records that the
+    bytes for this copy are known to be gone or no longer trusted (a storage
+    failure, a checksum mismatch found out-of-band, or any other grounds an
+    operator has). Unlike ``DistributionDiscarded``, this RECORDS A FACT ABOUT
+    THE WORLD rather than a deliberate act CORA is entitled to refuse; the
+    mark_distribution_stale decider's only guard is structural (the target
+    must exist and must not already be Discarded). The status is implicit
+    (``Stale``); the evolver sets it.
   - ``DistributionDiscarded`` (transition, terminal): the metadata-only
     reclaim-decision record. Bytes are reclaimed out-of-band (same shape as
     ``DatasetDiscarded``); this event keeps the reclaim reason + attribution
@@ -19,13 +27,15 @@ construction (``NewEvent``) lives at ``cora.infrastructure.event_envelope.to_new
 Per [[project-data-distribution-design]] L18:
 
   - ``DistributionVerified`` (Registered/Verified -> Verified)
-  - ``DistributionMarkedStale`` ({Registered, Verified} -> Stale, per L23/L4 +
-    operationally relaxed source-state set after gate review)
 
-These will land additively in follow-on slices. The discriminated union and
-``from_stored`` switch land their cases at that time. The Verified/Stale flip
-stays projection-only today (per state.py "Verified/Stale flip is a projection")
-and is NOT retro-converted to stream events by this slice.
+This will land additively in a follow-on slice. The discriminated union and
+``from_stored`` switch land its case at that time. The Verified flip stays
+projection-only today (per state.py "Verified/Stale flip is a projection")
+and is NOT retro-converted to a stream event by this slice. The Stale flip
+now has BOTH a projection-only path (AttestationRecorded Mismatch, unchanged)
+AND a Distribution-stream event (``DistributionMarkedStale``, this slice); see
+``cora.data.projections.distribution_summary`` for how the two independently
+reach the same read-model status.
 
 ## Payload conventions
 
@@ -106,6 +116,47 @@ class DistributionRegistered:
 
 
 @dataclass(frozen=True)
+class DistributionMarkedStale:
+    """A Distribution copy's bytes are known to be gone or no longer trusted.
+
+    Non-terminal transition (any non-Discarded status -> Stale). Unlike
+    ``DistributionDiscarded``, this event RECORDS A FACT ABOUT THE WORLD
+    THAT ALREADY HAPPENED (a storage array failure, a bit-rot finding, or
+    any other grounds an operator has to no longer trust this copy's
+    bytes); it is not a deliberate act CORA is entitled to refuse. The
+    only guard enforced upstream in the decider is structural: the target
+    must exist and must not already be Discarded (terminal). There is no
+    redundancy guard and no parent-Dataset guard. ``reason`` is a
+    free-form string (1-500 chars after trimming), captured verbatim.
+
+    ``trigger`` is the locked 3-value ``TriggerSource`` vocabulary,
+    serialized as its bare ``.value`` string (Supply's identical
+    treatment, not this module's typed-enum ``access_protocol``
+    carve-out): it names WHAT concluded this copy is stale, which
+    ``reason`` alone cannot, since an operator's storage-failure report
+    and a sweep's re-probe both produce free text. Only ``Operator`` is
+    emitted today; the decider hardcodes it rather than accepting it
+    from the caller, so a principal cannot claim its assertion came
+    from a monitor.
+
+    Fold-symmetry attribution per [[project-fold-symmetry-design]]:
+    ``marked_stale_by: ActorId`` carries the envelope ``principal_id`` of
+    the mark_distribution_stale-slice caller. There is deliberately NO
+    trigger-to-identity pairing check of the kind Supply's events run:
+    Supply pairs three trigger values against three distinct identity
+    NewTypes, whereas this event's attribution is ``ActorId`` for every
+    value the slice can emit, so the check would compare a constant
+    against a constant.
+    """
+
+    distribution_id: UUID
+    reason: str
+    trigger: str
+    occurred_at: datetime
+    marked_stale_by: ActorId
+
+
+@dataclass(frozen=True)
 class DistributionDiscarded:
     """A Distribution copy was discarded (any prior status -> Discarded terminal).
 
@@ -133,9 +184,10 @@ class DistributionDiscarded:
 
 
 #: Discriminated union over Distribution events. ``DistributionRegistered``
-#: is the genesis arm; ``DistributionDiscarded`` is the terminal transition.
-#: Future slices extend additively (Verified / MarkedStale).
-DistributionEvent = DistributionRegistered | DistributionDiscarded
+#: is the genesis arm; ``DistributionMarkedStale`` is a non-terminal
+#: transition; ``DistributionDiscarded`` is the terminal transition.
+#: Future slices extend additively (Verified).
+DistributionEvent = DistributionRegistered | DistributionMarkedStale | DistributionDiscarded
 
 
 def event_type_name(event: DistributionEvent) -> str:
@@ -180,6 +232,20 @@ def to_payload(event: DistributionEvent) -> dict[str, Any]:
                 "access_protocol": access_protocol.value,
                 "occurred_at": occurred_at.isoformat(),
                 "registered_by": str(registered_by),
+            }
+        case DistributionMarkedStale(
+            distribution_id=distribution_id,
+            reason=reason,
+            trigger=trigger,
+            occurred_at=occurred_at,
+            marked_stale_by=marked_stale_by,
+        ):
+            return {
+                "distribution_id": str(distribution_id),
+                "reason": reason,
+                "trigger": trigger,
+                "occurred_at": occurred_at.isoformat(),
+                "marked_stale_by": str(marked_stale_by),
             }
         case DistributionDiscarded(
             distribution_id=distribution_id,
@@ -236,6 +302,17 @@ def from_stored(stored: StoredEvent) -> DistributionEvent:
             return deserialize_or_raise(
                 "DistributionRegistered", _build_registered, extra=(ValueError,)
             )
+        case "DistributionMarkedStale":
+            return deserialize_or_raise(
+                "DistributionMarkedStale",
+                lambda: DistributionMarkedStale(
+                    distribution_id=UUID(payload["distribution_id"]),
+                    reason=payload["reason"],
+                    trigger=payload["trigger"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    marked_stale_by=ActorId(UUID(payload["marked_stale_by"])),
+                ),
+            )
         case "DistributionDiscarded":
             return deserialize_or_raise(
                 "DistributionDiscarded",
@@ -254,6 +331,7 @@ def from_stored(stored: StoredEvent) -> DistributionEvent:
 __all__ = [
     "DistributionDiscarded",
     "DistributionEvent",
+    "DistributionMarkedStale",
     "DistributionRegistered",
     "event_type_name",
     "from_stored",
