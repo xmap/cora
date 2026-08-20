@@ -101,12 +101,16 @@ def extract_capture_progress(event: StoredEvent) -> dict[str, int] | None:
     deliberately exposes no `all_counts_matched`, precisely to refuse
     that verdict.
 
-    Measured on 2-BM's record 2026-08-19, the distinction is not
-    hypothetical: across 609 completions, those showing a shortfall had
-    a mean reading lag of 70 s against 12 s for those showing none, and
-    the shortfall tracked the lag. Handing a model the counts without
-    the lag would invite it to report data loss from what looks like a
-    telemetry stall.
+    On the pilot's record, completions showing a shortfall carried a
+    mean reading lag of 70 s against 12 s for those showing none. That
+    correlation invited the reading that telemetry had gone quiet while
+    acquisition continued, and an earlier version of this docstring said
+    so. Counting frames in the files refuted it: the affected scans were
+    short on disk by exactly what the counter reported, and the lag runs
+    the other way, since a scan that skips half its flat collection
+    finishes that phase early and leaves a longer gap before the
+    terminal. The lag travels with the tallies as context for a reader,
+    never as grounds to discount a shortfall.
 
     The VO's docstring names this comparison as the one a reader should
     make, so computing it here is sanctioned; what stays refused is
