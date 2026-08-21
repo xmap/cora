@@ -258,7 +258,7 @@
 | src/cora/api/\_distribution\_materializer.py                                             |       40 |        2 |        6 |        1 |     93.5% |   188-191 |
 | src/cora/api/\_edge\_conductor.py                                                        |       85 |        7 |        6 |        1 |     91.2% |161-164, 315, 317, 323 |
 | src/cora/api/\_enclosure\_permit\_observer.py                                            |       91 |        2 |       26 |        1 |     95.7% |   204-205 |
-| src/cora/api/\_experiment\_steerer.py                                                    |      106 |        2 |       32 |        3 |     96.4% |394-\>398, 443-\>453, 465-466 |
+| src/cora/api/\_experiment\_steerer.py                                                    |      106 |        2 |       32 |        3 |     96.4% |416-\>420, 465-\>475, 487-488 |
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_procedure\_watcher.py                                                     |       78 |        0 |       22 |        0 |    100.0% |           |
@@ -1617,7 +1617,7 @@
 | src/cora/operation/adapters/in\_memory\_decide\_port.py                                  |       16 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/operation/adapters/in\_memory\_recipe\_expander.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/adapters/in\_memory\_transfer\_port.py                                |       50 |        1 |       10 |        1 |     96.7% |       127 |
-| src/cora/operation/adapters/llm\_decide\_port.py                                         |       68 |        0 |       12 |        0 |    100.0% |           |
+| src/cora/operation/adapters/llm\_decide\_port.py                                         |       71 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/operation/adapters/local\_process\_compute\_port.py                             |       93 |       12 |       26 |        5 |     85.7% |162-163, 190, 197, 216-217, 267-270, 277, 294 |
 | src/cora/operation/adapters/postgres\_procedure\_activity\_lookup.py                     |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/adapters/postgres\_procedure\_outcome\_lookup.py                      |       11 |        0 |        0 |        0 |    100.0% |           |
@@ -1760,7 +1760,7 @@
 | src/cora/operation/ports/compute\_port.py                                                |       80 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/control\_address.py                                             |       50 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/operation/ports/control\_port.py                                                |       54 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/ports/decide\_port.py                                                 |       82 |        2 |       12 |        0 |     97.9% |   280-281 |
+| src/cora/operation/ports/decide\_port.py                                                 |       91 |        2 |       12 |        0 |     98.1% |   280-281 |
 | src/cora/operation/ports/measurement.py                                                  |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/procedure\_activity\_lookup.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/procedure\_outcome\_lookup.py                                   |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -2675,7 +2675,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59789** | **1365** | **8968** |  **405** | **97.2%** |           |
+| **TOTAL**                                                                                | **59801** | **1365** | **8968** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
