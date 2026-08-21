@@ -46,6 +46,8 @@ def _row(**overrides: object) -> Inference:
         "finish_reasons": (),
         "input_tokens": None,
         "output_tokens": None,
+        "cache_creation_input_tokens": None,
+        "cache_read_input_tokens": None,
         "cost_usd": None,
         "agent_id": None,
         "agent_name": None,
@@ -80,6 +82,8 @@ def test_decision_reasoning_optional_fields_default_none() -> None:
     assert row.response_model is None
     assert row.input_tokens is None
     assert row.output_tokens is None
+    assert row.cache_creation_input_tokens is None
+    assert row.cache_read_input_tokens is None
     assert row.tool_name is None
     assert row.agent_id is None
     assert row.messages is None

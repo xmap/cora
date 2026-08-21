@@ -1431,6 +1431,22 @@ _CANNED_PROPOSE_WITH_USAGE = FakeLLMResponse(
     tool_name="cora_structured_output",
 )
 
+# Separate from _CANNED_PROPOSE_WITH_USAGE (rather than adding cache
+# tokens to it) because compute_cost_usd prices cache-read/cache-write
+# tokens differently than plain input, which would perturb that
+# fixture's pinned cost_usd assertion for an unrelated test.
+_CANNED_PROPOSE_WITH_CACHE_USAGE = FakeLLMResponse(
+    parsed=_CANNED_PROPOSE_CAUTION.parsed,
+    usage=LLMUsage(
+        input_tokens=2048,
+        output_tokens=320,
+        cache_creation_input_tokens=96,
+        cache_read_input_tokens=768,
+    ),
+    stop_reason="tool_use",
+    model_id="claude-sonnet-4-6-20260201",
+)
+
 
 @pytest.mark.unit
 async def test_apply_records_inference_on_proposal() -> None:
@@ -1477,6 +1493,30 @@ async def test_apply_records_inference_on_proposal() -> None:
     assert call.trace.tool_type == "function"
     assert isinstance(call.trace.duration, int)
     assert call.trace.duration >= 0
+
+
+@pytest.mark.unit
+async def test_apply_records_cache_tokens_from_response_usage() -> None:
+    """Provider-side prompt caching changes what a call costs without
+    changing input_tokens/output_tokens; the cache columns are what makes
+    that visible on the record (see
+    [[project-inference-duration-unwritten]])."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_PROPOSE_WITH_CACHE_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunAborted", run_id=run_id, reason="encoder offline")
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    trace = recorder.calls[0].trace
+    assert trace.cache_creation_input_tokens == 96
+    assert trace.cache_read_input_tokens == 768
 
 
 @pytest.mark.unit

@@ -130,6 +130,12 @@ class Inference:
     # --- OTel gen_ai.* token usage (NOT deprecated prompt/completion_tokens) ---
     input_tokens: int | None  # gen_ai.usage.input_tokens
     output_tokens: int | None  # gen_ai.usage.output_tokens
+    # Provider-side prompt caching changes what a call COSTS and what its
+    # token counts REPORT without changing input_tokens/output_tokens
+    # above; these two are what makes that visible instead of merely
+    # correct. NULL means the provider reported nothing, not zero spend.
+    cache_creation_input_tokens: int | None  # gen_ai.usage.cache_creation_input_tokens
+    cache_read_input_tokens: int | None  # gen_ai.usage.cache_read_input_tokens
     # --- CORA cost (custom; no OTel attribute exists for call cost) ---
     cost_usd: float | None  # mirrors the cora.agent.llm.cost.usd histogram
     # --- OTel gen_ai.* agent context ---
@@ -175,6 +181,12 @@ INFERENCE_LOGBOOK_SCHEMA: LogbookSchema = LogbookSchema(
         "input_tokens": LogbookFieldSpec(type="int", description="OTel gen_ai.usage.input_tokens"),
         "output_tokens": LogbookFieldSpec(
             type="int", description="OTel gen_ai.usage.output_tokens"
+        ),
+        "cache_creation_input_tokens": LogbookFieldSpec(
+            type="int", description="OTel gen_ai.usage.cache_creation_input_tokens"
+        ),
+        "cache_read_input_tokens": LogbookFieldSpec(
+            type="int", description="OTel gen_ai.usage.cache_read_input_tokens"
         ),
         "cost_usd": LogbookFieldSpec(
             type="float",
@@ -241,7 +253,8 @@ INSERT INTO entries_decision_inferences (
     agent_id, agent_name, agent_description, conversation_id,
     tool_name, tool_call_id, tool_type,
     messages,
-    cost_usd
+    cost_usd,
+    cache_creation_input_tokens, cache_read_input_tokens
 ) VALUES (
     $1, $2, $3, $4, $5,
     $6, $7,
@@ -253,7 +266,8 @@ INSERT INTO entries_decision_inferences (
     $20, $21, $22, $23,
     $24, $25, $26,
     $27,
-    $28
+    $28,
+    $29, $30
 )
 ON CONFLICT (event_id) DO NOTHING
 """
@@ -333,6 +347,8 @@ class PostgresInferenceStore:
                         row.tool_type,
                         json.dumps(row.messages) if row.messages is not None else None,
                         row.cost_usd,
+                        row.cache_creation_input_tokens,
+                        row.cache_read_input_tokens,
                     )
                     for row in rows
                 ],

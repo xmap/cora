@@ -81,6 +81,13 @@ class AgentInferenceTrace:
     multi-turn conversation, so no value would be honest. Mirrors how
     `messages` is deliberately never populated (PII gating) rather than being
     a column nobody got around to.
+
+    `cache_creation_input_tokens` / `cache_read_input_tokens` come straight off
+    `LLMResponse.usage`, which already carries both (defaulting to 0 there for
+    a provider that never reports cache stats). Here they stay `None` when the
+    producer has no value, matching every other optional column on this row:
+    `LLMUsage`'s 0-default is an in-memory convenience for arithmetic, not a
+    claim that zero cache tokens were used.
     """
 
     decision_id: UUID
@@ -94,6 +101,8 @@ class AgentInferenceTrace:
     finish_reasons: tuple[str, ...] = field(default_factory=tuple[str, ...])
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cache_creation_input_tokens: int | None = None
+    cache_read_input_tokens: int | None = None
     cost_usd: float | None = None
     request_max_tokens: int | None = None
     request_temperature: float | None = None

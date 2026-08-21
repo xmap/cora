@@ -53,6 +53,8 @@ def _row(
         finish_reasons=(),
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
         cost_usd=cost_usd,
         agent_id=str(agent_id) if agent_id is not None else None,
         agent_name=None,

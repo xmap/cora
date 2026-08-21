@@ -696,6 +696,8 @@ class RunDebrieferSubscriber:
             finish_reasons=(response.stop_reason,) if response.stop_reason else (),
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
+            cache_creation_input_tokens=response.usage.cache_creation_input_tokens,
+            cache_read_input_tokens=response.usage.cache_read_input_tokens,
             cost_usd=compute_cost_usd(request.model_ref, response.usage),
             request_max_tokens=request.max_output_tokens,
             request_temperature=request.temperature,

@@ -740,6 +740,22 @@ _CANNED_OK_WITH_USAGE = FakeLLMResponse(
     tool_name="cora_structured_output",
 )
 
+# Separate from _CANNED_OK_WITH_USAGE (rather than adding cache tokens to
+# it) because compute_cost_usd prices cache-read/cache-write tokens
+# differently than plain input, which would perturb that fixture's
+# pinned cost_usd assertion for an unrelated test.
+_CANNED_OK_WITH_CACHE_USAGE = FakeLLMResponse(
+    parsed=_CANNED_OK.parsed,
+    usage=LLMUsage(
+        input_tokens=1536,
+        output_tokens=240,
+        cache_creation_input_tokens=48,
+        cache_read_input_tokens=384,
+    ),
+    stop_reason="tool_use",
+    model_id="claude-haiku-4-5-20260201",
+)
+
 
 @pytest.mark.unit
 async def test_handler_records_inference_on_success() -> None:
@@ -789,6 +805,36 @@ async def test_handler_records_inference_on_success() -> None:
     assert call.trace.tool_type == "function"
     assert isinstance(call.trace.duration, int)
     assert call.trace.duration >= 0
+
+
+@pytest.mark.unit
+async def test_handler_records_cache_tokens_from_response_usage() -> None:
+    """Provider-side prompt caching changes what a call costs without
+    changing input_tokens/output_tokens; the cache columns are what makes
+    that visible on the record (see
+    [[project-inference-duration-unwritten]])."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_CACHE_USAGE])
+    recorder = FakeInferenceRecorder()
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    deps = replace(
+        build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm),
+        inference_recorder=recorder,
+    )
+    handler = bind(deps)
+
+    await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert len(recorder.calls) == 1
+    trace = recorder.calls[0].trace
+    assert trace.cache_creation_input_tokens == 48
+    assert trace.cache_read_input_tokens == 384
 
 
 @pytest.mark.unit

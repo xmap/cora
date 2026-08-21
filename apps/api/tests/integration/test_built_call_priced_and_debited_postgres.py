@@ -92,6 +92,8 @@ def _inference(*, provider: str, model: str, cost_usd: float) -> Inference:
         finish_reasons=(),
         input_tokens=1_000_000,
         output_tokens=1_000_000,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
         cost_usd=cost_usd,
         agent_id=None,
         agent_name=None,

@@ -67,6 +67,8 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         "finish_reasons": DROP,  # text[]: array of str, drop-unless-cleared
         "input_tokens": KEEP,
         "output_tokens": KEEP,
+        "cache_creation_input_tokens": KEEP,  # token count, same posture as input/output_tokens
+        "cache_read_input_tokens": KEEP,  # token count, same posture as input/output_tokens
         "agent_id": DROP,  # OTel gen_ai.agent.id; correlator, fail closed
         "agent_name": DROP,  # operator-authored free text
         "agent_description": DROP,
