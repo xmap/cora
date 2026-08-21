@@ -54,6 +54,9 @@ from dataclasses import dataclass
 from typing import Any, cast
 from urllib.parse import unquote, urlparse
 
+from cora.shared.path_segment import is_safe_path_segment
+from cora.shared.storage_root import matched_storage_root
+
 _PROBE_MODULE = "cora.data._remote_scan_probe"
 
 
@@ -125,7 +128,65 @@ async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[
     if not _prefix_allowed(raw_path, config.allowed_roots):
         return _refuse("path is outside the configured allowed roots")
 
-    payload = {**request, "allowed_roots": list(config.allowed_roots)}
+    return await _invoke({**request, "allowed_roots": list(config.allowed_roots)}, config=config)
+
+
+async def run_locate_probe(
+    *,
+    root: str,
+    months: tuple[str, ...],
+    directory_suffix: str,
+    filename: str,
+    subdirectory: str | None,
+    config: SshProbeConfig,
+) -> dict[str, Any]:
+    """Run one `locate` request against `config.host`; never raises.
+
+    The odd one out: `locate` carries no `locator_uri`, because its job
+    is to find a path CORA cannot yet name, so `run_probe`'s
+    locator-shaped guard does not apply and this validates the
+    locate-shaped request instead. Both go through the same transport
+    and both fill `allowed_roots` from `config` here rather than from
+    the caller, so the allowlist the client checked is the one the
+    remote enforces.
+
+    Every segment is checked against the same `is_safe_path_segment`
+    rule the remote applies. Checking on both sides is deliberate
+    duplication, not redundancy: the values come from PVs writable by
+    anyone with Channel Access, and the two processes are separately
+    reachable. The remote also caps how many months one request may
+    scan; the client does not duplicate that bound, since it is a
+    resource limit on the side that pays for it.
+    """
+    if matched_storage_root(root, config.allowed_roots) is None:
+        return _refuse("root is outside the configured allowed roots")
+    if not months:
+        return _refuse("no months to search")
+    unsafe = [
+        value for value in (*months, directory_suffix, filename) if not is_safe_path_segment(value)
+    ]
+    if unsafe or (subdirectory is not None and not is_safe_path_segment(subdirectory)):
+        return _refuse("request carries a value that is not one safe path segment")
+
+    payload: dict[str, Any] = {
+        "op": "locate",
+        "root": root,
+        "months": list(months),
+        "directory_suffix": directory_suffix,
+        "filename": filename,
+        "allowed_roots": list(config.allowed_roots),
+    }
+    if subdirectory is not None:
+        payload["subdirectory"] = subdirectory
+    return await _invoke(payload, config=config)
+
+
+async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
+    """Transport only: ssh out, one JSON line in, one JSON line back.
+
+    Shared by both entry points so the timeout handling, the never-raise
+    contract and the response parsing cannot drift apart between them.
+    """
     # `max(1, ...)`: OpenSSH reads `ConnectTimeout=0` as "no timeout
     # configured here, use the default" -- silently removing the bound
     # for a sub-1s config value instead of enforcing a very short one.
@@ -181,4 +242,4 @@ async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[
     return cast("dict[str, Any]", parsed)
 
 
-__all__ = ["SshProbeConfig", "raw_path_from_file_uri", "run_probe"]
+__all__ = ["SshProbeConfig", "raw_path_from_file_uri", "run_locate_probe", "run_probe"]

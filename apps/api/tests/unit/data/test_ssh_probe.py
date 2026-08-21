@@ -16,6 +16,7 @@ import pytest
 from cora.data.adapters._ssh_probe import (
     SshProbeConfig,
     raw_path_from_file_uri,
+    run_locate_probe,
     run_probe,
 )
 
@@ -407,3 +408,116 @@ async def test_run_probe_with_empty_probe_output_returns_a_probe_error(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
+
+
+_DURABLE_CONFIG = SshProbeConfig(
+    host="tomdet",
+    remote_python="/path/to/venv/bin/python3",
+    allowed_roots=("/local1/2BM", "/gdata/dm/2BM"),
+    connect_timeout_seconds=5.0,
+    command_timeout_seconds=5.0,
+)
+
+
+async def _locate(monkeypatch: pytest.MonkeyPatch, **overrides: Any) -> dict[str, Any]:
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+    kwargs: dict[str, Any] = {
+        "root": "/gdata/dm/2BM",
+        "months": ("2026-08", "2026-07"),
+        "directory_suffix": "-1015116",
+        "filename": "scan_005.h5",
+        "subdirectory": "data",
+        "config": _DURABLE_CONFIG,
+    }
+    kwargs.update(overrides)
+    return await run_locate_probe(**kwargs)
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_refuses_a_root_outside_allowed_roots_without_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = await _locate(monkeypatch, root="/etc")
+
+    assert response["kind"] == "ProbeError"
+    assert "outside the configured allowed roots" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_refuses_an_empty_month_list_without_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No months means the caller could not parse an experiment month.
+    Searching everything instead would scan an archive going back to
+    2020 to find, at best, a folder whose naming scheme predates
+    proposal numbers entirely."""
+    response = await _locate(monkeypatch, months=())
+
+    assert response["kind"] == "ProbeError"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("months", ("../2026-08",)),
+        ("months", ("2026-08", "..")),
+        ("directory_suffix", "-1015116/etc"),
+        ("filename", "../../etc/passwd"),
+        ("filename", ""),
+        ("subdirectory", "data/../.."),
+    ],
+)
+async def test_run_locate_probe_refuses_a_value_that_is_not_one_safe_segment(
+    monkeypatch: pytest.MonkeyPatch, field: str, value: Any
+) -> None:
+    """Checked here as well as on the remote. The proposal number and
+    filename both reach CORA from PVs writable by anyone with Channel
+    Access, and the two processes are separately reachable, so one
+    check is one place to be wrong."""
+    response = await _locate(monkeypatch, **{field: value})
+
+    assert response["kind"] == "ProbeError"
+    assert "safe path segment" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_refusal_detail_never_carries_the_searched_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same rule the locator refusals follow: a refusal detail is
+    logged verbatim, and the experiment folder these values reconstruct
+    is the personal data the vault exists to keep out of logs."""
+    response = await _locate(monkeypatch, filename=f"{_PERSONAL_PATH_FRAGMENT}/x")
+
+    assert response["kind"] == "ProbeError"
+    assert _PERSONAL_PATH_FRAGMENT not in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_fills_allowed_roots_from_config_not_the_caller(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The client-side guard and the remote's own confinement must read
+    the same allowlist, so the caller never supplies it."""
+    captured: dict[str, Any] = {}
+
+    class _Capturing:
+        async def __call__(self, *argv: str, **kwargs: Any) -> Any:
+            captured["argv"] = argv
+            return _ScriptedProcess(
+                returncode=0, stdout=b'{"kind": "Located", "paths": [], "match_count": 0}\n'
+            )
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _Capturing())
+    response = await run_locate_probe(
+        root="/gdata/dm/2BM",
+        months=("2026-08",),
+        directory_suffix="-1015116",
+        filename="scan_005.h5",
+        subdirectory="data",
+        config=_DURABLE_CONFIG,
+    )
+
+    assert response["kind"] == "Located"
+    assert "-1015116" not in " ".join(captured["argv"])
