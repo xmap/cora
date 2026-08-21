@@ -304,6 +304,18 @@ _CANNED_OK_WITH_CACHE_USAGE = FakeLLMResponse(
     model_id="claude-haiku-4-5-20260201",
 )
 
+# Separate from _CANNED_OK_WITH_USAGE (rather than setting gpu_seconds on
+# it) because this fixture stands in for a LocalLLM response: every other
+# adapter always leaves gpu_seconds None, and reusing the shared fixture
+# would perturb its pinned cost_usd assertion for an unrelated test.
+_CANNED_OK_WITH_GPU_USAGE = FakeLLMResponse(
+    parsed=_CANNED_OK.parsed,
+    usage=LLMUsage(input_tokens=1280, output_tokens=214),
+    stop_reason="tool_use",
+    model_id="llama-3.3-70b",
+    gpu_seconds=4.5,
+)
+
 
 # ---------- Subscriber metadata ----------
 
@@ -1789,6 +1801,27 @@ async def test_apply_records_cache_tokens_from_response_usage() -> None:
     trace = recorder.calls[0].trace
     assert trace.cache_creation_input_tokens == 64
     assert trace.cache_read_input_tokens == 512
+
+
+@pytest.mark.unit
+async def test_apply_records_gpu_seconds_from_local_llm_response() -> None:
+    """A LocalLLM-served debrief carries occupancy-share GPU-seconds on
+    its LLMResponse; the recorded trace must carry the same durable copy
+    (see [[project-inference-duration-unwritten]]'s last sibling gap)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_GPU_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    trace = recorder.calls[0].trace
+    assert trace.gpu_seconds == pytest.approx(4.5)
 
 
 @pytest.mark.unit

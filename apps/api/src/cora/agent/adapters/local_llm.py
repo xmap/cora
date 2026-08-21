@@ -23,7 +23,9 @@ before the backend runs and closes it after, so concurrent calls sharing
 one GPU are attributed their occupancy share, not their full wall-clock
 each (see `cora.infrastructure.observability.gpu_accounting`). The
 measured GPU-seconds are handed to an optional `on_measure` sink for
-observability; they never touch the budget gate. In the locked design
+observability, and also carried on the returned `LLMResponse.gpu_seconds`
+so a producer can persist a durable copy alongside the call's other
+provenance; neither ever touches the budget gate. In the locked design
 in-house serving is metered-free by default, so this is visibility, not
 a debit. Elapsed time is read from an injected `MonotonicClock`, never
 wall-clock, so a duration is never corrupted by an NTP correction and
@@ -176,6 +178,7 @@ class LocalLLM:
         self._call_seq += 1
         call_id = f"local-{self._call_seq}"
         model = request.model_ref.model
+        gpu_seconds: float
         self._meter.open(call_id, device_id=self._device_id, at_s=self._clock.now())
         try:
             with (
@@ -189,6 +192,7 @@ class LocalLLM:
                         f"output for model {model!r}"
                     )
                     raise LLMSchemaValidationError(msg)
+                parsed = completion.parsed
 
                 # record_llm_call returns the computed USD cost for telemetry
                 # only; the durable spend ledger is written by the caller
@@ -202,16 +206,13 @@ class LocalLLM:
                     stop_reason=completion.stop_reason,
                     max_tokens=request.max_output_tokens,
                 )
-
-                return LLMResponse(
-                    parsed=completion.parsed,
-                    raw_text=completion.raw_text,
-                    usage=completion.usage,
-                    stop_reason=completion.stop_reason,
-                    model_id=completion.model_id,
-                    response_id=completion.response_id,
-                )
         finally:
+            # gpu_seconds is only known once the call (success or failure)
+            # has fully elapsed, which is one step later than the `return`
+            # below would otherwise let it happen: the meter closes here in
+            # every case, including the exception paths above, so it must
+            # be read from `finally`, not folded into the `try` body's own
+            # return statement.
             gpu_seconds = self._meter.close(call_id, at_s=self._clock.now())
             if self._on_measure is not None:
                 self._on_measure(
@@ -222,6 +223,16 @@ class LocalLLM:
                         gpu_seconds=gpu_seconds,
                     )
                 )
+
+        return LLMResponse(
+            parsed=parsed,
+            raw_text=completion.raw_text,
+            usage=completion.usage,
+            stop_reason=completion.stop_reason,
+            model_id=completion.model_id,
+            response_id=completion.response_id,
+            gpu_seconds=gpu_seconds,
+        )
 
 
 @dataclass(frozen=True)

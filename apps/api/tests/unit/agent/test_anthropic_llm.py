@@ -181,6 +181,16 @@ async def test_response_id_and_tool_provenance_surface_on_llm_response() -> None
 
 
 @pytest.mark.unit
+async def test_gpu_seconds_stays_none_on_vendor_api_response() -> None:
+    """The adapter serves over a vendor API with no GPU to attribute;
+    `gpu_seconds` is `LocalLLM`-only and must never be set here."""
+    fake = _FakeAsyncAnthropic(_ok_message(parsed={"choice": "NominalCompletion"}))
+    adapter = AnthropicLLM(api_key="sk-test", client=fake)  # type: ignore[arg-type]
+    result = await adapter.chat(_basic_request())
+    assert result.gpu_seconds is None
+
+
+@pytest.mark.unit
 async def test_usage_includes_cache_tokens() -> None:
     fake = _FakeAsyncAnthropic(
         _ok_message(

@@ -136,8 +136,16 @@ class Inference:
     # correct. NULL means the provider reported nothing, not zero spend.
     cache_creation_input_tokens: int | None  # gen_ai.usage.cache_creation_input_tokens
     cache_read_input_tokens: int | None  # gen_ai.usage.cache_read_input_tokens
-    # --- CORA cost (custom; no OTel attribute exists for call cost) ---
+    # --- CORA cost + GPU metering (custom; no OTel attribute exists for either) ---
     cost_usd: float | None  # mirrors the cora.agent.llm.cost.usd histogram
+    # In-house serving is priced at $0/token by design, which is correct
+    # but leaves cost_usd near-zero with nothing showing the call was not
+    # free to run. NULL means no LocalLLM served this call, not zero GPU
+    # time. Stored as the raw primitive, not a priced shadow cost: the
+    # facility's USD-per-GPU-hour rate can change, and pricing at write
+    # time would make a historical row lie; a reader recomputes dollars
+    # from this column and the rate in effect when they ask.
+    gpu_seconds: float | None  # mirrors the cora.agent.llm.gpu.seconds histogram
     # --- OTel gen_ai.* agent context ---
     agent_id: str | None  # gen_ai.agent.id
     agent_name: str | None  # gen_ai.agent.name
@@ -197,6 +205,18 @@ INFERENCE_LOGBOOK_SCHEMA: LogbookSchema = LogbookSchema(
                 "histogram, no OTel attribute exists for call cost)"
             ),
         ),
+        "gpu_seconds": LogbookFieldSpec(
+            type="float",
+            units="s",
+            description=(
+                "Occupancy-share GPU-seconds a LocalLLM call consumed "
+                "(CORA custom; mirrors the cora.agent.llm.gpu.seconds "
+                "histogram, no OTel attribute exists for GPU time). NULL "
+                "means no LocalLLM served this call, not zero GPU time. "
+                "The raw primitive, not a priced shadow cost, since the "
+                "facility's GPU-hour rate can change over time."
+            ),
+        ),
         "agent_id": LogbookFieldSpec(type="string", description="OTel gen_ai.agent.id"),
         "agent_name": LogbookFieldSpec(type="string", description="OTel gen_ai.agent.name"),
         "agent_description": LogbookFieldSpec(
@@ -254,7 +274,8 @@ INSERT INTO entries_decision_inferences (
     tool_name, tool_call_id, tool_type,
     messages,
     cost_usd,
-    cache_creation_input_tokens, cache_read_input_tokens
+    cache_creation_input_tokens, cache_read_input_tokens,
+    gpu_seconds
 ) VALUES (
     $1, $2, $3, $4, $5,
     $6, $7,
@@ -267,7 +288,8 @@ INSERT INTO entries_decision_inferences (
     $24, $25, $26,
     $27,
     $28,
-    $29, $30
+    $29, $30,
+    $31
 )
 ON CONFLICT (event_id) DO NOTHING
 """
@@ -349,6 +371,7 @@ class PostgresInferenceStore:
                         row.cost_usd,
                         row.cache_creation_input_tokens,
                         row.cache_read_input_tokens,
+                        row.gpu_seconds,
                     )
                     for row in rows
                 ],

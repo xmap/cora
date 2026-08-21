@@ -60,6 +60,7 @@ async def _read_entries_for_decision(
                 output_type, finish_reasons,
                 input_tokens, output_tokens, cost_usd,
                 cache_creation_input_tokens, cache_read_input_tokens,
+                gpu_seconds,
                 agent_id, agent_name, agent_description, conversation_id,
                 tool_name, tool_call_id, tool_type,
                 messages
@@ -150,6 +151,7 @@ async def test_append_inferences_full_lazy_open_and_jsonb_round_trip(
         cache_creation_input_tokens=64,
         cache_read_input_tokens=128,
         cost_usd=0.00896,
+        gpu_seconds=3.14,
         agent_id=str(_PRINCIPAL_ID),
         agent_name="ApprovalAgent",
         conversation_id="conv-abc",
@@ -203,6 +205,8 @@ async def test_append_inferences_full_lazy_open_and_jsonb_round_trip(
     assert row_b["cache_read_input_tokens"] is None
     assert row_a["cost_usd"] == pytest.approx(0.00896)
     assert row_b["cost_usd"] is None
+    assert row_a["gpu_seconds"] == pytest.approx(3.14)
+    assert row_b["gpu_seconds"] is None
     assert row_a["finish_reasons"] == ["end_turn"]
     assert row_a["agent_name"] == "ApprovalAgent"
     assert row_a["conversation_id"] == "conv-abc"
@@ -326,6 +330,7 @@ async def test_postgres_reasoning_store_dedups_on_event_id(
         cache_creation_input_tokens=None,
         cache_read_input_tokens=None,
         cost_usd=None,
+        gpu_seconds=None,
         agent_id=None,
         agent_name=None,
         agent_description=None,
@@ -359,6 +364,7 @@ async def test_postgres_reasoning_store_dedups_on_event_id(
         cache_creation_input_tokens=None,
         cache_read_input_tokens=None,
         cost_usd=None,
+        gpu_seconds=None,
         agent_id=None,
         agent_name=None,
         agent_description=None,

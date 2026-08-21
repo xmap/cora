@@ -79,6 +79,7 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         "messages": BY_VALUE,  # dropped whole, see TIER2_JSONB_DROPPED_COLUMNS
         "recorded_at": KEEP,
         "cost_usd": KEEP,
+        "gpu_seconds": KEEP,  # raw seconds primitive, same posture as cost_usd
     },
     "activity": {
         "event_id": TOKEN,
