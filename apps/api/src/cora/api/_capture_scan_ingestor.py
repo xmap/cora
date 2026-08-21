@@ -120,7 +120,7 @@ if TYPE_CHECKING:
     import asyncpg
 
     from cora.data.features.ingest_scan.handler import IdempotentHandler
-    from cora.infrastructure.config import CaptureScanIngestorBinding
+    from cora.infrastructure.capture_scan_ingestor_binding import CaptureScanIngestorBinding
     from cora.infrastructure.kernel import Kernel
 
 _log = get_logger(__name__)
@@ -319,10 +319,10 @@ class CaptureScanIngestor:
             )
             return _Outcome.SKIP
 
-        location = binding.roots.get(candidate.root)
+        location = binding.locations.get(candidate.root)
         if location is None:
-            _log.info(
-                "capture_scan_ingestor.no_binding_for_root",
+            _log.warning(
+                "capture_scan_ingestor.no_location_for_root",
                 capture_code=candidate.capture_code,
                 run_id=str(candidate.run_id),
                 root=candidate.root,

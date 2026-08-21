@@ -45,7 +45,10 @@ from cora.data.aggregates.dataset import (
 )
 from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
-from cora.infrastructure.config import CaptureScanIngestorBinding, CaptureScanIngestorLocation
+from cora.infrastructure.capture_scan_ingestor_binding import (
+    CaptureScanIngestorBinding,
+    CaptureScanIngestorLocation,
+)
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -59,6 +62,7 @@ _RUN_ID_2 = UUID("01900000-0000-7000-8000-000000007102")
 _RUN_ID_3 = UUID("01900000-0000-7000-8000-000000007103")
 _ASSET_ID = uuid4()
 _SUPPLY_ID = uuid4()
+_SUPPLY_ID_2 = uuid4()
 _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
 
 
@@ -158,10 +162,30 @@ def _bindings() -> dict[str, CaptureScanIngestorBinding]:
     return {
         "2bmb-tomoscan": CaptureScanIngestorBinding(
             producing_asset_id=_ASSET_ID,
-            roots={
+            locations={
                 "/local1/2BM": CaptureScanIngestorLocation(
                     supply_id=_SUPPLY_ID, access_protocol="POSIX"
                 )
+            },
+        )
+    }
+
+
+def _bindings_with_two_locations() -> dict[str, CaptureScanIngestorBinding]:
+    """A binding configured for BOTH the acquisition tier and the durable
+    APS Data Management copy, with a distinct Supply/protocol pair on
+    each -- used to prove `_ingest_one` reads the location matching the
+    CANDIDATE's own root, not whichever location happens to be first."""
+    return {
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=_ASSET_ID,
+            locations={
+                "/local1/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID, access_protocol="POSIX"
+                ),
+                "/gdata/dm/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID_2, access_protocol="NFS"
+                ),
             },
         )
     }
@@ -419,7 +443,14 @@ async def test_tick_with_no_location_for_the_candidate_root_skips_ingest() -> No
     `/gdata` has no entry yet. This must be a distinct skip from
     `no_binding` (no binding at all for the capture code): the two mean
     different things to whoever reads the log."""
-    lookup = _ListCandidateLookup([_candidate(root="/gdata/dm/2BM")])
+    lookup = _ListCandidateLookup(
+        [
+            _candidate(
+                root="/gdata/dm/2BM",
+                observed_path=f"/gdata/dm/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+            )
+        ]
+    )
     ingest_scan = _FakeIngestScan()
     ingestor = CaptureScanIngestor(
         deps=_deps(),
@@ -432,10 +463,41 @@ async def test_tick_with_no_location_for_the_candidate_root_skips_ingest() -> No
         await ingestor.tick()
 
     assert ingest_scan.calls == []
-    assert any(entry["event"] == "capture_scan_ingestor.no_binding_for_root" for entry in logs)
+    events = [entry["event"] for entry in logs]
+    assert "capture_scan_ingestor.no_location_for_root" in events
+    assert "capture_scan_ingestor.no_binding" not in events
     for entry in logs:
         for value in entry.values():
             assert _PERSONAL_PATH_FRAGMENT not in str(value)
+
+
+@pytest.mark.unit
+async def test_tick_with_a_gdata_candidate_uses_the_gdata_locations_fields() -> None:
+    """A binding with two locations must resolve each candidate against
+    the location matching ITS OWN root, not whichever location a naive
+    single-entry lookup would have returned first."""
+    lookup = _ListCandidateLookup(
+        [
+            _candidate(
+                root="/gdata/dm/2BM",
+                observed_path=f"/gdata/dm/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+            )
+        ]
+    )
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(posix_checksum_roots=("/local1/2BM", "/gdata/dm/2BM")),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings_with_two_locations(),
+    )
+
+    await ingestor.tick()
+
+    assert len(ingest_scan.calls) == 1
+    command = ingest_scan.calls[0]
+    assert command.supply_id == _SUPPLY_ID_2
+    assert command.access_protocol == "NFS"
 
 
 @pytest.mark.unit

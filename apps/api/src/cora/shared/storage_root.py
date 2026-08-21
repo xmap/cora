@@ -43,6 +43,33 @@ def path_is_under_root(path: str, root: str) -> bool:
     return path == normalized or path.startswith(normalized + "/")
 
 
+def require_nonempty_absolute_root(root: str, *, label: str) -> None:
+    """Raise `ValueError` unless `root` is absolute and does not
+    normalize to the empty string.
+
+    Shared by three callers that enforce this same shape rule but then
+    diverge: `Settings._validate_posix_checksum_roots` and
+    `_validate_scan_probe_allowed_roots` call this then store `root` AS
+    TYPED, normalizing only at comparison time via `path_is_under_root`;
+    `CaptureScanIngestorBinding`'s locations validator calls this then
+    stores `normalize_storage_root(root)` itself, since that field is
+    later looked up by exact key rather than compared path-by-path, so
+    it must be normalization-stable at rest, not just at compare time.
+    `label` names the field and, where the caller has one, the entry
+    itself (for example `"posix_checksum_roots entry"`), so the raised
+    message reads naturally as `f"{label} {root!r} ..."`.
+    """
+    if not root.startswith("/"):
+        msg = f"{label} {root!r} is not an absolute path."
+        raise ValueError(msg)
+    if not normalize_storage_root(root):
+        msg = (
+            f"{label} {root!r} normalizes to the empty string. A root must "
+            "name a facility-level storage tier, not the filesystem root itself."
+        )
+        raise ValueError(msg)
+
+
 def matched_storage_root(path: str, roots: tuple[str, ...]) -> str | None:
     """The first root in `roots` that `path` falls under, normalized.
 
@@ -61,4 +88,9 @@ def matched_storage_root(path: str, roots: tuple[str, ...]) -> str | None:
     return None
 
 
-__all__ = ["matched_storage_root", "normalize_storage_root", "path_is_under_root"]
+__all__ = [
+    "matched_storage_root",
+    "normalize_storage_root",
+    "path_is_under_root",
+    "require_nonempty_absolute_root",
+]
