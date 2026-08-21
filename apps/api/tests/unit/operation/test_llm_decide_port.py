@@ -182,8 +182,18 @@ async def test_advise_next_reports_usage_to_the_sink() -> None:
         [
             FakeLLMResponse(
                 parsed={"verdict": "Stop", "confidence": 0.5, "rationale": "done"},
-                usage=LLMUsage(input_tokens=1200, output_tokens=80),
+                usage=LLMUsage(
+                    input_tokens=1200,
+                    output_tokens=80,
+                    cache_creation_input_tokens=5,
+                    cache_read_input_tokens=7,
+                ),
                 model_id="claude-sonnet-4-5-20250929",
+                stop_reason="end_turn",
+                response_id="resp_abc123",
+                tool_call_id="call_xyz",
+                tool_name="submit_advice",
+                gpu_seconds=0.42,
             )
         ]
     )
@@ -199,6 +209,18 @@ async def test_advise_next_reports_usage_to_the_sink() -> None:
     assert call.response_model == "claude-sonnet-4-5-20250929"
     assert call.usage.input_tokens == 1200
     assert call.usage.output_tokens == 80
+    assert call.usage.cache_creation_input_tokens == 5
+    assert call.usage.cache_read_input_tokens == 7
+    assert call.response_id == "resp_abc123"
+    assert call.stop_reason == "end_turn"
+    assert call.tool_call_id == "call_xyz"
+    assert call.tool_name == "submit_advice"
+    assert call.gpu_seconds == 0.42
+    assert call.request_max_tokens is not None
+    assert call.request_temperature is None
+    assert call.request_top_p is None
+    assert call.duration_ms is not None
+    assert call.duration_ms >= 0
 
 
 @pytest.mark.unit
