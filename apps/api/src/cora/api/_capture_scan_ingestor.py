@@ -95,7 +95,6 @@ import contextlib
 import enum
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
-from uuid import UUID
 
 from cora.agent.seed_capture_scan_ingestor import CAPTURE_SCAN_INGESTOR_AGENT_ID
 from cora.api._flag_watcher import probe_read_grant
@@ -116,10 +115,12 @@ from cora.shared.storage_root import normalize_storage_root
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
+    from uuid import UUID
 
     import asyncpg
 
     from cora.data.features.ingest_scan.handler import IdempotentHandler
+    from cora.infrastructure.config import CaptureScanIngestorBinding
     from cora.infrastructure.kernel import Kernel
 
 _log = get_logger(__name__)
@@ -283,7 +284,7 @@ class CaptureScanIngestor:
         deps: Kernel,
         candidate_lookup: ScanIngestCandidateLookup,
         ingest_scan: IdempotentHandler,
-        bindings: Mapping[str, Mapping[str, str]],
+        bindings: Mapping[str, CaptureScanIngestorBinding],
     ) -> None:
         self._deps = deps
         self._candidate_lookup = candidate_lookup
@@ -318,14 +319,13 @@ class CaptureScanIngestor:
             )
             return _Outcome.SKIP
 
-        try:
-            producing_asset_id = UUID(binding["producing_asset_id"])
-            supply_id = UUID(binding["supply_id"])
-        except ValueError:
-            _log.exception(
-                "capture_scan_ingestor.binding_malformed",
+        location = binding.roots.get(candidate.root)
+        if location is None:
+            _log.info(
+                "capture_scan_ingestor.no_binding_for_root",
                 capture_code=candidate.capture_code,
                 run_id=str(candidate.run_id),
+                root=candidate.root,
             )
             return _Outcome.SKIP
 
@@ -340,9 +340,9 @@ class CaptureScanIngestor:
 
         command = IngestScan(
             locator=locator,
-            producing_asset_id=producing_asset_id,
-            supply_id=supply_id,
-            access_protocol=binding["access_protocol"],
+            producing_asset_id=binding.producing_asset_id,
+            supply_id=location.supply_id,
+            access_protocol=location.access_protocol,
             producing_run_id=candidate.run_id,
         )
         try:

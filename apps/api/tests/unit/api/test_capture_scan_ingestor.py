@@ -45,6 +45,7 @@ from cora.data.aggregates.dataset import (
 )
 from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
+from cora.infrastructure.config import CaptureScanIngestorBinding, CaptureScanIngestorLocation
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -153,13 +154,16 @@ def _candidate(
     )
 
 
-def _bindings() -> dict[str, dict[str, str]]:
+def _bindings() -> dict[str, CaptureScanIngestorBinding]:
     return {
-        "2bmb-tomoscan": {
-            "producing_asset_id": str(_ASSET_ID),
-            "supply_id": str(_SUPPLY_ID),
-            "access_protocol": "POSIX",
-        }
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=_ASSET_ID,
+            roots={
+                "/local1/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID, access_protocol="POSIX"
+                )
+            },
+        )
     }
 
 
@@ -408,30 +412,27 @@ async def test_a_failed_ingest_never_logs_the_observed_path() -> None:
 
 
 @pytest.mark.unit
-async def test_tick_with_a_malformed_binding_uuid_skips_ingest() -> None:
-    """Defence in depth, not a reachable config state: the settings
-    validator already rejects a non-UUID binding value at construction.
-    The guard exists because `bindings` is a plain Mapping on the
-    constructor, so a future caller could supply one the validator never
-    saw, and an unguarded `UUID()` there would escape `tick()` as a bare
-    `ValueError` and kill the sweep loop for every other candidate."""
-    lookup = _ListCandidateLookup([_candidate()])
+async def test_tick_with_no_location_for_the_candidate_root_skips_ingest() -> None:
+    """A capture code CAN have a binding and still have no location for
+    THIS candidate's root -- e.g. a binding configured for only the
+    acquisition tier while the durable APS Data Management copy under
+    `/gdata` has no entry yet. This must be a distinct skip from
+    `no_binding` (no binding at all for the capture code): the two mean
+    different things to whoever reads the log."""
+    lookup = _ListCandidateLookup([_candidate(root="/gdata/dm/2BM")])
     ingest_scan = _FakeIngestScan()
-    bindings = {
-        "2bmb-tomoscan": {
-            "producing_asset_id": "not-a-uuid",
-            "supply_id": str(_SUPPLY_ID),
-            "access_protocol": "POSIX",
-        }
-    }
     ingestor = CaptureScanIngestor(
-        deps=_deps(), candidate_lookup=lookup, ingest_scan=ingest_scan, bindings=bindings
+        deps=_deps(),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings(),
     )
 
     with structlog.testing.capture_logs() as logs:
         await ingestor.tick()
 
     assert ingest_scan.calls == []
+    assert any(entry["event"] == "capture_scan_ingestor.no_binding_for_root" for entry in logs)
     for entry in logs:
         for value in entry.values():
             assert _PERSONAL_PATH_FRAGMENT not in str(value)
