@@ -709,6 +709,7 @@ class RunDebrieferSubscriber:
             tool_name=response.tool_name,
             tool_call_id=response.tool_call_id,
             tool_type="function" if response.tool_call_id is not None else None,
+            gpu_seconds=response.gpu_seconds,
         )
         try:
             await self.inference_recorder.record(

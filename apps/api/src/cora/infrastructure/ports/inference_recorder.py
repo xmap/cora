@@ -88,6 +88,15 @@ class AgentInferenceTrace:
     producer has no value, matching every other optional column on this row:
     `LLMUsage`'s 0-default is an in-memory convenience for arithmetic, not a
     claim that zero cache tokens were used.
+
+    `gpu_seconds` comes straight off `LLMResponse.gpu_seconds`, populated
+    only when the call was served by `LocalLLM`. In-house serving prices at
+    $0/token by design, which is correct, but leaves nothing on the row
+    showing the call was not free to run; this is that primitive. It is
+    deliberately the raw seconds, not a dollar figure: the facility's
+    GPU-hour rate is a configuration value that can change, and pricing at
+    write time would make a historical row lie about what it cost when it
+    ran. A reader recomputes shadow cost from this column when needed.
     """
 
     decision_id: UUID
@@ -114,6 +123,7 @@ class AgentInferenceTrace:
     tool_call_id: str | None = None
     tool_name: str | None = None
     tool_type: str | None = None
+    gpu_seconds: float | None = None
 
 
 class InferenceRecorder(Protocol):

@@ -74,6 +74,9 @@ async def test_solo_call_meters_its_full_duration_and_returns_response() -> None
     assert measures[0].gpu_seconds == pytest.approx(2.5)
     assert measures[0].device_id == "gpu0"
     assert measures[0].model == "llama-3.3-70b"
+    # The durable copy on LLMResponse must match what the ephemeral
+    # on_measure sink saw for this exact call, not a second measurement.
+    assert response.gpu_seconds == pytest.approx(measures[0].gpu_seconds)
 
 
 @pytest.mark.unit

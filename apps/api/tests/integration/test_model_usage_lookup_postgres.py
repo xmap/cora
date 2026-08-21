@@ -57,6 +57,7 @@ def _row(
         cache_creation_input_tokens=None,
         cache_read_input_tokens=None,
         cost_usd=None,
+        gpu_seconds=None,
         agent_id=agent_id,
         agent_name=None,
         agent_description=None,

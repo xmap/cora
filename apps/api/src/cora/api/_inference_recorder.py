@@ -69,6 +69,7 @@ class DelegatingInferenceRecorder:
                     cache_creation_input_tokens=trace.cache_creation_input_tokens,
                     cache_read_input_tokens=trace.cache_read_input_tokens,
                     cost_usd=trace.cost_usd,
+                    gpu_seconds=trace.gpu_seconds,
                     agent_id=trace.agent_id,
                     agent_name=trace.agent_name,
                     tool_name=trace.tool_name,
