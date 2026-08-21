@@ -232,9 +232,11 @@ async def test_main_rejects_a_json_request_that_is_not_an_object(
     assert json.loads(capsys.readouterr().out.splitlines()[0])["kind"] == "ProbeError"
 
 
-def _durable_tree(root: Path, *, experiment: str, filename: str = "scan_005.h5") -> Path:
+def _durable_tree(
+    root: Path, *, experiment: str, filename: str = "scan_005.h5", month: str = "2026-08"
+) -> Path:
     """A miniature of 2-BM's durable tree: `<root>/<month>/<exp>/data/<file>`."""
-    data_directory = root / "2026-08" / experiment / "data"
+    data_directory = root / month / experiment / "data"
     data_directory.mkdir(parents=True, exist_ok=True)
     scan_path = data_directory / filename
     scan_path.write_bytes(b"bytes")
@@ -246,7 +248,7 @@ def _locate_request(root: Path, **overrides: object) -> dict[str, object]:
         "op": "locate",
         "root": str(root),
         "allowed_roots": [str(root)],
-        "month": "2026-08",
+        "months": ["2026-08"],
         "directory_suffix": "-1015116",
         "subdirectory": "data",
         "filename": "scan_005.h5",
@@ -294,10 +296,44 @@ async def test_locate_op_with_no_match_reports_zero_rather_than_failing(tmp_path
 
 
 async def test_locate_op_with_an_absent_month_directory_reports_zero(tmp_path: Path) -> None:
-    response = await _handle(_locate_request(tmp_path, month="1999-01"))
+    response = await _handle(_locate_request(tmp_path, months=["1999-01"]))
 
     assert response["kind"] == "Located"
     assert response["match_count"] == 0
+
+
+async def test_locate_op_finds_an_experiment_filed_under_a_neighbouring_month(
+    tmp_path: Path,
+) -> None:
+    """Why `months` is a list. Beamtime can straddle a month boundary,
+    so the experiment folder can be filed under the month the beamtime
+    was scheduled in rather than the month the scan ran. Searching only
+    the scan's own month would miss it silently, and since no match
+    means keep waiting, it would never be found."""
+    scan_path = _durable_tree(tmp_path, experiment="2026-07-Haridy-1015116", month="2026-07")
+
+    response = await _handle(_locate_request(tmp_path, months=["2026-08", "2026-07"]))
+
+    assert response["match_count"] == 1
+    assert response["paths"] == [str(scan_path)]
+
+
+async def test_locate_op_refuses_an_empty_month_list(tmp_path: Path) -> None:
+    response = await _handle(_locate_request(tmp_path, months=[]))
+
+    assert response["kind"] == "ProbeError"
+    assert "months" in str(response["detail"])
+
+
+async def test_locate_op_refuses_more_months_than_the_cap(tmp_path: Path) -> None:
+    """The caller sends a month and its neighbours; a request to sweep
+    the whole archive is a misuse, and the tree goes back to 2020."""
+    response = await _handle(
+        _locate_request(tmp_path, months=[f"2026-{month:02d}" for month in range(1, 9)])
+    )
+
+    assert response["kind"] == "ProbeError"
+    assert "months" in str(response["detail"])
 
 
 @pytest.mark.parametrize(
@@ -307,10 +343,10 @@ async def test_locate_op_with_an_absent_month_directory_reports_zero(tmp_path: P
 async def test_locate_op_refuses_a_month_that_is_not_one_safe_segment(
     tmp_path: Path, segment: str
 ) -> None:
-    response = await _handle(_locate_request(tmp_path, month=segment))
+    response = await _handle(_locate_request(tmp_path, months=[segment]))
 
     assert response["kind"] == "ProbeError"
-    assert "month" in str(response["detail"])
+    assert "months" in str(response["detail"])
 
 
 async def test_locate_op_refuses_a_filename_carrying_a_separator(tmp_path: Path) -> None:

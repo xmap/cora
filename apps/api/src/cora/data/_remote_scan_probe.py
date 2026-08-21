@@ -74,6 +74,11 @@ _OP_DESCRIBE = "describe"
 _OP_CHECKSUM = "checksum"
 _OP_LOCATE = "locate"
 
+MAX_LOCATE_MONTHS = 4
+"""Cap on the month directories one `locate` may scan. A caller sends
+the experiment month plus its neighbours because beamtime can straddle
+a month boundary; it has no reason to sweep the archive."""
+
 MAX_LOCATE_MATCHES = 8
 """Cap on the paths one `locate` verdict carries. `match_count` is
 reported UNCAPPED beside them, so a caller can tell 2 matches from 50
@@ -125,13 +130,21 @@ def _locate(request: dict[str, Any], *, allowed_roots: tuple[str, ...]) -> dict[
     if matched_storage_root(root, allowed_roots) is None:
         return {"kind": "ProbeError", "detail": "root is not under an allowed root"}
 
-    segments = {name: request.get(name) for name in ("month", "directory_suffix", "filename")}
+    segments = {name: request.get(name) for name in ("directory_suffix", "filename")}
     for name, value in segments.items():
         if not isinstance(value, str) or not is_safe_path_segment(value):
             return {"kind": "ProbeError", "detail": f"malformed request: {name}"}
-    month = str(segments["month"])
     directory_suffix = str(segments["directory_suffix"])
     filename = str(segments["filename"])
+
+    raw_months = request.get("months")
+    if not isinstance(raw_months, list) or not raw_months:
+        return {"kind": "ProbeError", "detail": "malformed request: months"}
+    months = cast("list[Any]", raw_months)
+    if len(months) > MAX_LOCATE_MONTHS or not all(
+        isinstance(month, str) and is_safe_path_segment(month) for month in months
+    ):
+        return {"kind": "ProbeError", "detail": "malformed request: months"}
 
     subdirectory = request.get("subdirectory")
     if subdirectory is not None and (
@@ -139,11 +152,13 @@ def _locate(request: dict[str, Any], *, allowed_roots: tuple[str, ...]) -> dict[
     ):
         return {"kind": "ProbeError", "detail": "malformed request: subdirectory"}
 
-    month_directory = Path(root) / month
-    try:
-        entries = sorted(entry for entry in month_directory.iterdir() if entry.is_dir())
-    except OSError as exc:
-        return {"kind": "Located", "paths": [], "match_count": 0, "detail": type(exc).__name__}
+    entries: list[Path] = []
+    for month in months:
+        try:
+            entries.extend(entry for entry in (Path(root) / str(month)).iterdir() if entry.is_dir())
+        except OSError:
+            continue
+    entries.sort()
 
     matches: list[str] = []
     for entry in entries:
