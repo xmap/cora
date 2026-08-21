@@ -112,6 +112,32 @@ defense-in-depth). Verdict is `placeholder` for the substrate's own
 `"Unknown"` literal, `empty` for a blank string, `text(len=N)` for a
 real value, BAD only as `non-text`.
 
+## Camera-prefix cross-check
+
+2-BM has two cameras behind two different PV prefixes (`2bmSP1:`,
+`2bmSP2:`), and `full_file_name`'s configured PV is a hardcoded string:
+nothing makes it follow which camera the operator actually has
+selected. On 2026-08-20 an operator's camera switch left that role
+reading the idle camera's stale filename readback, which is exactly the
+value `RunWitnessRecorder` vaults into `run_capture_path` (personal
+data) as the Run's capture path. When a code declares BOTH
+`full_file_name` and the optional `camera_selected` role (the live
+camera-selection readback PV, e.g. 2-BM's
+`2bm:MCTOptics:CameraSelected`), this adds ONE further report line per
+code, `camera_prefix_check`, comparing the two: reused readings only,
+never a second `control_port.read()` of either PV. See
+`_camera_prefix_check`.
+
+CORA does not know, and must not guess, whether the substrate's
+`CameraSelected` resolves to a bare index or an ENUM label, so the
+resolved-reading -> expected-prefix mapping is a deployment-declared
+table (`Settings.capture_camera_select_prefixes`), never hardcoded
+here. Verdict is `match` (OK) when the live selection resolves to the
+same prefix `full_file_name` is configured with; `mismatch(...)`, an
+unrecognized reading, an empty mapping table, or an unreadable PV are
+all BAD, never a silent pass: this check either confirms the two agree
+or says plainly that it cannot.
+
 Exit codes: 0 every configured PV connected and decoded clean; 2 anything
 disconnected, timed out, was access-denied, or a decoder rejected it.
 """
@@ -162,6 +188,14 @@ _EXIT_CLEAN = 0
 _EXIT_PROBLEM = 2
 
 _PROGRESS_ROLES = (ROLE_IMAGES_SAVED, ROLE_IMAGES_COLLECTED)
+
+ROLE_CAMERA_SELECTED = "camera_selected"
+"""Optional `capture_watch_pvs` role, declared-and-unread by production
+exactly like `server_running` (`ControlPortCaptureObserver` builds no
+pump for either): the beamline's live camera-selection readback PV.
+Read here only, to cross-check against the `full_file_name` role's
+configured PV prefix; see `_camera_prefix_check` and this module's
+"Camera-prefix cross-check" docstring section."""
 
 
 @dataclass
@@ -221,6 +255,7 @@ async def preflight_read_capture_pvs(
     status_phases: Mapping[str, str],
     baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
     experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
+    camera_select_prefixes: Mapping[str, str] | None = None,
 ) -> _Report:
     """Read every configured `capture_watch_pvs` role, then every
     `capture_baseline_pvs` channel (slice 12), then every
@@ -232,11 +267,30 @@ async def preflight_read_capture_pvs(
     against an unchanged config produce line-for-line identical output.
     Each PV is read independently: one dead or misconfigured PV does
     not abort the sweep, it reports as its own failed line.
+
+    A code declaring BOTH `full_file_name` and `camera_selected` gets
+    one further line, `camera_prefix_check`, appended after that code's
+    own roles (see "Camera-prefix cross-check" in this module's
+    docstring): reused readings only, no extra `control_port.read()`.
     """
     report = _Report()
     for code in sorted(capture_pvs):
-        for role, pv in sorted(capture_pvs[code].items()):
-            report.lines.append(await _read_one(control_port, code, role, pv, status_phases))
+        roles = capture_pvs[code]
+        role_reports: dict[str, _PvReport] = {}
+        for role, pv in sorted(roles.items()):
+            pv_report = await _read_one(control_port, code, role, pv, status_phases)
+            report.lines.append(pv_report)
+            role_reports[role] = pv_report
+        if ROLE_FULL_FILE_NAME in roles and ROLE_CAMERA_SELECTED in roles:
+            report.lines.append(
+                _camera_prefix_check(
+                    code=code,
+                    full_file_name_pv=roles[ROLE_FULL_FILE_NAME],
+                    camera_selected_pv=roles[ROLE_CAMERA_SELECTED],
+                    camera_selected_report=role_reports[ROLE_CAMERA_SELECTED],
+                    camera_select_prefixes=camera_select_prefixes or {},
+                )
+            )
     for code in sorted(baseline_pvs or {}):
         for channel_name, pv in sorted((baseline_pvs or {})[code].items()):
             report.lines.append(await _read_one_baseline(control_port, code, channel_name, pv))
@@ -366,6 +420,105 @@ def _full_file_name_verdict(value: object) -> tuple[str, bool]:
     if len(value) >= FULL_FILE_NAME_TRUNCATION_THRESHOLD:
         return "suspected-truncated", False
     return f"text(len={len(value)})", True
+
+
+def _configured_pv_prefix(pv: str) -> str:
+    """The IOC-prefix segment of a configured PV name, up to and
+    including the first colon (`"2bmSP2:HDF1:FullFileName_RBV"` ->
+    `"2bmSP2:"`). Plain string parsing, not a lookup against any
+    facility-specific vocabulary: this reads the STATIC config string,
+    never a live value.
+    """
+    head, sep, _ = pv.partition(":")
+    return f"{head}{sep}"
+
+
+def _camera_prefix_check(
+    *,
+    code: str,
+    full_file_name_pv: str,
+    camera_selected_pv: str,
+    camera_selected_report: _PvReport,
+    camera_select_prefixes: Mapping[str, str],
+) -> _PvReport:
+    """The camera-prefix cross-check (see this module's docstring):
+    compares `full_file_name`'s CONFIGURED PV prefix against the live
+    `camera_selected` reading, resolved through the deployment-declared
+    `camera_select_prefixes` table.
+
+    Never reports a clean match on a reading it cannot actually
+    confirm: an unreadable `camera_selected` PV, a reading the table
+    does not resolve, or an empty table are each their own distinct BAD
+    verdict, not a fallback pass. Reuses `camera_selected_report`
+    (already read by the caller's own `capture_watch_pvs` sweep); makes
+    no second `control_port.read()` of its own.
+    """
+    configured_prefix = _configured_pv_prefix(full_file_name_pv)
+    if not camera_selected_report.connected:
+        return _PvReport(
+            code=code,
+            pv_key="camera_prefix_check",
+            pv=camera_selected_pv,
+            ok=False,
+            connected=False,
+            detail=f"camera_selected PV unreadable: {camera_selected_report.detail}",
+        )
+    if camera_selected_report.value is None:
+        return _PvReport(
+            code=code,
+            pv_key="camera_prefix_check",
+            pv=camera_selected_pv,
+            ok=False,
+            connected=True,
+            kind="PrefixCheck",
+            value=configured_prefix,
+            verdict="unrecognized-reading(camera_selected PV did not decode)",
+        )
+    if not camera_select_prefixes:
+        return _PvReport(
+            code=code,
+            pv_key="camera_prefix_check",
+            pv=camera_selected_pv,
+            ok=False,
+            connected=True,
+            kind="PrefixCheck",
+            value=configured_prefix,
+            verdict="not-configured(CAPTURE_CAMERA_SELECT_PREFIXES empty)",
+        )
+    resolved = str(camera_selected_report.value)
+    expected_prefix = camera_select_prefixes.get(resolved)
+    if expected_prefix is None:
+        return _PvReport(
+            code=code,
+            pv_key="camera_prefix_check",
+            pv=camera_selected_pv,
+            ok=False,
+            connected=True,
+            kind="PrefixCheck",
+            value=configured_prefix,
+            verdict=f"unrecognized-reading({resolved!r})",
+        )
+    if expected_prefix != configured_prefix:
+        return _PvReport(
+            code=code,
+            pv_key="camera_prefix_check",
+            pv=camera_selected_pv,
+            ok=False,
+            connected=True,
+            kind="PrefixCheck",
+            value=configured_prefix,
+            verdict=f"mismatch(selected camera expects {expected_prefix!r})",
+        )
+    return _PvReport(
+        code=code,
+        pv_key="camera_prefix_check",
+        pv=camera_selected_pv,
+        ok=True,
+        connected=True,
+        kind="PrefixCheck",
+        value=configured_prefix,
+        verdict="match",
+    )
 
 
 async def _read_one_baseline(
@@ -594,6 +747,7 @@ def main(argv: list[str] | None = None) -> int:
                 status_phases=settings.capture_status_phases,
                 baseline_pvs=settings.capture_baseline_pvs,
                 experiment_identity_pvs=settings.capture_experiment_identity_pvs,
+                camera_select_prefixes=settings.capture_camera_select_prefixes,
             )
             return _finish(report)
         finally:

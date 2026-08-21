@@ -812,7 +812,49 @@ class Settings(BaseSettings):
     # never logged in full and never lands on an event; it goes to the
     # `run_capture_path` PII vault via `RunWitnessRecorder`'s dual-clock
     # guard. See `_run_witness.py`'s "Capture path pairing" section.
+    #
+    # `camera_selected` (optional per code) is a further role,
+    # declared-and-unread by production exactly like `server_running`
+    # (`ControlPortCaptureObserver` builds no pump for either): it names
+    # the beamline's live camera-selection readback PV (2-BM:
+    # `2bm:MCTOptics:CameraSelected`), read only by
+    # `capture_watch_preflight`'s camera-prefix cross-check. That check
+    # exists because `full_file_name`'s PV above is a hardcoded string
+    # (2-BM's `2bmSP1:` / `2bmSP2:` are two separate cameras) with
+    # nothing making it follow which camera is actually selected: an
+    # operator's camera switch (as happened 2026-08-20) leaves it
+    # reading the idle camera's stale value, which then reaches the
+    # `run_capture_path` PII vault above unless caught first. See
+    # `capture_camera_select_prefixes` below and
+    # `capture_watch_preflight._camera_prefix_check`.
     capture_watch_pvs: dict[str, dict[str, str]] = {}
+
+    # Deployment-declared table the `camera_selected` role's decoded
+    # reading is looked up in, to resolve the `full_file_name` PV prefix
+    # it should correspond to (the camera-prefix cross-check above).
+    # CORA does not know, and must not guess, whether the substrate's
+    # `CameraSelected` resolves to a bare index or an EPICS ENUM label:
+    # that vocabulary belongs to one facility's IOC, exactly like
+    # `capture_status_phases` below, so it is declared here rather than
+    # hardcoded in the spine. Empty (default) means the cross-check
+    # reports "not configured" rather than silently passing. Read from
+    # CAPTURE_CAMERA_SELECT_PREFIXES as JSON:
+    #
+    #   CAPTURE_CAMERA_SELECT_PREFIXES='{
+    #     "0": "2bmSP1:",
+    #     "1": "2bmSP2:"
+    #   }'
+    #
+    # The example above encodes the ONE fact confirmed in
+    # `deployments/2-bm/beamline.yaml` (operator-verified 2026-06-19,
+    # DET-11): camera 0 is the 5 MP `2bmSP1:` unit, camera 1 is the
+    # 31 MP `2bmSP2:` unit. Whether `CameraSelected` actually reads back
+    # as the bare literal `"0"` / `"1"` (rather than some other ENUM
+    # label) is NOT confirmed against the live IOC; deploying this table
+    # with the wrong keys would only ever produce "unrecognized-reading"
+    # verdicts, never a false match, so it is safe to try and correct
+    # once staff confirm the real readback shape.
+    capture_camera_select_prefixes: dict[str, str] = {}
 
     # Genesis-baseline PVs (slice 12): a deployment-declared set read
     # ONCE, at the instant a capture promotes to a witnessed Run, and
