@@ -11,17 +11,27 @@
 # the start of a line, or after a semicolon). A GRANT/REVOKE privilege
 # list that merely names TRUNCATE among the privileges it grants or
 # removes is not a TRUNCATE statement (REVOKE ... TRUNCATE ... is in fact
-# safety-increasing, not destructive) and must not match. DROP TABLE,
-# DROP COLUMN and ALTER COLUMN ... TYPE never appear as items in a
-# privilege list, so they keep the plain anywhere-on-the-line match.
+# safety-increasing, not destructive) and must not match. DROP TABLE and
+# DROP COLUMN never appear as items in a privilege list, so they keep the
+# plain anywhere-on-the-line match.
 #
-# The escape hatch is accepted either on the offending line itself or on
-# the nearest non-blank line above it: 4 of the 6 existing uses in this
-# repo's migrations put the marker on a standalone comment line above the
-# statement, separated from it by one blank line (a paragraph break in the
-# migration's header comment), so only accepting a literal same-line or
-# strict-N-minus-1 form would leave those precedents with no working
-# opt-out.
+# ALTER COLUMN ... TYPE only counts when the same line carries no USING
+# clause: an explicit USING spells out the exact conversion, which is the
+# documented, reviewed way to do this, not a bare unannounced type change.
+# This check is line-scoped, so a USING clause written on a continuation
+# line of a multi-line ALTER COLUMN statement would not be seen here; this
+# corpus's two USING occurrences are both single-line.
+#
+# The escape hatch is same-line only. Measured against this corpus with a
+# same-line-only marker: 5 violations, identical to the widened form that
+# also accepted a marker on the line before. Nothing here currently
+# depends on a backward-lookback marker, and a lookback marker on this
+# script's forbidden statements (DROP TABLE, DROP COLUMN, ALTER COLUMN,
+# TRUNCATE) is far more likely to leak onto an unrelated later statement
+# than to legitimately excuse one (see scan_constraint_drops.sh's history
+# for why the lookback form needs an extra standalone-comment guard even
+# where it is load bearing), so this script does not carry that surface
+# at all.
 #
 # Usage: scan_destructive_ddl.sh <repo-root> <repo-root-relative-sql-file>...
 # File arguments must be relative to <repo-root> so the emitted
@@ -29,36 +39,18 @@
 
 set -euo pipefail
 
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=_scan_common.sh
+source "$script_dir/_scan_common.sh"
+
 root="$1"
 shift
 
-marker='atlas:safety:allow='
 violations=0
-
-# Walks backward from just above $2 in file $1, skipping blank
-# (whitespace-only) lines, and prints the first non-blank line found (or
-# nothing, if the file starts with $2). That is the line a reader would
-# call "immediately before" the statement once blank paragraph breaks in
-# a header comment are not counted as content.
-find_prev_nonblank_line() {
-    local path="$1"
-    local check_line=$(($2 - 1))
-    local text
-    while [ "$check_line" -gt 0 ]; do
-        text=$(sed -n "${check_line}p" "$path")
-        if [ -n "$(printf '%s' "$text" | tr -d '[:space:]')" ]; then
-            printf '%s' "$text"
-            return 0
-        fi
-        check_line=$((check_line - 1))
-    done
-    printf ''
-}
 
 for f in "$@"; do
     path="$root/$f"
-    if [ ! -f "$path" ]; then
-        echo "::error file=${f}::Listed as a changed migration but not found on disk." >&2
+    if ! require_file "$root" "$f"; then
         violations=$((violations + 1))
         continue
     fi
@@ -79,20 +71,25 @@ for f in "$@"; do
         line_no="${m%%:*}"
         content="${m#*:}"
         lower_content=$(tr '[:upper:]' '[:lower:]' <<<"$content")
+
         case "$lower_content" in
+            *alter*column*type*)
+                case "$lower_content" in
+                    *using*) continue ;;
+                esac
+                reason="ALTER COLUMN ... TYPE without USING"
+                ;;
             *drop*table*) reason="DROP TABLE" ;;
             *drop*column*) reason="DROP COLUMN" ;;
-            *alter*column*type*) reason="ALTER COLUMN ... TYPE" ;;
             *) reason="TRUNCATE" ;;
         esac
 
         original=$(sed -n "${line_no}p" "$path")
-        prev_original=$(find_prev_nonblank_line "$path" "$line_no")
 
-        if grep -q -i -F -- "$marker" <<<"$original" || grep -q -i -F -- "$marker" <<<"$prev_original"; then
+        if grep -q -i -F -- "$marker" <<<"$original"; then
             :
         else
-            echo "::error file=${f},line=${line_no}::Destructive DDL ($reason) with no atlas:safety:allow marker on this line or the nearest non-blank line above it." >&2
+            echo "::error file=${f},line=${line_no}::Destructive DDL ($reason) with no atlas:safety:allow marker on this line." >&2
             violations=$((violations + 1))
         fi
     done <<<"$matches"

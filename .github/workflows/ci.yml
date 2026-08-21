@@ -338,6 +338,42 @@ jobs:
       - name: Validate migration directory
         run: atlas migrate validate --env local
 
+      # The scan scripts below have no runtime dependency on apps/api; this
+      # borrows its locked pytest install rather than maintaining a second
+      # Python environment just for a couple of dozen fixture-file tests.
+      # This is what makes the safety scan self-checking: the previous
+      # version of this gate went silently inert for three months because
+      # nothing exercised it outside of ci.yml itself.
+      - uses: ./.github/actions/setup
+
+      - name: Run scan script regression tests
+        run: uv run --project ../../apps/api pytest scripts/tests -v
+
+      # `git diff --name-only` always prints paths relative to the repo
+      # root, regardless of this job's `working-directory: infra/atlas`
+      # default. Computed once here and shared via a step output so the
+      # two scan steps below (and any scan added later) do not each carry
+      # their own copy of this diff.
+      - name: Determine changed migration files
+        id: changed_migrations
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base sha (initial push or detached HEAD); nothing to scan."
+            {
+              echo "changed<<SCAN_EOF"
+              echo "SCAN_EOF"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only --diff-filter=A "$base"...HEAD -- migrations/ | grep '\.sql$' || true)
+          echo "Changed migrations: $changed"
+          {
+            echo "changed<<SCAN_EOF"
+            echo "$changed"
+            echo "SCAN_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       # Atlas v0.38+ moved `atlas migrate lint` behind atlas-cloud login.
       # We deliberately skip that path (no signup, no payment) and run a
       # narrow grep-based safety scan on net-new migration files instead:
@@ -346,45 +382,29 @@ jobs:
       # USING). Catches the common foot-guns; doesn't replace a real
       # planner-aware lint, but does keep the merge gate honest.
       #
-      # `git diff --name-only` always prints paths relative to the repo
-      # root, regardless of this job's `working-directory: infra/atlas`
-      # default. Resolving `$root` explicitly and opening `$root/$f` (while
-      # still passing the bare, repo-root-relative `$f` to the scan script
-      # for its `::error file=` annotations) keeps this step correct no
-      # matter which directory it runs from.
+      # Opening `$root/$f` (while still passing the bare, repo-root-
+      # relative `$f` to the scan script for its `::error file=`
+      # annotations) keeps this step correct no matter which directory it
+      # runs from.
       - name: Safety scan changed migration files
+        if: steps.changed_migrations.outputs.changed != ''
         run: |
-          base="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
-            echo "No base sha (initial push or detached HEAD); skipping safety scan."
-            exit 0
-          fi
           root=$(git rev-parse --show-toplevel)
-          changed=$(git diff --name-only --diff-filter=A "$base"...HEAD -- migrations/ | grep '\.sql$' || true)
-          if [ -z "$changed" ]; then
-            echo "No new migration files in this change."
-            exit 0
-          fi
-          echo "Scanning new migrations: $changed"
+          changed="${{ steps.changed_migrations.outputs.changed }}"
           "$root/infra/atlas/scripts/scan_destructive_ddl.sh" "$root" $changed
 
-      # Refuses a new migration that drops a constraint or a unique index
-      # and adds nothing back in the same file: a bare removal of a data
-      # integrity guarantee, with no replacement definition to show for it.
+      # Refuses a new migration that drops a constraint or an index and
+      # adds nothing back in the same file: a bare removal of a data
+      # integrity guarantee, with no replacement definition to show for
+      # it. Runs with `if: always()` so a failure in the safety scan
+      # above does not hide a separate constraint-drop finding in the
+      # same push; without it, an author who fixes the first failure only
+      # discovers the second on their next push.
       - name: Constraint-drop scan changed migration files
+        if: always() && steps.changed_migrations.outputs.changed != ''
         run: |
-          base="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
-            echo "No base sha (initial push or detached HEAD); skipping constraint-drop scan."
-            exit 0
-          fi
           root=$(git rev-parse --show-toplevel)
-          changed=$(git diff --name-only --diff-filter=A "$base"...HEAD -- migrations/ | grep '\.sql$' || true)
-          if [ -z "$changed" ]; then
-            echo "No new migration files in this change."
-            exit 0
-          fi
-          echo "Scanning new migrations: $changed"
+          changed="${{ steps.changed_migrations.outputs.changed }}"
           "$root/infra/atlas/scripts/scan_constraint_drops.sh" "$root" $changed
 
   # Single aggregate context for branch protection. Two things make the test

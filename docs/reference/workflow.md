@@ -69,7 +69,7 @@ make migrate-hash               # update infra/atlas/migrations/atlas.sum
 make migrate-apply              # apply locally
 ```
 
-CI verifies `atlas.sum` and runs a grep-based safety scan on net-new files (blocks `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, `ALTER COLUMN ... TYPE`). Atlas's `migrate lint` is behind atlas-cloud login (skipped). For genuine destructives, add `-- atlas:safety:allow=<reason>` per line. Forward-only: a rollback is a new compensating migration.
+CI verifies `atlas.sum` and runs two grep-based scans on net-new files, both in `infra/atlas/scripts/`. `scan_destructive_ddl.sh` blocks `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, and `ALTER COLUMN ... TYPE` without a `USING` clause; its `-- atlas:safety:allow=<reason>` opt-out must be on the same line as the statement. `scan_constraint_drops.sh` blocks a dropped constraint or index with nothing added back in the same file (`ADD CONSTRAINT`, `ADD PRIMARY KEY`, `ADD UNIQUE`, `ADD CHECK`, `ADD FOREIGN KEY`, or `CREATE INDEX` all count as adding something back); its opt-out is accepted on the offending line or on a standalone `-- atlas:safety:allow=<reason>` comment line above it. Atlas's `migrate lint` is behind atlas-cloud login (skipped). Forward-only: a rollback is a new compensating migration.
 
 ## Tests
 
