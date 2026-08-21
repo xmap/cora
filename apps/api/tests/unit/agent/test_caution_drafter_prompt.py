@@ -169,6 +169,59 @@ def test_payload_with_no_candidate_targets_serialises_empty_list() -> None:
 
 
 @pytest.mark.unit
+def test_build_request_carries_capture_progress_when_snapshot_present() -> None:
+    """The frame tallies must reach the user message JSON verbatim so the
+    LLM can read them under the system prompt's "Frame-count context"
+    section."""
+    payload = _payload(
+        capture_progress={
+            "frames_saved": 1528,
+            "frames_saved_expected": 1541,
+            "frames_collected": 1541,
+            "frames_collected_expected": 1541,
+            "reading_age_seconds_before_terminal": 13,
+        }
+    )
+    request = build_caution_drafter_chat_request(payload)
+    json_blob = request.user_message.text[request.user_message.text.index("{") :]
+    parsed = json.loads(json_blob)
+    assert parsed["capture_progress"] == {
+        "frames_saved": 1528,
+        "frames_saved_expected": 1541,
+        "frames_collected": 1541,
+        "frames_collected_expected": 1541,
+        "reading_age_seconds_before_terminal": 13,
+    }
+
+
+@pytest.mark.unit
+def test_build_request_capture_progress_defaults_to_none() -> None:
+    """A Run with no witnessed-capture snapshot must still build a valid
+    request, with `capture_progress` travelling as JSON `null` rather
+    than being omitted."""
+    request = build_caution_drafter_chat_request(_payload())
+    json_blob = request.user_message.text[request.user_message.text.index("{") :]
+    parsed = json.loads(json_blob)
+    assert parsed["capture_progress"] is None
+
+
+@pytest.mark.unit
+def test_system_prompt_forbids_originating_from_a_lone_shortfall() -> None:
+    """Pin the load-bearing invariant, not a section title: a single Run's
+    shortfall must never by itself produce a Caution proposal. A future
+    reword of the section is fine; this rule collapsing back into a
+    per-run alert is not."""
+    assert "A shortfall alone must never produce a proposal" in CAUTION_DRAFTER_SYSTEM_PROMPT
+
+
+@pytest.mark.unit
+def test_system_prompt_forbids_comparing_saved_and_collected_counts() -> None:
+    """Pin the other load-bearing invariant: saved and collected tallies
+    come from different instruments and are never mutually comparable."""
+    assert "Never compare a saved count with a collected count" in CAUTION_DRAFTER_SYSTEM_PROMPT
+
+
+@pytest.mark.unit
 def test_decision_context_constant_matches_design_lock() -> None:
     """The context value used by the subscriber is `CautionProposal`."""
     assert DECISION_CONTEXT_CAUTION_PROPOSAL == "CautionProposal"

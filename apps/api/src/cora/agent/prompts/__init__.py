@@ -38,7 +38,8 @@ from cora.agent.prompts.run_debrief import (
 KNOWN_PROMPT_TEMPLATES: dict[UUID, str] = {
     RUN_DEBRIEF_PROMPT_TEMPLATE_ID: "RunDebrief v1: terminal-Run AAR narrative + advisory choice",
     CAUTION_DRAFTER_PROMPT_TEMPLATE_ID: (
-        "CautionDrafter v1: terminal-Run Caution proposal with 5-choice verdict"
+        "CautionDrafter v1: terminal-Run Caution proposal with 5-choice verdict; "
+        "payload now also carries the terminal snapshot's frame-tally capture_progress"
     ),
 }
 

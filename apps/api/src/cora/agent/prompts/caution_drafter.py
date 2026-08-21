@@ -55,10 +55,25 @@ first; applies to BOTH agents at once for parallel-cost amortization):
 
 ## Read scope (v1)
 
-v1 reads: terminal Run event + Run aggregate state + existing
+v1 reads: terminal Run event (including its frame-tally snapshot, when
+the terminal event carries one) + Run aggregate state + existing
 Active Cautions for the target (via `CautionLookup` port). Deferred
 to v2 per design memo: RunDebriefer's prior Decision for the same Run
 (needs `DecisionLookup` port; deferred until pilot UX surfaces need).
+
+Named boundary, not a TODO: this agent has no recurrence signal across
+Runs on the same target. It reads one terminal event at a time, so it
+cannot tell "this Run was short" from "this Asset is short on a third
+of its Runs, by a consistent margin." Originating a Caution from a
+repeated shortfall therefore cannot happen in v1; a shortfall alone
+stays `NoAction` (see the system prompt's "Frame-count context"
+section). A pilot observation grounds this, measured 2026-08-21: every
+recorded completion declares the same expectation of 1541 saved
+frames; 616 met it exactly and 364 fell short by about 11 frames on
+average. A shortfall there is common and systematic, not exceptional,
+which is exactly why a single occurrence is weak evidence and why a
+cross-Run recurrence signal, once it can be sourced without a new
+lookup/port, is the next slice.
 
 ## Structured output schema
 
@@ -404,6 +419,41 @@ shallow per-occurrence entries.
 
 If no Active Caution matches, propose new (pick the severity tier).
 
+## Frame-count context (capture_progress)
+
+The input payload may carry `capture_progress`: the terminal snapshot's
+frame tallies for a witnessed capture. Not every Run is a witnessed
+capture; when the field is absent, draw no conclusion from its absence.
+
+A `frames_saved` shortfall against `frames_saved_expected` is a fact about
+ONE RUN. RunDebriefer already records exactly that fact on its own
+Decision, as `DataSuspect`; do not duplicate it here. A Caution is a claim
+about an ASSET, and an asset-level claim needs a pattern, which a single
+Run cannot establish. This payload carries one Run, so it does not carry
+sufficient evidence to originate a Caution from a shortfall.
+
+A shortfall alone must never produce a proposal. `NoAction` is the
+correct verdict for an isolated shortfall.
+
+Refusing here discards nothing. The tallies stay on the terminal event
+permanently, and RunDebriefer's verdict is a durable Decision; the
+occurrence is not lost by declining to propose from it.
+
+Exception: when an `existing_cautions` entry for the same target already
+describes frame loss or detector trouble, a fresh shortfall is
+corroboration that the condition persists, and `ProposeSupersede` is
+available under the "Lookback then propose" rule above. This is a
+secondary path, not the main mechanism: reach for it only when the
+existing Caution already names the pattern, never as a way to originate
+one from a shortfall alone.
+
+Never compare a saved count with a collected count. They come from
+different instruments and their totals are not the same quantity, so a
+difference between them means nothing. Each count is only ever comparable
+with its own `_expected` pair (`frames_saved` against
+`frames_saved_expected`; `frames_collected` against
+`frames_collected_expected`).
+
 ## Categories (closed 6-value set)
 
 Pick the ONE that most narrowly fits:
@@ -493,6 +543,20 @@ class CautionDrafterPayload:
 
     `informed_by_decision_id` is reserved for v2 when DecisionLookup
     ports ship; v1 always None.
+
+    `capture_progress` mirrors `RunDebriefPayload`'s field of the same
+    name exactly: the terminal snapshot's frame tallies
+    (`frames_saved` / `frames_saved_expected`, `frames_collected` /
+    `frames_collected_expected`), plus `reading_age_seconds_before_terminal`
+    when the tallies carry a parseable timestamp pair, or `None` for a
+    Run with no witnessed-capture snapshot. Absence is ordinary, not a
+    fault: not every Run is a witnessed capture. See
+    `extract_capture_progress` in `_terminal_run_helpers` for the
+    extraction and the full provenance discussion. Unlike RunDebriefer,
+    which reports a shortfall as a fact about the one Run it just
+    watched, CautionDrafter's job is to decide whether the ASSET
+    warrants a standing advisory; see the system prompt's "Frame-count
+    context" section for the current framing of that distinction.
     """
 
     terminal_event_type: str
@@ -510,6 +574,7 @@ class CautionDrafterPayload:
     interrupted_at: str | None
     candidate_targets: tuple[CandidateTarget, ...] = field(default_factory=tuple)
     existing_cautions: tuple[ExistingCaution, ...] = field(default_factory=tuple)
+    capture_progress: dict[str, int] | None = None
 
 
 def build_caution_drafter_chat_request(
@@ -580,6 +645,7 @@ def _payload_to_json_safe(payload: CautionDrafterPayload) -> dict[str, Any]:
             }
             for ec in payload.existing_cautions
         ],
+        "capture_progress": payload.capture_progress,
     }
 
 

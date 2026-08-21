@@ -12,6 +12,7 @@ Mirrors `test_run_debrief_subscriber.py` structure.
 
 # pyright: reportPrivateUsage=false, reportUnknownMemberType=false
 
+import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID, uuid4, uuid5
@@ -44,6 +45,7 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import (
     AlwaysQuietCautionLookup,
+    CautionLookupResult,
     FakeLLM,
     FakeLLMResponse,
     LLMServerError,
@@ -223,8 +225,16 @@ def _terminal_event(
     event_type: str,
     run_id: UUID,
     reason: str | None = None,
+    capture_progress_snapshot: dict[str, object] | None = None,
 ) -> StoredEvent:
-    """Build a StoredEvent for a terminal Run event."""
+    """Build a StoredEvent for a terminal Run event.
+
+    `capture_progress_snapshot`, when given, is merged into the payload
+    by hand (rather than via the typed `CaptureProgressSnapshot`
+    dataclass) so tests can assemble the exact raw shape
+    `extract_capture_progress` reads, mirroring
+    `test_run_debriefer_subscriber._progress_event`.
+    """
     domain: Any
     if event_type == "RunCompleted":
         domain = RunCompleted(run_id=run_id, occurred_at=_LATER, observed_at=None)
@@ -234,6 +244,9 @@ def _terminal_event(
     else:
         msg = f"unsupported event type for fixture: {event_type}"
         raise ValueError(msg)
+    payload = run_to_payload(domain)
+    if capture_progress_snapshot is not None:
+        payload = {**payload, "capture_progress_snapshot": capture_progress_snapshot}
     return StoredEvent(
         position=1,
         event_id=UUID("01900000-0000-7000-8000-00000000ff01"),
@@ -242,7 +255,7 @@ def _terminal_event(
         version=2,
         event_type=event_type,
         schema_version=1,
-        payload=run_to_payload(domain),
+        payload=payload,
         correlation_id=_CORRELATION_ID,
         causation_id=None,
         occurred_at=_LATER,
@@ -388,6 +401,196 @@ async def test_apply_emits_caution_proposal_decision_on_run_aborted() -> None:
     assert decision.inputs["informed_by_decision_id"] is None
     # confidence_band carried through always.
     assert decision.inputs["confidence_band"] == "medium"
+
+
+# ---------------------------------------------------------------------------
+# Capture-progress frame tallies (extract_capture_progress -> payload)
+# ---------------------------------------------------------------------------
+
+
+class _FixedCautionLookup:
+    """`CautionLookup` stub returning a canned list of existing cautions.
+
+    Sibling of `AlwaysQuietCautionLookup` for tests that need
+    `find_active_in_scope` to answer non-empty, so the
+    shortfall-plus-existing-Caution corroboration path can be pinned.
+    """
+
+    def __init__(self, results: list[CautionLookupResult]) -> None:
+        self._results = results
+
+    async def find_active_in_scope(
+        self,
+        *,
+        asset_ids: frozenset[UUID],
+        procedure_ids: frozenset[UUID],
+        min_severity: str = "Caution",
+    ) -> list[CautionLookupResult]:
+        _ = (asset_ids, procedure_ids, min_severity)
+        return self._results
+
+    async def find_retired_for_target(
+        self,
+        *,
+        target_kind: str,
+        target_id: UUID,
+        category: str,
+        authored_by: UUID,
+    ) -> list[CautionLookupResult]:
+        _ = (target_kind, target_id, category, authored_by)
+        return []
+
+
+_SHORTFALL_SNAPSHOT: dict[str, object] = {
+    "saved_count": 1528,
+    "saved_total": 1541,
+    "collected_count": 1541,
+    "collected_total": 1541,
+    "saved_at": "2026-05-17T14:46:47+00:00",
+}
+
+
+@pytest.mark.unit
+async def test_apply_passes_capture_progress_to_llm_payload_when_snapshot_present() -> None:
+    """The terminal event's frame tallies must reach the built request's
+    user message, mirroring RunDebriefer's `extract_capture_progress`
+    wiring. Before this, CautionDrafter never saw a shortfall at all."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(
+        event_type="RunCompleted",
+        run_id=run_id,
+        capture_progress_snapshot=_SHORTFALL_SNAPSHOT,
+    )
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(llm.received) == 1
+    user_text = llm.received[0].user_message.text
+    json_blob = user_text[user_text.index("{") :]
+    parsed = json.loads(json_blob)
+    # No `reading_age_seconds_before_terminal` key: the fixture's terminal
+    # event carries `observed_at=None`, so `_reading_lag_seconds` has no
+    # second timestamp to subtract and the key is omitted rather than
+    # defaulted to zero.
+    assert parsed["capture_progress"] == {
+        "frames_saved": 1528,
+        "frames_saved_expected": 1541,
+        "frames_collected": 1541,
+        "frames_collected_expected": 1541,
+    }
+
+
+@pytest.mark.unit
+async def test_apply_passes_none_capture_progress_when_snapshot_absent() -> None:
+    """A Run with no witnessed-capture snapshot (the ordinary case, not a
+    fault) must still build a valid request, with `capture_progress`
+    travelling as `None`."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(llm.received) == 1
+    user_text = llm.received[0].user_message.text
+    json_blob = user_text[user_text.index("{") :]
+    parsed = json.loads(json_blob)
+    assert parsed["capture_progress"] is None
+
+
+@pytest.mark.unit
+async def test_apply_sends_shortfall_alongside_matching_existing_caution() -> None:
+    """One documented path: a shortfall corroborated by an existing
+    Active Caution describing frame loss on the same target. Pins the
+    payload the LLM sees (both the tallies and the existing Caution)
+    rather than any verdict, per the "cannot assert what the model
+    chooses" constraint."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    matching_caution_id = uuid4()
+    caution_lookup = _FixedCautionLookup(
+        [
+            CautionLookupResult(
+                caution_id=matching_caution_id,
+                target_kind="Asset",
+                target_id=_ASSET_ID,
+                category="Wiring",
+                severity="Caution",
+                text_excerpt="detector drops frames intermittently under load",
+                workaround_excerpt="re-arm the file writer before long scans",
+            )
+        ]
+    )
+    subscriber = CautionDrafterSubscriber(
+        event_store=store,
+        llm=llm,
+        caution_lookup=caution_lookup,
+    )
+    event = _terminal_event(
+        event_type="RunCompleted",
+        run_id=run_id,
+        capture_progress_snapshot=_SHORTFALL_SNAPSHOT,
+    )
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(llm.received) == 1
+    user_text = llm.received[0].user_message.text
+    json_blob = user_text[user_text.index("{") :]
+    parsed = json.loads(json_blob)
+    assert parsed["capture_progress"]["frames_saved"] == 1528
+    assert parsed["capture_progress"]["frames_saved_expected"] == 1541
+    assert len(parsed["existing_cautions"]) == 1
+    assert parsed["existing_cautions"][0]["caution_id"] == str(matching_caution_id)
+    assert parsed["existing_cautions"][0]["text_excerpt"] == (
+        "detector drops frames intermittently under load"
+    )
+
+
+@pytest.mark.unit
+async def test_apply_sends_shortfall_absent_existing_caution() -> None:
+    """The other documented path: a shortfall with nothing in
+    `existing_cautions` to corroborate it. Per the guidance, this is
+    the case where the prompt tells the model `NoAction` remains
+    correct; this test pins that the payload still carries the tallies
+    with an empty `existing_cautions` list, not that the model must
+    refuse."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)  # AlwaysQuietCautionLookup
+    event = _terminal_event(
+        event_type="RunCompleted",
+        run_id=run_id,
+        capture_progress_snapshot=_SHORTFALL_SNAPSHOT,
+    )
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(llm.received) == 1
+    user_text = llm.received[0].user_message.text
+    json_blob = user_text[user_text.index("{") :]
+    parsed = json.loads(json_blob)
+    assert parsed["capture_progress"]["frames_saved"] == 1528
+    assert parsed["existing_cautions"] == []
 
 
 # ---------------------------------------------------------------------------
