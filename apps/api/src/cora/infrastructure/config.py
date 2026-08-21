@@ -1224,7 +1224,9 @@ class Settings(BaseSettings):
     #         },
     #         "/gdata/dm/2BM": {
     #           "supply_id": "77f0...-storage-supply-uuid",
-    #           "access_protocol": "NFS"
+    #           "access_protocol": "NFS",
+    #           "durable": true,
+    #           "subdirectory": "data"
     #         }
     #       }
     #     }
