@@ -15,7 +15,12 @@ function name, or a module-level alias.
 
 Matching is by stem PREFIX over each lowercase token, so morphological
 variants are caught too: `captures` / `setpoints` / `steps` / `scanned` /
-`acquired` / `motors` / `pvs` / `kernels` all trip their singular stem.
+`acquired` / `motors` / `pvs` / `kernels` all trip their singular stem. The
+two-letter "gp" acronym (Gaussian Process) is the one exception: it is
+matched by EXACT token equality instead, because prefix matching on a
+two-letter stem also catches unrelated words that merely start with it
+(`gpu_seconds`, an honest inference-ledger field with no optimizer
+meaning, would otherwise trip on "gp").
 
 The point-to-captures translation is the CALLER's job; `point_to_captures`
 must never be a `DecidePort` member (the `capture` stem enforces it).
@@ -41,7 +46,6 @@ _OPTIMIZER_STEMS = frozenset(
         "exploration",
         "hyperparam",
         "lengthscale",
-        "gp",
         "surrogate",
         "posterior",
     }
@@ -64,6 +68,15 @@ _ACTION_STEMS = frozenset(
 )
 _BANNED_STEMS = _OPTIMIZER_STEMS | _ACTION_STEMS
 
+# Two-letter optimizer acronym ("Gaussian Process"), matched by EXACT token
+# equality rather than prefix: prefix matching would also trip "gpu" (GPU
+# compute time, an honest inference-ledger field with no optimizer meaning),
+# "gps", or any other unrelated word that happens to start with these two
+# letters. A lone "gp" token (e.g. a field named `gp` or `gp_kernel`) still
+# trips this; "gpu_seconds" tokenizes to {"gpu", "seconds"}, neither an
+# exact "gp", so it does not.
+_BANNED_EXACT_TOKENS = frozenset({"gp"})
+
 
 def _tokens(name: str) -> set[str]:
     """Split a snake_case / camelCase identifier into lowercase tokens."""
@@ -73,8 +86,13 @@ def _tokens(name: str) -> set[str]:
 
 
 def _banned_hits(name: str) -> set[str]:
-    """Stems a name's tokens trip, by prefix (so `captures` trips `capture`)."""
-    return {stem for token in _tokens(name) for stem in _BANNED_STEMS if token.startswith(stem)}
+    """Stems a name's tokens trip: by prefix for morphological stems (so
+    `captures` trips `capture`), by exact match for bare acronyms (so `gpu`
+    does not trip `gp`)."""
+    tokens = _tokens(name)
+    prefix_hits = {stem for token in tokens for stem in _BANNED_STEMS if token.startswith(stem)}
+    exact_hits = tokens & _BANNED_EXACT_TOKENS
+    return prefix_hits | exact_hits
 
 
 def _surface_names(tree: ast.AST) -> list[str]:
@@ -112,6 +130,25 @@ def test_decide_port_surface_is_optimizer_and_action_neutral() -> None:
         "stays open. Move optimizer internals into the adapter and control specifics "
         "into the caller's point translation; keep the port to coordinate vocabulary."
     )
+
+
+@pytest.mark.architecture
+def test_banned_hits_gpu_seconds_field_name_not_flagged() -> None:
+    """`gpu_seconds` must not trip the "gp" acronym stem.
+
+    A prior version of this scanner matched "gp" by prefix, which also
+    caught "gpu" (GPU compute seconds, an honest field with no optimizer
+    meaning) and would have blocked `SteeringLlmCall.gpu_seconds` from
+    ever being added to the seam's usage-record DTO.
+    """
+    assert _banned_hits("gpu_seconds") == set()
+
+
+@pytest.mark.architecture
+def test_banned_hits_bare_gp_token_flagged() -> None:
+    """A genuine "gp" (Gaussian Process) token must still be caught."""
+    assert "gp" in _banned_hits("gp_kernel")
+    assert "gp" in _banned_hits("gp")
 
 
 @pytest.mark.architecture

@@ -376,17 +376,39 @@ class SteeringLlmCall:
 
     Emitted by `LlmDecidePort` into the conduct loop's usage sink so the
     composition root can post each call to the durable inference ledger
-    once the across-procedure Decision exists. Carries only what the
-    brain legitimately knows at the seam: the model it asked for, the
-    model that answered, and the provider-reported token usage. Cost is
+    once the across-procedure Decision exists. Carries everything the
+    brain legitimately knows at the seam, mirroring the fields
+    `RunDebrieferSubscriber` / `CautionDrafterSubscriber` /
+    `regenerate_run_debrief` read straight off their `LLMChatRequest` /
+    `LLMResponse` pair: the model asked for and the model that answered,
+    the provider-reported token usage (cache counts included), the
+    provider's own response id, the stop reason, any tool-use identifiers,
+    GPU seconds, and the sampling dials the request carried. Cost is
     computed by the consumer from `usage` and pricing, the same math as
-    every other metered caller.
+    every other metered caller; `output_type` and `tool_type` are likewise
+    left to the consumer to derive, since both depend on how the trace's
+    home (`AgentInferenceTrace`) defines them, not on anything this DTO
+    needs to store twice.
+
+    The fields after `usage` default to `None` so existing test
+    construction sites that predate them keep working. Every one of them
+    is genuinely available at the `LlmDecidePort.advise_next` seam; none
+    is a placeholder for an omission.
     """
 
     provider: str
     request_model: str
     response_model: str | None
     usage: "LLMUsage"
+    response_id: str | None = None
+    stop_reason: str | None = None
+    tool_call_id: str | None = None
+    tool_name: str | None = None
+    gpu_seconds: float | None = None
+    request_max_tokens: int | None = None
+    request_temperature: float | None = None
+    request_top_p: float | None = None
+    duration_ms: int | None = None
 
 
 def objective_is_satisfied(

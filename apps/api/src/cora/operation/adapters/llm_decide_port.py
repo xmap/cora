@@ -59,6 +59,7 @@ translation, exactly as the other brains leave it.
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, cast
 
 from cora.infrastructure.observability.gen_ai import (
@@ -144,6 +145,7 @@ class LlmDecidePort:
         payload = evidence_to_payload(evidence)
         request = build_llm_decide_chat_request(payload, model_ref=self._model_ref)
         await self._refuse_if_over_budget(request)
+        call_started_at = time.monotonic()
         try:
             response = await self._llm.chat(request)
         except LLMTimeoutError as exc:
@@ -157,6 +159,7 @@ class LlmDecidePort:
             LLMInvalidRequestError,
         ) as exc:
             raise DecideNotAvailableError(f"LLM call failed: {type(exc).__name__}") from exc
+        duration_ms = round((time.monotonic() - call_started_at) * 1000)
 
         self._conduct_spent_usd += compute_cost_usd(self._model_ref, response.usage)
         self._conduct_spent_tokens += (response.usage.input_tokens or 0) + (
@@ -171,6 +174,15 @@ class LlmDecidePort:
                     request_model=self._model_ref.model,
                     response_model=response.model_id,
                     usage=response.usage,
+                    response_id=response.response_id,
+                    stop_reason=response.stop_reason,
+                    tool_call_id=response.tool_call_id,
+                    tool_name=response.tool_name,
+                    gpu_seconds=response.gpu_seconds,
+                    request_max_tokens=request.max_output_tokens,
+                    request_temperature=request.temperature,
+                    request_top_p=request.top_p,
+                    duration_ms=duration_ms,
                 )
             )
         return self._advice_from_parsed(response.parsed, evidence)
