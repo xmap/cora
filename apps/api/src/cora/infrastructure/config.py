@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from cora.infrastructure.auth.config import IdentityProviderConfig
 from cora.infrastructure.control_port_route import ControlPortRoute
 from cora.shared.capture_phase import CapturePhase
+from cora.shared.storage_root import normalize_storage_root
 
 _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
@@ -1230,6 +1231,81 @@ class Settings(BaseSettings):
                 "an explicit interpreter path to run cora.data._remote_scan_probe."
             )
             raise ValueError(msg)
+        return value
+
+    @field_validator("scan_probe_remote_host")
+    @classmethod
+    def _validate_scan_probe_remote_host(cls, value: str | None) -> str | None:
+        """Reject an empty or whitespace-only host rather than silently
+        treating it as unset.
+
+        `SCAN_PROBE_REMOTE_HOST=""` is a different
+        signal than the variable being absent -- in a deployment's
+        settings template it usually means an interpolation that
+        resolved to nothing -- and `active_scan_transport` tests
+        `is not None`, so a bare "" was passing through as a configured
+        remote transport with no host to connect to, then failing the
+        vault's own CHECK constraint on the first upsert instead of at
+        boot. Coercing "" to `None` was the other option; rejecting is
+        chosen instead so the misconfiguration surfaces immediately
+        rather than being silently papered over. Leave the setting
+        unset to mean "no remote probe."
+        """
+        if value is not None and not value.strip():
+            msg = (
+                "scan_probe_remote_host is set to an empty or "
+                "whitespace-only string. Leave it unset to disable the "
+                "remote scan probe, rather than setting it to an empty value."
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("posix_checksum_roots")
+    @classmethod
+    def _validate_posix_checksum_roots(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        """Refuse a root that cannot name a real storage tier at boot,
+        not at the first attestation. A relative path is meaningless to
+        `PosixChecksumAdapter`, which treats every root as absolute, and
+        `normalize_storage_root("/")` collapses to the empty string,
+        which the run_capture_path vault's own CHECK constraint forbids
+        -- so bare "/" would otherwise pass here and fail on the first
+        write instead of at boot. A trailing slash is fine: normalization
+        (`cora.shared.storage_root`) handles it.
+        """
+        for root in value:
+            if not root.startswith("/"):
+                msg = f"posix_checksum_roots entry {root!r} is not an absolute path."
+                raise ValueError(msg)
+            if not normalize_storage_root(root):
+                msg = (
+                    f"posix_checksum_roots entry {root!r} normalizes to the "
+                    "empty string. A root must name a facility-level storage "
+                    "tier, not the filesystem root itself."
+                )
+                raise ValueError(msg)
+        return value
+
+    @field_validator("scan_probe_allowed_roots")
+    @classmethod
+    def _validate_scan_probe_allowed_roots(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        """Same rule as `posix_checksum_roots`, applied to the roots
+        allowlisted on `scan_probe_remote_host`: a relative path or a
+        bare "/" is a misconfiguration worth refusing at boot rather
+        than discovering when the remote probe's own resolver refuses
+        every locator. A trailing slash is fine: normalization
+        (`cora.shared.storage_root`) handles it.
+        """
+        for root in value:
+            if not root.startswith("/"):
+                msg = f"scan_probe_allowed_roots entry {root!r} is not an absolute path."
+                raise ValueError(msg)
+            if not normalize_storage_root(root):
+                msg = (
+                    f"scan_probe_allowed_roots entry {root!r} normalizes to the "
+                    "empty string. A root must name a facility-level storage "
+                    "tier, not the filesystem root itself."
+                )
+                raise ValueError(msg)
         return value
 
     @field_validator("capture_experiment_identity_pvs")

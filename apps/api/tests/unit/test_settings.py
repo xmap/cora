@@ -636,3 +636,101 @@ def test_settings_scan_probe_remote_host_with_remote_python_is_accepted(
     settings = Settings()
     assert settings.scan_probe_remote_host == "tomdet"
     assert settings.scan_probe_remote_python == "/venv/bin/python3"
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_remote_host_rejects_empty_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`SCAN_PROBE_REMOTE_HOST=""` used to pass validation and then
+    `active_scan_transport` (`is not None`) treated it as a configured
+    remote host, failing the vault's CHECK constraint on first upsert
+    instead of at boot."""
+    import pydantic
+
+    monkeypatch.setenv("SCAN_PROBE_REMOTE_HOST", "")
+    with pytest.raises(pydantic.ValidationError, match="scan_probe_remote_host is set to"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_remote_host_rejects_whitespace_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv("SCAN_PROBE_REMOTE_HOST", "   ")
+    with pytest.raises(pydantic.ValidationError, match="scan_probe_remote_host is set to"):
+        Settings()
+
+
+# ---------------------------------------------------------------------------
+# posix_checksum_roots / scan_probe_allowed_roots: absolute-path boot checks
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_posix_checksum_roots_accepts_trailing_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Normalization (`cora.shared.storage_root`) handles the trailing
+    slash; the validator must not reject what normalization already fixes."""
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM/"]')
+    settings = Settings()
+    assert settings.posix_checksum_roots == ("/local1/2BM/",)
+
+
+@pytest.mark.unit
+def test_settings_posix_checksum_roots_rejects_relative_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["local1/2BM"]')
+    with pytest.raises(pydantic.ValidationError, match="is not an absolute path"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_posix_checksum_roots_rejects_bare_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A bare "/" normalizes to the empty string, which the
+    run_capture_path vault's CHECK constraint forbids; refuse it at
+    boot instead of at the first write."""
+    import pydantic
+
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/"]')
+    with pytest.raises(pydantic.ValidationError, match="normalizes to the empty string"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_allowed_roots_accepts_trailing_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/local1/2BM/"]')
+    settings = Settings()
+    assert settings.scan_probe_allowed_roots == ("/local1/2BM/",)
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_allowed_roots_rejects_relative_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["local1/2BM"]')
+    with pytest.raises(pydantic.ValidationError, match="is not an absolute path"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_allowed_roots_rejects_bare_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/"]')
+    with pytest.raises(pydantic.ValidationError, match="normalizes to the empty string"):
+        Settings()
