@@ -11,6 +11,7 @@ populate them.
 # pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false
 
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -45,23 +46,31 @@ async def _insert_capture_path(
     created_at: datetime,
     host: str | None = "tomdet",
     root: str | None = "/local1/2BM",
-) -> None:
+) -> UUID:
     """Rows default to a RECORDED location, because `_CANDIDATE_SQL`
     excludes rows without one: a locator cannot be minted for a location
     the vault never recorded, so such a row is not a candidate. Pass
-    host=None, root=None to build the legacy shape deliberately."""
-    await pool.execute(
-        """
-        INSERT INTO run_capture_path
-            (run_id, observed_path, observed_at, created_at, updated_at, host, root)
-        VALUES ($1, $2, $3, $4, $4, $5, $6)
-        """,
-        run_id,
-        observed_path,
-        created_at,
-        created_at,
-        host,
-        root,
+    host=None, root=None to build the legacy shape deliberately.
+
+    Returns the row's own `capture_path_id`, the surrogate key `exclude`
+    is keyed by (not `run_id`: a Run may hold more than one vault row).
+    """
+    return cast(
+        "UUID",
+        await pool.fetchval(
+            """
+            INSERT INTO run_capture_path
+                (run_id, observed_path, observed_at, created_at, updated_at, host, root)
+            VALUES ($1, $2, $3, $4, $4, $5, $6)
+            RETURNING capture_path_id
+            """,
+            run_id,
+            observed_path,
+            created_at,
+            created_at,
+            host,
+            root,
+        ),
     )
 
 
@@ -156,13 +165,15 @@ async def test_no_candidates_at_all_returns_none(db_pool: asyncpg.Pool) -> None:
 
 
 @pytest.mark.integration
-async def test_an_excluded_run_id_is_skipped_for_the_next_oldest(db_pool: asyncpg.Pool) -> None:
+async def test_an_excluded_capture_path_id_is_skipped_for_the_next_oldest(
+    db_pool: asyncpg.Pool,
+) -> None:
     """The bounded-retry loop's own contract: `exclude` lets `tick()`
     walk past a candidate it already gave up on THIS tick."""
     older_run_id, newer_run_id = uuid4(), uuid4()
     await _insert_run_summary(db_pool, run_id=older_run_id, capture_code="2bmb-tomoscan")
     await _insert_run_summary(db_pool, run_id=newer_run_id, capture_code="2bmb-tomoscan")
-    await _insert_capture_path(
+    older_capture_path_id = await _insert_capture_path(
         db_pool, run_id=older_run_id, observed_path="/local1/2BM/older.h5", created_at=_NOW
     )
     await _insert_capture_path(
@@ -173,7 +184,7 @@ async def test_an_excluded_run_id_is_skipped_for_the_next_oldest(db_pool: asyncp
     )
 
     lookup = PostgresScanIngestCandidateLookup(db_pool)
-    candidate = await lookup.next_candidate(exclude=frozenset({older_run_id}))
+    candidate = await lookup.next_candidate(exclude=frozenset({older_capture_path_id}))
 
     assert candidate is not None
     assert candidate.run_id == newer_run_id
@@ -183,12 +194,45 @@ async def test_an_excluded_run_id_is_skipped_for_the_next_oldest(db_pool: asyncp
 async def test_excluding_every_candidate_returns_none(db_pool: asyncpg.Pool) -> None:
     run_id = uuid4()
     await _insert_run_summary(db_pool, run_id=run_id, capture_code="2bmb-tomoscan")
-    await _insert_capture_path(
+    capture_path_id = await _insert_capture_path(
         db_pool, run_id=run_id, observed_path="/local1/2BM/scan.h5", created_at=_NOW
     )
 
     lookup = PostgresScanIngestCandidateLookup(db_pool)
-    assert await lookup.next_candidate(exclude=frozenset({run_id})) is None
+    assert await lookup.next_candidate(exclude=frozenset({capture_path_id})) is None
+
+
+@pytest.mark.integration
+async def test_excluding_one_location_of_a_run_still_returns_its_other_location(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A Run may hold more than one vault row (one per storage location);
+    `exclude` is keyed by `capture_path_id`, not `run_id`, so giving up on
+    ONE of a run's locations this tick must not also rule out its OTHER
+    location, which is a distinct, independently ingestable row."""
+    run_id = uuid4()
+    await _insert_run_summary(db_pool, run_id=run_id, capture_code="2bmb-tomoscan")
+    local_capture_path_id = await _insert_capture_path(
+        db_pool,
+        run_id=run_id,
+        observed_path="/local1/2BM/scan.h5",
+        created_at=_NOW,
+        root="/local1/2BM",
+    )
+    await _insert_capture_path(
+        db_pool,
+        run_id=run_id,
+        observed_path="/gdata/dm/2BM/scan.h5",
+        created_at=_NOW,
+        root="/gdata/dm/2BM",
+    )
+
+    lookup = PostgresScanIngestCandidateLookup(db_pool)
+    candidate = await lookup.next_candidate(exclude=frozenset({local_capture_path_id}))
+
+    assert candidate is not None
+    assert candidate.run_id == run_id
+    assert candidate.root == "/gdata/dm/2BM"
 
 
 @pytest.mark.integration

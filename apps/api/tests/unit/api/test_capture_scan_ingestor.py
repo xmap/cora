@@ -60,6 +60,8 @@ if TYPE_CHECKING:
 _RUN_ID = UUID("01900000-0000-7000-8000-000000007101")
 _RUN_ID_2 = UUID("01900000-0000-7000-8000-000000007102")
 _RUN_ID_3 = UUID("01900000-0000-7000-8000-000000007103")
+_CAPTURE_PATH_ID = UUID("01900000-0000-7000-8000-000000008101")
+_CAPTURE_PATH_ID_2 = UUID("01900000-0000-7000-8000-000000008102")
 _ASSET_ID = uuid4()
 _SUPPLY_ID = uuid4()
 _SUPPLY_ID_2 = uuid4()
@@ -82,10 +84,11 @@ def _deps(**settings_kwargs: Any) -> Any:
 
 
 class _ListCandidateLookup:
-    """Mirrors the real SQL's contract: returns the first candidate NOT
-    in `exclude`, oldest-first, or `None` when the list is exhausted --
-    close enough to `PostgresScanIngestCandidateLookup`'s behavior to
-    exercise `tick()`'s bounded-retry loop without a database."""
+    """Mirrors the real SQL's contract: returns the first candidate whose
+    `capture_path_id` is NOT in `exclude`, oldest-first, or `None` when
+    the list is exhausted -- close enough to
+    `PostgresScanIngestCandidateLookup`'s behavior to exercise `tick()`'s
+    bounded-retry loop without a database."""
 
     def __init__(self, candidates: list[ScanIngestCandidate]) -> None:
         self._candidates = candidates
@@ -96,7 +99,7 @@ class _ListCandidateLookup:
     ) -> ScanIngestCandidate | None:
         self.exclude_calls.append(exclude)
         for candidate in self._candidates:
-            if candidate.run_id not in exclude:
+            if candidate.capture_path_id not in exclude:
                 return candidate
         return None
 
@@ -144,12 +147,14 @@ class _FakeIngestScan:
 
 def _candidate(
     run_id: UUID = _RUN_ID,
+    capture_path_id: UUID = _CAPTURE_PATH_ID,
     capture_code: str = "2bmb-tomoscan",
     observed_path: str = f"/local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
     host: str = "localhost",
     root: str = "/local1/2BM",
 ) -> ScanIngestCandidate:
     return ScanIngestCandidate(
+        capture_path_id=capture_path_id,
         run_id=run_id,
         capture_code=capture_code,
         observed_path=observed_path,
@@ -266,8 +271,10 @@ async def test_tick_with_a_stuck_oldest_candidate_still_ingests_the_next_one() -
     """The head-of-line-blocking regression this gate review caught: an
     oldest candidate with no binding must not prevent a later, bindable
     candidate from being ingested in the SAME tick."""
-    stuck = _candidate(run_id=_RUN_ID, capture_code="unbound-code")
-    good = _candidate(run_id=_RUN_ID_2)
+    stuck = _candidate(
+        run_id=_RUN_ID, capture_path_id=_CAPTURE_PATH_ID, capture_code="unbound-code"
+    )
+    good = _candidate(run_id=_RUN_ID_2, capture_path_id=_CAPTURE_PATH_ID_2)
     lookup = _ListCandidateLookup([stuck, good])
     ingest_scan = _FakeIngestScan()
     ingestor = CaptureScanIngestor(
@@ -278,8 +285,38 @@ async def test_tick_with_a_stuck_oldest_candidate_still_ingests_the_next_one() -
 
     assert len(ingest_scan.calls) == 1
     assert ingest_scan.calls[0].producing_run_id == _RUN_ID_2
-    # The lookup was asked to exclude the stuck candidate on the retry.
-    assert lookup.exclude_calls[-1] == frozenset({_RUN_ID})
+    # The lookup was asked to exclude the stuck candidate's vault row on
+    # the retry -- by capture_path_id, not run_id.
+    assert lookup.exclude_calls[-1] == frozenset({_CAPTURE_PATH_ID})
+
+
+@pytest.mark.unit
+async def test_tick_with_one_of_a_runs_two_locations_unbound_still_ingests_the_bound_one() -> None:
+    """`exclude` is keyed by `capture_path_id`, not `run_id`: a Run with
+    two vault rows (one per location) whose binding only covers ONE of
+    them must not have the unbound location's SKIP also rule out the
+    SAME run's other, bound location."""
+    unbound = _candidate(
+        run_id=_RUN_ID,
+        capture_path_id=_CAPTURE_PATH_ID,
+        root="/gdata/dm/2BM",
+        observed_path=f"/gdata/dm/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+    )
+    bound = _candidate(run_id=_RUN_ID, capture_path_id=_CAPTURE_PATH_ID_2, root="/local1/2BM")
+    lookup = _ListCandidateLookup([unbound, bound])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(posix_checksum_roots=("/local1/2BM", "/gdata/dm/2BM")),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings(),
+    )
+
+    await ingestor.tick()
+
+    assert len(ingest_scan.calls) == 1
+    assert ingest_scan.calls[0].producing_run_id == _RUN_ID
+    assert ingest_scan.calls[0].supply_id == _SUPPLY_ID
 
 
 @pytest.mark.unit
@@ -300,7 +337,10 @@ async def test_tick_stops_after_one_success_even_with_more_candidates_left() -> 
 
 @pytest.mark.unit
 async def test_tick_with_every_candidate_stuck_gives_up_after_the_attempt_cap() -> None:
-    candidates = [_candidate(run_id=UUID(int=n), capture_code="unbound-code") for n in range(1, 15)]
+    candidates = [
+        _candidate(run_id=UUID(int=n), capture_path_id=UUID(int=n), capture_code="unbound-code")
+        for n in range(1, 15)
+    ]
     lookup = _ListCandidateLookup(candidates)
     ingest_scan = _FakeIngestScan()
     ingestor = CaptureScanIngestor(
