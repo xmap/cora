@@ -95,7 +95,6 @@ import contextlib
 import enum
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
-from uuid import UUID
 
 from cora.agent.seed_capture_scan_ingestor import CAPTURE_SCAN_INGESTOR_AGENT_ID
 from cora.api._flag_watcher import probe_read_grant
@@ -116,10 +115,12 @@ from cora.shared.storage_root import normalize_storage_root
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
+    from uuid import UUID
 
     import asyncpg
 
     from cora.data.features.ingest_scan.handler import IdempotentHandler
+    from cora.infrastructure.capture_scan_ingestor_binding import CaptureScanIngestorBinding
     from cora.infrastructure.kernel import Kernel
 
 _log = get_logger(__name__)
@@ -135,7 +136,8 @@ _LOG_PREFIX = "capture_scan_ingestor"
 _MAX_CANDIDATES_PER_TICK = 10
 
 _CANDIDATE_SQL = """
-SELECT rcp.run_id, rcp.observed_path, rcp.host, rcp.root, prs.capture_code
+SELECT rcp.capture_path_id, rcp.run_id, rcp.observed_path, rcp.host, rcp.root,
+       prs.capture_code
 FROM run_capture_path rcp
 JOIN proj_run_summary prs ON prs.run_id = rcp.run_id
 WHERE prs.capture_code IS NOT NULL
@@ -148,7 +150,7 @@ WHERE prs.capture_code IS NOT NULL
   -- location columns are the population this covers.
   AND rcp.host IS NOT NULL
   AND rcp.root IS NOT NULL
-  AND NOT (rcp.run_id = ANY($1::uuid[]))
+  AND NOT (rcp.capture_path_id = ANY($1::uuid[]))
   AND NOT EXISTS (
       SELECT 1 FROM proj_data_dataset_summary dds
       WHERE dds.producing_run_id = rcp.run_id
@@ -160,9 +162,10 @@ LIMIT 1
 
 @dataclass(frozen=True)
 class ScanIngestCandidate:
-    """One terminated witnessed Run whose capture path resolved and
-    which has no Dataset yet."""
+    """One terminated witnessed Run's vault row whose capture path
+    resolved and which has no Dataset yet."""
 
+    capture_path_id: UUID
     run_id: UUID
     capture_code: str
     observed_path: str
@@ -181,8 +184,14 @@ class ScanIngestCandidateLookup(Protocol):
     Neither BC owns this query alone, mirroring `main.py`'s own
     "only cora.api may depend on both" placement rule.
 
-    `exclude` lets one tick walk past candidates it already gave up on
-    without re-selecting the same stuck head repeatedly; see
+    `exclude` holds `capture_path_id` values, not `run_id` values: a Run
+    may hold more than one vault row (one per storage location it was
+    observed under), and a tick that skips one location's row must still
+    be free to try that SAME run's other location on the next attempt.
+    Excluding by `run_id` would wrongly rule out every row for a run
+    after just one of its locations proved unbound or unreadable. Lets
+    one tick walk past candidates it already gave up on without
+    re-selecting the same stuck head repeatedly; see
     `CaptureScanIngestor.tick`'s bounded-retry loop.
     """
 
@@ -204,6 +213,7 @@ class PostgresScanIngestCandidateLookup:
         if row is None:
             return None
         return ScanIngestCandidate(
+            capture_path_id=row["capture_path_id"],
             run_id=row["run_id"],
             capture_code=row["capture_code"],
             observed_path=row["observed_path"],
@@ -283,7 +293,7 @@ class CaptureScanIngestor:
         deps: Kernel,
         candidate_lookup: ScanIngestCandidateLookup,
         ingest_scan: IdempotentHandler,
-        bindings: Mapping[str, Mapping[str, str]],
+        bindings: Mapping[str, CaptureScanIngestorBinding],
     ) -> None:
         self._deps = deps
         self._candidate_lookup = candidate_lookup
@@ -302,7 +312,7 @@ class CaptureScanIngestor:
                 return
             if outcome is _Outcome.SUCCESS:
                 return
-            excluded.add(candidate.run_id)
+            excluded.add(candidate.capture_path_id)
         _log.warning(
             "capture_scan_ingestor.tick_exhausted_attempts",
             attempts=_MAX_CANDIDATES_PER_TICK,
@@ -318,14 +328,13 @@ class CaptureScanIngestor:
             )
             return _Outcome.SKIP
 
-        try:
-            producing_asset_id = UUID(binding["producing_asset_id"])
-            supply_id = UUID(binding["supply_id"])
-        except ValueError:
-            _log.exception(
-                "capture_scan_ingestor.binding_malformed",
+        location = binding.locations.get(candidate.root)
+        if location is None:
+            _log.warning(
+                "capture_scan_ingestor.no_location_for_root",
                 capture_code=candidate.capture_code,
                 run_id=str(candidate.run_id),
+                root=candidate.root,
             )
             return _Outcome.SKIP
 
@@ -340,9 +349,9 @@ class CaptureScanIngestor:
 
         command = IngestScan(
             locator=locator,
-            producing_asset_id=producing_asset_id,
-            supply_id=supply_id,
-            access_protocol=binding["access_protocol"],
+            producing_asset_id=binding.producing_asset_id,
+            supply_id=location.supply_id,
+            access_protocol=location.access_protocol,
             producing_run_id=candidate.run_id,
         )
         try:

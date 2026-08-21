@@ -45,6 +45,10 @@ from cora.data.aggregates.dataset import (
 )
 from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
+from cora.infrastructure.capture_scan_ingestor_binding import (
+    CaptureScanIngestorBinding,
+    CaptureScanIngestorLocation,
+)
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -56,8 +60,11 @@ if TYPE_CHECKING:
 _RUN_ID = UUID("01900000-0000-7000-8000-000000007101")
 _RUN_ID_2 = UUID("01900000-0000-7000-8000-000000007102")
 _RUN_ID_3 = UUID("01900000-0000-7000-8000-000000007103")
+_CAPTURE_PATH_ID = UUID("01900000-0000-7000-8000-000000008101")
+_CAPTURE_PATH_ID_2 = UUID("01900000-0000-7000-8000-000000008102")
 _ASSET_ID = uuid4()
 _SUPPLY_ID = uuid4()
+_SUPPLY_ID_2 = uuid4()
 _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
 
 
@@ -77,10 +84,11 @@ def _deps(**settings_kwargs: Any) -> Any:
 
 
 class _ListCandidateLookup:
-    """Mirrors the real SQL's contract: returns the first candidate NOT
-    in `exclude`, oldest-first, or `None` when the list is exhausted --
-    close enough to `PostgresScanIngestCandidateLookup`'s behavior to
-    exercise `tick()`'s bounded-retry loop without a database."""
+    """Mirrors the real SQL's contract: returns the first candidate whose
+    `capture_path_id` is NOT in `exclude`, oldest-first, or `None` when
+    the list is exhausted -- close enough to
+    `PostgresScanIngestCandidateLookup`'s behavior to exercise `tick()`'s
+    bounded-retry loop without a database."""
 
     def __init__(self, candidates: list[ScanIngestCandidate]) -> None:
         self._candidates = candidates
@@ -91,7 +99,7 @@ class _ListCandidateLookup:
     ) -> ScanIngestCandidate | None:
         self.exclude_calls.append(exclude)
         for candidate in self._candidates:
-            if candidate.run_id not in exclude:
+            if candidate.capture_path_id not in exclude:
                 return candidate
         return None
 
@@ -139,12 +147,14 @@ class _FakeIngestScan:
 
 def _candidate(
     run_id: UUID = _RUN_ID,
+    capture_path_id: UUID = _CAPTURE_PATH_ID,
     capture_code: str = "2bmb-tomoscan",
     observed_path: str = f"/local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
     host: str = "localhost",
     root: str = "/local1/2BM",
 ) -> ScanIngestCandidate:
     return ScanIngestCandidate(
+        capture_path_id=capture_path_id,
         run_id=run_id,
         capture_code=capture_code,
         observed_path=observed_path,
@@ -153,13 +163,36 @@ def _candidate(
     )
 
 
-def _bindings() -> dict[str, dict[str, str]]:
+def _bindings() -> dict[str, CaptureScanIngestorBinding]:
     return {
-        "2bmb-tomoscan": {
-            "producing_asset_id": str(_ASSET_ID),
-            "supply_id": str(_SUPPLY_ID),
-            "access_protocol": "POSIX",
-        }
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=_ASSET_ID,
+            locations={
+                "/local1/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID, access_protocol="POSIX"
+                )
+            },
+        )
+    }
+
+
+def _bindings_with_two_locations() -> dict[str, CaptureScanIngestorBinding]:
+    """A binding configured for BOTH the acquisition tier and the durable
+    APS Data Management copy, with a distinct Supply/protocol pair on
+    each -- used to prove `_ingest_one` reads the location matching the
+    CANDIDATE's own root, not whichever location happens to be first."""
+    return {
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=_ASSET_ID,
+            locations={
+                "/local1/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID, access_protocol="POSIX"
+                ),
+                "/gdata/dm/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID_2, access_protocol="NFS"
+                ),
+            },
+        )
     }
 
 
@@ -238,8 +271,10 @@ async def test_tick_with_a_stuck_oldest_candidate_still_ingests_the_next_one() -
     """The head-of-line-blocking regression this gate review caught: an
     oldest candidate with no binding must not prevent a later, bindable
     candidate from being ingested in the SAME tick."""
-    stuck = _candidate(run_id=_RUN_ID, capture_code="unbound-code")
-    good = _candidate(run_id=_RUN_ID_2)
+    stuck = _candidate(
+        run_id=_RUN_ID, capture_path_id=_CAPTURE_PATH_ID, capture_code="unbound-code"
+    )
+    good = _candidate(run_id=_RUN_ID_2, capture_path_id=_CAPTURE_PATH_ID_2)
     lookup = _ListCandidateLookup([stuck, good])
     ingest_scan = _FakeIngestScan()
     ingestor = CaptureScanIngestor(
@@ -250,8 +285,38 @@ async def test_tick_with_a_stuck_oldest_candidate_still_ingests_the_next_one() -
 
     assert len(ingest_scan.calls) == 1
     assert ingest_scan.calls[0].producing_run_id == _RUN_ID_2
-    # The lookup was asked to exclude the stuck candidate on the retry.
-    assert lookup.exclude_calls[-1] == frozenset({_RUN_ID})
+    # The lookup was asked to exclude the stuck candidate's vault row on
+    # the retry -- by capture_path_id, not run_id.
+    assert lookup.exclude_calls[-1] == frozenset({_CAPTURE_PATH_ID})
+
+
+@pytest.mark.unit
+async def test_tick_with_one_of_a_runs_two_locations_unbound_still_ingests_the_bound_one() -> None:
+    """`exclude` is keyed by `capture_path_id`, not `run_id`: a Run with
+    two vault rows (one per location) whose binding only covers ONE of
+    them must not have the unbound location's SKIP also rule out the
+    SAME run's other, bound location."""
+    unbound = _candidate(
+        run_id=_RUN_ID,
+        capture_path_id=_CAPTURE_PATH_ID,
+        root="/gdata/dm/2BM",
+        observed_path=f"/gdata/dm/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+    )
+    bound = _candidate(run_id=_RUN_ID, capture_path_id=_CAPTURE_PATH_ID_2, root="/local1/2BM")
+    lookup = _ListCandidateLookup([unbound, bound])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(posix_checksum_roots=("/local1/2BM", "/gdata/dm/2BM")),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings(),
+    )
+
+    await ingestor.tick()
+
+    assert len(ingest_scan.calls) == 1
+    assert ingest_scan.calls[0].producing_run_id == _RUN_ID
+    assert ingest_scan.calls[0].supply_id == _SUPPLY_ID
 
 
 @pytest.mark.unit
@@ -272,7 +337,10 @@ async def test_tick_stops_after_one_success_even_with_more_candidates_left() -> 
 
 @pytest.mark.unit
 async def test_tick_with_every_candidate_stuck_gives_up_after_the_attempt_cap() -> None:
-    candidates = [_candidate(run_id=UUID(int=n), capture_code="unbound-code") for n in range(1, 15)]
+    candidates = [
+        _candidate(run_id=UUID(int=n), capture_path_id=UUID(int=n), capture_code="unbound-code")
+        for n in range(1, 15)
+    ]
     lookup = _ListCandidateLookup(candidates)
     ingest_scan = _FakeIngestScan()
     ingestor = CaptureScanIngestor(
@@ -408,33 +476,68 @@ async def test_a_failed_ingest_never_logs_the_observed_path() -> None:
 
 
 @pytest.mark.unit
-async def test_tick_with_a_malformed_binding_uuid_skips_ingest() -> None:
-    """Defence in depth, not a reachable config state: the settings
-    validator already rejects a non-UUID binding value at construction.
-    The guard exists because `bindings` is a plain Mapping on the
-    constructor, so a future caller could supply one the validator never
-    saw, and an unguarded `UUID()` there would escape `tick()` as a bare
-    `ValueError` and kill the sweep loop for every other candidate."""
-    lookup = _ListCandidateLookup([_candidate()])
+async def test_tick_with_no_location_for_the_candidate_root_skips_ingest() -> None:
+    """A capture code CAN have a binding and still have no location for
+    THIS candidate's root -- e.g. a binding configured for only the
+    acquisition tier while the durable APS Data Management copy under
+    `/gdata` has no entry yet. This must be a distinct skip from
+    `no_binding` (no binding at all for the capture code): the two mean
+    different things to whoever reads the log."""
+    lookup = _ListCandidateLookup(
+        [
+            _candidate(
+                root="/gdata/dm/2BM",
+                observed_path=f"/gdata/dm/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+            )
+        ]
+    )
     ingest_scan = _FakeIngestScan()
-    bindings = {
-        "2bmb-tomoscan": {
-            "producing_asset_id": "not-a-uuid",
-            "supply_id": str(_SUPPLY_ID),
-            "access_protocol": "POSIX",
-        }
-    }
     ingestor = CaptureScanIngestor(
-        deps=_deps(), candidate_lookup=lookup, ingest_scan=ingest_scan, bindings=bindings
+        deps=_deps(),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings(),
     )
 
     with structlog.testing.capture_logs() as logs:
         await ingestor.tick()
 
     assert ingest_scan.calls == []
+    events = [entry["event"] for entry in logs]
+    assert "capture_scan_ingestor.no_location_for_root" in events
+    assert "capture_scan_ingestor.no_binding" not in events
     for entry in logs:
         for value in entry.values():
             assert _PERSONAL_PATH_FRAGMENT not in str(value)
+
+
+@pytest.mark.unit
+async def test_tick_with_a_gdata_candidate_uses_the_gdata_locations_fields() -> None:
+    """A binding with two locations must resolve each candidate against
+    the location matching ITS OWN root, not whichever location a naive
+    single-entry lookup would have returned first."""
+    lookup = _ListCandidateLookup(
+        [
+            _candidate(
+                root="/gdata/dm/2BM",
+                observed_path=f"/gdata/dm/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+            )
+        ]
+    )
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(posix_checksum_roots=("/local1/2BM", "/gdata/dm/2BM")),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings_with_two_locations(),
+    )
+
+    await ingestor.tick()
+
+    assert len(ingest_scan.calls) == 1
+    command = ingest_scan.calls[0]
+    assert command.supply_id == _SUPPLY_ID_2
+    assert command.access_protocol == "NFS"
 
 
 @pytest.mark.unit

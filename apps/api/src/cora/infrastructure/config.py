@@ -12,9 +12,10 @@ from pydantic import SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from cora.infrastructure.auth.config import IdentityProviderConfig
+from cora.infrastructure.capture_scan_ingestor_binding import CaptureScanIngestorBinding
 from cora.infrastructure.control_port_route import ControlPortRoute
 from cora.shared.capture_phase import CapturePhase
-from cora.shared.storage_root import normalize_storage_root
+from cora.shared.storage_root import normalize_storage_root, require_nonempty_absolute_root
 
 _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
@@ -22,11 +23,6 @@ _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 # (slice 14a), dispatched on by name in
 # `cora.api._capture_experiment_identity_reader`.
 _EXPERIMENT_IDENTITY_ROLES = frozenset({"proposal_number", "esaf_number", "esaf_doi_number"})
-
-# Closed key vocabulary for one `Settings.capture_scan_ingestor_bindings` entry
-# (slice 17), consumed by name in `cora.api._capture_scan_ingestor` to build
-# `IngestScan`.
-_SCAN_INGEST_BINDING_KEYS = frozenset({"producing_asset_id", "supply_id", "access_protocol"})
 
 OtelExporter = Literal["otlp", "console", "none"]
 
@@ -1198,63 +1194,78 @@ class Settings(BaseSettings):
     scan_probe_ssh_command_timeout_seconds: float = 60.0
 
     # Per-capture-code binding: what `IngestScan` needs that no file or PV
-    # can say (which Asset produced it, which Supply holds it, over what
-    # access protocol). Same `code -> inner-dict` shape as
-    # `capture_watch_pvs`, closed inner-key vocabulary because
-    # `cora.api._capture_scan_ingestor` dispatches on these three names.
-    # A code absent from this map is never auto-ingested, mirroring every
-    # other per-code table's optionality. Read from
+    # can say (which Asset produced it), plus one `CaptureScanIngestorLocation`
+    # per storage root the finished file may land on. A Run holds one
+    # vault row per storage location (the acquisition tier on fast local
+    # disk, and the durable APS Data Management copy under `/gdata`),
+    # each reached over a different access protocol from a different
+    # Supply, so `locations` carries one entry per location -- keyed by
+    # the location's OWN storage root rather than an invented tier name.
+    # The vault's `root` column itself carries only a length CHECK, no
+    # normalization guarantee; every row it holds is normalized in
+    # practice because `_run_witness.py` is the column's single writer
+    # and always writes through `matched_storage_root`
+    # (`cora.shared.storage_root`), so `cora.api._capture_scan_ingestor`
+    # reading a candidate's root straight off that row and joining
+    # against these keys needs no separate normalization step. A code
+    # absent from this map is never auto-ingested, mirroring every
+    # other per-code table's optionality. See
+    # `cora.infrastructure.capture_scan_ingestor_binding`
+    # for the model shapes and their own validation. Read from
     # CAPTURE_SCAN_INGESTOR_BINDINGS as JSON, for example:
     #
     #   CAPTURE_SCAN_INGESTOR_BINDINGS='{
     #     "2bmb-tomoscan": {
     #       "producing_asset_id": "0c5e...-camera-asset-uuid",
-    #       "supply_id": "b2a1...-storage-supply-uuid",
-    #       "access_protocol": "POSIX"
+    #       "locations": {
+    #         "/local1/2BM": {
+    #           "supply_id": "b2a1...-storage-supply-uuid",
+    #           "access_protocol": "POSIX"
+    #         },
+    #         "/gdata/dm/2BM": {
+    #           "supply_id": "77f0...-storage-supply-uuid",
+    #           "access_protocol": "NFS"
+    #         }
+    #       }
     #     }
     #   }'
-    capture_scan_ingestor_bindings: dict[str, dict[str, str]] = {}
+    capture_scan_ingestor_bindings: dict[str, CaptureScanIngestorBinding] = {}
 
     @field_validator("capture_scan_ingestor_bindings")
     @classmethod
     def _validate_capture_scan_ingestor_bindings(
-        cls, value: dict[str, dict[str, str]]
-    ) -> dict[str, dict[str, str]]:
-        """Refuse an unrecognized or incomplete binding at boot, not at
-        the first sweep tick: `cora.api._capture_scan_ingestor` reads
-        exactly `producing_asset_id` / `supply_id` / `access_protocol` by
-        name, and `producing_asset_id` / `supply_id` must parse as a
-        UUID, since `IngestScan` requires one."""
-        bad_keys = {
-            code: sorted(set(binding) - _SCAN_INGEST_BINDING_KEYS)
-            for code, binding in value.items()
-            if set(binding) - _SCAN_INGEST_BINDING_KEYS
-        }
-        if bad_keys:
-            msg = (
-                "capture_scan_ingestor_bindings has keys outside "
-                f"{sorted(_SCAN_INGEST_BINDING_KEYS)}: {bad_keys}. An unrecognized "
-                "key is never read by cora.api._capture_scan_ingestor."
-            )
-            raise ValueError(msg)
-        missing = {
-            code: sorted(_SCAN_INGEST_BINDING_KEYS - set(binding))
-            for code, binding in value.items()
-            if _SCAN_INGEST_BINDING_KEYS - set(binding)
-        }
-        if missing:
-            msg = f"capture_scan_ingestor_bindings is missing required keys: {missing}."
-            raise ValueError(msg)
+        cls, value: dict[str, CaptureScanIngestorBinding], info: ValidationInfo
+    ) -> dict[str, CaptureScanIngestorBinding]:
+        """Refuse a location root that CORA can never actually read from, at boot.
+
+        Per-binding shape (non-empty, absolute, normalized, no
+        collapsing duplicates) is enforced by
+        `CaptureScanIngestorBinding`'s own field validator, which runs
+        before this one sees the value. What only `Settings` can check
+        is reachability: a location root must be a member of either
+        `posix_checksum_roots` or `scan_probe_allowed_roots`, the two
+        allowlists `_build_scan_ingest_pair` actually reads from,
+        because a root neither adapter can serve would sit in the map
+        forever, refused by `_mint_locator`'s allowlist check on every
+        tick. Checked as a plain UNION rather than by reproducing
+        `active_scan_transport`'s host-conditional selection between the
+        two: the deployment may reconfigure `scan_probe_remote_host`
+        after boot's static validation runs, so a location valid under
+        either allowlist must not be rejected here.
+        """
+        posix_roots = info.data.get("posix_checksum_roots", ())
+        probe_roots = info.data.get("scan_probe_allowed_roots", ())
+        allowed_roots = {normalize_storage_root(root) for root in (*posix_roots, *probe_roots)}
         for code, binding in value.items():
-            for id_key in ("producing_asset_id", "supply_id"):
-                try:
-                    UUID(binding[id_key])
-                except ValueError as exc:
+            for root in binding.locations:
+                if root not in allowed_roots:
                     msg = (
-                        f"capture_scan_ingestor_bindings[{code!r}][{id_key!r}] is not a "
-                        f"valid UUID: {binding[id_key]!r}"
+                        f"capture_scan_ingestor_bindings[{code!r}] names location "
+                        f"{root!r}, which is in neither posix_checksum_roots nor "
+                        "scan_probe_allowed_roots. A location CORA can never "
+                        "read from can never be ingested."
                     )
-                    raise ValueError(msg) from exc
+                    raise ValueError(msg)
         return value
 
     @field_validator("scan_probe_remote_python")
@@ -1315,16 +1326,7 @@ class Settings(BaseSettings):
         (`cora.shared.storage_root`) handles it.
         """
         for root in value:
-            if not root.startswith("/"):
-                msg = f"posix_checksum_roots entry {root!r} is not an absolute path."
-                raise ValueError(msg)
-            if not normalize_storage_root(root):
-                msg = (
-                    f"posix_checksum_roots entry {root!r} normalizes to the "
-                    "empty string. A root must name a facility-level storage "
-                    "tier, not the filesystem root itself."
-                )
-                raise ValueError(msg)
+            require_nonempty_absolute_root(root, label="posix_checksum_roots entry")
         return value
 
     @field_validator("scan_probe_allowed_roots")
@@ -1338,16 +1340,7 @@ class Settings(BaseSettings):
         (`cora.shared.storage_root`) handles it.
         """
         for root in value:
-            if not root.startswith("/"):
-                msg = f"scan_probe_allowed_roots entry {root!r} is not an absolute path."
-                raise ValueError(msg)
-            if not normalize_storage_root(root):
-                msg = (
-                    f"scan_probe_allowed_roots entry {root!r} normalizes to the "
-                    "empty string. A root must name a facility-level storage "
-                    "tier, not the filesystem root itself."
-                )
-                raise ValueError(msg)
+            require_nonempty_absolute_root(root, label="scan_probe_allowed_roots entry")
         return value
 
     @field_validator("capture_experiment_identity_pvs")

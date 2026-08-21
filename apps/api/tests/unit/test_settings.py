@@ -1,5 +1,7 @@
 """Smoke tests for application Settings loading."""
 
+from uuid import UUID
+
 import pytest
 
 from cora.infrastructure.config import Settings
@@ -544,54 +546,217 @@ def test_settings_capture_scan_ingestor_defaults_are_empty_and_off(
 def test_settings_capture_scan_ingestor_bindings_reads_code_keyed_json(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
     monkeypatch.setenv(
         "CAPTURE_SCAN_INGESTOR_BINDINGS",
         '{"2bmb-tomoscan": {'
         '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
         '"supply_id": "01900000-0000-7000-8000-000000000002", '
         '"access_protocol": "POSIX"'
-        "}}",
+        "}}}}",
     )
     settings = Settings()
-    assert settings.capture_scan_ingestor_bindings == {
-        "2bmb-tomoscan": {
-            "producing_asset_id": "01900000-0000-7000-8000-000000000001",
-            "supply_id": "01900000-0000-7000-8000-000000000002",
-            "access_protocol": "POSIX",
-        }
-    }
+    binding = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"]
+    assert binding.producing_asset_id == UUID("01900000-0000-7000-8000-000000000001")
+    location = binding.locations["/local1/2BM"]
+    assert location.supply_id == UUID("01900000-0000-7000-8000-000000000002")
+    assert location.access_protocol == "POSIX"
 
 
 @pytest.mark.unit
-def test_settings_capture_scan_ingestor_bindings_rejects_unrecognized_key(
+def test_settings_capture_scan_ingestor_bindings_rejects_a_missing_required_field(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A typo'd key must fail at boot: `_capture_scan_ingestor` reads
-    exactly the three closed keys by name and would otherwise silently
-    never read an unrecognized one."""
     import pydantic
 
     monkeypatch.setenv(
         "CAPTURE_SCAN_INGESTOR_BINDINGS",
-        '{"2bmb-tomoscan": {"producing_asset_idd": "01900000-0000-7000-8000-000000000001"}}',
+        '{"2bmb-tomoscan": {"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
     )
-    with pytest.raises(pydantic.ValidationError, match="capture_scan_ingestor_bindings has keys"):
+    with pytest.raises(pydantic.ValidationError, match="Field required"):
         Settings()
 
 
 @pytest.mark.unit
-def test_settings_capture_scan_ingestor_bindings_rejects_a_missing_required_key(
+def test_settings_capture_scan_ingestor_bindings_with_two_locations_both_retrievable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A detector's finished file lands on more than one storage location
+    (the acquisition tier, and a durable APS Data Management copy under
+    `/gdata`); one binding must carry one entry per location."""
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/gdata/dm/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {'
+        '"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}, "
+        '"/gdata/dm/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000003", '
+        '"access_protocol": "NFS"'
+        "}"
+        "}}}",
+    )
+    settings = Settings()
+    binding = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"]
+
+    local = binding.locations["/local1/2BM"]
+    assert local.supply_id == UUID("01900000-0000-7000-8000-000000000002")
+    assert local.access_protocol == "POSIX"
+
+    durable = binding.locations["/gdata/dm/2BM"]
+    assert durable.supply_id == UUID("01900000-0000-7000-8000-000000000003")
+    assert durable.access_protocol == "NFS"
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_location_with_trailing_slash_is_normalized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM/": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    settings = Settings()
+    binding = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"]
+    assert "/local1/2BM" in binding.locations
+    assert "/local1/2BM/" not in binding.locations
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_a_relative_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import pydantic
 
     monkeypatch.setenv(
         "CAPTURE_SCAN_INGESTOR_BINDINGS",
-        '{"2bmb-tomoscan": {"producing_asset_id": "01900000-0000-7000-8000-000000000001"}}',
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
     )
-    with pytest.raises(
-        pydantic.ValidationError, match="capture_scan_ingestor_bindings is missing required keys"
-    ):
+    with pytest.raises(pydantic.ValidationError, match="is not an absolute path"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_root_of_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    with pytest.raises(pydantic.ValidationError, match="normalizes to the empty string"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_empty_locations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {}'
+        "}}",
+    )
+    with pytest.raises(pydantic.ValidationError, match="locations is empty"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_two_locations_that_collapse_to_one_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`/local1/2BM` and `/local1/2BM/` normalize to the same root; silently
+    keeping only one would drop a Supply/protocol pairing an operator wrote
+    on purpose with no signal that it happened."""
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {'
+        '"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}, "
+        '"/local1/2BM/": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000003", '
+        '"access_protocol": "NFS"'
+        "}"
+        "}}}",
+    )
+    with pytest.raises(pydantic.ValidationError, match="both normalize to"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_unknown_key_on_binding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"producing_asset_idd": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    with pytest.raises(pydantic.ValidationError, match="Extra inputs are not permitted"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_unknown_key_on_location(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX", '
+        '"extra_field": "x"'
+        "}}}}",
+    )
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError, match="Extra inputs are not permitted"):
         Settings()
 
 
@@ -605,12 +770,82 @@ def test_settings_capture_scan_ingestor_bindings_rejects_a_non_uuid_asset_id(
         "CAPTURE_SCAN_INGESTOR_BINDINGS",
         '{"2bmb-tomoscan": {'
         '"producing_asset_id": "not-a-uuid", '
+        '"locations": {"/local1/2BM": {'
         '"supply_id": "01900000-0000-7000-8000-000000000002", '
         '"access_protocol": "POSIX"'
-        "}}",
+        "}}}}",
     )
-    with pytest.raises(pydantic.ValidationError, match="is not a valid UUID"):
+    with pytest.raises(pydantic.ValidationError, match="Input should be a valid UUID"):
         Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_an_unrecognized_access_protocol(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "FTP"'
+        "}}}}",
+    )
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError, match="access_protocol"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_a_root_not_in_either_scan_allowlist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A location neither `posix_checksum_roots` nor
+    `scan_probe_allowed_roots` allowlists can never actually be read by
+    the sweep; refusing at boot beats a location that sits unreachable
+    forever."""
+    import pydantic
+
+    monkeypatch.delenv("POSIX_CHECKSUM_ROOTS", raising=False)
+    monkeypatch.delenv("SCAN_PROBE_ALLOWED_ROOTS", raising=False)
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    with pytest.raises(
+        pydantic.ValidationError,
+        match="is in neither posix_checksum_roots nor scan_probe_allowed_roots",
+    ):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_accepts_a_root_only_in_scan_probe_allowed_roots(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The boot check is a UNION of both allowlists, not just
+    `posix_checksum_roots`: a location reachable only via the remote
+    probe must still validate."""
+    monkeypatch.delenv("POSIX_CHECKSUM_ROOTS", raising=False)
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    settings = Settings()
+    assert "/local1/2BM" in settings.capture_scan_ingestor_bindings["2bmb-tomoscan"].locations
 
 
 @pytest.mark.unit
