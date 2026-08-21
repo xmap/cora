@@ -2038,7 +2038,7 @@
 | src/cora/run/adapters/sim\_observation\_feeder.py                                        |       37 |        0 |        2 |        1 |     97.4% |  97-\>116 |
 | src/cora/run/aggregates/\_\_init\_\_.py                                                  |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/\_\_init\_\_.py                                              |       13 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/run/aggregates/run/capture\_path.py                                             |       56 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/run/aggregates/run/capture\_path.py                                             |       57 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/capture\_probes.py                                           |       26 |        1 |        2 |        1 |     92.9% |       167 |
 | src/cora/run/aggregates/run/entries.py                                                   |       28 |        1 |        4 |        1 |     93.8% |       162 |
 | src/cora/run/aggregates/run/events.py                                                    |      187 |        0 |       58 |        0 |    100.0% |           |
@@ -2674,7 +2674,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59698** | **1364** | **8942** |  **405** | **97.2%** |           |
+| **TOTAL**                                                                                | **59699** | **1364** | **8944** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
