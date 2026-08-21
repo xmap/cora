@@ -197,6 +197,13 @@ class LLMResponse:
     that reach structured output through forced tool-use (the Anthropic
     family); an adapter that asks for JSON output directly (no tool
     involved) leaves both `None`, which is the honest value, not a gap.
+
+    `gpu_seconds` is populated only by `LocalLLM`: the occupancy-share GPU
+    time its meter measured for this call. Every other adapter serves over
+    a vendor API with no GPU to attribute, so it stays `None` there, which
+    is the honest value, not a gap. This is the only channel from the
+    adapter that measured the time to the producers that build the durable
+    inference trace.
     """
 
     parsed: Mapping[str, Any]
@@ -207,6 +214,7 @@ class LLMResponse:
     response_id: str | None = None
     tool_call_id: str | None = None
     tool_name: str | None = None
+    gpu_seconds: float | None = None
 
 
 class LLMError(Exception):
@@ -311,6 +319,7 @@ class FakeLLMResponse:
     response_id: str | None = None
     tool_call_id: str | None = None
     tool_name: str | None = None
+    gpu_seconds: float | None = None
 
 
 class FakeLLM:
@@ -359,6 +368,7 @@ class FakeLLM:
             response_id=head.response_id,
             tool_call_id=head.tool_call_id,
             tool_name=head.tool_name,
+            gpu_seconds=head.gpu_seconds,
         )
 
     def enqueue(self, response: FakeLLMResponse | LLMError) -> None:

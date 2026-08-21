@@ -1447,6 +1447,19 @@ _CANNED_PROPOSE_WITH_CACHE_USAGE = FakeLLMResponse(
     model_id="claude-sonnet-4-6-20260201",
 )
 
+# Separate from _CANNED_PROPOSE_WITH_USAGE (rather than setting
+# gpu_seconds on it) because this fixture stands in for a LocalLLM
+# response: every other adapter always leaves gpu_seconds None, and
+# reusing the shared fixture would perturb its pinned cost_usd assertion
+# for an unrelated test.
+_CANNED_PROPOSE_WITH_GPU_USAGE = FakeLLMResponse(
+    parsed=_CANNED_PROPOSE_CAUTION.parsed,
+    usage=LLMUsage(input_tokens=2048, output_tokens=320),
+    stop_reason="tool_use",
+    model_id="llama-3.3-70b",
+    gpu_seconds=6.25,
+)
+
 
 @pytest.mark.unit
 async def test_apply_records_inference_on_proposal() -> None:
@@ -1517,6 +1530,28 @@ async def test_apply_records_cache_tokens_from_response_usage() -> None:
     trace = recorder.calls[0].trace
     assert trace.cache_creation_input_tokens == 96
     assert trace.cache_read_input_tokens == 768
+
+
+@pytest.mark.unit
+async def test_apply_records_gpu_seconds_from_local_llm_response() -> None:
+    """A LocalLLM-served proposal carries occupancy-share GPU-seconds on
+    its LLMResponse; the recorded trace must carry the same durable copy
+    (see [[project-inference-duration-unwritten]]'s last sibling gap)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_PROPOSE_WITH_GPU_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunAborted", run_id=run_id, reason="encoder offline")
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    trace = recorder.calls[0].trace
+    assert trace.gpu_seconds == pytest.approx(6.25)
 
 
 @pytest.mark.unit

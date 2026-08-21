@@ -61,6 +61,8 @@ class ReasoningEntryInput:
     cache_creation_input_tokens: int | None = None
     cache_read_input_tokens: int | None = None
     cost_usd: float | None = None
+    # NULL means no LocalLLM served this call, not zero GPU time.
+    gpu_seconds: float | None = None
     agent_id: str | None = None
     agent_name: str | None = None
     agent_description: str | None = None

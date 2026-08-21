@@ -95,6 +95,7 @@ def _inference(*, provider: str, model: str, cost_usd: float) -> Inference:
         cache_creation_input_tokens=None,
         cache_read_input_tokens=None,
         cost_usd=cost_usd,
+        gpu_seconds=None,
         agent_id=None,
         agent_name=None,
         agent_description=None,

@@ -287,6 +287,7 @@ def _build_row(
         cache_creation_input_tokens=entry.cache_creation_input_tokens,
         cache_read_input_tokens=entry.cache_read_input_tokens,
         cost_usd=entry.cost_usd,
+        gpu_seconds=entry.gpu_seconds,
         agent_id=entry.agent_id,
         agent_name=entry.agent_name,
         agent_description=entry.agent_description,

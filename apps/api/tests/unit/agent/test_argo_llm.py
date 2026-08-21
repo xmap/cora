@@ -233,6 +233,18 @@ async def test_chat_response_id_carries_the_vrtx_prefix_argo_composition_adds() 
 
 
 @pytest.mark.unit
+async def test_gpu_seconds_stays_none_on_gateway_response() -> None:
+    """Argo serves over a vendor gateway with no GPU to attribute;
+    `gpu_seconds` is `LocalLLM`-only and must never be set here."""
+    client = _FakeAsyncAnthropic(_served_message())
+    adapter = ArgoLLM(username="svcbeamline", client=client)  # type: ignore[arg-type]
+
+    response = await adapter.chat(_request())
+
+    assert response.gpu_seconds is None
+
+
+@pytest.mark.unit
 async def test_chat_rejects_a_model_ref_priced_as_a_direct_vendor_purchase() -> None:
     """Cost resolves from `ModelRef.provider`, so a mismatch would misprice the call.
 
