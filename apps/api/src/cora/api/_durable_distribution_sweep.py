@@ -201,8 +201,8 @@ class PostgresDurableDistributionCandidateLookup:
         self,
         pool: asyncpg.Pool,
         *,
-        durable_roots: tuple[str, ...],
-        durable_supply_ids: tuple[UUID, ...],
+        durable_roots: frozenset[str],
+        durable_supply_ids: frozenset[UUID],
     ) -> None:
         self._pool = pool
         self._durable_roots = durable_roots
@@ -213,11 +213,15 @@ class PostgresDurableDistributionCandidateLookup:
     ) -> DurableDistributionCandidate | None:
         if not self._durable_roots or not self._durable_supply_ids:
             return None
+        # `sorted`, not `list`: a frozenset iterates in an
+        # implementation-defined order, and an unstable bind parameter
+        # makes an identical query plan-cache differently and a failing
+        # query harder to reproduce from its log line.
         row = await self._pool.fetchrow(  # pyright: ignore[reportUnknownMemberType]
             _CANDIDATE_SQL,
             list(exclude),
-            list(self._durable_roots),
-            list(self._durable_supply_ids),
+            sorted(self._durable_roots),
+            sorted(self._durable_supply_ids),
         )
         if row is None:
             return None

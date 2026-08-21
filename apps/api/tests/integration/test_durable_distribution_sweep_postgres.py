@@ -133,8 +133,8 @@ async def _seed_ready_candidate(
 def _lookup(
     pool: asyncpg.Pool,
     *,
-    durable_roots: tuple[str, ...] = (_DURABLE_ROOT,),
-    durable_supply_ids: tuple[UUID, ...],
+    durable_roots: frozenset[str] = frozenset({_DURABLE_ROOT}),
+    durable_supply_ids: frozenset[UUID],
 ) -> PostgresDurableDistributionCandidateLookup:
     return PostgresDurableDistributionCandidateLookup(
         pool, durable_roots=durable_roots, durable_supply_ids=durable_supply_ids
@@ -150,7 +150,7 @@ async def test_a_dataset_with_vault_row_capture_code_and_proposal_is_returned(
     observed_path = "/local1/2BM/2026-08-Haridy-1015116/scan_005.h5"
     run_id, dataset_id = await _seed_ready_candidate(db_pool, observed_path=observed_path)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     candidate = await lookup.next_candidate()
 
     assert candidate == DurableDistributionCandidate(
@@ -172,7 +172,7 @@ async def test_a_run_with_no_experiment_identity_row_is_not_a_candidate(
     the inner join drops it before the NULL check even runs."""
     await _seed_ready_candidate(db_pool, skip_experiment_identity=True)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     assert await lookup.next_candidate() is None
 
 
@@ -185,7 +185,7 @@ async def test_a_run_with_null_proposal_number_is_not_a_candidate(
     reported a proposal, so there is no search key at all."""
     await _seed_ready_candidate(db_pool, proposal_number=None)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     assert await lookup.next_candidate() is None
 
 
@@ -199,7 +199,7 @@ async def test_a_dataset_with_a_distribution_at_a_durable_supply_is_not_a_candid
     _, dataset_id = await _seed_ready_candidate(db_pool)
     await _insert_distribution(db_pool, dataset_id=dataset_id, supply_id=supply_id)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(supply_id,))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({supply_id}))
     assert await lookup.next_candidate() is None
 
 
@@ -215,7 +215,7 @@ async def test_a_discarded_distribution_at_a_durable_supply_is_a_candidate_again
         db_pool, dataset_id=dataset_id, supply_id=supply_id, status="Discarded"
     )
 
-    lookup = _lookup(db_pool, durable_supply_ids=(supply_id,))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({supply_id}))
     candidate = await lookup.next_candidate()
 
     assert candidate is not None
@@ -236,7 +236,7 @@ async def test_a_distribution_at_a_non_durable_supply_does_not_suppress_the_cand
     _, dataset_id = await _seed_ready_candidate(db_pool)
     await _insert_distribution(db_pool, dataset_id=dataset_id, supply_id=other_supply_id)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(durable_supply_id,))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({durable_supply_id}))
     candidate = await lookup.next_candidate()
 
     assert candidate is not None
@@ -272,7 +272,7 @@ async def test_a_vault_row_already_at_a_durable_root_is_not_mistaken_for_the_acq
     await _insert_experiment_identity(db_pool, run_id=run_id, proposal_number=_PROPOSAL_NUMBER)
     dataset_id = await _insert_dataset(db_pool, producing_run_id=run_id, created_at=_NOW)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     candidate = await lookup.next_candidate()
 
     assert candidate is not None
@@ -292,7 +292,7 @@ async def test_an_excluded_dataset_id_is_skipped_for_the_next_oldest(
         db_pool, dataset_created_at=_NOW + timedelta(minutes=5)
     )
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     candidate = await lookup.next_candidate(exclude=frozenset({older_dataset_id}))
 
     assert candidate is not None
@@ -303,7 +303,7 @@ async def test_an_excluded_dataset_id_is_skipped_for_the_next_oldest(
 async def test_excluding_the_only_candidate_returns_none(db_pool: asyncpg.Pool) -> None:
     _, dataset_id = await _seed_ready_candidate(db_pool)
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     assert await lookup.next_candidate(exclude=frozenset({dataset_id})) is None
 
 
@@ -312,7 +312,7 @@ async def test_a_discarded_dataset_is_not_a_candidate(db_pool: asyncpg.Pool) -> 
     """Pins `dds.status = 'Registered'`."""
     await _seed_ready_candidate(db_pool, dataset_status="Discarded")
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     assert await lookup.next_candidate() is None
 
 
@@ -336,7 +336,7 @@ async def test_candidates_are_returned_oldest_first(db_pool: asyncpg.Pool) -> No
         dataset_created_at=_NOW - timedelta(minutes=5),
     )
 
-    lookup = _lookup(db_pool, durable_supply_ids=(uuid4(),))
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     candidate = await lookup.next_candidate()
 
     assert candidate is not None
@@ -357,10 +357,10 @@ async def test_next_candidate_with_no_durable_roots_or_supply_ids_returns_none_u
     pool = cast("asyncpg.Pool", _UntouchablePool())
 
     no_roots = PostgresDurableDistributionCandidateLookup(
-        pool, durable_roots=(), durable_supply_ids=(uuid4(),)
+        pool, durable_roots=frozenset(), durable_supply_ids=frozenset({uuid4()})
     )
     no_supply_ids = PostgresDurableDistributionCandidateLookup(
-        pool, durable_roots=(_DURABLE_ROOT,), durable_supply_ids=()
+        pool, durable_roots=frozenset({_DURABLE_ROOT}), durable_supply_ids=frozenset()
     )
 
     assert await no_roots.next_candidate() is None
