@@ -81,6 +81,7 @@ from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent._budget_gate import find_allocation_breach, find_budget_breach
+from cora.agent._model_ref import to_port_model_ref
 from cora.agent._subscriber_lease import attempt_debrief_lease
 from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import (
@@ -90,6 +91,7 @@ from cora.agent.prompts import (
     ExistingCaution,
     build_caution_drafter_chat_request,
 )
+from cora.agent.prompts.caution_drafter import DEFAULT_CAUTION_DRAFTER_MODEL
 from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_ID,
     CAUTION_DRAFTER_AGENT_KIND,
@@ -184,9 +186,11 @@ class CautionDrafterSubscriber:
     satisfies the `Reaction` Protocol structurally.
 
     Holds references to the LLM port, event store, and CautionLookup
-    port. The Decision's `actor_id` is the seeded CautionDrafter
-    Agent's id (== that agent's Actor.id per 8f-a's identity-sharing
-    invariant).
+    port. The Decision's `actor_id` is the CautionDrafter Agent this
+    subscriber acts as (== that agent's Actor.id per 8f-a's
+    identity-sharing invariant): the seeded singleton by default, or a
+    deployment-designated Agent when `settings.caution_drafter_agent_id`
+    names one (see `_agent_id`).
 
     `batch_size = 1` for the same reason as RunDebriefer: the apply
     path includes a slow LLM round-trip, so holding the bookmark
@@ -208,11 +212,17 @@ class CautionDrafterSubscriber:
         inference_recorder: InferenceRecorder | None = None,
         spend_lookup: SpendLookup | None = None,
         allocation_lookup: AllocationLookup | None = None,
+        agent_id: UUID = CAUTION_DRAFTER_AGENT_ID,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
         self.caution_lookup = caution_lookup
         self.signer = signer
+        # Which Agent this subscriber acts as. Defaults to the seeded
+        # singleton so the class stays unit-testable without Settings;
+        # `make_caution_drafter_subscriber` passes the deployment's
+        # `settings.caution_drafter_agent_id` designation when set.
+        self._agent_id = agent_id
         # Defaults to the no-op recorder so direct test construction stays
         # inert; production wiring passes the Kernel's recorder via
         # `make_caution_drafter_subscriber`.
@@ -267,19 +277,21 @@ class CautionDrafterSubscriber:
 
         # Pre-load the Agent's Actor + revocation gate (mirrors
         # RunDebriefer verbatim).
-        actor = await load_actor(self.event_store, CAUTION_DRAFTER_AGENT_ID)
+        actor = await load_actor(self.event_store, self._agent_id)
         if actor is None:
+            # No Agent fold to name here (the Actor itself is missing),
+            # so the log carries the id only -- a bare `agent_name`
+            # constant would misname a designated Agent under
+            # designation.
             log.warning(
                 "caution_drafter.skip.agent_actor_missing",
-                agent_id=str(CAUTION_DRAFTER_AGENT_ID),
-                agent_name=CAUTION_DRAFTER_AGENT_NAME,
+                agent_id=str(self._agent_id),
             )
             return
         if not actor.active:
             log.warning(
                 "caution_drafter.skip.agent_actor_deactivated",
-                agent_id=str(CAUTION_DRAFTER_AGENT_ID),
-                agent_name=CAUTION_DRAFTER_AGENT_NAME,
+                agent_id=str(self._agent_id),
             )
             return
 
@@ -287,12 +299,37 @@ class CautionDrafterSubscriber:
         # acts; Suspended, Deprecated, and not-yet-promoted Defined all
         # skip. A missing Agent stream stays permissive. The Agent fold
         # also carries the declared budget the post-lease gate reads.
-        agent = await load_agent(self.event_store, CAUTION_DRAFTER_AGENT_ID)
+        agent = await load_agent(self.event_store, self._agent_id)
+
+        # Designation validation (mirrors RunDebriefer). Gated on
+        # `is_designated` so the seeded default stays exempt from the
+        # existence check, exactly as `regenerate_run_debrief` exempts it
+        # on the on-demand path: an explicitly named Agent is a
+        # deliberate choice and gets checked; the approved-model catalog
+        # gate is NOT re-checked here (`define_agent` already checked it).
+        is_designated = self._agent_id != CAUTION_DRAFTER_AGENT_ID
+        if is_designated:
+            if agent is None:
+                log.warning(
+                    "caution_drafter.skip.designated_agent_missing",
+                    agent_id=str(self._agent_id),
+                )
+                return
+            if agent.kind.value != CAUTION_DRAFTER_AGENT_KIND:
+                log.warning(
+                    "caution_drafter.skip.designated_agent_wrong_kind",
+                    agent_id=str(self._agent_id),
+                    agent_name=agent.name.value,
+                    expected_kind=CAUTION_DRAFTER_AGENT_KIND,
+                    actual_kind=agent.kind.value,
+                )
+                return
+
         if agent is not None and agent.status is not AgentStatus.VERSIONED:
             log.warning(
                 "caution_drafter.skip.agent_not_versioned",
-                agent_id=str(CAUTION_DRAFTER_AGENT_ID),
-                agent_name=CAUTION_DRAFTER_AGENT_NAME,
+                agent_id=str(self._agent_id),
+                agent_name=agent.name.value,
                 agent_status=str(agent.status),
             )
             return
@@ -307,7 +344,7 @@ class CautionDrafterSubscriber:
         lease_acquired, winning_agent_id = await attempt_debrief_lease(
             self.event_store,
             run_id=run_id,
-            debriefer_agent_id=CAUTION_DRAFTER_AGENT_ID,
+            debriefer_agent_id=self._agent_id,
             debriefer_kind=CAUTION_DRAFTER_AGENT_KIND,
             terminal_event=event,
             occurred_at=event.occurred_at,
@@ -455,7 +492,19 @@ class CautionDrafterSubscriber:
             candidate_targets=candidate_targets,
             existing_cautions=existing_cautions,
         )
-        request = build_caution_drafter_chat_request(payload)
+        # The Agent's declared model, not the module default: that
+        # declaration is what `define_agent` gated against the approved
+        # catalog, so serving anything else makes the gate decorative.
+        # `agent` is None only when the Agent stream was never seeded
+        # (the branch above tolerates it), and the default stands in.
+        request = build_caution_drafter_chat_request(
+            payload,
+            model_ref=(
+                to_port_model_ref(agent.model_ref)
+                if agent is not None
+                else DEFAULT_CAUTION_DRAFTER_MODEL
+            ),
+        )
 
         try:
             response = await self.llm.chat(request)
@@ -500,6 +549,7 @@ class CautionDrafterSubscriber:
         await self._record_inference(
             decision_id=decision_id,
             actor=actor,
+            agent_name=agent.name.value if agent is not None else CAUTION_DRAFTER_AGENT_NAME,
             request=request,
             response=response,
             terminal_event=event,
@@ -511,6 +561,7 @@ class CautionDrafterSubscriber:
         *,
         decision_id: UUID,
         actor: Actor,
+        agent_name: str,
         request: LLMChatRequest,
         response: LLMResponse,
         terminal_event: StoredEvent,
@@ -540,8 +591,8 @@ class CautionDrafterSubscriber:
             request_max_tokens=request.max_output_tokens,
             request_temperature=request.temperature,
             request_top_p=request.top_p,
-            agent_id=str(CAUTION_DRAFTER_AGENT_ID),
-            agent_name=CAUTION_DRAFTER_AGENT_NAME,
+            agent_id=str(self._agent_id),
+            agent_name=agent_name,
         )
         try:
             await self.inference_recorder.record(
@@ -913,6 +964,7 @@ def make_caution_drafter_subscriber(deps: Kernel) -> CautionDrafterSubscriber:
         inference_recorder=deps.inference_recorder,
         spend_lookup=deps.spend_lookup,
         allocation_lookup=deps.allocation_lookup,
+        agent_id=deps.settings.caution_drafter_agent_id or CAUTION_DRAFTER_AGENT_ID,
     )
 
 

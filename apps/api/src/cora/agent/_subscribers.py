@@ -62,13 +62,27 @@ The operator escape-hatch for wedged bookmarks has since shipped as
 the `dismiss_event_in_reaction` slice. Further widening (a separate
 `ReactionWorker` with its own pool budget) stays deferred behind the
 next named triggers: 3rd Reaction OR first wedged-bookmark incident.
+
+## Subscriber agent designation
+
+`settings.run_debriefer_agent_id` / `settings.caution_drafter_agent_id`
+let a deployment designate a non-seeded Agent for either LLM
+subscriber to act as (a deployment whose configured `llm_provider`
+cannot reach the seeded agents' declared provider defines its own
+Agent and names it here). `report_designated_agents(deps)`, called
+from `cora.api.main` after both singleton seeds, logs which Agent is
+effective for each subscriber and warns on a provider mismatch; it is
+a report, not a gate, so it never blocks boot.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cora.agent.aggregates.agent import load_agent
 from cora.agent.build_llm import llm_unwired_reason
+from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
+from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_ID
 from cora.agent.subscribers.authority_revocation_holder import (
     make_authority_revocation_holder_subscriber,
 )
@@ -161,4 +175,54 @@ def register_agent_subscribers(registry: ProjectionRegistry, deps: Kernel) -> No
     )
 
 
-__all__ = ["register_agent_subscribers"]
+async def report_designated_agents(deps: Kernel) -> None:
+    """Log which Agent each LLM subscriber will act as, and whether its
+    declared provider matches `settings.llm_provider`.
+
+    Called from `cora.api.main` AFTER both singleton seeds, so the
+    default (unset designation) case always resolves an Agent. This is
+    a REPORT, never a gate: it does not skip, raise, or refuse boot on a
+    mismatch. The LLM adapter already refuses a request whose
+    `model_ref.provider` isn't its own and is the authority on whether
+    the pairing works; a second gate here would re-decide a verdict
+    that already exists. The warning exists only because the adapter's
+    refusal arrives per-event, hours later, as a deferred Decision that
+    never names the mismatch -- an operator reading the boot log should
+    see it up front instead.
+
+    A designated-but-missing Agent (misconfiguration) logs a warning
+    and moves on; the subscriber's own per-apply gate is what actually
+    skips work for that case.
+    """
+    for subscriber_name, agent_id in (
+        ("run_debriefer", deps.settings.run_debriefer_agent_id or RUN_DEBRIEFER_AGENT_ID),
+        ("caution_drafter", deps.settings.caution_drafter_agent_id or CAUTION_DRAFTER_AGENT_ID),
+    ):
+        agent = await load_agent(deps.event_store, agent_id)
+        if agent is None:
+            _log.warning(
+                "agent_subscriber.designated_agent_not_found",
+                subscriber=subscriber_name,
+                agent_id=str(agent_id),
+            )
+            continue
+        _log.info(
+            "agent_subscriber.designated_agent",
+            subscriber=subscriber_name,
+            agent_id=str(agent_id),
+            agent_name=agent.name.value,
+            agent_kind=agent.kind.value,
+            provider=agent.model_ref.provider,
+            model=agent.model_ref.model,
+        )
+        if agent.model_ref.provider != deps.settings.llm_provider:
+            _log.warning(
+                "agent_subscriber.designated_agent_provider_mismatch",
+                subscriber=subscriber_name,
+                agent_id=str(agent_id),
+                agent_provider=agent.model_ref.provider,
+                configured_llm_provider=deps.settings.llm_provider,
+            )
+
+
+__all__ = ["register_agent_subscribers", "report_designated_agents"]

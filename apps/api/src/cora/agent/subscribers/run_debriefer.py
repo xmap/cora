@@ -269,8 +269,10 @@ class RunDebrieferSubscriber:
     it extends) structurally.
 
     Holds references to the LLM port and event store. The Decision's
-    `actor_id` is the seeded RunDebriefer Agent's id (== that agent's
-    Actor.id per 8f-a's identity-sharing invariant).
+    `actor_id` is the RunDebriefer Agent this subscriber acts as (==
+    that agent's Actor.id per 8f-a's identity-sharing invariant): the
+    seeded singleton by default, or a deployment-designated Agent when
+    `settings.run_debriefer_agent_id` names one (see `_agent_id`).
 
     `name`, `subscribed_event_types`, and `batch_size` are plain
     class-level constants (matches the wider Subscriber convention;
@@ -299,11 +301,17 @@ class RunDebrieferSubscriber:
         inference_recorder: InferenceRecorder | None = None,
         spend_lookup: SpendLookup | None = None,
         allocation_lookup: AllocationLookup | None = None,
+        agent_id: UUID = RUN_DEBRIEFER_AGENT_ID,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
         self.logbook_mirror = logbook_mirror
         self.signer = signer
+        # Which Agent this subscriber acts as. Defaults to the seeded
+        # singleton so the class stays unit-testable without Settings;
+        # `make_run_debriefer_subscriber` passes the deployment's
+        # `settings.run_debriefer_agent_id` designation when set.
+        self._agent_id = agent_id
         # Defaults to the no-op recorder so direct test construction (and any
         # caller that omits it) stays inert; production wiring passes the
         # Kernel's recorder via `make_run_debriefer_subscriber`.
@@ -360,12 +368,15 @@ class RunDebrieferSubscriber:
         # `actor_id` to exist in Access BC). If the agent isn't seeded
         # (bootstrap not yet run, deployment misconfigured), short-circuit
         # without writing -- the operator needs to fix the seed.
-        actor = await load_actor(self.event_store, RUN_DEBRIEFER_AGENT_ID)
+        actor = await load_actor(self.event_store, self._agent_id)
         if actor is None:
+            # No Agent fold to name here (the Actor itself is missing),
+            # so the log carries the id only -- a bare `agent_name`
+            # constant would misname a designated Agent under
+            # designation.
             log.warning(
                 "run_debriefer.skip.agent_actor_missing",
-                agent_id=str(RUN_DEBRIEFER_AGENT_ID),
-                agent_name=RUN_DEBRIEFER_AGENT_NAME,
+                agent_id=str(self._agent_id),
             )
             return
 
@@ -379,8 +390,7 @@ class RunDebrieferSubscriber:
         if not actor.active:
             log.warning(
                 "run_debriefer.skip.agent_actor_deactivated",
-                agent_id=str(RUN_DEBRIEFER_AGENT_ID),
-                agent_name=RUN_DEBRIEFER_AGENT_NAME,
+                agent_id=str(self._agent_id),
             )
             return
 
@@ -393,12 +403,40 @@ class RunDebrieferSubscriber:
         # behavior for the NEXT terminal event; skipped work items are
         # not replayed. The Agent fold also carries the declared budget
         # the post-lease gate below reads.
-        agent = await load_agent(self.event_store, RUN_DEBRIEFER_AGENT_ID)
+        agent = await load_agent(self.event_store, self._agent_id)
+
+        # Designation validation. Gated on `is_designated` (an explicit
+        # deployment setting, not the seeded default) because the seeded
+        # default is exempt from the existence check the same way
+        # `regenerate_run_debrief` exempts it: the apply path already
+        # tolerates an Actor-only legacy deployment, but an explicitly
+        # named Agent is a deliberate choice and gets checked. The
+        # approved-model catalog gate is NOT re-checked here: `define_agent`
+        # already checked it, and a second authority could disagree with
+        # the first.
+        is_designated = self._agent_id != RUN_DEBRIEFER_AGENT_ID
+        if is_designated:
+            if agent is None:
+                log.warning(
+                    "run_debriefer.skip.designated_agent_missing",
+                    agent_id=str(self._agent_id),
+                )
+                return
+            if agent.kind.value != RUN_DEBRIEFER_AGENT_KIND:
+                log.warning(
+                    "run_debriefer.skip.designated_agent_wrong_kind",
+                    agent_id=str(self._agent_id),
+                    agent_name=agent.name.value,
+                    expected_kind=RUN_DEBRIEFER_AGENT_KIND,
+                    actual_kind=agent.kind.value,
+                )
+                return
+
         if agent is not None and agent.status is not AgentStatus.VERSIONED:
             log.warning(
                 "run_debriefer.skip.agent_not_versioned",
-                agent_id=str(RUN_DEBRIEFER_AGENT_ID),
-                agent_name=RUN_DEBRIEFER_AGENT_NAME,
+                agent_id=str(self._agent_id),
+                agent_name=agent.name.value,
                 agent_status=str(agent.status),
             )
             return
@@ -415,7 +453,7 @@ class RunDebrieferSubscriber:
         lease_acquired, winning_agent_id = await attempt_debrief_lease(
             self.event_store,
             run_id=run_id,
-            debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+            debriefer_agent_id=self._agent_id,
             debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
             terminal_event=event,
             occurred_at=event.occurred_at,
@@ -585,6 +623,7 @@ class RunDebrieferSubscriber:
         await self._record_inference(
             decision_id=decision_id,
             actor=actor,
+            agent_name=agent.name.value if agent is not None else RUN_DEBRIEFER_AGENT_NAME,
             request=request,
             response=response,
             terminal_event=event,
@@ -613,6 +652,7 @@ class RunDebrieferSubscriber:
         *,
         decision_id: UUID,
         actor: Actor,
+        agent_name: str,
         request: LLMChatRequest,
         response: LLMResponse,
         terminal_event: StoredEvent,
@@ -647,8 +687,8 @@ class RunDebrieferSubscriber:
             request_max_tokens=request.max_output_tokens,
             request_temperature=request.temperature,
             request_top_p=request.top_p,
-            agent_id=str(RUN_DEBRIEFER_AGENT_ID),
-            agent_name=RUN_DEBRIEFER_AGENT_NAME,
+            agent_id=str(self._agent_id),
+            agent_name=agent_name,
         )
         try:
             await self.inference_recorder.record(
@@ -931,6 +971,7 @@ def make_run_debriefer_subscriber(deps: Kernel) -> RunDebrieferSubscriber:
         inference_recorder=deps.inference_recorder,
         spend_lookup=deps.spend_lookup,
         allocation_lookup=deps.allocation_lookup,
+        agent_id=deps.settings.run_debriefer_agent_id or RUN_DEBRIEFER_AGENT_ID,
     )
 
 

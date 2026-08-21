@@ -31,6 +31,7 @@ from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_KIND,
     RUN_DEBRIEFER_AGENT_NAME,
 )
+from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_KIND
 from cora.agent.subscribers._terminal_run_helpers import (
     extract_capture_progress as _extract_capture_progress,
 )
@@ -87,19 +88,22 @@ _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000099001")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000009900a")
+_DESIGNATED_AGENT_ID = UUID("01900000-0000-7000-8000-0000cccc0001")
 
 
 async def _seed_run_debrief_actor(
     store: InMemoryEventStore,
     *,
+    agent_id: UUID = RUN_DEBRIEFER_AGENT_ID,
     deactivated: bool = False,
 ) -> None:
-    """Write the bare-minimum Actor for the seeded RunDebriefer agent.
+    """Write the bare-minimum Actor for a RunDebriefer agent (the seeded
+    singleton by default, or a designated id when `agent_id` is passed).
 
-    The subscriber's `load_actor(event_store, RUN_DEBRIEFER_AGENT_ID)`
-    needs an Actor row at that id. We only write the Actor (skip the
-    Agent aggregate write); the subscriber doesn't load the Agent
-    aggregate at apply()-time.
+    The subscriber's `load_actor(event_store, self._agent_id)` needs an
+    Actor row at that id. We only write the Actor (skip the Agent
+    aggregate write); the subscriber doesn't load the Agent aggregate
+    at apply()-time.
 
     Set `deactivated=True` to also append an `ActorDeactivated` event
     so the loaded Actor has `active=False` (exercise the security
@@ -110,7 +114,7 @@ async def _seed_run_debrief_actor(
     # surface, so the legacy seed-name constant stays unused here.
     _ = RUN_DEBRIEFER_AGENT_NAME
     event = ActorRegistered(
-        actor_id=RUN_DEBRIEFER_AGENT_ID,
+        actor_id=agent_id,
         occurred_at=_NOW,
         kind=ActorKind.AGENT,
     )
@@ -126,7 +130,7 @@ async def _seed_run_debrief_actor(
     )
     await store.append(
         stream_type="Actor",
-        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        stream_id=agent_id,
         expected_version=0,
         events=[new_event],
     )
@@ -134,7 +138,7 @@ async def _seed_run_debrief_actor(
         from cora.access.aggregates.actor import ActorDeactivated
 
         deactivated_event = ActorDeactivated(
-            actor_id=RUN_DEBRIEFER_AGENT_ID,
+            actor_id=agent_id,
             occurred_at=_NOW,
         )
         deactivated_new_event = to_new_event(
@@ -149,7 +153,7 @@ async def _seed_run_debrief_actor(
         )
         await store.append(
             stream_type="Actor",
-            stream_id=RUN_DEBRIEFER_AGENT_ID,
+            stream_id=agent_id,
             expected_version=1,
             events=[deactivated_new_event],
         )
@@ -240,6 +244,7 @@ async def _build_subscriber(
     inference_recorder: FakeInferenceRecorder | None = None,
     spend_lookup: FakeSpendLookup | None = None,
     allocation_lookup: FakeAllocationLookup | None = None,
+    agent_id: UUID = RUN_DEBRIEFER_AGENT_ID,
 ) -> RunDebrieferSubscriber:
     return RunDebrieferSubscriber(
         event_store=event_store,
@@ -248,6 +253,7 @@ async def _build_subscriber(
         inference_recorder=inference_recorder,
         spend_lookup=spend_lookup,
         allocation_lookup=allocation_lookup,
+        agent_id=agent_id,
     )
 
 
@@ -1831,3 +1837,166 @@ async def test_apply_falls_back_to_the_default_model_when_no_agent_is_seeded() -
     await subscriber.apply(event, conn=None)
 
     assert llm.received[0].model_ref == DEFAULT_RUN_DEBRIEF_MODEL
+
+
+# ---------------------------------------------------------------------------
+# Subscriber agent designation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_default_agent_id_is_the_seeded_singleton() -> None:
+    """Unset means the seeded singleton, so nothing changes on upgrade."""
+    subscriber = RunDebrieferSubscriber(
+        event_store=InMemoryEventStore(),
+        llm=FakeLLM(),
+        logbook_mirror=None,
+    )
+    assert subscriber._agent_id == RUN_DEBRIEFER_AGENT_ID
+
+
+@pytest.mark.unit
+async def test_apply_designation_honoured_on_actor_id_lease_and_inference_trace() -> None:
+    """A designated Agent's id lands on the Decision's actor_id, on the
+    lease event_id seed, and on the inference trace -- the three places
+    getting this wrong would be silent."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        kind=RUN_DEBRIEFER_AGENT_KIND,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.decided_by == _DESIGNATED_AGENT_ID
+
+    stored, _version = await store.load("Run", run_id)
+    leases = [s for s in stored if s.event_type == "DecisionDebriefRequested"]
+    assert len(leases) == 1
+    assert leases[0].payload["debriefer_agent_id"] == str(_DESIGNATED_AGENT_ID)
+
+    assert len(recorder.calls) == 1
+    assert recorder.calls[0].trace.agent_id == str(_DESIGNATED_AGENT_ID)
+
+
+@pytest.mark.unit
+async def test_apply_designation_serves_the_designated_agents_declared_model() -> None:
+    """The designated Agent's declared `model_ref` reaches the LLM port,
+    not the prompt module default."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        kind=RUN_DEBRIEFER_AGENT_KIND,
+        model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    served = llm.received[0].model_ref
+    assert served.provider == "argo"
+    assert served.model == "claude-haiku-4-5"
+
+
+@pytest.mark.unit
+async def test_apply_skips_when_designated_agent_stream_missing() -> None:
+    """Designated but the Agent stream does not exist (Actor-only): skip.
+    The seeded default is exempt from this check; an explicitly named
+    Agent is a deliberate choice and gets checked."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received == []
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+
+
+@pytest.mark.unit
+async def test_apply_skips_when_designated_agent_wrong_kind() -> None:
+    """Designated Agent's kind isn't RunDebriefer: skip. Attributing a
+    RunDebrief-context Decision to an agent that doesn't debrief would
+    make the audit trail unreadable."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        kind=CAUTION_DRAFTER_AGENT_KIND,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received == []
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+
+
+@pytest.mark.unit
+async def test_apply_skips_when_designated_agent_not_versioned() -> None:
+    """Designated but not Versioned: skip via the existing lifecycle
+    gate, now reading whichever id is threaded in."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store, agent_id=_DESIGNATED_AGENT_ID)
+    await seed_defined_agent(
+        store,
+        agent_id=_DESIGNATED_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+        kind=RUN_DEBRIEFER_AGENT_KIND,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, agent_id=_DESIGNATED_AGENT_ID)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received == []
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None

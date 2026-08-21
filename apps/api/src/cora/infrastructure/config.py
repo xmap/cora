@@ -255,6 +255,21 @@ class Settings(BaseSettings):
     # for the entry, which is what makes the envelope source-agnostic.
     llm_provider: Literal["anthropic", "argo", "local"] = "anthropic"
 
+    # `run_debriefer_agent_id` / `caution_drafter_agent_id` let a deployment
+    # designate WHICH Agent each LLM subscriber acts as, instead of always
+    # acting as the seeded singleton (`RUN_DEBRIEFER_AGENT_ID` /
+    # `CAUTION_DRAFTER_AGENT_ID`). Unset (None, the default) means the seeded
+    # singleton, so nothing changes on upgrade. The named Agent must already
+    # exist, defined through the gated `define_agent` path: this setting only
+    # SELECTS among Agents that already passed that gate, the same way
+    # `run_initiator_plan_id` below selects among Plans rather than
+    # declaring one. A deployment whose configured `llm_provider` cannot
+    # reach the seeded agents' declared provider (eg. `anthropic` from a
+    # controls network with no internet) defines its own Agent against a
+    # reachable provider and names it here.
+    run_debriefer_agent_id: UUID | None = None
+    caution_drafter_agent_id: UUID | None = None
+
     # Bought-through-gateway path. Argo authenticates with a bare ANL
     # domain username in the API-key position, so there is no issued
     # credential to rotate; it is held as a SecretStr anyway because it
