@@ -56,6 +56,7 @@ key retry replays the cached DebriefDeferred; the operator must
 mint a fresh key to bypass the cache).
 """
 
+import time
 from datetime import datetime
 from typing import Any, Protocol
 from uuid import UUID, uuid5
@@ -327,6 +328,7 @@ def bind(deps: Kernel) -> Handler:
         )
 
         response: LLMResponse | None = None
+        call_started_at = time.monotonic()
         try:
             response = await llm.chat(request)
         except LLMError as exc:
@@ -359,6 +361,7 @@ def bind(deps: Kernel) -> Handler:
                 reasoning=str(response.parsed["reasoning"]),
             )
             outcome = "success"
+        duration_ms = round((time.monotonic() - call_started_at) * 1000)
 
         domain_events = decide(
             state=None,
@@ -399,6 +402,7 @@ def bind(deps: Kernel) -> Handler:
                 decision_id=new_id,
                 request=request,
                 response=response,
+                duration_ms=duration_ms,
                 occurred_at=now,
                 principal_id=debriefer_agent_id,
                 debriefer_agent_id=debriefer_agent_id,
@@ -422,6 +426,7 @@ async def _record_inference(
     decision_id: UUID,
     request: LLMChatRequest,
     response: LLMResponse,
+    duration_ms: int,
     occurred_at: datetime,
     principal_id: UUID,
     debriefer_agent_id: UUID,
@@ -448,6 +453,11 @@ async def _record_inference(
     the token counts, and the cost silently fail to reach
     `entries_decision_inferences`, which is the table the spend lookup and the
     record export both read.
+
+    `duration_ms` is measured by the caller around `llm.chat(...)`, not here.
+    `tool_type` is derived from whether a tool actually mediated the call
+    (`response.tool_call_id` set), not a blind "function" constant: a
+    local/JSON-mode adapter reaches structured output without one.
     """
     trace = AgentInferenceTrace(
         decision_id=decision_id,
@@ -456,16 +466,24 @@ async def _record_inference(
         operation_name=DECISION_REASONING_OPERATION_CHAT,
         provider_name=request.model_ref.provider,
         request_model=request.model_ref.model,
+        response_id=response.response_id,
         response_model=response.model_id,
         finish_reasons=(response.stop_reason,) if response.stop_reason else (),
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
+        cache_creation_input_tokens=response.usage.cache_creation_input_tokens,
+        cache_read_input_tokens=response.usage.cache_read_input_tokens,
         cost_usd=compute_cost_usd(request.model_ref, response.usage),
         request_max_tokens=request.max_output_tokens,
         request_temperature=request.temperature,
         request_top_p=request.top_p,
         agent_id=str(debriefer_agent_id),
         agent_name=debriefer_agent_name,
+        output_type="json",
+        duration=duration_ms,
+        tool_name=response.tool_name,
+        tool_call_id=response.tool_call_id,
+        tool_type="function" if response.tool_call_id is not None else None,
     )
     try:
         await recorder.record(

@@ -77,6 +77,30 @@ async def test_solo_call_meters_its_full_duration_and_returns_response() -> None
 
 
 @pytest.mark.unit
+async def test_response_id_carries_from_completion_onto_llm_response() -> None:
+    """`LocalCompletion.response_id` reaches `LLMResponse.response_id`;
+    `tool_call_id` / `tool_name` are not this adapter's to set (see
+    `LocalCompletion`'s docstring: no tool-use on this path, ever)."""
+    clock = FakeMonotonicClock()
+    completion = LocalCompletion(
+        parsed={"summary": "ok"},
+        raw_text="",
+        usage=LLMUsage(input_tokens=10, output_tokens=5),
+        model_id="llama-3.3-70b",
+        stop_reason="stop",
+        response_id="chatcmpl-xyz",
+    )
+    backend = StubLocalBackend(clock, [StubCompletion(completion, gpu_seconds=1.0)])
+    adapter = LocalLLM(backend=backend, monotonic_clock=clock, device_id="gpu0")
+
+    response = await adapter.chat(_request())
+
+    assert response.response_id == "chatcmpl-xyz"
+    assert response.tool_call_id is None
+    assert response.tool_name is None
+
+
+@pytest.mark.unit
 async def test_missing_structured_output_raises_but_still_meters() -> None:
     clock = FakeMonotonicClock()
     no_output = LocalCompletion(

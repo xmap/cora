@@ -1,4 +1,4 @@
-h1:p1Q+a5zhZHaIF1C7wE+Ln1LW9EgTVwj2Dm9feDMI6yw=
+h1:0vQcEB1qZqXQdmT+TDUhhlBsTm2D+HbS2Aipso/OkrQ=
 20260509120000_init_events.sql h1:GmgCZKfaqXu1m96/cKAks2vhaLWTdEaHTLkFtUo9FXg=
 20260509170000_init_idempotency.sql h1:Nbu8DIE4Sv1WiHw3G22+tYffPhKc5Jryw3PMK8wB2zY=
 20260510010000_add_event_id.sql h1:RbtYP6uMnOB20zhJ9dNXUi4YVqbmlEzf562pmygnRW8=
@@ -170,3 +170,4 @@ h1:p1Q+a5zhZHaIF1C7wE+Ln1LW9EgTVwj2Dm9feDMI6yw=
 20260816150000_init_entries_run_capture_probes.sql h1:iB1y4kPcjlKyuxtZ0c/0650GeK4pim02hihx8DLaldI=
 20260817160000_add_entries_run_observations_categorical_value.sql h1:1RTfXxzCwTXm/O55QW+fmFRvbq6wnBVaw07bSYg0wX8=
 20260820120000_add_run_capture_path_location.sql h1:GmPYI5w9hF9wfVZ7iEhGvSpoef+T0hJ434+5LpIxw8c=
+20260821145224_add_inference_cache_tokens.sql h1:gx0kaWkvy+Wg4ebFprbxfm/LYztnjGh2kxJlN8NCX3Q=

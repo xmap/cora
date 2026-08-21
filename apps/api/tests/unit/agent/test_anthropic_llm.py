@@ -167,6 +167,20 @@ async def test_raw_text_empty_when_response_has_no_text_blocks() -> None:
 
 
 @pytest.mark.unit
+async def test_response_id_and_tool_provenance_surface_on_llm_response() -> None:
+    """`message.id` and the structured-output block's `.id` / `.name` were
+    read by the adapter and discarded (see
+    [[project-inference-duration-unwritten]]); they must now reach
+    `LLMResponse` so the inference ledger can record them."""
+    fake = _FakeAsyncAnthropic(_ok_message(parsed={"choice": "NominalCompletion"}))
+    adapter = AnthropicLLM(api_key="sk-test", client=fake)  # type: ignore[arg-type]
+    result = await adapter.chat(_basic_request())
+    assert result.response_id == "msg_test_01"
+    assert result.tool_call_id == "toolu_test_01"
+    assert result.tool_name == "cora_structured_output"
+
+
+@pytest.mark.unit
 async def test_usage_includes_cache_tokens() -> None:
     fake = _FakeAsyncAnthropic(
         _ok_message(

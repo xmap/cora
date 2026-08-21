@@ -57,6 +57,9 @@ class ReasoningEntryInput:
     finish_reasons: tuple[str, ...] = field(default_factory=tuple[str, ...])
     input_tokens: int | None = None
     output_tokens: int | None = None
+    # NULL means the provider reported nothing, not zero cache activity.
+    cache_creation_input_tokens: int | None = None
+    cache_read_input_tokens: int | None = None
     cost_usd: float | None = None
     agent_id: str | None = None
     agent_name: str | None = None

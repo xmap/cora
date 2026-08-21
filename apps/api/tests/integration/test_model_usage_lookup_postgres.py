@@ -54,6 +54,8 @@ def _row(
         finish_reasons=(),
         input_tokens=100,
         output_tokens=50,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
         cost_usd=None,
         agent_id=agent_id,
         agent_name=None,

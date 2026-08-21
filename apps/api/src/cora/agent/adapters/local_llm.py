@@ -98,6 +98,12 @@ class LocalCompletion:
     `LLMSchemaValidationError`). `usage` reports the token counts the
     server returned; open models report input and output tokens, and the
     cache fields default to 0.
+
+    `response_id` is the wire response's own id when the server reports
+    one (OpenAI-compatible bodies carry a top-level `id`); `None` when it
+    does not. There is no `tool_call_id` / `tool_name` on this path: this
+    backend asks for structured output via `response_format=json_schema`
+    directly, never through tool-use, so no tool call ever happens here.
     """
 
     parsed: Mapping[str, Any] | None
@@ -105,6 +111,7 @@ class LocalCompletion:
     usage: LLMUsage
     model_id: str
     stop_reason: str
+    response_id: str | None = None
 
 
 class LocalCompletionBackend(Protocol):
@@ -202,6 +209,7 @@ class LocalLLM:
                     usage=completion.usage,
                     stop_reason=completion.stop_reason,
                     model_id=completion.model_id,
+                    response_id=completion.response_id,
                 )
         finally:
             gpu_seconds = self._meter.close(call_id, at_s=self._clock.now())

@@ -284,6 +284,8 @@ def _build_row(
         finish_reasons=entry.finish_reasons,
         input_tokens=entry.input_tokens,
         output_tokens=entry.output_tokens,
+        cache_creation_input_tokens=entry.cache_creation_input_tokens,
+        cache_read_input_tokens=entry.cache_read_input_tokens,
         cost_usd=entry.cost_usd,
         agent_id=entry.agent_id,
         agent_name=entry.agent_name,

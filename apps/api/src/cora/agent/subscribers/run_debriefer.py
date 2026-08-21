@@ -134,6 +134,7 @@ with the duplication, documented here + at
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
@@ -583,6 +584,7 @@ class RunDebrieferSubscriber:
             ),
         )
 
+        call_started_at = time.monotonic()
         try:
             response = await self.llm.chat(request)
         except Exception as exc:
@@ -607,6 +609,7 @@ class RunDebrieferSubscriber:
                 log=log,
             )
             return
+        duration_ms = round((time.monotonic() - call_started_at) * 1000)
 
         await self._write_debrief_success(
             decision_id=decision_id,
@@ -626,6 +629,7 @@ class RunDebrieferSubscriber:
             agent_name=agent.name.value if agent is not None else RUN_DEBRIEFER_AGENT_NAME,
             request=request,
             response=response,
+            duration_ms=duration_ms,
             terminal_event=event,
             log=log,
         )
@@ -655,6 +659,7 @@ class RunDebrieferSubscriber:
         agent_name: str,
         request: LLMChatRequest,
         response: LLMResponse,
+        duration_ms: int,
         terminal_event: StoredEvent,
         log: Any,
     ) -> None:
@@ -671,6 +676,13 @@ class RunDebrieferSubscriber:
         `AppendInferences` (as RunSupervisor is granted `HoldRun`); a missing
         grant surfaces as a loud `inference_recorder.unauthorized` warning from
         the recorder, never a silent drop.
+
+        `duration_ms` is measured by the caller around `self.llm.chat(...)`,
+        not derived here: this method only sees the response, not the span.
+        `tool_type` is derived from whether a tool actually mediated the call
+        (`response.tool_call_id` set); it is not a blind "function" constant,
+        because a local/JSON-mode adapter reaches structured output without
+        one.
         """
         trace = AgentInferenceTrace(
             decision_id=decision_id,
@@ -679,16 +691,24 @@ class RunDebrieferSubscriber:
             operation_name=DECISION_REASONING_OPERATION_CHAT,
             provider_name=request.model_ref.provider,
             request_model=request.model_ref.model,
+            response_id=response.response_id,
             response_model=response.model_id,
             finish_reasons=(response.stop_reason,) if response.stop_reason else (),
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
+            cache_creation_input_tokens=response.usage.cache_creation_input_tokens,
+            cache_read_input_tokens=response.usage.cache_read_input_tokens,
             cost_usd=compute_cost_usd(request.model_ref, response.usage),
             request_max_tokens=request.max_output_tokens,
             request_temperature=request.temperature,
             request_top_p=request.top_p,
             agent_id=str(self._agent_id),
             agent_name=agent_name,
+            output_type="json",
+            duration=duration_ms,
+            tool_name=response.tool_name,
+            tool_call_id=response.tool_call_id,
+            tool_type="function" if response.tool_call_id is not None else None,
         )
         try:
             await self.inference_recorder.record(

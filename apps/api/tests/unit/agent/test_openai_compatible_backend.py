@@ -47,6 +47,29 @@ async def test_parses_a_chat_completion_into_a_local_completion(httpserver: HTTP
     assert completion.usage.output_tokens == 7
     assert completion.model_id == "llama-3.3-70b-instruct"
     assert completion.stop_reason == "stop"
+    # No "id" in the fixture body (matches most OpenAI-compatible engines
+    # that omit it): response_id must stay None, not a fabricated value.
+    assert completion.response_id is None
+
+
+@pytest.mark.unit
+async def test_response_id_surfaces_when_the_server_reports_one(httpserver: HTTPServer) -> None:
+    """Never uses tool-calling (structured output is
+    `response_format=json_schema` directly), so `response_id` is the only
+    provenance field this path can ever populate; `tool_call_id` /
+    `tool_name` stay None on `LLMResponse` regardless."""
+    httpserver.expect_request("/v1/chat/completions", method="POST").respond_with_json(
+        {
+            "id": "chatcmpl-abc123",
+            "model": "llama-3.3-70b-instruct",
+            "choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}],
+            "usage": {},
+        }
+    )
+
+    completion = await _backend(httpserver).complete(_request())
+
+    assert completion.response_id == "chatcmpl-abc123"
 
 
 @pytest.mark.unit

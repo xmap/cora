@@ -283,6 +283,25 @@ _CANNED_OK_WITH_USAGE = FakeLLMResponse(
     usage=LLMUsage(input_tokens=1280, output_tokens=214),
     stop_reason="tool_use",
     model_id="claude-haiku-4-5-20260201",
+    response_id="msg_01abc",
+    tool_call_id="toolu_01xyz",
+    tool_name="cora_structured_output",
+)
+
+# Separate from _CANNED_OK_WITH_USAGE (rather than adding cache tokens to
+# it) because compute_cost_usd prices cache-read/cache-write tokens at
+# different rates than plain input, which would perturb that fixture's
+# pinned cost_usd assertion for an unrelated test.
+_CANNED_OK_WITH_CACHE_USAGE = FakeLLMResponse(
+    parsed=_CANNED_OK.parsed,
+    usage=LLMUsage(
+        input_tokens=1280,
+        output_tokens=214,
+        cache_creation_input_tokens=64,
+        cache_read_input_tokens=512,
+    ),
+    stop_reason="tool_use",
+    model_id="claude-haiku-4-5-20260201",
 )
 
 
@@ -1710,6 +1729,66 @@ async def test_apply_records_inference_on_success() -> None:
     assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
     assert call.correlation_id == event.correlation_id
     assert call.causation_id == event.event_id
+    # Provenance columns that were previously written by nobody (see
+    # [[project-inference-duration-unwritten]]): response_id/tool_call_id/
+    # tool_name come from the LLMResponse; output_type is a producer-known
+    # constant; tool_type is DERIVED from tool_call_id being set, not a
+    # blind constant, because a JSON-mode adapter never sets tool_call_id.
+    assert call.trace.response_id == "msg_01abc"
+    assert call.trace.output_type == "json"
+    assert call.trace.tool_name == "cora_structured_output"
+    assert call.trace.tool_call_id == "toolu_01xyz"
+    assert call.trace.tool_type == "function"
+    assert isinstance(call.trace.duration, int)
+    assert call.trace.duration >= 0
+
+
+@pytest.mark.unit
+async def test_apply_records_no_tool_type_when_response_carries_no_tool_call() -> None:
+    """A JSON-mode adapter (the local/in-house path) never sets
+    tool_call_id, so tool_type must stay None rather than the "function"
+    literal a tool-use path would carry. Getting this backwards would
+    claim a tool mediated a call that never used one."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])  # no response_id/tool_call_id/tool_name set
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    trace = recorder.calls[0].trace
+    assert trace.tool_call_id is None
+    assert trace.tool_name is None
+    assert trace.tool_type is None
+    assert trace.output_type == "json"
+
+
+@pytest.mark.unit
+async def test_apply_records_cache_tokens_from_response_usage() -> None:
+    """Provider-side prompt caching changes what a call costs without
+    changing input_tokens/output_tokens; the cache columns are what makes
+    that visible on the record (see
+    [[project-inference-duration-unwritten]])."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK_WITH_CACHE_USAGE])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, recorder)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(recorder.calls) == 1
+    trace = recorder.calls[0].trace
+    assert trace.cache_creation_input_tokens == 64
+    assert trace.cache_read_input_tokens == 512
 
 
 @pytest.mark.unit

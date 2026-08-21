@@ -303,7 +303,8 @@ class AnthropicLLM:
             if self._inspect_response is not None:
                 self._inspect_response(message)
 
-            parsed = _extract_structured_output(message)
+            tool_use_block = _find_structured_output_block(message)
+            parsed = tool_use_block.input
             raw_text = _extract_raw_text(message)
             usage = _to_llm_usage(message.usage)
             response_model_id = message.model
@@ -334,6 +335,9 @@ class AnthropicLLM:
                 usage=usage,
                 stop_reason=stop_reason,
                 model_id=response_model_id,
+                response_id=message.id,
+                tool_call_id=tool_use_block.id,
+                tool_name=tool_use_block.name,
             )
 
 
@@ -395,16 +399,19 @@ def _resolve_model_id(model_ref: ModelRef) -> str:
     return f"{model_ref.model}-{model_ref.snapshot_pin}"
 
 
-def _extract_structured_output(message: anthropic.types.Message) -> dict[str, object]:
-    """Find the synthetic-tool input block; raise if absent or wrong-named.
+def _find_structured_output_block(message: anthropic.types.Message) -> ToolUseBlock:
+    """Find the synthetic-tool block; raise if absent or wrong-named.
 
-    The SDK's typing guarantees `ToolUseBlock.input` is `dict[str, object]`
-    (Anthropic JSON-decodes server-side). We trust the type at the
-    structural level and validate presence-by-name, not shape.
+    Returns the whole block, not just `.input`: `.id` and `.name` are the
+    call's `tool_call_id` / `tool_name` provenance, discarded until the
+    inference ledger gained columns for them. The SDK's typing guarantees
+    `ToolUseBlock.input` is `dict[str, object]` (Anthropic JSON-decodes
+    server-side). We trust the type at the structural level and validate
+    presence-by-name, not shape.
     """
     for block in message.content:
         if isinstance(block, ToolUseBlock) and block.name == _STRUCTURED_OUTPUT_TOOL_NAME:
-            return block.input
+            return block
     msg = (
         f"response had no tool_use block named {_STRUCTURED_OUTPUT_TOOL_NAME!r}; "
         f"stop_reason={message.stop_reason}, content_block_types="

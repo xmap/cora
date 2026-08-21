@@ -190,6 +190,13 @@ class LLMResponse:
     selected by the provider when `ModelRef.snapshot_pin` is
     `None`), surfaced for the `gen_ai.response.model` OTel
     attribute and observability dashboards.
+
+    `response_id` is the provider's own message id (`gen_ai.response.id`):
+    the join key into the provider's own logs when a recorded verdict is
+    disputed. `tool_call_id` / `tool_name` are populated only by adapters
+    that reach structured output through forced tool-use (the Anthropic
+    family); an adapter that asks for JSON output directly (no tool
+    involved) leaves both `None`, which is the honest value, not a gap.
     """
 
     parsed: Mapping[str, Any]
@@ -197,6 +204,9 @@ class LLMResponse:
     usage: LLMUsage
     stop_reason: str
     model_id: str
+    response_id: str | None = None
+    tool_call_id: str | None = None
+    tool_name: str | None = None
 
 
 class LLMError(Exception):
@@ -298,6 +308,9 @@ class FakeLLMResponse:
     usage: LLMUsage = field(default_factory=lambda: LLMUsage(input_tokens=0, output_tokens=0))
     stop_reason: str = "end_turn"
     model_id: str = "fake-model-v1"
+    response_id: str | None = None
+    tool_call_id: str | None = None
+    tool_name: str | None = None
 
 
 class FakeLLM:
@@ -343,6 +356,9 @@ class FakeLLM:
             usage=head.usage,
             stop_reason=head.stop_reason,
             model_id=head.model_id,
+            response_id=head.response_id,
+            tool_call_id=head.tool_call_id,
+            tool_name=head.tool_name,
         )
 
     def enqueue(self, response: FakeLLMResponse | LLMError) -> None:
