@@ -345,6 +345,13 @@ jobs:
       # TABLE / DROP COLUMN / TRUNCATE / ALTER COLUMN ... TYPE without
       # USING). Catches the common foot-guns; doesn't replace a real
       # planner-aware lint, but does keep the merge gate honest.
+      #
+      # `git diff --name-only` always prints paths relative to the repo
+      # root, regardless of this job's `working-directory: infra/atlas`
+      # default. Resolving `$root` explicitly and opening `$root/$f` (while
+      # still passing the bare, repo-root-relative `$f` to the scan script
+      # for its `::error file=` annotations) keeps this step correct no
+      # matter which directory it runs from.
       - name: Safety scan changed migration files
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
@@ -352,26 +359,33 @@ jobs:
             echo "No base sha (initial push or detached HEAD); skipping safety scan."
             exit 0
           fi
+          root=$(git rev-parse --show-toplevel)
           changed=$(git diff --name-only --diff-filter=A "$base"...HEAD -- migrations/ | grep '\.sql$' || true)
           if [ -z "$changed" ]; then
             echo "No new migration files in this change."
             exit 0
           fi
           echo "Scanning new migrations: $changed"
-          # Patterns we refuse without an explicit `-- atlas:safety:allow=<reason>` opt-out.
-          forbidden='(\bDROP\s+TABLE\b|\bDROP\s+COLUMN\b|\bTRUNCATE\b|\bALTER\s+COLUMN\b.*\bTYPE\b)'
-          violations=0
-          for f in $changed; do
-            grep -i -E "$forbidden" "$f" | grep -v -i 'atlas:safety:allow=' || true
-            if grep -i -E "$forbidden" "$f" | grep -v -q -i 'atlas:safety:allow='; then
-              echo "::error file=$f::Destructive DDL detected in new migration. Add a comment '-- atlas:safety:allow=<reason>' on the same line if intentional." >&2
-              violations=$((violations + 1))
-            fi
-          done
-          if [ "$violations" -gt 0 ]; then
-            exit 1
+          "$root/infra/atlas/scripts/scan_destructive_ddl.sh" "$root" $changed
+
+      # Refuses a new migration that drops a constraint or a unique index
+      # and adds nothing back in the same file: a bare removal of a data
+      # integrity guarantee, with no replacement definition to show for it.
+      - name: Constraint-drop scan changed migration files
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base sha (initial push or detached HEAD); skipping constraint-drop scan."
+            exit 0
           fi
-          echo "Safety scan passed."
+          root=$(git rev-parse --show-toplevel)
+          changed=$(git diff --name-only --diff-filter=A "$base"...HEAD -- migrations/ | grep '\.sql$' || true)
+          if [ -z "$changed" ]; then
+            echo "No new migration files in this change."
+            exit 0
+          fi
+          echo "Scanning new migrations: $changed"
+          "$root/infra/atlas/scripts/scan_constraint_drops.sh" "$root" $changed
 
   # Single aggregate context for branch protection. Two things make the test
   # lanes unrequirable on their own: protection matches names by exact string,
