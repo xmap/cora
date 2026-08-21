@@ -89,6 +89,146 @@ async def test_upsert_is_idempotent_on_run_id(db_pool: asyncpg.Pool) -> None:
 
 
 @pytest.mark.integration
+async def test_upsert_older_observed_at_leaves_row_unchanged(db_pool: asyncpg.Pool) -> None:
+    store = PostgresCapturePathStore(db_pool)
+    run_id = uuid4()
+    newer = _NOW + timedelta(hours=1)
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=newer,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/stale.h5",
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    row = await store.get(run_id, host=None, root=None)
+    assert row is not None
+    assert row.observed_path == "/data/first.h5"
+    assert row.observed_at == newer
+    assert row.updated_at == row.created_at
+
+
+@pytest.mark.integration
+async def test_upsert_newer_observed_at_still_updates(db_pool: asyncpg.Pool) -> None:
+    store = PostgresCapturePathStore(db_pool)
+    run_id = uuid4()
+    later = _NOW + timedelta(hours=1)
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/second.h5",
+        observed_at=later,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    row = await store.get(run_id, host=None, root=None)
+    assert row is not None
+    assert row.observed_path == "/data/second.h5"
+    assert row.observed_at == later
+    assert row.updated_at > row.created_at
+
+
+@pytest.mark.integration
+async def test_upsert_equal_observed_at_still_updates(db_pool: asyncpg.Pool) -> None:
+    """The guard is `>=`, not `>`: a genuine retry of the SAME
+    observation (identical `observed_at`) that carries a corrected path
+    must still land, e.g. a recorder retrying after a transient write
+    failure with no new reading in between."""
+    store = PostgresCapturePathStore(db_pool)
+    run_id = uuid4()
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/corrected.h5",
+        observed_at=_NOW,
+        created_at=_NOW,
+        host=None,
+        root=None,
+    )
+
+    row = await store.get(run_id, host=None, root=None)
+    assert row is not None
+    assert row.observed_path == "/data/corrected.h5"
+    assert row.observed_at == _NOW
+    assert row.updated_at > row.created_at
+
+
+@pytest.mark.integration
+async def test_get_latest_ignores_stale_replay_against_the_newer_location(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The bug this guard fixes, not just the row-level symptom: with
+    two locations for one run, a stale EPICS replay against the
+    location that is ALREADY the newest must not corrupt its
+    `observed_at` down below the OTHER location's, or `get_latest`
+    would start returning the wrong location entirely, not merely the
+    wrong path for the right location."""
+    store = PostgresCapturePathStore(db_pool)
+    run_id = uuid4()
+    earlier = _NOW - timedelta(hours=1)
+    later = _NOW + timedelta(hours=1)
+    stale = _NOW - timedelta(hours=2)
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/gdata/dm/2BM/exp/scan_005.h5",
+        observed_at=earlier,
+        created_at=earlier,
+        host="tomdet",
+        root="/gdata/dm/2BM",
+    )
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/local1/2BM/exp/scan_005.h5",
+        observed_at=later,
+        created_at=later,
+        host="tomdet",
+        root="/local1/2BM",
+    )
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/local1/2BM/exp/STALE_scan_005.h5",
+        observed_at=stale,
+        created_at=stale,
+        host="tomdet",
+        root="/local1/2BM",
+    )
+
+    row = await store.get_latest(run_id)
+    assert row is not None
+    assert row.observed_path == "/local1/2BM/exp/scan_005.h5"
+    assert row.root == "/local1/2BM"
+
+
+@pytest.mark.integration
 async def test_table_has_force_row_level_security_enabled(db_pool: asyncpg.Pool) -> None:
     """Defense-in-depth check on the migration itself: FORCE (not just
     ENABLE) means even the table-owner role goes through policy,
