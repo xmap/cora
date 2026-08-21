@@ -510,6 +510,43 @@ async def test_tick_never_holds_a_witnessed_run_when_beam_down() -> None:
 
 
 @pytest.mark.unit
+async def test_tick_never_resumes_a_witnessed_held_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Same setup as `test_tick_resumes_held_run_after_settle_window` (envelope
+    good, memory HELD, settle window passed) with only `conduct_mode` differing.
+    The Conducted Run resumes there; this one never does. Patching the envelope
+    matters: without it the real assembly fails on the bare fixture's missing
+    Plan, and the assertion below would hold even with the gate removed."""
+    _patch_envelope(monkeypatch, ok=True)
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs_split(held=[_held_item(run_id, conduct_mode="Witnessed")])
+    hold_run, _hold = _make_recording_hold()
+    resume_run, resume_calls = _make_recording_resume()
+    memory: dict[UUID, str] = {run_id: _MEM_HELD}
+    settle: dict[UUID, int] = {}
+
+    for _ in range(3):  # past the settle window the Conducted sibling resumes on
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            resume_run=resume_run,
+            beam_lookup=_BeamOpen(),
+            memory=memory,
+            settle=settle,
+            resume_enabled=True,
+            resume_settle_ticks=2,
+        )
+
+    assert resume_calls == []
+    assert run_id not in settle
+    # Neither Running nor Conducted-Held, so it is in no scope at all: the hold
+    # FSM prunes its memory entry rather than carrying a Run it cannot act on.
+    assert run_id not in memory
+
+
+@pytest.mark.unit
 async def test_tick_is_noop_when_supervisor_actor_absent() -> None:
     """Revocation gate: with no seeded (active) supervisor Actor, do nothing."""
     kernel = _kernel()  # NOT seeded
@@ -826,7 +863,7 @@ class _BeamOpen:
         return _beam()
 
 
-def _held_item(run_id: UUID) -> RunSummaryItem:
+def _held_item(run_id: UUID, *, conduct_mode: str = "Conducted") -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
         name="streaming tomo",
@@ -840,7 +877,7 @@ def _held_item(run_id: UUID) -> RunSummaryItem:
         campaign_id=None,
         snr_limit=None,
         expected_observation_interval_seconds=None,
-        conduct_mode="Conducted",
+        conduct_mode=conduct_mode,
         capture_code=None,
     )
 
@@ -1194,10 +1231,12 @@ async def test_shadow_liveness_flags_stale_run_observe_only() -> None:
 
 
 @pytest.mark.unit
-async def test_shadow_liveness_never_flags_a_witnessed_run() -> None:
-    """A Witnessed Run's duration is set by the external tool driving it, not
-    by anything CORA can truncate; the liveness/truncate population excludes
-    it before the ceiling check ever runs, however long it has been open."""
+async def test_shadow_liveness_flags_a_stale_witnessed_run() -> None:
+    """A wedged Witnessed Run is just as invisible to an operator as a wedged
+    Conducted one, so the shadow liveness pass sees it too (would_flag), even
+    though the hold FSM and resume path never touch it: this is what the
+    2026-08-20 TomoScan incident (a scan wedged 2.5 hours, unseen by the
+    supervisor) motivated."""
     kernel = _kernel()
     await seed_run_supervisor_agent(kernel)
     run_id = uuid4()
@@ -1219,9 +1258,10 @@ async def test_shadow_liveness_never_flags_a_witnessed_run() -> None:
         liveness_ceiling_seconds=3600.0,
     )
 
-    assert liveness == set()
+    assert liveness == {run_id}
     assert hold_calls == []
     assert resume_calls == []
+    assert await _supervision_decision_choices(kernel) == []
 
 
 @pytest.mark.unit
@@ -1363,6 +1403,49 @@ async def test_shadow_liveness_prunes_run_that_left_inflight() -> None:
     await _tick(
         kernel,
         list_runs=_make_list_runs([_running_item(run_id, running_since=_NOW - timedelta(hours=2))]),
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+    assert liveness == {run_id}
+
+    # Next tick: the Run has terminated (no longer returned by list_runs).
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([]),
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+    assert liveness == set()
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_prunes_witnessed_run_that_left_inflight() -> None:
+    """The liveness edge-trigger entry for a Witnessed Run is garbage-collected
+    once it leaves flight, same as a Conducted one: `inflight_ids` must be
+    built from the wider liveness_candidates set, not the Conducted-only
+    `running`, or a terminated Witnessed Run's id would leak in `liveness`
+    forever."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    hold_run, _hold = _make_recording_hold()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs(
+            [
+                _running_item(
+                    run_id, running_since=_NOW - timedelta(hours=2), conduct_mode="Witnessed"
+                )
+            ]
+        ),
         hold_run=hold_run,
         beam_lookup=_BeamOpen(),
         memory={},
@@ -1866,6 +1949,57 @@ async def test_shadow_quality_would_flag_log_carries_is_simulated_provenance() -
     assert flagged[0]["run_id"] == str(run_id)
 
 
+@pytest.mark.unit
+async def test_witnessed_run_never_reaches_rule_q_or_rule_r() -> None:
+    """Rules Q and R only ever see the Conducted-only `running` list: a
+    Witnessed Run breaching both a quality limit and the stall window is
+    never added to `quality` or `stall`, and never advises, even with both
+    rules configured and advise enabled."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs(
+        [
+            _running_item(
+                run_id,
+                snr_limit=5.0,
+                expected_observation_interval_seconds=10.0,
+                conduct_mode="Witnessed",
+            )
+        ]
+    )
+    hold_run, _hold = _make_recording_hold()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=1.0, recorded_at=_NOW)
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)
+    rules_config = ObservationRuleConfig(
+        quality_channel_name="snr",
+        stall_channel_name="projection_index",
+        stall_window_factor=3.0,
+        stall_hysteresis_ticks=1,
+        feed_heartbeat_ceiling_seconds=120.0,
+    )
+    quality: set[UUID] = set()
+    stall: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=rules_config,
+        quality=quality,
+        stall=stall,
+        advise_enabled=True,
+    )
+
+    assert quality == set()
+    assert stall == set()
+    assert await _supervision_decision_choices(kernel) == []
+
+
 # ---------- advise rung: edge-triggered Decision, still no command ----------
 
 
@@ -2052,6 +2186,39 @@ async def test_advise_liveness_stale_is_edge_triggered_single_decision() -> None
         )
 
     assert await _supervision_decision_choices(kernel) == ["SupervisionQuieted"]
+
+
+@pytest.mark.unit
+async def test_advise_liveness_stale_witnessed_run_records_supervision_quieted() -> None:
+    """A stale Witnessed Run is advise-eligible: the supervisor may not hold,
+    resume, or truncate it, but it can still tell a human to check on it. One
+    SupervisionQuieted Decision, no command."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs(
+        [_running_item(run_id, running_since=_NOW - timedelta(hours=2), conduct_mode="Witnessed")]
+    )
+    hold_run, hold_calls = _make_recording_hold()
+    truncate_run, truncate_calls = _make_recording_truncate()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=set(),
+        liveness_ceiling_seconds=3600.0,
+        advise_enabled=True,
+        truncate_run=truncate_run,
+        truncate_enabled=True,
+        truncate_settle_ticks=1,
+    )
+
+    assert await _supervision_decision_choices(kernel) == ["SupervisionQuieted"]
+    assert hold_calls == []
+    assert truncate_calls == []
 
 
 @pytest.mark.unit
@@ -2271,6 +2438,81 @@ async def test_truncate_disabled_never_truncates_a_stale_run() -> None:
     )
 
     assert truncate_calls == []
+
+
+@pytest.mark.unit
+async def test_truncate_never_fires_for_a_stale_witnessed_run_even_when_enabled() -> None:
+    """The truncate act stays Conducted-only even with run_supervisor_truncate_enabled
+    on and the settle window fully elapsed: a Witnessed Run's terminal belongs
+    to RunWitnessRecorder (it truncates a stale Witnessed Run itself on the
+    next BEGUN observation), not to the supervisor. The Run is still flagged
+    (shadow), just never issued a command."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs(
+        [_running_item(run_id, running_since=_STALE_SINCE, conduct_mode="Witnessed")]
+    )
+    truncate_run, truncate_calls = _make_recording_truncate()
+    liveness: set[UUID] = set()
+    truncate_settle: dict[UUID, int] = {}
+
+    for _ in range(3):  # well past any settle window
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=_make_recording_hold()[0],
+            beam_lookup=_BeamOpen(),
+            memory={},
+            liveness=liveness,
+            truncate_run=truncate_run,
+            truncate_settle=truncate_settle,
+            truncate_enabled=True,
+            truncate_settle_ticks=1,
+            liveness_ceiling_seconds=_CEILING,
+        )
+
+    assert truncate_calls == []
+    assert liveness == {run_id}
+    assert run_id not in truncate_settle
+
+
+@pytest.mark.unit
+async def test_liveness_pass_flags_both_modes_but_truncates_only_the_conducted_one() -> None:
+    """One stale Conducted Run and one stale Witnessed Run in the SAME tick. Both
+    are flagged, proving the wide scope is per-item and not all-or-nothing, and
+    only the Conducted one is truncated, proving the act gate is per-item too."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    conducted_id = uuid4()
+    witnessed_id = uuid4()
+    list_runs = _make_list_runs(
+        [
+            _running_item(conducted_id, running_since=_STALE_SINCE),
+            _running_item(witnessed_id, running_since=_STALE_SINCE, conduct_mode="Witnessed"),
+        ]
+    )
+    truncate_run, truncate_calls = _make_recording_truncate()
+    liveness: set[UUID] = set()
+    truncate_settle: dict[UUID, int] = {}
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        truncate_run=truncate_run,
+        truncate_settle=truncate_settle,
+        truncate_enabled=True,
+        truncate_settle_ticks=1,
+        liveness_ceiling_seconds=_CEILING,
+    )
+
+    assert liveness == {conducted_id, witnessed_id}
+    assert [call.run_id for call in truncate_calls] == [conducted_id]
+    assert witnessed_id not in truncate_settle
 
 
 @pytest.mark.unit
