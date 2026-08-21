@@ -12,10 +12,25 @@ The resulting bytes are returned via a `data:` URL inline today; a
 production deployment that writes to object storage swaps the adapter
 or extends this one with an upload step.
 
+## Publish-once discipline
+
+This artifact gets registered under a DOI once sealed, and a DOI-bearing
+document is unretractable. Every field it carries must therefore be a
+HISTORICAL STATEMENT ("this was so when published"), never a LIVE
+PROMISE ("follow this and it will work"). A live promise rots the
+moment the world moves, and CORA has no mechanism to revise bytes that
+already carry a checksum a third party may have copied. Fields that
+would only ever be a live promise (a fetch location, an access
+procedure, an internal identifier the outside world cannot resolve)
+are omitted outright rather than published in a form that will go
+stale.
+
 ## What ships
 
-  - Top-level JSON-LD with `@context` = the RO-Crate 1.2-DRAFT context
-    plus the Workflow Run Crate profile.
+  - Top-level JSON-LD with `@context` = the RO-Crate 1.2 context (the
+    released Recommendation, not the superseded 1.2-DRAFT constant
+    this adapter shipped with before RO-Crate 1.2 was finalized) plus
+    the Workflow Run Crate profile.
   - Root `Dataset` entity for the Edition itself (`@id="./"`) with:
       - `name`: the Edition title
       - `datePublished`: the publication year (RFC-3339 year)
@@ -27,18 +42,55 @@ or extends this one with an upload step.
       - `conformsTo`: list of profile URIs
   - One `Dataset` entry per `DatasetRef`, carrying:
       - `@id`: `urn:uuid:<dataset_id>` (stable; cross-system safe)
-      - `contentUrl`: the canonical Distribution URI
       - `sha256`: from the Distribution checksum (algorithm pinned to
         sha256 in the Dataset BC today)
       - `contentSize`: byte size as integer
       - `encodingFormat`: media type
       - `conformsTo`: encoding's `conforms_to` profile URIs (sorted)
 
+    `contentUrl` is deliberately NOT emitted. The Distribution URI is
+    either an internal `cora-capture-path://` locator that resolves
+    for nobody outside CORA, or a real filesystem path that embeds
+    operator-identifying detail (a lead scientist's surname has shown
+    up in these paths). No value this field could hold is safe to
+    publish permanently, and omitting it only for some rows would be
+    worse than omitting it always: a reader could not tell "restricted"
+    from "forgotten". The `@id` (`urn:uuid`) plus `sha256` already let
+    anyone who obtains a candidate file prove it is this dataset; that
+    is the stronger of the two links anyway; a path only says where to
+    look and proves nothing about what you find. Do not add
+    `conditionsOfAccess` or any other field describing how to obtain
+    the bytes: an access mechanism is exactly the same live-promise
+    shape and rots the same way (this project has already watched one
+    storage tier carry three different names in a few months).
+
+Creators are published without an `identifier`. `Creator.actor_id`
+(see `cora.data.aggregates.edition.state.Creator`) is CORA's internal-
+opaque Actor id, useless for external attribution since no outside
+reader can resolve it, and dangerous to publish anyway: it is a stable
+pseudonymous person-identifier that would let anyone correlate every
+Edition credited to the same individual forever without ever learning
+who that is. Pseudonymous is not anonymous, and nobody consented to
+that linkage. The Person entity therefore carries only `@id` (a
+document-local blank node), `@type`, and `affiliation` when supplied;
+the creator list conveys how many creators there were, in what order,
+and their affiliations, and honestly declines to name them. The gap is
+real: attribution is currently unnamed. The intended resolution is to
+resolve `actor_id` to a name / ORCID via an `ActorLookup` port before
+serializing, but that port has not been built, and building it is a
+separate slice with its own design. Trigger: the first real
+publication that needs named attribution.
+
 External-pid awareness: when `external_pid is None` the artifact omits
 `identifier` (pre-DOI bytes). When `external_pid` is supplied, the
 root entity gains `identifier` carrying the scheme-prefixed value
 (e.g. `doi:10.5281/zenodo.1234567`). The sha256 of the two byte
-streams differs by design (this is the two-content-hash model).
+streams differs by design (this is the two-content-hash model). Note
+that the root `identifier` falls back to `edition:<uuid>` (an internal
+id under an unregistered scheme) when no DOI is present; that fallback
+is the same class of mistake as the two fixed above, at lower severity
+because a real publication always replaces it before the pre-DOI bytes
+would be relied on. Left alone pending a dedicated fix.
 """
 
 import base64
@@ -58,7 +110,7 @@ from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identifier import PersistentIdentifier
 
-_ROCRATE_12_CONTEXT = "https://w3id.org/ro/crate/1.2-DRAFT/context"
+_ROCRATE_12_CONTEXT = "https://w3id.org/ro/crate/1.2/context"
 _WORKFLOW_RUN_CRATE_PROFILE = "https://w3id.org/ro/wfrun/workflow/0.5"
 _PROCESS_RUN_CRATE_PROFILE = "https://w3id.org/ro/wfrun/process/0.5"
 _CONTENT_TYPE = "application/ld+json"
@@ -76,7 +128,6 @@ def _dataset_part(ref: DatasetRef) -> dict[str, object]:
     return {
         "@id": _dataset_id_uri(ref.dataset_id),
         "@type": "Dataset",
-        "contentUrl": ref.uri.value,
         "sha256": ref.checksum.value,
         "contentSize": ref.byte_size,
         "encodingFormat": ref.encoding.media_type,
@@ -89,7 +140,6 @@ def _creator_entity(creator: Creator, index: int) -> dict[str, object]:
     entity: dict[str, object] = {
         "@id": person_id,
         "@type": "Person",
-        "identifier": str(creator.actor_id),
     }
     if creator.affiliation is not None:
         entity["affiliation"] = creator.affiliation
