@@ -1016,6 +1016,16 @@ async def _observe_run_signals(
         # Rule R (rate-dropout / stall): beam-aware + dead-feeder-aware + multi-
         # tick hysteresis. Active only when the channel, the per-Run interval,
         # and the feeder-health ceiling are all set.
+        #
+        # Deployment note (2-BM): TomoScan cycles the station shutter (SBS,
+        # PV S02BM-PSS:SBS:BeamBlockingM) closed for dark and flat fields and
+        # open for projections, many times per scan (deployments/2-bm/
+        # beamline.yaml, the StationShutter note). That same PV backs
+        # beam.sbs_open, which feeds this rule's beam_open gate (and
+        # decide_supervision's Hold FSM), so beam_open reads False for long
+        # stretches of every HEALTHY 2-BM scan and Rule R defers through all
+        # of them. Documented limitation, not a behavior change: Rule R stays
+        # beam-aware because a real beam outage must not read as a stall.
         stall_channel = rules_config.stall_channel_name
         interval = item.expected_observation_interval_seconds
         ceiling = rules_config.feed_heartbeat_ceiling_seconds
@@ -1177,16 +1187,29 @@ async def _supervise_tick(
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             reason=str(err),
         ) from err
-    # Witnessed Runs are not the supervisor's to hold, resume,
-    # flag-liveness, truncate, or observe: they are driven by an external
-    # tool CORA only witnessed at genesis, so every downstream mechanism
-    # below (hold FSM, gated resume, liveness/truncate, Rule Q/R) would be
-    # trying to intervene on an act it cannot actually control. Filtering
-    # here, once, before any mechanism sees the lists, is what keeps a
-    # future new mechanism from having to remember this on its own.
+    # Two scopes, not one. The command-issuing rungs below (hold FSM, gated
+    # resume, Rule Q's abort act, Rule R's stop act) stay Conducted-only: a
+    # Witnessed Run is driven by an external tool (e.g. TomoScan at APS 2-BM),
+    # so CORA has no authority to hold, resume, abort, or stop it, only
+    # record what it witnesses. `liveness_candidates`, below, is wider on
+    # purpose: it carries every Running Run regardless of conduct_mode, so
+    # the run-liveness pass can still see a wedged Witnessed Run. A 2026-08-20
+    # incident showed why that matters: a TomoScan scan wedged for 2.5 hours
+    # with the supervisor blind to it, because this filter used to run before
+    # any rule did. The liveness pass may flag or advise a Witnessed Run; it
+    # must never issue TruncateRun for one (gated at the act site below).
+    # RunWitnessRecorder already truncates a stale Witnessed Run itself, on
+    # the next BEGUN observation for the same capture code (see
+    # `_run_witness.py`, "BEGUN while a Run is already open"): that terminal
+    # already has an owner, and re-deciding it here would be the supervisor
+    # overriding another authority's verdict on a Run it does not drive,
+    # exactly what `project_conjunct_symmetry_design` rules out: bind what
+    # only CORA can enforce, and where something else already enforces it,
+    # read that thing's verdict instead of re-deciding it.
+    liveness_candidates = running
     running = [item for item in running if item.conduct_mode == "Conducted"]
     held = [item for item in held if item.conduct_mode == "Conducted"]
-    inflight_ids = {item.run_id for item in running} | {item.run_id for item in held}
+    inflight_ids = {item.run_id for item in liveness_candidates} | {item.run_id for item in held}
     for run_id in list(memory):
         if run_id not in inflight_ids:
             del memory[run_id]
@@ -1220,20 +1243,27 @@ async def _supervise_tick(
 
     # Run-liveness pass (the run-liveness rule): flags a Running Run that has
     # been Running implausibly long (now - running_since past the operator
-    # ceiling). Runs before the beam read so it is independent of beam I/O. Off
-    # unless the operator set a ceiling. Three rungs, each a further opt-in:
+    # ceiling). Walks `liveness_candidates` (every Running Run, any
+    # conduct_mode, see the comment above), not the Conducted-only `running`:
+    # a wedged Witnessed Run is just as invisible to an operator as a wedged
+    # Conducted one. Runs before the beam read so it is independent of beam
+    # I/O. Off unless the operator set a ceiling. Three rungs, each a further
+    # opt-in:
     #   - SHADOW (always, when a ceiling is set): log `run_liveness.would_flag`
-    #     once per stall episode, edge-triggered via `liveness`.
+    #     once per stall episode, edge-triggered via `liveness`. Either
+    #     conduct_mode.
     #   - ADVISE (advise_enabled): record one Decision(choice=SupervisionQuieted)
-    #     on the same edge, still no command.
-    #   - ACT (truncate_enabled): count CONSECUTIVE stale ticks in
-    #     `truncate_settle`; once the settle window elapses, record one
-    #     Decision(choice=Truncate) and issue TruncateRun (terminal). The settle
-    #     window is the fail-safe: a transiently-stale or recovering Run, which
-    #     clears the counter on its first non-stale tick, is never truncated.
+    #     on the same edge, still no command. Either conduct_mode.
+    #   - ACT (truncate_enabled): Conducted only (see the comment above; a
+    #     Witnessed Run's terminal belongs to RunWitnessRecorder). Count
+    #     CONSECUTIVE stale ticks in `truncate_settle`; once the settle window
+    #     elapses, record one Decision(choice=Truncate) and issue TruncateRun
+    #     (terminal). The settle window is the fail-safe: a transiently-stale
+    #     or recovering Run, which clears the counter on its first non-stale
+    #     tick, is never truncated.
     if liveness_ceiling_seconds is not None:
         now = deps.clock.now()
-        for item in running:
+        for item in liveness_candidates:
             running_since = item.running_since
             if running_since is None or not is_run_stale(
                 running_since, now, liveness_ceiling_seconds
@@ -1265,7 +1295,7 @@ async def _supervise_tick(
                             "whether it is hung. No command issued (advise rung)."
                         ),
                     )
-            if truncate_enabled:
+            if truncate_enabled and item.conduct_mode == "Conducted":
                 tick_count = truncate_settle.get(item.run_id, 0) + 1
                 truncate_settle[item.run_id] = tick_count
                 if tick_count >= truncate_settle_ticks:
