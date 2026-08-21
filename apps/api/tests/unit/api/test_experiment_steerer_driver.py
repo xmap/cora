@@ -313,6 +313,15 @@ def _sonnet_call(input_tokens: int = 1000, output_tokens: int = 100) -> Steering
         request_model="claude-sonnet-4-5",
         response_model="claude-sonnet-4-5-20250929",
         usage=LLMUsage(input_tokens=input_tokens, output_tokens=output_tokens),
+        response_id="resp_steer_1",
+        stop_reason="end_turn",
+        tool_call_id="call_steer_1",
+        tool_name="submit_advice",
+        gpu_seconds=0.13,
+        request_max_tokens=1024,
+        request_temperature=None,
+        request_top_p=None,
+        duration_ms=250,
     )
 
 
@@ -345,6 +354,19 @@ async def test_steer_posts_llm_usage_to_the_inference_ledger() -> None:
     assert first.trace.response_model == "claude-sonnet-4-5-20250929"
     # Sonnet pricing: $3/M input + $15/M output.
     assert first.trace.cost_usd == pytest.approx(1000 / 1e6 * 3 + 100 / 1e6 * 15)
+    # The fields the historical defect left NULL: now read straight off
+    # the widened SteeringLlmCall rather than dropped at this seam.
+    assert first.trace.response_id == "resp_steer_1"
+    assert first.trace.finish_reasons == ("end_turn",)
+    assert first.trace.request_max_tokens == 1024
+    assert first.trace.request_temperature is None
+    assert first.trace.request_top_p is None
+    assert first.trace.output_type == "json"
+    assert first.trace.duration == 250
+    assert first.trace.tool_call_id == "call_steer_1"
+    assert first.trace.tool_name == "submit_advice"
+    assert first.trace.tool_type == "function"
+    assert first.trace.gpu_seconds == 0.13
 
 
 @pytest.mark.unit

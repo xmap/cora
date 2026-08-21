@@ -280,6 +280,15 @@ async def _record_steering_inferences(
     steering path. A conduct that crashes on a non-decide fault loses its
     in-memory call list, an accepted crash-path undercount in the same
     permissive direction as transport failures.
+
+    Every `AgentInferenceTrace` field this producer can honestly know is
+    read straight off `call` (widened at the `LlmDecidePort` seam to carry
+    them), the same shape `RunDebrieferSubscriber._record_inference` reads
+    off `LLMResponse`. `output_type` is a producer-known constant: every
+    call `LlmDecidePort` makes requests the steering structured-output
+    schema, so `"json"` is always the honest answer, never an assumption.
+    `tool_type` is derived from whether a tool actually mediated the call
+    (`call.tool_call_id` set), not a blind constant.
     """
     now = deps.clock.now()
     for index, call in enumerate(calls):
@@ -294,12 +303,25 @@ async def _record_steering_inferences(
             operation_name=DECISION_REASONING_OPERATION_CHAT,
             provider_name=call.provider,
             request_model=call.request_model,
+            response_id=call.response_id,
             response_model=call.response_model,
+            finish_reasons=(call.stop_reason,) if call.stop_reason else (),
             input_tokens=call.usage.input_tokens,
             output_tokens=call.usage.output_tokens,
+            cache_creation_input_tokens=call.usage.cache_creation_input_tokens,
+            cache_read_input_tokens=call.usage.cache_read_input_tokens,
             cost_usd=cost_usd,
+            request_max_tokens=call.request_max_tokens,
+            request_temperature=call.request_temperature,
+            request_top_p=call.request_top_p,
             agent_id=str(EXPERIMENT_STEERER_AGENT_ID),
             agent_name=EXPERIMENT_STEERER_AGENT_NAME,
+            output_type="json",
+            duration=call.duration_ms,
+            tool_call_id=call.tool_call_id,
+            tool_name=call.tool_name,
+            tool_type="function" if call.tool_call_id is not None else None,
+            gpu_seconds=call.gpu_seconds,
         )
         await deps.inference_recorder.record(
             trace,
