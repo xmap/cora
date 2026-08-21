@@ -99,6 +99,12 @@ class Inference:
     dedup). `correlation_id` and `causation_id` thread through from
     the originating command's envelope for full audit traceability
     (gate-review G7 lock).
+
+    `conversation_id` is never populated by any producer, and that is
+    deliberate: every LLM call this row can describe is single-shot, with
+    no multi-turn conversation behind it, so there is no honest value to
+    write. This mirrors `messages` being deliberately unwritten for PII
+    control; both are N/A by design, not columns nobody got around to.
     """
 
     # --- CORA infra (entry envelope) ---
@@ -130,7 +136,7 @@ class Inference:
     agent_id: str | None  # gen_ai.agent.id
     agent_name: str | None  # gen_ai.agent.name
     agent_description: str | None  # gen_ai.agent.description
-    conversation_id: str | None  # gen_ai.conversation.id
+    conversation_id: str | None  # gen_ai.conversation.id (see below: N/A by design)
     # --- OTel gen_ai.* tool-call context (only for execute_tool ops) ---
     tool_name: str | None  # gen_ai.tool.name
     tool_call_id: str | None  # gen_ai.tool.call.id

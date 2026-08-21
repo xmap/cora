@@ -75,6 +75,7 @@ gate-review convention).
 
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
@@ -506,6 +507,7 @@ class CautionDrafterSubscriber:
             ),
         )
 
+        call_started_at = time.monotonic()
         try:
             response = await self.llm.chat(request)
         except Exception as exc:
@@ -530,6 +532,7 @@ class CautionDrafterSubscriber:
                 log=log,
             )
             return
+        duration_ms = round((time.monotonic() - call_started_at) * 1000)
 
         await self._write_proposal(
             decision_id=decision_id,
@@ -552,6 +555,7 @@ class CautionDrafterSubscriber:
             agent_name=agent.name.value if agent is not None else CAUTION_DRAFTER_AGENT_NAME,
             request=request,
             response=response,
+            duration_ms=duration_ms,
             terminal_event=event,
             log=log,
         )
@@ -564,6 +568,7 @@ class CautionDrafterSubscriber:
         agent_name: str,
         request: LLMChatRequest,
         response: LLMResponse,
+        duration_ms: int,
         terminal_event: StoredEvent,
         log: Any,
     ) -> None:
@@ -574,7 +579,8 @@ class CautionDrafterSubscriber:
         defense-in-depth), deterministic inference `event_id` so retries dedup,
         recorded only after the Decision append commits. See that method and
         the inference_recorder port for the operator AppendInferences grant
-        note.
+        note, and for why `duration_ms` is measured by the caller and
+        `tool_type` is derived rather than a blind constant.
         """
         trace = AgentInferenceTrace(
             decision_id=decision_id,
@@ -583,6 +589,7 @@ class CautionDrafterSubscriber:
             operation_name=DECISION_REASONING_OPERATION_CHAT,
             provider_name=request.model_ref.provider,
             request_model=request.model_ref.model,
+            response_id=response.response_id,
             response_model=response.model_id,
             finish_reasons=(response.stop_reason,) if response.stop_reason else (),
             input_tokens=response.usage.input_tokens,
@@ -593,6 +600,11 @@ class CautionDrafterSubscriber:
             request_top_p=request.top_p,
             agent_id=str(self._agent_id),
             agent_name=agent_name,
+            output_type="json",
+            duration=duration_ms,
+            tool_name=response.tool_name,
+            tool_call_id=response.tool_call_id,
+            tool_type="function" if response.tool_call_id is not None else None,
         )
         try:
             await self.inference_recorder.record(

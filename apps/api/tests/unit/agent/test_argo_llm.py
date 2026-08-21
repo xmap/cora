@@ -216,6 +216,23 @@ async def test_chat_reports_the_snapshot_the_gateway_actually_served() -> None:
 
 
 @pytest.mark.unit
+async def test_chat_response_id_carries_the_vrtx_prefix_argo_composition_adds() -> None:
+    """`ArgoLLM.chat` composes `AnthropicLLM` verbatim (see the module
+    docstring), so `response_id` / `tool_call_id` / `tool_name` should
+    reach `LLMResponse` for free with no Argo-specific code. Verified
+    rather than assumed: `msg_vrtx_` is the routing tell (Vertex, not
+    first-party) that only this gateway's ids carry."""
+    client = _FakeAsyncAnthropic(_served_message())
+    adapter = ArgoLLM(username="svcbeamline", client=client)  # type: ignore[arg-type]
+
+    response = await adapter.chat(_request())
+
+    assert response.response_id == "msg_vrtx_test_01"
+    assert response.tool_call_id == "toolu_vrtx_test_01"
+    assert response.tool_name == "cora_structured_output"
+
+
+@pytest.mark.unit
 async def test_chat_rejects_a_model_ref_priced_as_a_direct_vendor_purchase() -> None:
     """Cost resolves from `ModelRef.provider`, so a mismatch would misprice the call.
 

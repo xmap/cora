@@ -131,6 +131,7 @@ class OpenAICompatibleBackend:
         message = choice.get("message") or {}
         content = message.get("content")
         usage_raw = body.get("usage") or {}
+        response_id = body.get("id")
         return LocalCompletion(
             parsed=_parse_json_object_or_none(content),
             raw_text=content if isinstance(content, str) else "",
@@ -140,6 +141,7 @@ class OpenAICompatibleBackend:
             ),
             model_id=str(body.get("model") or self._model),
             stop_reason=str(choice.get("finish_reason") or "stop"),
+            response_id=str(response_id) if response_id is not None else None,
         )
 
 

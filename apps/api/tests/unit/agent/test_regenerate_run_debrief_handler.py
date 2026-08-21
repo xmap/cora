@@ -735,6 +735,9 @@ _CANNED_OK_WITH_USAGE = FakeLLMResponse(
     usage=LLMUsage(input_tokens=1536, output_tokens=240),
     stop_reason="tool_use",
     model_id="claude-haiku-4-5-20260201",
+    response_id="msg_03ghi",
+    tool_call_id="toolu_03rst",
+    tool_name="cora_structured_output",
 )
 
 
@@ -776,6 +779,16 @@ async def test_handler_records_inference_on_success() -> None:
     # the operator who issued the command).
     assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
     assert call.correlation_id == _CORRELATION_ID
+    # Provenance columns previously written by nobody (see
+    # [[project-inference-duration-unwritten]]); tool_type is derived from
+    # tool_call_id being set, not a blind constant.
+    assert call.trace.response_id == "msg_03ghi"
+    assert call.trace.output_type == "json"
+    assert call.trace.tool_name == "cora_structured_output"
+    assert call.trace.tool_call_id == "toolu_03rst"
+    assert call.trace.tool_type == "function"
+    assert isinstance(call.trace.duration, int)
+    assert call.trace.duration >= 0
 
 
 @pytest.mark.unit

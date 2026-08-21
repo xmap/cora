@@ -1426,6 +1426,9 @@ _CANNED_PROPOSE_WITH_USAGE = FakeLLMResponse(
     usage=LLMUsage(input_tokens=2048, output_tokens=320),
     stop_reason="tool_use",
     model_id="claude-sonnet-4-6-20260201",
+    response_id="msg_02def",
+    tool_call_id="toolu_02uvw",
+    tool_name="cora_structured_output",
 )
 
 
@@ -1464,6 +1467,16 @@ async def test_apply_records_inference_on_proposal() -> None:
     assert call.principal_id == CAUTION_DRAFTER_AGENT_ID
     assert call.correlation_id == event.correlation_id
     assert call.causation_id == event.event_id
+    # Provenance columns previously written by nobody (see
+    # [[project-inference-duration-unwritten]]); tool_type is derived from
+    # tool_call_id being set, not a blind constant.
+    assert call.trace.response_id == "msg_02def"
+    assert call.trace.output_type == "json"
+    assert call.trace.tool_name == "cora_structured_output"
+    assert call.trace.tool_call_id == "toolu_02uvw"
+    assert call.trace.tool_type == "function"
+    assert isinstance(call.trace.duration, int)
+    assert call.trace.duration >= 0
 
 
 @pytest.mark.unit
