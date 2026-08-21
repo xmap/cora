@@ -53,7 +53,13 @@ the Globus collection `APS:DM:2BM` and archived to tape on a per-experiment time
 beamline names this tier two ways, DM on its current pages and Sojourner on older ones; both mean the same
 `/gdata` mount, which is the stable thing to match on. The upstream tiers are transient, capacity-purged with
 no fixed schedule, so a dataset is briefly multi-homed and then collapses to the DM copy; there is no
-continuous beamtime-long sync. The reconstruction compute resource itself is not yet pinned to a specific
+continuous beamtime-long sync. The DM tier is readable from `tomdet` over the same SSH hop CORA
+already uses to read a finished scan file, measured 2026-08-21 from `arcturus` as the beamline account:
+the month directories run back to `2020-11`, and an experiment folder carries the documented
+`{data,analysis,system}` split. The earlier reading behind HOST-2 covered `arcturus` only, where none of
+the tiers are visible, so this is a different host and not a re-test. An experiment folder is also
+locatable from its GUP number alone (`2026-08/*-1015116` resolved to exactly one directory), which is what
+lets a reader find the durable copy without being told the PI surname the folder name carries. The reconstruction compute resource itself is not yet pinned to a specific
 host or pool.
 
 Transient understates what can happen upstream. On 2026-08-14 the `tomodata2` array failed and `/data2` was
