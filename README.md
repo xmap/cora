@@ -525,7 +525,7 @@
 | src/cora/data/adapters/posix\_checksum.py                                                |       60 |        6 |       14 |        3 |     87.8% |119-126, 147, 170, 187 |
 | src/cora/data/adapters/postgres\_dataset\_distribution\_lookup.py                        |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/adapters/postgres\_distribution\_lookup.py                                 |       24 |        2 |        4 |        2 |     85.7% |    37, 53 |
-| src/cora/data/adapters/rocrate12\_serializer.py                                          |       28 |        0 |        2 |        1 |     96.7% |   94-\>96 |
+| src/cora/data/adapters/rocrate12\_serializer.py                                          |       28 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/data/adapters/ssh\_data\_exchange\_scan\_reader.py                              |       44 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/data/adapters/ssh\_posix\_checksum\_computer.py                                 |       26 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/data/adapters/stub\_edition\_serializer.py                                      |       16 |        1 |        0 |        0 |     93.8% |       121 |
@@ -2675,7 +2675,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **59789** | **1365** | **8968** |  **406** | **97.2%** |           |
+| **TOTAL**                                                                                | **59789** | **1365** | **8968** |  **405** | **97.2%** |           |
 
 
 ## Setup coverage badge
