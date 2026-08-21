@@ -130,6 +130,17 @@ class CapturePathStore(Protocol):
         the location columns; see the migration's own comment for what
         the old run_id-keyed upsert would have done to an already
         minted locator.
+
+        `observed_at` is the EPICS PV's own timestamp, not CORA's
+        clock, so it can arrive out of order (a monitor reconnect
+        replays a stale value, or an IOC's clock steps). The update is
+        therefore monotonic in `observed_at`: a write carrying an
+        OLDER `observed_at` than the stored row for this exact location
+        is silently declined and leaves the stored row, including its
+        `updated_at`, completely untouched. An equal `observed_at`
+        still updates, so a genuine retry of the same observation that
+        corrects the path still lands. A declined write affects zero
+        rows in the Postgres adapter; that is correct, not a failure.
         """
         ...
 
@@ -186,6 +197,7 @@ ON CONFLICT (run_id, host, root) DO UPDATE
     SET observed_path = EXCLUDED.observed_path,
         observed_at = EXCLUDED.observed_at,
         updated_at = now()
+    WHERE EXCLUDED.observed_at >= run_capture_path.observed_at
 """
 
 _GET_SQL = """
@@ -263,6 +275,11 @@ class InMemoryCapturePathStore:
     `ON CONFLICT DO UPDATE` time in the real adapter's `_UPSERT_SQL`,
     never the caller-supplied `created_at`, which the real adapter
     never even sends on the UPDATE branch).
+
+    Also mirrors the real adapter's monotonic `WHERE` guard: an
+    incoming `observed_at` older than the stored row's leaves that row
+    completely untouched, `updated_at` included, so a declined write
+    is invisible in both adapters.
     """
 
     def __init__(self) -> None:
@@ -291,7 +308,7 @@ class InMemoryCapturePathStore:
                 host=host,
                 root=root,
             )
-        else:
+        elif observed_at >= existing.observed_at:
             self._rows[key] = CapturePath(
                 # Preserved, mirroring the real ON CONFLICT DO UPDATE,
                 # which never touches the surrogate key.

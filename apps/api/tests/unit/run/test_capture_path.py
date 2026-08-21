@@ -94,6 +94,141 @@ async def test_upsert_overwrites_and_preserves_created_at() -> None:
 
 
 @pytest.mark.unit
+async def test_upsert_older_observed_at_leaves_row_unchanged() -> None:
+    store = InMemoryCapturePathStore()
+    run_id = uuid4()
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=_at(10),
+        created_at=_at(10),
+        host=None,
+        root=None,
+    )
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/stale.h5",
+        observed_at=_at(5),
+        created_at=_at(5),
+        host=None,
+        root=None,
+    )
+
+    row = await store.get(run_id, host=None, root=None)
+    assert row is not None
+    assert row.observed_path == "/data/first.h5"
+    assert row.observed_at == _at(10)
+    assert row.updated_at == _at(10)
+
+
+@pytest.mark.unit
+async def test_upsert_newer_observed_at_still_updates() -> None:
+    store = InMemoryCapturePathStore()
+    run_id = uuid4()
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=_at(0),
+        created_at=_at(0),
+        host=None,
+        root=None,
+    )
+    before_second_upsert = datetime.now(tz=UTC)
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/second.h5",
+        observed_at=_at(5),
+        created_at=_at(5),
+        host=None,
+        root=None,
+    )
+
+    row = await store.get(run_id, host=None, root=None)
+    assert row is not None
+    assert row.observed_path == "/data/second.h5"
+    assert row.observed_at == _at(5)
+    assert row.updated_at >= before_second_upsert
+
+
+@pytest.mark.unit
+async def test_upsert_equal_observed_at_still_updates() -> None:
+    """The guard is `>=`, not `>`: a genuine retry of the SAME
+    observation (identical `observed_at`) that carries a corrected path
+    must still land, e.g. a recorder retrying after a transient write
+    failure with no new reading in between."""
+    store = InMemoryCapturePathStore()
+    run_id = uuid4()
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/first.h5",
+        observed_at=_at(5),
+        created_at=_at(5),
+        host=None,
+        root=None,
+    )
+    before_second_upsert = datetime.now(tz=UTC)
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/data/corrected.h5",
+        observed_at=_at(5),
+        created_at=_at(5),
+        host=None,
+        root=None,
+    )
+
+    row = await store.get(run_id, host=None, root=None)
+    assert row is not None
+    assert row.observed_path == "/data/corrected.h5"
+    assert row.observed_at == _at(5)
+    assert row.updated_at >= before_second_upsert
+
+
+@pytest.mark.unit
+async def test_get_latest_ignores_stale_replay_against_the_newer_location() -> None:
+    """The bug this guard fixes, not just the row-level symptom: with
+    two locations for one run, a stale EPICS replay against the
+    location that is ALREADY the newest must not corrupt its
+    `observed_at` down below the OTHER location's, or `get_latest`
+    would start returning the wrong location entirely, not merely the
+    wrong path for the right location."""
+    store = InMemoryCapturePathStore()
+    run_id = uuid4()
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/gdata/dm/2BM/exp/scan_005.h5",
+        observed_at=_at(5),
+        created_at=_at(5),
+        host="tomdet",
+        root="/gdata/dm/2BM",
+    )
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/local1/2BM/exp/scan_005.h5",
+        observed_at=_at(10),
+        created_at=_at(10),
+        host="tomdet",
+        root="/local1/2BM",
+    )
+
+    await store.upsert(
+        run_id=run_id,
+        observed_path="/local1/2BM/exp/STALE_scan_005.h5",
+        observed_at=_at(1),
+        created_at=_at(1),
+        host="tomdet",
+        root="/local1/2BM",
+    )
+
+    row = await store.get_latest(run_id)
+    assert row is not None
+    assert row.observed_path == "/local1/2BM/exp/scan_005.h5"
+    assert row.root == "/local1/2BM"
+
+
+@pytest.mark.unit
 async def test_load_run_capture_path_returns_the_real_path_when_present() -> None:
     store = InMemoryCapturePathStore()
     run_id = uuid4()
