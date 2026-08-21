@@ -69,6 +69,7 @@ async def _preflight(
     status_phases: dict[str, str] | None = None,
     baseline_pvs: dict[str, dict[str, str]] | None = None,
     experiment_identity_pvs: dict[str, dict[str, str]] | None = None,
+    camera_select_prefixes: dict[str, str] | None = None,
 ) -> _Report:
     """`_FakeControlPort` implements `.read()` only (this command never
     writes or subscribes), so it satisfies `ControlPort` in practice but
@@ -80,6 +81,7 @@ async def _preflight(
         status_phases=status_phases if status_phases is not None else _PHASES,
         baseline_pvs=baseline_pvs,
         experiment_identity_pvs=experiment_identity_pvs,
+        camera_select_prefixes=camera_select_prefixes,
     )
 
 
@@ -285,6 +287,161 @@ async def test_preflight_read_full_file_name_role_non_text_is_bad() -> None:
     assert not line.ok
     assert line.verdict == "non-text"
     assert line.value == "<redacted, non-text>"
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_matching_camera_is_ok() -> None:
+    """The 2026-08-20 incident's happy path: `full_file_name` is
+    configured for `2bmSP2:`, and the live `camera_selected` reading
+    resolves (via the deployment's own table) to that same prefix."""
+    port = _FakeControlPort(
+        {
+            "2bmSP2:HDF1:FullFileName_RBV": _reading("/local1/2BM/2026-08-exp/scan_0001.h5"),
+            "2bm:MCTOptics:CameraSelected": _reading("1", kind="Categorical"),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {
+            "code": {
+                "full_file_name": "2bmSP2:HDF1:FullFileName_RBV",
+                "camera_selected": "2bm:MCTOptics:CameraSelected",
+            }
+        },
+        camera_select_prefixes={"0": "2bmSP1:", "1": "2bmSP2:"},
+    )
+
+    by_key = {line.pv_key: line for line in report.lines}
+    check = by_key["camera_prefix_check"]
+    assert check.ok
+    assert check.verdict == "match"
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_wrong_camera_selected_is_a_mismatch() -> None:
+    """The actual 2026-08-20 shape: the operator switched to camera 0,
+    but `full_file_name` is still hardcoded to camera 1's PV prefix."""
+    port = _FakeControlPort(
+        {
+            "2bmSP2:HDF1:FullFileName_RBV": _reading("/local1/2BM/2026-08-exp/scan_0001.h5"),
+            "2bm:MCTOptics:CameraSelected": _reading("0", kind="Categorical"),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {
+            "code": {
+                "full_file_name": "2bmSP2:HDF1:FullFileName_RBV",
+                "camera_selected": "2bm:MCTOptics:CameraSelected",
+            }
+        },
+        camera_select_prefixes={"0": "2bmSP1:", "1": "2bmSP2:"},
+    )
+
+    by_key = {line.pv_key: line for line in report.lines}
+    check = by_key["camera_prefix_check"]
+    assert not check.ok
+    assert check.verdict == "mismatch(selected camera expects '2bmSP1:')"
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_unreadable_camera_pv_is_bad_not_skipped() -> None:
+    port = _FakeControlPort(
+        {
+            "2bmSP2:HDF1:FullFileName_RBV": _reading("/local1/2BM/2026-08-exp/scan_0001.h5"),
+            "2bm:MCTOptics:CameraSelected": ControlNotConnectedError(
+                "2bm:MCTOptics:CameraSelected"
+            ),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {
+            "code": {
+                "full_file_name": "2bmSP2:HDF1:FullFileName_RBV",
+                "camera_selected": "2bm:MCTOptics:CameraSelected",
+            }
+        },
+        camera_select_prefixes={"0": "2bmSP1:", "1": "2bmSP2:"},
+    )
+
+    by_key = {line.pv_key: line for line in report.lines}
+    check = by_key["camera_prefix_check"]
+    assert not check.ok
+    assert not check.connected
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_empty_prefix_table_reports_not_configured() -> (
+    None
+):
+    """No `CAPTURE_CAMERA_SELECT_PREFIXES` declared yet: must report
+    that the check cannot confirm anything, never a silent pass."""
+    port = _FakeControlPort(
+        {
+            "2bmSP2:HDF1:FullFileName_RBV": _reading("/local1/2BM/2026-08-exp/scan_0001.h5"),
+            "2bm:MCTOptics:CameraSelected": _reading("1", kind="Categorical"),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {
+            "code": {
+                "full_file_name": "2bmSP2:HDF1:FullFileName_RBV",
+                "camera_selected": "2bm:MCTOptics:CameraSelected",
+            }
+        },
+    )
+
+    by_key = {line.pv_key: line for line in report.lines}
+    check = by_key["camera_prefix_check"]
+    assert not check.ok
+    assert check.verdict == "not-configured(CAPTURE_CAMERA_SELECT_PREFIXES empty)"
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_unrecognized_reading_is_bad() -> None:
+    """A `camera_selected` reading absent from the deployment's own
+    table: the mapping is deployment-declared vocabulary, so an
+    unrecognized reading is reported plainly, never guessed at."""
+    port = _FakeControlPort(
+        {
+            "2bmSP2:HDF1:FullFileName_RBV": _reading("/local1/2BM/2026-08-exp/scan_0001.h5"),
+            "2bm:MCTOptics:CameraSelected": _reading("Camera 1", kind="Categorical"),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {
+            "code": {
+                "full_file_name": "2bmSP2:HDF1:FullFileName_RBV",
+                "camera_selected": "2bm:MCTOptics:CameraSelected",
+            }
+        },
+        camera_select_prefixes={"0": "2bmSP1:", "1": "2bmSP2:"},
+    )
+
+    by_key = {line.pv_key: line for line in report.lines}
+    check = by_key["camera_prefix_check"]
+    assert not check.ok
+    assert check.verdict == "unrecognized-reading('Camera 1')"
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_skipped_without_camera_selected_role() -> None:
+    """A code with `full_file_name` alone (no `camera_selected` role
+    declared) gets no cross-check line: this is the pre-existing
+    behavior for every deployment that has not yet opted in."""
+    port = _FakeControlPort({"pv:file": _reading("2bmSP2:HDF1:FullFileName_RBV")})
+
+    report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    assert "camera_prefix_check" not in {line.pv_key for line in report.lines}
 
 
 @pytest.mark.unit
