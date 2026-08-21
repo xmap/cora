@@ -230,3 +230,124 @@ async def test_main_rejects_a_json_request_that_is_not_an_object(
     await _main()
 
     assert json.loads(capsys.readouterr().out.splitlines()[0])["kind"] == "ProbeError"
+
+
+def _durable_tree(root: Path, *, experiment: str, filename: str = "scan_005.h5") -> Path:
+    """A miniature of 2-BM's durable tree: `<root>/<month>/<exp>/data/<file>`."""
+    data_directory = root / "2026-08" / experiment / "data"
+    data_directory.mkdir(parents=True, exist_ok=True)
+    scan_path = data_directory / filename
+    scan_path.write_bytes(b"bytes")
+    return scan_path
+
+
+def _locate_request(root: Path, **overrides: object) -> dict[str, object]:
+    request: dict[str, object] = {
+        "op": "locate",
+        "root": str(root),
+        "allowed_roots": [str(root)],
+        "month": "2026-08",
+        "directory_suffix": "-1015116",
+        "subdirectory": "data",
+        "filename": "scan_005.h5",
+    }
+    request.update(overrides)
+    return request
+
+
+async def test_locate_op_finds_the_experiment_directory_by_proposal_suffix(
+    tmp_path: Path,
+) -> None:
+    """The whole point of the op: CORA holds the proposal number and the
+    filename but never the PI surname the directory is named after, so
+    the match has to come from the suffix alone. The second experiment
+    exists so a match proves suffix filtering, not "the only entry"."""
+    scan_path = _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+    _durable_tree(tmp_path, experiment="2026-08-Someone-9999999")
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["kind"] == "Located"
+    assert response["match_count"] == 1
+    assert response["paths"] == [str(scan_path)]
+
+
+async def test_locate_op_reports_every_match_when_the_suffix_is_ambiguous(
+    tmp_path: Path,
+) -> None:
+    _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+    _durable_tree(tmp_path, experiment="2026-08-Other-1015116")
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["match_count"] == 2
+
+
+async def test_locate_op_with_no_match_reports_zero_rather_than_failing(tmp_path: Path) -> None:
+    _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+
+    response = await _handle(_locate_request(tmp_path, directory_suffix="-7777777"))
+
+    assert response["kind"] == "Located"
+    assert response["match_count"] == 0
+    assert response["paths"] == []
+
+
+async def test_locate_op_with_an_absent_month_directory_reports_zero(tmp_path: Path) -> None:
+    response = await _handle(_locate_request(tmp_path, month="1999-01"))
+
+    assert response["kind"] == "Located"
+    assert response["match_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "segment",
+    ["../2026-08", "2026-08/..", ".", "..", "", "2026-08\x00", " 2026-08"],
+)
+async def test_locate_op_refuses_a_month_that_is_not_one_safe_segment(
+    tmp_path: Path, segment: str
+) -> None:
+    response = await _handle(_locate_request(tmp_path, month=segment))
+
+    assert response["kind"] == "ProbeError"
+    assert "month" in str(response["detail"])
+
+
+async def test_locate_op_refuses_a_filename_carrying_a_separator(tmp_path: Path) -> None:
+    _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+
+    response = await _handle(_locate_request(tmp_path, filename="../../etc/passwd"))
+
+    assert response["kind"] == "ProbeError"
+    assert "filename" in str(response["detail"])
+
+
+async def test_locate_op_refuses_a_root_outside_allowed_roots(tmp_path: Path) -> None:
+    _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+
+    response = await _handle(
+        _locate_request(tmp_path, allowed_roots=[str(tmp_path / "somewhere-else")])
+    )
+
+    assert response["kind"] == "ProbeError"
+
+
+async def test_locate_op_refuses_a_symlink_that_escapes_the_allowed_root(
+    tmp_path: Path,
+) -> None:
+    """Confinement is re-checked AFTER resolution, so a data directory
+    symlinked out of the tree is declined rather than followed. The
+    matched entry is inside the root by construction; only what it
+    resolves to is not, which is the case a pre-resolution check misses."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "scan_005.h5").write_bytes(b"bytes")
+    root = tmp_path / "gdata"
+    experiment = root / "2026-08" / "2026-08-Haridy-1015116"
+    experiment.mkdir(parents=True)
+    (experiment / "data").symlink_to(outside, target_is_directory=True)
+
+    response = await _handle(_locate_request(root, allowed_roots=[str(root)]))
+
+    assert response["kind"] == "Located"
+    assert response["match_count"] == 0

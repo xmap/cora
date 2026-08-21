@@ -56,6 +56,7 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import asdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
@@ -63,12 +64,23 @@ from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.posix_checksum import PosixChecksumAdapter
 from cora.data.ports.checksum_computer import ComputedChecksum
 from cora.data.ports.scan_reader import Description, Unreadable, Unrecognized
+from cora.shared.path_segment import is_safe_path_segment
+from cora.shared.storage_root import matched_storage_root
 
 if TYPE_CHECKING:
     from cora.data.ports.checksum_verifier import Unreachable as ChecksumUnreachable
 
 _OP_DESCRIBE = "describe"
 _OP_CHECKSUM = "checksum"
+_OP_LOCATE = "locate"
+
+MAX_LOCATE_MATCHES = 8
+"""Cap on the paths one `locate` verdict carries. `match_count` is
+reported UNCAPPED beside them, so a caller can tell 2 matches from 50
+even though it only ever sees the first few: the caller refuses
+anything but exactly one match, and a silently truncated list would let
+a pathological request return a response sized by the directory rather
+than by the answer."""
 
 
 def _description_to_json(result: Description | Unreadable | Unrecognized) -> dict[str, Any]:
@@ -90,12 +102,78 @@ def _checksum_to_json(result: ComputedChecksum | ChecksumUnreachable) -> dict[st
     return {"kind": "Unreachable", "error_detail": result.error_detail}
 
 
+def _locate(request: dict[str, Any], *, allowed_roots: tuple[str, ...]) -> dict[str, Any]:
+    """Find the durable copy of a file whose directory CORA cannot name.
+
+    At 2-BM an experiment folder is `{yyyy-mm}-{PIsurname}-{GUP}`, and
+    CORA deliberately holds no surname (`run_experiment_identity`
+    carries proposal, ESAF and ESAF-DOI numbers and nothing else), so
+    the durable copy has to be found from the parts CORA does hold. The
+    request therefore names each path segment literally except the
+    experiment directory, which it matches by suffix.
+
+    No pattern is ever built from the request. Every segment is checked
+    against `is_safe_path_segment` first, matching is `str.endswith` on
+    entries this process itself enumerated, and the resolved match is
+    re-confined afterwards so a symlink out of the tree is refused
+    rather than followed. Deciding what a given match COUNT means is
+    the caller's policy, not this process's: it reports what it found.
+    """
+    root = request.get("root")
+    if not isinstance(root, str):
+        return {"kind": "ProbeError", "detail": "malformed request: root"}
+    if matched_storage_root(root, allowed_roots) is None:
+        return {"kind": "ProbeError", "detail": "root is not under an allowed root"}
+
+    segments = {name: request.get(name) for name in ("month", "directory_suffix", "filename")}
+    for name, value in segments.items():
+        if not isinstance(value, str) or not is_safe_path_segment(value):
+            return {"kind": "ProbeError", "detail": f"malformed request: {name}"}
+    month = str(segments["month"])
+    directory_suffix = str(segments["directory_suffix"])
+    filename = str(segments["filename"])
+
+    subdirectory = request.get("subdirectory")
+    if subdirectory is not None and (
+        not isinstance(subdirectory, str) or not is_safe_path_segment(subdirectory)
+    ):
+        return {"kind": "ProbeError", "detail": "malformed request: subdirectory"}
+
+    month_directory = Path(root) / month
+    try:
+        entries = sorted(entry for entry in month_directory.iterdir() if entry.is_dir())
+    except OSError as exc:
+        return {"kind": "Located", "paths": [], "match_count": 0, "detail": type(exc).__name__}
+
+    matches: list[str] = []
+    for entry in entries:
+        if not entry.name.endswith(directory_suffix):
+            continue
+        candidate = entry / subdirectory / filename if subdirectory else entry / filename
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            continue
+        if not resolved.is_file() or matched_storage_root(str(resolved), allowed_roots) is None:
+            continue
+        matches.append(str(resolved))
+
+    return {
+        "kind": "Located",
+        "paths": matches[:MAX_LOCATE_MATCHES],
+        "match_count": len(matches),
+    }
+
+
 async def _handle(request: dict[str, Any]) -> dict[str, Any]:
     op = request.get("op")
+    allowed_roots = tuple(request.get("allowed_roots") or ())
+    if op == _OP_LOCATE:
+        return _locate(request, allowed_roots=allowed_roots)
+
     locator_uri = request.get("locator_uri")
     if not isinstance(locator_uri, str):
         return {"kind": "ProbeError", "detail": "malformed request: locator_uri"}
-    allowed_roots = tuple(request.get("allowed_roots") or ())
 
     if op == _OP_DESCRIBE:
         captured_at_source = request.get("captured_at_source") or "start_date"
