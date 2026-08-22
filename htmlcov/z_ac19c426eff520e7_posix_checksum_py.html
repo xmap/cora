@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/cora/data/adapters/posix_checksum.py: 87.8%</title>
+    <title>Coverage for src/cora/data/adapters/posix_checksum.py: 97.3%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>data<span class="sep">/</span>adapters<span class="sep">/</span>posix_checksum.py</b>:
-            <span class="pc_cov">87.8%</span>
+            <span class="pc_cov">97.3%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -56,10 +56,10 @@
         </aside>
         <h2>
             <span class="text">60 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">54<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">6<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">59<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">1<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">14<span class="text"> excluded</span></button>
-            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">3<span class="text"> partial</span></button>
+            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">1<span class="text"> partial</span></button>
         </h2>
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_ac19c426eff520e7_in_memory_distribution_lookup_py.html">&#xab; prev</a> &nbsp; &nbsp;
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_ac19c426eff520e7_postgres_dataset_distribution_lookup_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-21 21:45 +0000
+            created at 2026-08-22 18:45 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -188,9 +188,9 @@
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">                <span class="str">&quot;posix_checksum.read_failed&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">                <span class="nam">distribution_uri</span><span class="op">=</span><span class="nam">distribution_uri</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">                <span class="nam">supply_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">supply_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">                <span class="nam">error</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">exc</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">                <span class="nam">error</span><span class="op">=</span><span class="nam">type</span><span class="op">(</span><span class="nam">exc</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">            <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span><span class="nam">error_detail</span><span class="op">=</span><span class="fst">f&quot;</span><span class="fst">read failed: </span><span class="op">{</span><span class="nam">exc</span><span class="op">}</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">            <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span><span class="nam">error_detail</span><span class="op">=</span><span class="fst">f&quot;</span><span class="fst">read failed: </span><span class="op">{</span><span class="nam">type</span><span class="op">(</span><span class="nam">exc</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">}</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="key">async</span> <span class="key">def</span> <span class="nam">compute</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -200,14 +200,14 @@
     <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">ChecksumComputationResult</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">            <span class="key">return</span> <span class="key">await</span> <span class="nam">asyncio</span><span class="op">.</span><span class="nam">to_thread</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">_resolve_and_digest</span><span class="op">,</span> <span class="nam">locator_uri</span><span class="op">,</span> <span class="nam">supply_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">        <span class="key">except</span> <span class="op">(</span><span class="nam">OSError</span><span class="op">,</span> <span class="nam">ValueError</span><span class="op">)</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">            <span class="nam">_log</span><span class="op">.</span><span class="nam">warning</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">                <span class="str">&quot;posix_checksum.compute_failed&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">                <span class="nam">locator_uri</span><span class="op">=</span><span class="nam">locator_uri</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">                <span class="nam">supply_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">supply_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                <span class="nam">error</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">exc</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span><span class="nam">error_detail</span><span class="op">=</span><span class="fst">f&quot;</span><span class="fst">read failed: </span><span class="op">{</span><span class="nam">exc</span><span class="op">}</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">        <span class="key">except</span> <span class="op">(</span><span class="nam">OSError</span><span class="op">,</span> <span class="nam">ValueError</span><span class="op">)</span> <span class="key">as</span> <span class="nam">exc</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">            <span class="nam">_log</span><span class="op">.</span><span class="nam">warning</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">                <span class="str">&quot;posix_checksum.compute_failed&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">                <span class="nam">locator_uri</span><span class="op">=</span><span class="nam">locator_uri</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">                <span class="nam">supply_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">supply_id</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                <span class="nam">error</span><span class="op">=</span><span class="nam">type</span><span class="op">(</span><span class="nam">exc</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span><span class="nam">error_detail</span><span class="op">=</span><span class="fst">f&quot;</span><span class="fst">read failed: </span><span class="op">{</span><span class="nam">type</span><span class="op">(</span><span class="nam">exc</span><span class="op">)</span><span class="op">.</span><span class="nam">__name__</span><span class="op">}</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="key">def</span> <span class="nam">_resolve_and_hash</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">        <span class="nam">self</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -250,8 +250,8 @@
     <p class="run"><span class="n"><a id="t166" href="#t166">166</a></span><span class="t">            <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span><span class="nam">error_detail</span><span class="op">=</span><span class="nam">resolved</span><span class="op">.</span><span class="nam">reason</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t167" href="#t167">167</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t168" href="#t168">168</a></span><span class="t">        <span class="nam">computed</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_hash_file</span><span class="op">(</span><span class="nam">resolved</span><span class="op">.</span><span class="nam">real_path</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">        <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">computed</span><span class="op">,</span> <span class="nam">Unreachable</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">169&#x202F;&#x219B;&#x202F;170</span><span class="annotate long">line 169 didn't jump to line 170 because the condition on line 169 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t">            <span class="key">return</span> <span class="nam">computed</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">        <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">computed</span><span class="op">,</span> <span class="nam">Unreachable</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t">            <span class="key">return</span> <span class="nam">computed</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t171" href="#t171">171</a></span><span class="t">        <span class="com"># Stat AFTER the walk: this snapshot is the second point of the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t">        <span class="com"># ingest live-file guard (the reader statted before its read).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t">        <span class="nam">stat</span> <span class="op">=</span> <span class="nam">os</span><span class="op">.</span><span class="nam">stat</span><span class="op">(</span><span class="nam">resolved</span><span class="op">.</span><span class="nam">real_path</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -267,10 +267,10 @@
     <p class="run"><span class="n"><a id="t183" href="#t183">183</a></span><span class="t">        <span class="nam">hasher</span> <span class="op">=</span> <span class="nam">hashlib</span><span class="op">.</span><span class="nam">sha256</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t184" href="#t184">184</a></span><span class="t">        <span class="key">with</span> <span class="nam">open</span><span class="op">(</span><span class="nam">real_path</span><span class="op">,</span> <span class="str">&quot;rb&quot;</span><span class="op">)</span> <span class="key">as</span> <span class="nam">handle</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t185" href="#t185">185</a></span><span class="t">            <span class="key">while</span> <span class="key">True</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t186" href="#t186">186</a></span><span class="t">                <span class="key">if</span> <span class="nam">time</span><span class="op">.</span><span class="nam">monotonic</span><span class="op">(</span><span class="op">)</span> <span class="op">&gt;</span> <span class="nam">deadline</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">186&#x202F;&#x219B;&#x202F;187</span><span class="annotate long">line 186 didn't jump to line 187 because the condition on line 186 was never true</span></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">                    <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t188" href="#t188">188</a></span><span class="t">                        <span class="nam">error_detail</span><span class="op">=</span><span class="fst">f&quot;</span><span class="fst">walk exceeded max_walk_seconds=</span><span class="op">{</span><span class="nam">self</span><span class="op">.</span><span class="nam">_max_walk_seconds</span><span class="op">}</span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">                    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t186" href="#t186">186</a></span><span class="t">                <span class="key">if</span> <span class="nam">time</span><span class="op">.</span><span class="nam">monotonic</span><span class="op">(</span><span class="op">)</span> <span class="op">&gt;</span> <span class="nam">deadline</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">                    <span class="key">return</span> <span class="nam">Unreachable</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t188" href="#t188">188</a></span><span class="t">                        <span class="nam">error_detail</span><span class="op">=</span><span class="fst">f&quot;</span><span class="fst">walk exceeded max_walk_seconds=</span><span class="op">{</span><span class="nam">self</span><span class="op">.</span><span class="nam">_max_walk_seconds</span><span class="op">}</span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">                    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">                <span class="nam">chunk</span> <span class="op">=</span> <span class="nam">handle</span><span class="op">.</span><span class="nam">read</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">_chunk_bytes</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">                <span class="key">if</span> <span class="key">not</span> <span class="nam">chunk</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">                    <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
@@ -288,7 +288,7 @@
             <a class="nav" href="z_ac19c426eff520e7_postgres_dataset_distribution_lookup_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-21 21:45 +0000
+            created at 2026-08-22 18:45 +0000
         </p>
     </div>
 </footer>
