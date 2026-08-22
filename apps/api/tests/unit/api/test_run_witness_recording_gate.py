@@ -35,6 +35,19 @@ gates but keyed on a DIFFERENT prerequisite: `capture_scan_ingestor_enabled=True
 requires `capture_path_recording_enabled=True` -- the sweep's only
 candidate signal is a resolved `run_capture_path` row, so with path
 recording off no run ever becomes a candidate.
+
+The durable-distribution sweep adds a NINTH gate, keyed on FOUR
+prerequisites: `durable_distribution_sweep_enabled=True` requires
+`capture_path_recording_enabled=True` (same reasoning as the eighth
+gate); `scan_probe_remote_host` to be set (`SshLocateProbe` is the only
+`LocateProbe` this codebase ships, so with no remote host there is no
+way to find a durable copy at all); at least one location marked
+durable across `capture_scan_ingestor_bindings`; and every durable root
+present in `scan_probe_allowed_roots` SPECIFICALLY -- not merely the
+union with `posix_checksum_roots` that `CaptureScanIngestorBinding`'s
+own validator checks, which would let a durable root reachable only by
+the local pair pass boot and then make every `SshLocateProbe` call
+refuse.
 """
 
 from uuid import UUID, uuid4
@@ -42,7 +55,32 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.api.main import _enforce_run_witness_recording_gate
+from cora.infrastructure.capture_scan_ingestor_binding import (
+    CaptureScanIngestorBinding,
+    CaptureScanIngestorLocation,
+)
 from cora.infrastructure.config import Settings
+
+_ACQUISITION_ROOT = "/local1/2BM"
+_DURABLE_ROOT = "/gdata/dm/2BM"
+
+
+def _durable_bindings(
+    *, durable_root: str = _DURABLE_ROOT
+) -> dict[str, CaptureScanIngestorBinding]:
+    return {
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=uuid4(),
+            locations={
+                _ACQUISITION_ROOT: CaptureScanIngestorLocation(
+                    supply_id=uuid4(), access_protocol="POSIX"
+                ),
+                durable_root: CaptureScanIngestorLocation(
+                    supply_id=uuid4(), access_protocol="NFS", durable=True
+                ),
+            },
+        )
+    }
 
 
 def _settings(
@@ -56,6 +94,12 @@ def _settings(
     capture_experiment_identity_recording_enabled: bool = False,
     capture_probe_recording_enabled: bool = False,
     capture_scan_ingestor_enabled: bool = False,
+    durable_distribution_sweep_enabled: bool = False,
+    capture_scan_ingestor_bindings: dict[str, CaptureScanIngestorBinding] | None = None,
+    posix_checksum_roots: tuple[str, ...] = (),
+    scan_probe_allowed_roots: tuple[str, ...] = (),
+    scan_probe_remote_host: str | None = None,
+    scan_probe_remote_python: str | None = None,
 ) -> Settings:
     return Settings(  # type: ignore[call-arg]
         run_witness_enabled=run_witness_enabled,
@@ -69,6 +113,12 @@ def _settings(
         ),
         capture_probe_recording_enabled=capture_probe_recording_enabled,
         capture_scan_ingestor_enabled=capture_scan_ingestor_enabled,
+        durable_distribution_sweep_enabled=durable_distribution_sweep_enabled,
+        capture_scan_ingestor_bindings=capture_scan_ingestor_bindings or {},
+        posix_checksum_roots=posix_checksum_roots,
+        scan_probe_allowed_roots=scan_probe_allowed_roots,
+        scan_probe_remote_host=scan_probe_remote_host,
+        scan_probe_remote_python=scan_probe_remote_python,
     )
 
 
@@ -332,5 +382,103 @@ def test_capture_scan_ingestor_enabled_with_path_recording_passes() -> None:
             run_witness_recording_enabled=True,
             capture_path_recording_enabled=True,
             capture_scan_ingestor_enabled=True,
+        )
+    )
+
+
+def test_durable_distribution_sweep_enabled_without_path_recording_refuses_boot() -> None:
+    with pytest.raises(RuntimeError, match="CAPTURE_PATH_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                capture_path_recording_enabled=False,
+                durable_distribution_sweep_enabled=True,
+                capture_scan_ingestor_bindings=_durable_bindings(),
+                scan_probe_allowed_roots=(_ACQUISITION_ROOT, _DURABLE_ROOT),
+            )
+        )
+
+
+def test_durable_distribution_sweep_enabled_without_remote_host_refuses_boot() -> None:
+    """`SshLocateProbe` is the only `LocateProbe` this codebase ships;
+    with no remote host there is no way to find a durable copy at all,
+    regardless of how the roots are configured."""
+    with pytest.raises(RuntimeError, match="SCAN_PROBE_REMOTE_HOST"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=True,
+                capture_watch_plan_id=uuid4(),
+                run_witness_recording_enabled=True,
+                capture_path_recording_enabled=True,
+                durable_distribution_sweep_enabled=True,
+                capture_scan_ingestor_bindings=_durable_bindings(),
+                scan_probe_allowed_roots=(_ACQUISITION_ROOT, _DURABLE_ROOT),
+                scan_probe_remote_host=None,
+            )
+        )
+
+
+def test_durable_distribution_sweep_enabled_without_any_durable_location_refuses_boot() -> None:
+    """A binding may exist for scan ingest without any location marked
+    durable yet; the sweep has nothing to find in that case."""
+    non_durable_bindings = {
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=uuid4(),
+            locations={
+                _ACQUISITION_ROOT: CaptureScanIngestorLocation(
+                    supply_id=uuid4(), access_protocol="POSIX"
+                )
+            },
+        )
+    }
+    with pytest.raises(RuntimeError, match="CAPTURE_SCAN_INGESTOR_BINDINGS"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=True,
+                capture_watch_plan_id=uuid4(),
+                run_witness_recording_enabled=True,
+                capture_path_recording_enabled=True,
+                durable_distribution_sweep_enabled=True,
+                capture_scan_ingestor_bindings=non_durable_bindings,
+                posix_checksum_roots=(_ACQUISITION_ROOT,),
+                scan_probe_remote_host="tomdet",
+                scan_probe_remote_python="/venv/bin/python3",
+            )
+        )
+
+
+def test_durable_sweep_root_only_in_posix_checksum_roots_refuses_boot() -> None:
+    """The trap this gate exists to catch: the durable root satisfies
+    `CaptureScanIngestorBinding`'s own UNION validator (it is in
+    `posix_checksum_roots`) but is absent from `scan_probe_allowed_roots`
+    specifically, which is what `SshLocateProbe` actually checks against."""
+    with pytest.raises(RuntimeError, match="SCAN_PROBE_ALLOWED_ROOTS"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=True,
+                capture_watch_plan_id=uuid4(),
+                run_witness_recording_enabled=True,
+                capture_path_recording_enabled=True,
+                durable_distribution_sweep_enabled=True,
+                capture_scan_ingestor_bindings=_durable_bindings(),
+                posix_checksum_roots=(_ACQUISITION_ROOT, _DURABLE_ROOT),
+                scan_probe_allowed_roots=(),
+                scan_probe_remote_host="tomdet",
+                scan_probe_remote_python="/venv/bin/python3",
+            )
+        )
+
+
+def test_durable_sweep_root_in_scan_probe_allowed_roots_passes() -> None:
+    _enforce_run_witness_recording_gate(
+        _settings(
+            run_witness_enabled=True,
+            capture_watch_plan_id=uuid4(),
+            run_witness_recording_enabled=True,
+            capture_path_recording_enabled=True,
+            durable_distribution_sweep_enabled=True,
+            capture_scan_ingestor_bindings=_durable_bindings(),
+            scan_probe_allowed_roots=(_ACQUISITION_ROOT, _DURABLE_ROOT),
+            scan_probe_remote_host="tomdet",
+            scan_probe_remote_python="/venv/bin/python3",
         )
     )

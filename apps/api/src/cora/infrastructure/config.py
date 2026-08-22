@@ -1145,6 +1145,24 @@ class Settings(BaseSettings):
     # Irrelevant when `capture_scan_ingestor_enabled` is False.
     capture_scan_ingestor_tick_seconds: float = 30.0
 
+    # NINTH kill switch (durable-distribution sweep): gates whether
+    # DurableCopyRegistrar's periodic sweep finds a Dataset's durable
+    # copy (the archival tier an operator later copies the experiment
+    # to, distinct from the transient acquisition tier) and registers it
+    # as a second Distribution on the same Dataset. Default off.
+    # Refuses to boot if True without `capture_path_recording_enabled`,
+    # without at least one durable location configured, or with a
+    # durable root outside `scan_probe_allowed_roots` specifically (see
+    # `_enforce_run_witness_recording_gate`). Named after the sweep
+    # (`durable_distribution_sweep_*`), matching every other lifespan
+    # switch's `snake(<AgentClass>)_enabled` convention. See
+    # `cora.api._durable_distribution`.
+    durable_distribution_sweep_enabled: bool = False
+
+    # Sweep cadence, matching every other loop's `*_tick_seconds` naming.
+    # Irrelevant when `durable_distribution_sweep_enabled` is False.
+    durable_distribution_sweep_tick_seconds: float = 30.0
+
     # SSH host holding the scan bytes (e.g. "tomdet"), or `None` for a
     # deployment where CORA's own host mounts the storage directly. When
     # set, `ingest_scan` reads and digests the file entirely on this host
