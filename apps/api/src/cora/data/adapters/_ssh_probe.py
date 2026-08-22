@@ -48,6 +48,16 @@ Every `ProbeError` this module itself produces carries an `origin` (see
 `cora.shared.probe_error`) saying whether the transport was touched.
 Responses relayed from the remote process carry none, and correctly so:
 they arrived over a transport that demonstrably works.
+
+## No `detail` this module writes can carry a path
+
+Callers log `detail` verbatim, and the trees these probes walk are
+organized into directories named for people. So every `detail`
+constructed here is either a fixed literal, an exit code, or an
+exception TYPE name. Nothing interpolates an exception message, the
+remote's stderr, or its stdout, all three of which have carried a path
+at some point in this module's history. Keep it that way: the property
+holds only because each site holds it, and one `{exc}` puts it back.
 """
 
 from __future__ import annotations
@@ -237,7 +247,7 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
             stderr=asyncio.subprocess.PIPE,
         )
     except OSError as exc:
-        return _transport_failure(f"could not launch ssh: {exc}")
+        return _transport_failure(f"could not launch ssh: {type(exc).__name__}")
 
     try:
         stdout, stderr = await asyncio.wait_for(
@@ -251,8 +261,20 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
         return _transport_failure(f"timed out after {config.command_timeout_seconds}s")
 
     if process.returncode != 0:
-        tail = stderr.decode(errors="replace").strip()[-300:]
-        return _transport_failure(f"ssh exited {process.returncode}: {tail}")
+        # The exit code, NOT the tail of the remote's stderr. That tail
+        # is arbitrary text from a process walking a tree whose
+        # directories are named for people, and this string is logged
+        # verbatim by every caller. Carrying it would have been a path
+        # in a log line reachable from any failing probe.
+        #
+        # Yes, this costs diagnosis: `Permission denied` and `Host key
+        # verification failed` came through here. They are recoverable
+        # by running the probe by hand, which an operator with access to
+        # the host can do; a surname in an append-only log sink is not
+        # recoverable by anyone. `255` is OpenSSH's own "the connection
+        # or authentication failed" code and says which half to look at.
+        _ = stderr
+        return _transport_failure(f"ssh exited {process.returncode}")
 
     # No origin on either of these. The hop carried the request and the
     # remote exited 0, so calling it a transport failure would be false,
@@ -262,7 +284,13 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
     try:
         parsed: Any = json.loads(stdout.decode("utf-8").splitlines()[0])
     except (IndexError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        return {"kind": "ProbeError", "detail": f"unparseable probe response: {exc}"}
+        # The exception TYPE, not its message. The thing most likely to
+        # corrupt line one is a log line from the remote, which is
+        # exactly the text that carries a path.
+        return {
+            "kind": "ProbeError",
+            "detail": f"unparseable probe response: {type(exc).__name__}",
+        }
     if not isinstance(parsed, dict):
         return {"kind": "ProbeError", "detail": "probe response is not a JSON object"}
     return cast("dict[str, Any]", parsed)

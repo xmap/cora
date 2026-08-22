@@ -71,31 +71,49 @@ wedge the sweep for every other. This mirrors `CaptureScanIngestor`,
 where a gate review removed exactly this head-of-line blocking once
 already.
 
-## Why the walked set outlives the tick
+## Why the cursor outlives the tick, and why it is a cursor
 
 Skipping within a tick is not enough, and the difference is the whole
 reason this state is on the instance rather than the stack. The
-candidate query is `ORDER BY created_at ASC LIMIT 1`, so the queue head
-is stable, and three of the skip conditions never clear on their own:
-a capture code with no durable location, an acquisition folder with no
-month in its name, and an ambiguous match. That last one is expected
-roughly one month in eight and has no resolution path today. A tick
-that forgot what it walked would therefore spend all ten of its
-attempts on the first ten permanently-stuck Datasets, forever, and
-never reach the eleventh. Ten is not a pathological number here; given
-the stated ambiguity rate it is the steady state.
+candidate query is ordered and its head is stable, and three of the
+skip conditions never clear on their own: a capture code with no
+durable location, an acquisition folder with no month in its name, and
+an ambiguous match. That last one is expected roughly one month in
+eight and has no resolution path today. A tick that forgot what it
+walked would spend all ten of its attempts on the first ten
+permanently-stuck Datasets, forever, and never reach the eleventh. Ten
+is not a pathological number here; given the stated ambiguity rate it
+is the steady state.
 
-Carrying the set turns that into a cycle: each tick resumes where the
-last left off, and when nothing is left the set clears and the sweep
-starts over, so a Dataset that was merely waiting gets looked at again.
-It also suppresses the re-probe residue described above, since a
-Dataset registered this cycle is not re-offered until the cycle ends.
+Carrying position turns that into a cycle: each tick resumes where the
+last left off, and when nothing is left after the cursor it rewinds and
+the sweep starts over, so a Dataset that was merely waiting gets looked
+at again. It also suppresses the re-probe residue described above,
+since a Dataset walked this cycle is not re-offered until the cycle
+ends.
 
-The honest limit: this lives in process memory, so a restart begins a
-fresh cycle from the head. That is acceptable because a cycle is cheap
-(one directory listing per stuck Dataset) and because the alternative,
-persisting a skip list, would need its own erasure story for a table
-keyed by Dataset.
+A CURSOR rather than a set of ids, and that is not a detail. The first
+version of this remembered ids, which meant memory that grew with the
+population and a bind parameter that grew with it, so it needed a cap,
+and a cap means truncation, and truncation restarts the cycle at the
+head. That does not remove starvation, it moves it from the tenth
+Dataset to the five-hundredth, which is worse for being harder to
+notice. A keyset is two values whatever the backlog is, so there is
+nothing to truncate and nothing to starve.
+
+A second, smaller thing falls out of it: the cursor is REPLACED on each
+step, never mutated in place, so the shared-mutable-default hazard that
+a set version carried cannot arise here even if someone declares it at
+class scope. That is worth knowing because it is the reason no test
+guards it. A test for a bug the shape of the data forbids would pass
+unconditionally, which is worse than no test.
+
+The honest limits, both accepted. Position lives in process memory, so
+a restart begins a fresh cycle from the head; a cycle is cheap (one
+directory listing per stuck Dataset) and persisting it would need its
+own erasure story for a table keyed by Dataset. And a Dataset whose
+`created_at` lands BEHIND the cursor, which a backfill could produce,
+waits until the cycle rewinds rather than being picked up immediately.
 
 ## Personal data
 
@@ -140,7 +158,10 @@ from cora.api._durable_copy_verdict import (
     DurableCopyUnreachable,
     read_locate_response,
 )
-from cora.api._durable_distribution_sweep import months_to_search
+from cora.api._durable_distribution_sweep import (
+    DurableDistributionCursor,
+    months_to_search,
+)
 from cora.data.adapters.capture_path_locator import mint_capture_path_locator
 from cora.infrastructure.logging import get_logger
 from cora.shared.storage_root import normalize_storage_root
@@ -161,11 +182,6 @@ _MAX_CANDIDATES_PER_TICK = 10
 """Bound on how many Datasets one tick will walk past before giving up.
 Mirrors `CaptureScanIngestor.tick`: without it, a population of stuck
 candidates would be re-walked in full on every tick forever."""
-
-_MAX_WALKED_CARRIED = 500
-"""Bound on the cycle's memory of what it has already walked. Not a
-memory bound: the set is bound into the candidate query as an array, so
-this is a bound on how big that query's parameter may get."""
 
 
 class _Outcome(Enum):
@@ -345,36 +361,29 @@ class DurableDistributionDriver:
         self._registrar = registrar
         self._host = host
         self._clock = clock
-        self._walked: set[UUID] = set()
+        self._cursor: DurableDistributionCursor | None = None
 
     async def tick(self) -> None:
         for _ in range(_MAX_CANDIDATES_PER_TICK):
-            candidate = await self._candidate_lookup.next_candidate(exclude=frozenset(self._walked))
+            candidate = await self._candidate_lookup.next_candidate(after=self._cursor)
             if candidate is None:
-                # Every candidate has been walked at least once this
-                # cycle. Starting over is the only way a Dataset that
-                # was merely waiting gets looked at again.
-                self._walked.clear()
+                # Nothing left after the cursor, so the cycle is done.
+                # Rewinding is the only way a Dataset that was merely
+                # waiting gets looked at again.
+                self._cursor = None
                 return
             outcome = await self._sweep_one(candidate)
             if outcome is _Outcome.STOP_TICK:
+                # Cursor deliberately NOT advanced. Both systemic
+                # conditions are about CORA's side rather than this
+                # Dataset, so the next tick should retry this one rather
+                # than step over it unexamined.
                 return
-            self._walked.add(candidate.dataset_id)
+            self._cursor = DurableDistributionCursor(
+                created_at=candidate.created_at, dataset_id=candidate.dataset_id
+            )
             if outcome is _Outcome.SUCCESS:
                 return
-            if len(self._walked) >= _MAX_WALKED_CARRIED:
-                # More permanently-stuck Datasets than one cycle can
-                # carry. Restarting the cycle re-starves whatever sits
-                # behind them, so this is deliberately loud: it is a
-                # deployment that needs an operator, not a condition the
-                # sweep can work around. The fix, if it ever fires, is a
-                # `(created_at, dataset_id)` cursor in place of the
-                # exclusion list, which is bounded by construction.
-                _log.warning(
-                    "durable_distribution.walked_set_overflowed",
-                    carried=len(self._walked),
-                )
-                self._walked.clear()
         _log.info("durable_distribution.tick_exhausted_attempts", attempts=_MAX_CANDIDATES_PER_TICK)
 
     async def _sweep_one(self, candidate: DurableDistributionCandidate) -> _Outcome:
@@ -472,10 +481,12 @@ class DurableDistributionDriver:
             run_id=candidate.run_id,
             observed_path=verdict.path,
             # The FILE's timestamp, not `clock.now()`. That is what the
-            # column means, and it is also what makes the re-record on a
-            # retry a true no-op: the upsert is monotonic in
-            # `observed_at`, so CORA's clock would write a newer value
-            # every time while claiming to state the same fact.
+            # column means, and it is what keeps a re-record VALUE
+            # stable: the upsert is monotonic in `observed_at`, so
+            # CORA's clock would write a newer value every time while
+            # claiming to state the same unchanged fact. Not write-free
+            # either way, since the guard is `>=` and an equal timestamp
+            # still refreshes `updated_at`.
             observed_at=verdict.modified_at,
             created_at=self._clock.now(),
             host=self._host,

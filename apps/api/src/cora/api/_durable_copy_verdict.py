@@ -16,16 +16,15 @@ a candidate and the next sweep looks again. There is deliberately no
 expiry: a bounded window would silently drop a genuinely late copy,
 which is the failure that actually costs data.
 
-**Several matches means refuse, and say which.** Guessing would record
-the wrong bytes as the durable copy of this Dataset, permanently, in a
-log that cannot be edited. This is not a defensive edge case. Measured
-on the real archive: internal beamtime carries no proposal number, so
-DMagic names every such folder `...-0`, and 8 of the last 14 months
-hold more than one. The filename usually separates them, and in
-`2026-02` three internal folders share 45 filenames and it does not.
-Expect this to fire roughly one month in eight, which is why the
-refusal has to name the colliding folders: an operator who cannot see
-WHICH experiments collided cannot resolve it.
+**Several matches means refuse, and report how many.** Guessing would
+record the wrong bytes as the durable copy of this Dataset,
+permanently, in a log that cannot be edited. This is not a defensive
+edge case. Measured on the real archive: internal beamtime carries no
+proposal number, so DMagic names every such folder `...-0`, and 8 of
+the last 14 months hold more than one. The filename usually separates
+them, and in `2026-02` three internal folders share 45 filenames and it
+does not. Expect this to fire roughly one month in eight. The count is
+reported and the colliding paths are NOT, for the reason set out below.
 
 **A failure to look is either this one request's problem or the hop's,
 and they are not the same verdict.** `DurableCopyRefused` means the

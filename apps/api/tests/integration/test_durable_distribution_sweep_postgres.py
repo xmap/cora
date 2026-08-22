@@ -25,6 +25,7 @@ import pytest
 
 from cora.api._durable_distribution_sweep import (
     DurableDistributionCandidate,
+    DurableDistributionCursor,
     PostgresDurableDistributionCandidateLookup,
 )
 from tests.integration.test_capture_scan_ingestor_postgres import (
@@ -155,6 +156,7 @@ async def test_a_dataset_with_vault_row_capture_code_and_proposal_is_returned(
 
     assert candidate == DurableDistributionCandidate(
         dataset_id=dataset_id,
+        created_at=_NOW,
         run_id=run_id,
         capture_code=_CAPTURE_CODE,
         proposal_number=_PROPOSAL_NUMBER,
@@ -282,29 +284,119 @@ async def test_a_vault_row_already_at_a_durable_root_is_not_mistaken_for_the_acq
 
 
 @pytest.mark.integration
-async def test_an_excluded_dataset_id_is_skipped_for_the_next_oldest(
+async def test_after_the_older_candidates_cursor_returns_the_next_oldest(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """Pins `NOT (dds.dataset_id = ANY($1::uuid[]))`: excluding one
-    Dataset leaves another one reachable."""
+    """Pins the keyset predicate: resuming from the older candidate's own
+    cursor advances to the next one in `(created_at, dataset_id)` order,
+    not back to itself."""
     _, older_dataset_id = await _seed_ready_candidate(db_pool, dataset_created_at=_NOW)
     _, newer_dataset_id = await _seed_ready_candidate(
         db_pool, dataset_created_at=_NOW + timedelta(minutes=5)
     )
 
     lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
-    candidate = await lookup.next_candidate(exclude=frozenset({older_dataset_id}))
+    first = await lookup.next_candidate()
+    assert first is not None
+    assert first.dataset_id == older_dataset_id
 
-    assert candidate is not None
-    assert candidate.dataset_id == newer_dataset_id
+    cursor = DurableDistributionCursor(created_at=first.created_at, dataset_id=first.dataset_id)
+    second = await lookup.next_candidate(after=cursor)
+
+    assert second is not None
+    assert second.dataset_id == newer_dataset_id
 
 
 @pytest.mark.integration
-async def test_excluding_the_only_candidate_returns_none(db_pool: asyncpg.Pool) -> None:
+async def test_after_none_returns_the_head(db_pool: asyncpg.Pool) -> None:
+    """`after=None` starts a fresh cycle at the head, same as omitting
+    the argument entirely."""
+    _, older_dataset_id = await _seed_ready_candidate(db_pool, dataset_created_at=_NOW)
+    await _seed_ready_candidate(db_pool, dataset_created_at=_NOW + timedelta(minutes=5))
+
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
+    candidate = await lookup.next_candidate(after=None)
+
+    assert candidate is not None
+    assert candidate.dataset_id == older_dataset_id
+
+
+@pytest.mark.integration
+async def test_after_the_only_candidates_cursor_returns_none(db_pool: asyncpg.Pool) -> None:
     _, dataset_id = await _seed_ready_candidate(db_pool)
 
     lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
-    assert await lookup.next_candidate(exclude=frozenset({dataset_id})) is None
+    candidate = await lookup.next_candidate()
+    assert candidate is not None
+    assert candidate.dataset_id == dataset_id
+
+    cursor = DurableDistributionCursor(
+        created_at=candidate.created_at, dataset_id=candidate.dataset_id
+    )
+    assert await lookup.next_candidate(after=cursor) is None
+
+
+@pytest.mark.integration
+async def test_walking_the_cursor_visits_every_candidate_exactly_once_then_stops(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Repeatedly resuming from the last-seen cursor must reach every
+    candidate in the population exactly once and then terminate, which
+    is the property an exclusion set could only offer up to whatever
+    size it was allowed to grow to."""
+    dataset_ids = [
+        (await _seed_ready_candidate(db_pool, dataset_created_at=_NOW + timedelta(minutes=i)))[1]
+        for i in range(5)
+    ]
+
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
+    visited: list[UUID] = []
+    cursor: DurableDistributionCursor | None = None
+    while True:
+        candidate = await lookup.next_candidate(after=cursor)
+        if candidate is None:
+            break
+        visited.append(candidate.dataset_id)
+        cursor = DurableDistributionCursor(
+            created_at=candidate.created_at, dataset_id=candidate.dataset_id
+        )
+
+    assert visited == dataset_ids
+
+
+@pytest.mark.integration
+async def test_the_dataset_id_tiebreak_visits_both_candidates_with_identical_created_at(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The case a naive `created_at > $1` cursor gets wrong: two
+    Datasets sharing the exact same `created_at` still both get
+    visited, neither skipped nor repeated, because the comparison is on
+    the row tuple `(created_at, dataset_id)`, not on `created_at` alone."""
+    _, first_id = await _seed_ready_candidate(
+        db_pool,
+        observed_path="/local1/2BM/2026-08-Haridy-1015116/tie_a.h5",
+        dataset_created_at=_NOW,
+    )
+    _, second_id = await _seed_ready_candidate(
+        db_pool,
+        observed_path="/local1/2BM/2026-08-Haridy-1015116/tie_b.h5",
+        dataset_created_at=_NOW,
+    )
+    expected = sorted((first_id, second_id))
+
+    lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
+    visited: list[UUID] = []
+    cursor: DurableDistributionCursor | None = None
+    while True:
+        candidate = await lookup.next_candidate(after=cursor)
+        if candidate is None:
+            break
+        visited.append(candidate.dataset_id)
+        cursor = DurableDistributionCursor(
+            created_at=candidate.created_at, dataset_id=candidate.dataset_id
+        )
+
+    assert visited == expected
 
 
 @pytest.mark.integration

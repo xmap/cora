@@ -16,7 +16,9 @@ verdict `_response_to_result` on the client side can round-trip.
 # pyright: reportPrivateUsage=false
 
 import io
+import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -173,7 +175,7 @@ async def test_checksum_op_outside_allowed_roots_returns_unreachable(tmp_path: P
 
 
 async def test_main_emits_exactly_one_json_line_for_one_stdin_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
 ) -> None:
     """The actual contract with the SSH client, which reads
     `stdout.splitlines()[0]`: one request line in, exactly one JSON line
@@ -196,13 +198,13 @@ async def test_main_emits_exactly_one_json_line_for_one_stdin_request(
 
     await _main()
 
-    lines = capsys.readouterr().out.splitlines()
+    lines = capfd.readouterr().out.splitlines()
     assert len(lines) == 1
     assert json.loads(lines[0])["kind"] == "Description"
 
 
 async def test_main_turns_unparseable_stdin_into_a_probe_error_line(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
 ) -> None:
     """Truncated or garbled stdin must still produce one JSON line and a
     zero exit: a traceback on stderr with nothing on stdout is what the
@@ -215,13 +217,13 @@ async def test_main_turns_unparseable_stdin_into_a_probe_error_line(
 
     await _main()
 
-    lines = capsys.readouterr().out.splitlines()
+    lines = capfd.readouterr().out.splitlines()
     assert len(lines) == 1
     assert json.loads(lines[0])["kind"] == "ProbeError"
 
 
 async def test_main_rejects_a_json_request_that_is_not_an_object(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
 ) -> None:
     import json
 
@@ -231,11 +233,11 @@ async def test_main_rejects_a_json_request_that_is_not_an_object(
 
     await _main()
 
-    assert json.loads(capsys.readouterr().out.splitlines()[0])["kind"] == "ProbeError"
+    assert json.loads(capfd.readouterr().out.splitlines()[0])["kind"] == "ProbeError"
 
 
 async def test_main_catch_all_never_renders_the_exceptions_message(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
 ) -> None:
     """The exception TYPE only, never `str(exc)`: the paths this process
     walks embed a PI surname, and an `OSError` subclass renders the
@@ -257,43 +259,47 @@ async def test_main_catch_all_never_renders_the_exceptions_message(
 
     await _remote_scan_probe._main()
 
-    response = json.loads(capsys.readouterr().out.splitlines()[0])
+    response = json.loads(capfd.readouterr().out.splitlines()[0])
     assert response["kind"] == "ProbeError"
     assert response["detail"] == "unhandled OSError"
     assert secret_fragment not in response["detail"]
 
 
-async def test_main_discards_a_stray_stdout_write_from_handle_and_never_leaks_it(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """`describe` and `checksum` both make `_log` calls that write to
-    stdout by default, and stdout IS the protocol: the client parses the
-    FIRST line as the verdict. `_handle` here stands in for a call that
-    logs (and even `print`s) a path carrying a surname before returning
-    its real verdict; only that verdict may reach stdout."""
-    import json
+def test_main_as_a_subprocess_emits_only_the_verdict_on_stdout(tmp_path: Path) -> None:
+    """Stdout IS the protocol: the client parses the FIRST line as the
+    verdict, and `describe` logs the locator it refused. structlog
+    writes to stdout, so without the guard that log line lands where the
+    verdict belongs, the client fails to parse it, and a per-file
+    problem is reported as a dead transport.
 
-    from cora.data import _remote_scan_probe
+    Run as a real subprocess, which is the only way to see this. The
+    guard works on file descriptor 1, and in-process pytest replaces
+    `sys.stdout` with an object that never reaches that descriptor, so
+    an in-process version of this test would exercise nothing and pass
+    whether or not the guard exists.
+    """
+    import subprocess
 
-    secret_fragment = "Smith-1015116/scan_005.h5"
-
-    async def _noisy_handle(request: dict[str, Any]) -> dict[str, Any]:
-        print(f"resolved locator to {secret_fragment}")
-        print(f"also logged: {secret_fragment}")
-        return {"kind": "Located", "matches": [], "match_count": 0}
-
-    monkeypatch.setattr(_remote_scan_probe, "_handle", _noisy_handle)
-    monkeypatch.setattr(
-        "sys.stdin", io.StringIO(json.dumps({"op": "describe", "locator_uri": "file:///x"}) + "\n")
+    request = json.dumps(
+        {
+            "op": "describe",
+            "locator_uri": f"file://{tmp_path}/2026-08-Haridy-1015116/scan_005.h5",
+            "allowed_roots": [str(tmp_path / "elsewhere")],
+        }
     )
 
-    await _remote_scan_probe._main()
+    completed = subprocess.run(
+        [sys.executable, "-m", "cora.data._remote_scan_probe"],
+        input=request + "\n",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-    out = capsys.readouterr().out
-    lines = out.splitlines()
+    lines = completed.stdout.splitlines()
     assert len(lines) == 1
-    assert json.loads(lines[0]) == {"kind": "Located", "matches": [], "match_count": 0}
-    assert secret_fragment not in out
+    assert json.loads(lines[0])["kind"] == "Unreadable"
+    assert "Haridy" not in completed.stdout
 
 
 def _durable_tree(

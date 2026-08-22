@@ -54,12 +54,12 @@ error), not against an adversary who has not yet arrived here.
 from __future__ import annotations
 
 import contextlib
-import io
 import json
+import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TextIO, cast
 from uuid import UUID
 
 from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
@@ -70,7 +70,11 @@ from cora.shared.path_segment import is_safe_path_segment
 from cora.shared.storage_root import matched_storage_root
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cora.data.ports.checksum_verifier import Unreachable as ChecksumUnreachable
+
+_STDOUT_FD = 1
 
 _OP_DESCRIBE = "describe"
 _OP_CHECKSUM = "checksum"
@@ -231,22 +235,53 @@ async def _handle(request: dict[str, Any]) -> dict[str, Any]:
     return {"kind": "ProbeError", "detail": f"unknown op: {op!r}"}
 
 
+@contextlib.contextmanager
+def _stdout_reserved_for_the_verdict() -> Generator[TextIO]:
+    """Give the caller the ONLY writable handle on real stdout.
+
+    Stdout is the protocol: the client reads the first line and parses
+    it as the verdict, so anything else written there corrupts the
+    answer. `describe` and `checksum` both log, and structlog writes to
+    stdout, which puts a log line exactly where the verdict belongs.
+
+    Done at the file-descriptor level rather than by rebinding
+    `sys.stdout`, and the difference is not academic. A rebind is
+    defeated the moment anyone calls `configure_logging()`, because its
+    `StreamHandler` captures the stream OBJECT once and keeps writing to
+    the real descriptor afterwards. Pointing fd 1 itself at `/dev/null`
+    catches that, plus a stray `print`, plus anything a library writes
+    from C. What comes back is a private duplicate of the original fd,
+    which only this function's caller holds.
+
+    Discarded rather than folded into stderr, which is the tempting
+    version: the client puts nothing from stderr into its refusal text
+    precisely so a path cannot reach a log, and sending the probe's own
+    log lines there would undo that. Nothing is lost, since these writes
+    were already being swallowed by the SSH pipe.
+    """
+    sys.stdout.flush()
+    saved = os.dup(_STDOUT_FD)
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    try:
+        os.dup2(devnull, _STDOUT_FD)
+        os.close(devnull)
+        with os.fdopen(saved, "w", closefd=False) as verdict_stream:
+            yield verdict_stream
+    finally:
+        # Flush BEFORE restoring, so anything `print` left sitting in
+        # `sys.stdout`'s buffer drains into `/dev/null` rather than onto
+        # the real descriptor once it is back. Without this the guard
+        # holds for line-buffered writers and leaks for block-buffered
+        # ones, which is what a pipe gives you, which is what SSH is.
+        with contextlib.suppress(ValueError):
+            sys.stdout.flush()
+        os.dup2(saved, _STDOUT_FD)
+        os.close(saved)
+
+
 async def _main() -> None:
     line = sys.stdin.readline()
-    # Stdout IS the protocol: the client reads the FIRST line and parses
-    # it as the verdict. Anything else written there corrupts the answer,
-    # and structlog's default logger writes to stdout, so any `_log` call
-    # reached from `_handle` puts a log line where the verdict belongs.
-    # `describe` and `checksum` already make such calls. Guarding here is
-    # cheaper than auditing every library on this path forever, and it
-    # catches a stray `print` too.
-    #
-    # DISCARDED rather than sent to stderr, which is the tempting
-    # version. The client folds the tail of stderr into its own refusal
-    # text, so redirecting there would trade a corrupted protocol for a
-    # path in a log line. Nothing is lost: these writes were already
-    # being swallowed by the SSH pipe, where no operator could read them.
-    with contextlib.redirect_stdout(io.StringIO()):
+    with _stdout_reserved_for_the_verdict() as verdict_stream:
         try:
             parsed: Any = json.loads(line)
             if not isinstance(parsed, dict):
@@ -260,9 +295,9 @@ async def _main() -> None:
             # one, which makes this arm's no-path guarantee structural
             # rather than a promise about every call above it.
             response = {"kind": "ProbeError", "detail": f"unhandled {type(exc).__name__}"}
-    sys.stdout.write(json.dumps(response))
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+        verdict_stream.write(json.dumps(response))
+        verdict_stream.write("\n")
+        verdict_stream.flush()
 
 
 if __name__ == "__main__":

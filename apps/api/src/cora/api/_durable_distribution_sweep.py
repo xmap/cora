@@ -62,6 +62,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from uuid import UUID
 
     import asyncpg
@@ -70,6 +71,7 @@ _MONTH_PATTERN = re.compile(r"^(\d{4})-(\d{2})")
 
 _CANDIDATE_SQL = """
 SELECT dds.dataset_id,
+       dds.created_at,
        rcp.run_id,
        rcp.observed_path,
        rcp.root,
@@ -91,19 +93,25 @@ WHERE dds.producing_run_id IS NOT NULL
   -- answer, not the question.
   AND rcp.host IS NOT NULL
   AND rcp.root IS NOT NULL
-  AND NOT (rcp.root = ANY($2::text[]))
-  AND NOT (dds.dataset_id = ANY($1::uuid[]))
+  AND NOT (rcp.root = ANY($3::text[]))
+  -- Keyset, not an exclusion list. A sweep that walked past a Dataset
+  -- has to remember it, and remembering by id means a set that grows
+  -- with the population and gets bound into this query on every call.
+  -- A cursor is two values however large the backlog is, and it cannot
+  -- be truncated, which an exclusion set has to be. `dataset_id`
+  -- breaks the tie because `created_at` is not unique.
+  AND ($1::timestamptz IS NULL OR (dds.created_at, dds.dataset_id) > ($1::timestamptz, $2::uuid))
   AND NOT EXISTS (
       SELECT 1 FROM proj_data_distribution_summary pdd
       WHERE pdd.dataset_id = dds.dataset_id
-        AND pdd.supply_id = ANY($3::uuid[])
+        AND pdd.supply_id = ANY($4::uuid[])
         -- A discarded Distribution is not a recorded durable copy, so
         -- the Dataset becomes a candidate again. Mirrors the partial
         -- unique index on (dataset_id, supply_id, uri), which also
         -- excludes discarded rows so a re-register is permitted.
         AND pdd.status <> 'Discarded'
   )
-ORDER BY dds.created_at ASC
+ORDER BY dds.created_at ASC, dds.dataset_id ASC
 LIMIT 1
 """
 
@@ -150,10 +158,30 @@ def _shift_month(year: int, month: int, offset: int) -> str:
 
 
 @dataclass(frozen=True)
+class DurableDistributionCursor:
+    """Where a sweep cycle got to, in the candidate query's own order.
+
+    Two values rather than a set of what has been seen, which is the
+    difference between a sweep that reaches the end of its population
+    and one that starves whatever sits past the point where its memory
+    had to be truncated.
+    """
+
+    created_at: datetime
+    dataset_id: UUID
+    """Tiebreak. `created_at` alone is not unique, and a cursor on a
+    non-unique key either re-serves a row forever or skips its
+    neighbour, depending on which comparison you pick."""
+
+
+@dataclass(frozen=True)
 class DurableDistributionCandidate:
     """One Dataset whose durable copy has not been recorded yet."""
 
     dataset_id: UUID
+    created_at: datetime
+    """Ordering key, carried so the caller can advance its cursor past
+    this candidate without a second query."""
     run_id: UUID
     capture_code: str
     proposal_number: str
@@ -184,13 +212,14 @@ class DurableDistributionCandidateLookup(Protocol):
     BC owns this query alone, mirroring `main.py`'s "only cora.api may
     depend on both" placement rule.
 
-    `exclude` holds `dataset_id` values. The unit of work is one
-    Dataset's durable copy, so a tick that gives up on a Dataset must
-    not re-select it, while a Run's OTHER Datasets stay reachable.
+    `after` resumes a sweep cycle: the caller passes the cursor of the
+    last candidate it walked and gets the next one in query order.
+    `None` starts a fresh cycle at the head. The unit of work is one
+    Dataset's durable copy, so a Run's OTHER Datasets stay reachable.
     """
 
     async def next_candidate(
-        self, *, exclude: frozenset[UUID] = frozenset()
+        self, *, after: DurableDistributionCursor | None = None
     ) -> DurableDistributionCandidate | None: ...
 
 
@@ -209,7 +238,7 @@ class PostgresDurableDistributionCandidateLookup:
         self._durable_supply_ids = durable_supply_ids
 
     async def next_candidate(
-        self, *, exclude: frozenset[UUID] = frozenset()
+        self, *, after: DurableDistributionCursor | None = None
     ) -> DurableDistributionCandidate | None:
         if not self._durable_roots or not self._durable_supply_ids:
             return None
@@ -219,7 +248,8 @@ class PostgresDurableDistributionCandidateLookup:
         # query harder to reproduce from its log line.
         row = await self._pool.fetchrow(  # pyright: ignore[reportUnknownMemberType]
             _CANDIDATE_SQL,
-            list(exclude),
+            after.created_at if after else None,
+            after.dataset_id if after else None,
             sorted(self._durable_roots),
             sorted(self._durable_supply_ids),
         )
@@ -227,6 +257,7 @@ class PostgresDurableDistributionCandidateLookup:
             return None
         return DurableDistributionCandidate(
             dataset_id=row["dataset_id"],
+            created_at=row["created_at"],
             run_id=row["run_id"],
             capture_code=row["capture_code"],
             proposal_number=row["proposal_number"],
@@ -241,15 +272,16 @@ class NeverDurableDistributionCandidateLookup:
     `NeverScanIngestCandidateLookup`'s own shape."""
 
     async def next_candidate(
-        self, *, exclude: frozenset[UUID] = frozenset()
+        self, *, after: DurableDistributionCursor | None = None
     ) -> DurableDistributionCandidate | None:
-        _ = exclude
+        _ = after
         return None
 
 
 __all__ = [
     "DurableDistributionCandidate",
     "DurableDistributionCandidateLookup",
+    "DurableDistributionCursor",
     "NeverDurableDistributionCandidateLookup",
     "PostgresDurableDistributionCandidateLookup",
     "months_to_search",

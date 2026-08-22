@@ -23,7 +23,8 @@ minted with the wrong host.
 """
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from itertools import count
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -41,6 +42,7 @@ from cora.api._durable_distribution_driver import (  # pyright: ignore[reportPri
 )
 from cora.api._durable_distribution_sweep import (  # pyright: ignore[reportPrivateUsage]
     DurableDistributionCandidate,
+    DurableDistributionCursor,
 )
 from cora.data.adapters.capture_path_locator import (
     mint_capture_path_locator,
@@ -55,6 +57,7 @@ from cora.shared.probe_error import (
 pytestmark = pytest.mark.unit
 
 _NOW = datetime(2026, 8, 21, 12, 0, tzinfo=UTC)
+_EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 _MTIME = 1755000000.0
 _MTIME_AS_DATETIME = datetime.fromtimestamp(_MTIME, tz=UTC)
 _DURABLE_ROOT = "/gdata/dm/2BM"
@@ -129,27 +132,39 @@ class _Clock:
 
 
 class _Candidates:
-    """Serves each candidate once, honouring `exclude` the way the real
-    SQL does, so a driver that forgot to exclude would loop here."""
+    """Serves candidates in the real query's order, honouring the cursor
+    the way its keyset predicate does, so a driver that forgot to
+    advance would loop here and one that advanced twice would skip."""
 
     def __init__(self, candidates: list[DurableDistributionCandidate]) -> None:
-        self._candidates = candidates
+        self._candidates = sorted(candidates, key=lambda c: (c.created_at, c.dataset_id))
 
     async def next_candidate(
-        self, *, exclude: frozenset[UUID] = frozenset()
+        self, *, after: DurableDistributionCursor | None = None
     ) -> DurableDistributionCandidate | None:
         for candidate in self._candidates:
-            if candidate.dataset_id not in exclude:
+            if after is None or (candidate.created_at, candidate.dataset_id) > (
+                after.created_at,
+                after.dataset_id,
+            ):
                 return candidate
         return None
 
 
-def _candidate(*, observed_path: str | None = None) -> DurableDistributionCandidate:
+_created_at_sequence = count()
+
+
+def _candidate(
+    *, observed_path: str | None = None, proposal_number: str = "1015116"
+) -> DurableDistributionCandidate:
+    """Each call is one tick of the query's ordering key, so candidates
+    come back in the order they were built."""
     return DurableDistributionCandidate(
         dataset_id=uuid4(),
+        created_at=_EPOCH + timedelta(minutes=next(_created_at_sequence)),
         run_id=uuid4(),
         capture_code="2bmb-tomoscan",
-        proposal_number="1015116",
+        proposal_number=proposal_number,
         observed_path=observed_path or f"{_ACQUISITION_ROOT}/2026-08-Haridy-1015116/scan_005.h5",
         acquisition_root=_ACQUISITION_ROOT,
     )
@@ -548,16 +563,22 @@ async def test_a_drained_cycle_starts_over_so_a_waiting_dataset_is_looked_at_aga
 async def test_a_registered_dataset_is_not_reprobed_for_the_rest_of_the_cycle() -> None:
     """Candidacy is read from a projection that lags behind the append,
     so the Dataset keeps coming back as a candidate after a successful
-    register. Remembering it for the rest of the cycle is what keeps
-    that lag from costing a probe per tick."""
-    done, pending = _candidate(), _candidate()
+    register. Advancing past it is what keeps that lag from costing a
+    probe per tick.
+
+    The two candidates carry DIFFERENT proposal numbers on purpose. An
+    earlier version asserted on the filename, which `_candidate` gives
+    every candidate identically, so it could not tell "probed each once"
+    from "probed the first one twice" and passed against a driver that
+    never advanced on success."""
+    done = _candidate(proposal_number="1000001")
+    pending = _candidate(proposal_number="2000002")
     driver, probe, _, _ = _driver(candidates=[done, pending], responses=[_FOUND_ONE])
 
     await driver.tick()
     await driver.tick()
 
-    assert [call["filename"] for call in probe.calls] == ["scan_005.h5", "scan_005.h5"]
-    assert len(probe.calls) == 2
+    assert [call["directory_suffix"] for call in probe.calls] == ["-1000001", "-2000002"]
 
 
 async def test_a_successful_registration_ends_the_tick() -> None:
@@ -618,3 +639,34 @@ async def test_the_locator_names_the_file_the_probe_found_not_the_one_it_searche
     )
 
     assert resolved == f"file://{renamed}"
+
+
+async def test_a_tick_stopped_by_a_dead_transport_retries_the_same_candidate() -> None:
+    """Neither systemic condition is the candidate's fault, so the
+    cursor must not step over a Dataset that was never examined. This
+    is the one path that deliberately does not advance."""
+    first = _candidate(proposal_number="1000001")
+    second = _candidate(proposal_number="2000002")
+    driver, probe, _, _ = _driver(
+        candidates=[first, second], responses=[_TRANSPORT_DEAD, _TRANSPORT_DEAD]
+    )
+
+    await driver.tick()
+    await driver.tick()
+
+    assert [call["directory_suffix"] for call in probe.calls] == ["-1000001", "-1000001"]
+
+
+async def test_a_tick_stopped_by_an_unauthorized_register_retries_the_same_candidate() -> None:
+    first = _candidate(proposal_number="1000001")
+    second = _candidate(proposal_number="2000002")
+    driver, probe, _, _ = _driver(
+        candidates=[first, second],
+        responses=[_FOUND_ONE],
+        registration=DurableCopyRegisterUnauthorized(),
+    )
+
+    await driver.tick()
+    await driver.tick()
+
+    assert [call["directory_suffix"] for call in probe.calls] == ["-1000001", "-1000001"]

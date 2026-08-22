@@ -8,12 +8,14 @@ turning an acquisition-tier path into the months and the filename the
 remote `locate` op will search on.
 """
 
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 
 from cora.api._durable_distribution_sweep import (  # pyright: ignore[reportPrivateUsage]
     DurableDistributionCandidate,
+    DurableDistributionCursor,
     NeverDurableDistributionCandidateLookup,
     months_to_search,
 )
@@ -21,6 +23,7 @@ from cora.api._durable_distribution_sweep import (  # pyright: ignore[reportPriv
 pytestmark = pytest.mark.unit
 
 _ACQUISITION_ROOT = "/local1/2BM"
+_NOW = datetime(2026, 8, 20, 12, 0, 0, tzinfo=UTC)
 
 
 def _candidate(
@@ -30,6 +33,7 @@ def _candidate(
 ) -> DurableDistributionCandidate:
     return DurableDistributionCandidate(
         dataset_id=uuid4(),
+        created_at=_NOW,
         run_id=uuid4(),
         capture_code="2bmb-tomoscan",
         proposal_number=proposal_number,
@@ -121,4 +125,5 @@ async def test_the_no_pool_lookup_never_offers_a_candidate() -> None:
     lookup = NeverDurableDistributionCandidateLookup()
 
     assert await lookup.next_candidate() is None
-    assert await lookup.next_candidate(exclude=frozenset({uuid4()})) is None
+    cursor = DurableDistributionCursor(created_at=_NOW, dataset_id=uuid4())
+    assert await lookup.next_candidate(after=cursor) is None

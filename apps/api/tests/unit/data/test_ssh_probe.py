@@ -367,22 +367,27 @@ async def test_run_probe_reports_a_failed_ssh_launch_instead_of_raising(
 
 
 @pytest.mark.unit
-async def test_run_probe_reports_a_nonzero_ssh_exit_with_the_stderr_tail(
+async def test_run_probe_reports_a_nonzero_ssh_exit_without_the_stderr_tail(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The likeliest real failure at 2-BM: the host is unreachable, the
-    key is refused, or the remote interpreter does not exist. The
-    operator needs the reason, so the stderr tail is carried through."""
+    """The tail used to be carried through, because an operator wants
+    the reason. It cannot be: stderr on this hop is whatever a process
+    walking a tree of person-named directories chose to write, and this
+    string is logged verbatim. The exit code says which half to look at,
+    and the reason is recoverable by running the probe by hand."""
     _scripted(
         monkeypatch,
-        _ScriptedProcess(returncode=255, stdout=b"", stderr=b"Permission denied (publickey)."),
+        _ScriptedProcess(
+            returncode=255,
+            stdout=b"",
+            stderr=b"Permission denied. /gdata/dm/2BM/2026-08/2026-08-Haridy-1015116/s.h5",
+        ),
     )
 
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
-    assert response["kind"] == "ProbeError"
-    assert "ssh exited 255" in response["detail"]
-    assert "publickey" in response["detail"]
+    assert response["detail"] == "ssh exited 255"
+    assert "Haridy" not in str(response["detail"])
     assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
