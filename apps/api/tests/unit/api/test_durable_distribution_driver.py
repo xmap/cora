@@ -548,7 +548,7 @@ async def test_a_stuck_queue_head_longer_than_the_cap_still_lets_the_rest_throug
 
 
 async def test_a_drained_cycle_starts_over_so_a_waiting_dataset_is_looked_at_again() -> None:
-    """The other half of carrying the walked set: "not there yet" is
+    """The other half of carrying a cursor: "not there yet" is
     the normal state for days, so a Dataset skipped for it has to come
     back round rather than be excluded for the life of the process."""
     candidate = _candidate()
@@ -657,10 +657,16 @@ async def test_a_tick_stopped_by_a_dead_transport_retries_the_same_candidate() -
     assert [call["directory_suffix"] for call in probe.calls] == ["-1000001", "-1000001"]
 
 
-async def test_a_tick_stopped_by_an_unauthorized_register_retries_the_same_candidate() -> None:
+async def test_a_tick_stopped_by_an_unauthorized_register_moves_on_next_tick() -> None:
+    """The other systemic stop, and the opposite cursor decision. By the
+    time a register is refused this candidate has been probed, its
+    location written to the vault and its locator minted. Holding the
+    cursor there would repeat a remote directory listing and a
+    personal-data write every tick, forever, to record what the vault
+    already records, while nothing else is ever looked at."""
     first = _candidate(proposal_number="1000001")
     second = _candidate(proposal_number="2000002")
-    driver, probe, _, _ = _driver(
+    driver, probe, recorder, _ = _driver(
         candidates=[first, second],
         responses=[_FOUND_ONE],
         registration=DurableCopyRegisterUnauthorized(),
@@ -669,4 +675,5 @@ async def test_a_tick_stopped_by_an_unauthorized_register_retries_the_same_candi
     await driver.tick()
     await driver.tick()
 
-    assert [call["directory_suffix"] for call in probe.calls] == ["-1000001", "-1000001"]
+    assert [call["directory_suffix"] for call in probe.calls] == ["-1000001", "-2000002"]
+    assert [row["run_id"] for row in recorder.rows] == [first.run_id, second.run_id]

@@ -362,7 +362,7 @@ async def test_run_probe_reports_a_failed_ssh_launch_instead_of_raising(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
-    assert "could not launch ssh" in response["detail"]
+    assert response["detail"] == "could not launch ssh: OSError"
     assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
@@ -402,7 +402,7 @@ async def test_run_probe_reports_an_unparseable_probe_response(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
-    assert "unparseable probe response" in response["detail"]
+    assert response["detail"] == "unparseable probe response: JSONDecodeError"
     assert "origin" not in response
 
 

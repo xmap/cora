@@ -53,11 +53,16 @@ they arrived over a transport that demonstrably works.
 
 Callers log `detail` verbatim, and the trees these probes walk are
 organized into directories named for people. So every `detail`
-constructed here is either a fixed literal, an exit code, or an
-exception TYPE name. Nothing interpolates an exception message, the
-remote's stderr, or its stdout, all three of which have carried a path
-at some point in this module's history. Keep it that way: the property
-holds only because each site holds it, and one `{exc}` puts it back.
+constructed here is built only from a fixed literal, a configured
+value (the timeout), an exit code, or an exception TYPE name. Nothing
+interpolates an exception message, the remote's stderr, or its stdout,
+all three of which have carried a path at some point in this module's
+history. Keep it that way: the property holds only because each site
+holds it, and one `{exc}` puts it back.
+
+The property is about what THIS module writes. A `detail` relayed from
+the remote process is that module's to guarantee, and it does so for
+the `locate` op only; see `_remote_scan_probe`.
 """
 
 from __future__ import annotations
@@ -284,9 +289,12 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
     try:
         parsed: Any = json.loads(stdout.decode("utf-8").splitlines()[0])
     except (IndexError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        # The exception TYPE, not its message. The thing most likely to
-        # corrupt line one is a log line from the remote, which is
-        # exactly the text that carries a path.
+        # The exception TYPE, not its message. None of the three types
+        # caught here renders the input it choked on, so this is
+        # defense in depth rather than a fix for a live leak: it keeps
+        # the rule uniform across every `detail` in the module, so a
+        # reader does not have to re-derive per site which exceptions
+        # happen to be safe to render.
         return {
             "kind": "ProbeError",
             "detail": f"unparseable probe response: {type(exc).__name__}",

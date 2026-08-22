@@ -67,9 +67,19 @@ Only two conditions are systemic, meaning the next candidate would hit
 exactly the same wall: a transport that will not carry a request, and
 an agent whose grant to register is missing. Everything else is scoped
 to one Dataset and must skip, so that one misconfigured Run cannot
-wedge the sweep for every other. This mirrors `CaptureScanIngestor`,
-where a gate review removed exactly this head-of-line blocking once
-already.
+wedge the sweep for every other.
+
+The two systemic conditions stop the tick but do NOT leave it in the
+same place, and conflating them costs real work. A dead transport means
+this candidate was never examined, so the cursor stays and the next
+tick retries it. A missing grant means it was examined completely: the
+remote tree was listed, the location was written to the vault, the
+locator was minted, and only the append was refused. Holding the cursor
+there would repeat a directory listing and a personal-data write on
+every tick, indefinitely, to record what the vault already records,
+while every other Dataset waits. So the cursor moves on, the vault rows
+accumulate correctly, and the moment the grant lands those Datasets
+need only the register.
 
 ## Why the cursor outlives the tick, and why it is a cursor
 
@@ -102,11 +112,9 @@ notice. A keyset is two values whatever the backlog is, so there is
 nothing to truncate and nothing to starve.
 
 A second, smaller thing falls out of it: the cursor is REPLACED on each
-step, never mutated in place, so the shared-mutable-default hazard that
-a set version carried cannot arise here even if someone declares it at
-class scope. That is worth knowing because it is the reason no test
-guards it. A test for a bug the shape of the data forbids would pass
-unconditionally, which is worse than no test.
+step, never mutated in place, so the shared-mutable-default hazard a
+set version would carry cannot arise here even if someone declares it
+at class scope.
 
 The honest limits, both accepted. Position lives in process memory, so
 a restart begins a fresh cycle from the head; a cycle is cheap (one
@@ -187,7 +195,15 @@ candidates would be re-walked in full on every tick forever."""
 class _Outcome(Enum):
     SUCCESS = auto()
     SKIP = auto()
-    STOP_TICK = auto()
+    STOP_TICK_UNEXAMINED = auto()
+    """Stop, and leave the cursor where it is: nothing was done to this
+    candidate, so the next tick should look at it rather than step past
+    something never examined."""
+    STOP_TICK_RECORDED = auto()
+    """Stop, but move the cursor on: this candidate WAS probed and its
+    location written to the vault, and only the register was refused.
+    Re-examining it every tick would repeat a remote directory listing
+    and a personal-data write to say what the vault already says."""
 
 
 @dataclass(frozen=True)
@@ -241,9 +257,9 @@ The axis NOT split on is retryable versus permanent, which is the more
 tempting one, since `RegisterRefused` covers unreadable bytes (retry
 helps) and a missing cross-reference (it does not). That distinction
 would matter if permanence starved the queue, and it no longer does:
-the walked set rotates past a stuck Dataset rather than re-attempting
-it. Split it when something needs to ACT on the difference, not to
-record it.
+the cursor moves past a stuck Dataset rather than re-attempting it.
+Split it when something needs to ACT on the difference, not to record
+it.
 """
 
 
@@ -373,16 +389,12 @@ class DurableDistributionDriver:
                 self._cursor = None
                 return
             outcome = await self._sweep_one(candidate)
-            if outcome is _Outcome.STOP_TICK:
-                # Cursor deliberately NOT advanced. Both systemic
-                # conditions are about CORA's side rather than this
-                # Dataset, so the next tick should retry this one rather
-                # than step over it unexamined.
+            if outcome is _Outcome.STOP_TICK_UNEXAMINED:
                 return
             self._cursor = DurableDistributionCursor(
                 created_at=candidate.created_at, dataset_id=candidate.dataset_id
             )
-            if outcome is _Outcome.SUCCESS:
+            if outcome in (_Outcome.SUCCESS, _Outcome.STOP_TICK_RECORDED):
                 return
         _log.info("durable_distribution.tick_exhausted_attempts", attempts=_MAX_CANDIDATES_PER_TICK)
 
@@ -441,7 +453,7 @@ class DurableDistributionDriver:
                 dataset_id=str(candidate.dataset_id),
                 detail=verdict.detail,
             )
-            return _Outcome.STOP_TICK
+            return _Outcome.STOP_TICK_UNEXAMINED
 
         if isinstance(verdict, DurableCopyRefused):
             _log.warning(
@@ -523,7 +535,7 @@ class DurableDistributionDriver:
                 "durable_distribution.register_unauthorized",
                 dataset_id=str(candidate.dataset_id),
             )
-            return _Outcome.STOP_TICK
+            return _Outcome.STOP_TICK_RECORDED
 
         if isinstance(registration, DurableCopyRegisterRefused):
             # The vault row stays: it is a true statement whether or not

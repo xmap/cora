@@ -302,6 +302,79 @@ def test_main_as_a_subprocess_emits_only_the_verdict_on_stdout(tmp_path: Path) -
     assert "Haridy" not in completed.stdout
 
 
+def test_main_as_a_subprocess_flushes_a_buffered_print_before_restoring_stdout() -> None:
+    """The guard's `finally` flushes `sys.stdout` BEFORE restoring the
+    real descriptor, so a `print` a handler left sitting in Python's
+    block-buffered stdout drains into `/dev/null` rather than onto the
+    real descriptor once it comes back. This only shows up when stdout
+    is block-buffered, which is what a pipe (and SSH) gives a
+    subprocess and a terminal does not, so it is run as a real
+    subprocess with `_handle` replaced in the child rather than
+    in-process: pytest's capture object never reaches file descriptor 1
+    either way.
+    """
+    import subprocess
+
+    surname_fragment = "Haridy-1015116"
+    script = (
+        "import asyncio, io, json, sys\n"
+        "from cora.data import _remote_scan_probe\n"
+        "async def _leaky_handle(request):\n"
+        f'    print("leaked /gdata/dm/2BM/2026-08-{surname_fragment}/scan_005.h5")\n'
+        '    return {"kind": "Description", "detail": "ok"}\n'
+        "_remote_scan_probe._handle = _leaky_handle\n"
+        'sys.stdin = io.StringIO(json.dumps({"op": "describe"}) + "\\n")\n'
+        "asyncio.run(_remote_scan_probe._main())\n"
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    lines = completed.stdout.splitlines()
+    assert len(lines) == 1
+    assert surname_fragment not in completed.stdout
+    assert json.loads(lines[0])["kind"] == "Description"
+
+
+def test_main_as_a_subprocess_emits_a_probe_error_when_the_guards_open_call_fails() -> None:
+    """The never-raise, always-one-JSON-line contract has to cover the
+    guard's own syscalls, not just what runs inside it: `_main` wraps
+    `_respond` in a `try/except` precisely because `os.open` inside
+    `_stdout_reserved_for_the_verdict` can fail (fd exhaustion is the
+    realistic case), and a non-zero exit with empty stdout reads to the
+    client as a dead transport, the one verdict that stops a sweep.
+    """
+    import subprocess
+
+    script = (
+        "import asyncio, io, json, os, sys\n"
+        "from cora.data import _remote_scan_probe\n"
+        "_real_open = os.open\n"
+        "def _boom(path, *args, **kwargs):\n"
+        "    if path == os.devnull:\n"
+        '        raise OSError("fd exhausted")\n'
+        "    return _real_open(path, *args, **kwargs)\n"
+        "os.open = _boom\n"
+        'sys.stdin = io.StringIO(json.dumps({"op": "describe"}) + "\\n")\n'
+        "asyncio.run(_remote_scan_probe._main())\n"
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    lines = completed.stdout.splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0])["kind"] == "ProbeError"
+
+
 def _durable_tree(
     root: Path, *, experiment: str, filename: str = "scan_005.h5", month: str = "2026-08"
 ) -> Path:

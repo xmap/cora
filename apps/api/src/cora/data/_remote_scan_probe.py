@@ -232,7 +232,10 @@ async def _handle(request: dict[str, Any]) -> dict[str, Any]:
         return _checksum_to_json(
             await computer.compute(locator_uri=locator_uri, supply_id=supply_id)
         )
-    return {"kind": "ProbeError", "detail": f"unknown op: {op!r}"}
+    # The op is NOT echoed. Every other refusal in this module is a
+    # fixed literal so that a caller may log it, and interpolating a
+    # request value here would make that true of all but one.
+    return {"kind": "ProbeError", "detail": "unknown op"}
 
 
 @contextlib.contextmanager
@@ -281,6 +284,34 @@ def _stdout_reserved_for_the_verdict() -> Generator[TextIO]:
 
 async def _main() -> None:
     line = sys.stdin.readline()
+    # The guard itself does syscalls (`dup`, `open`, `dup2`) and they can
+    # fail, on fd exhaustion most plausibly. Outside this try that would
+    # exit non-zero with nothing on stdout, which the client reads as a
+    # dead TRANSPORT rather than a bad request, and a dead transport is
+    # the one verdict that stops a sweep without moving past the
+    # candidate. So the module's never-raise, always-one-JSON-line
+    # promise has to cover the guard, not just what runs inside it.
+    try:
+        await _respond(line)
+    except Exception as exc:
+        sys.stdout.write(json.dumps({"kind": "ProbeError", "detail": _unhandled(exc)}))
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+
+def _unhandled(exc: BaseException) -> str:
+    """The exception TYPE only, never `str(exc)`.
+
+    The paths this process walks embed a PI surname, and the exceptions
+    most likely to reach a catch-all are `OSError` subclasses that
+    render the filename they failed on. A class name cannot carry one,
+    which makes the no-path property of these two arms structural
+    rather than a promise about every call beneath them.
+    """
+    return f"unhandled {type(exc).__name__}"
+
+
+async def _respond(line: str) -> None:
     with _stdout_reserved_for_the_verdict() as verdict_stream:
         try:
             parsed: Any = json.loads(line)
@@ -288,13 +319,7 @@ async def _main() -> None:
                 raise TypeError("request is not a JSON object")
             response = await _handle(cast("dict[str, Any]", parsed))
         except Exception as exc:
-            # The exception TYPE only, never `str(exc)`. The paths this
-            # process walks embed a PI surname, and the exceptions most
-            # likely to land here are `OSError` subclasses that render
-            # the filename they failed on. A class name cannot carry
-            # one, which makes this arm's no-path guarantee structural
-            # rather than a promise about every call above it.
-            response = {"kind": "ProbeError", "detail": f"unhandled {type(exc).__name__}"}
+            response = {"kind": "ProbeError", "detail": _unhandled(exc)}
         verdict_stream.write(json.dumps(response))
         verdict_stream.write("\n")
         verdict_stream.flush()

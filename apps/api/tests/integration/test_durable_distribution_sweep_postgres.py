@@ -352,7 +352,11 @@ async def test_walking_the_cursor_visits_every_candidate_exactly_once_then_stops
     lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     visited: list[UUID] = []
     cursor: DurableDistributionCursor | None = None
-    while True:
+    # Bounded rather than `while True`: a regression in the cursor
+    # predicate that never returns None would otherwise hang until
+    # pytest-timeout fires, which wedges the pool and errors every other
+    # test in this file instead of naming the actual defect.
+    for _ in range(len(dataset_ids) + 2):
         candidate = await lookup.next_candidate(after=cursor)
         if candidate is None:
             break
@@ -387,7 +391,10 @@ async def test_the_dataset_id_tiebreak_visits_both_candidates_with_identical_cre
     lookup = _lookup(db_pool, durable_supply_ids=frozenset({uuid4()}))
     visited: list[UUID] = []
     cursor: DurableDistributionCursor | None = None
-    while True:
+    # Bounded rather than `while True`; see the sibling walk test above
+    # for why an unbounded loop here hangs the whole file rather than
+    # naming the defect.
+    for _ in range(len(expected) + 2):
         candidate = await lookup.next_candidate(after=cursor)
         if candidate is None:
             break
