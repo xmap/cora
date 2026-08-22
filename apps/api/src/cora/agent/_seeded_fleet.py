@@ -1,9 +1,9 @@
 """The set of Agents CORA ships with itself.
 
-Every deployment gets these seventeen at boot, seeded by the
-`seed_*_agent` functions. Until now the set existed only as seventeen
-sequential calls in `cora.api.main`, which was enough to create them and
-not enough to ask a question ABOUT them.
+Every deployment gets these eighteen at boot, seeded by the
+`seed_*_agent` functions. Until this file existed the set existed only
+as sequential calls in `cora.api.main`, which was enough to create them
+and not enough to ask a question ABOUT them.
 
 The question that needed asking: which of these can actually act? A
 seeded Agent lands `Versioned` on a fresh bootstrap, but a deployment
@@ -14,7 +14,7 @@ a fleet needs the fleet to be a value rather than a control flow.
 
 ## Why a hand-written tuple, and why the fitness test is the real work
 
-Nothing here derives the list, so nothing here stops the eighteenth
+Nothing here derives the list, so nothing here stops the next
 agent from being added without an entry. That silent-incompleteness
 shape is precisely what stranded the fleet in the first place: a set
 that looks complete, reports nothing, and is quietly missing a member.
@@ -71,6 +71,10 @@ from cora.agent.seed_clearance_watcher import (
     CLEARANCE_WATCHER_AGENT_ID,
     CLEARANCE_WATCHER_AGENT_NAME,
 )
+from cora.agent.seed_durable_copy_registrar import (
+    DURABLE_COPY_REGISTRAR_AGENT_ID,
+    DURABLE_COPY_REGISTRAR_AGENT_NAME,
+)
 from cora.agent.seed_experiment_steerer import (
     EXPERIMENT_STEERER_AGENT_ID,
     EXPERIMENT_STEERER_AGENT_NAME,
@@ -119,6 +123,7 @@ SEEDED_FLEET: Final[tuple[SeededAgent, ...]] = (
     SeededAgent(CAUTION_PROMOTER_AGENT_ID, CAUTION_PROMOTER_AGENT_NAME),
     SeededAgent(CLEARANCE_EXPIRER_AGENT_ID, CLEARANCE_EXPIRER_AGENT_NAME),
     SeededAgent(CLEARANCE_WATCHER_AGENT_ID, CLEARANCE_WATCHER_AGENT_NAME),
+    SeededAgent(DURABLE_COPY_REGISTRAR_AGENT_ID, DURABLE_COPY_REGISTRAR_AGENT_NAME),
     SeededAgent(EXPERIMENT_STEERER_AGENT_ID, EXPERIMENT_STEERER_AGENT_NAME),
     SeededAgent(PROCEDURE_WATCHER_AGENT_ID, PROCEDURE_WATCHER_AGENT_NAME),
     SeededAgent(RATIFICATION_ENFORCER_AGENT_ID, RATIFICATION_ENFORCER_AGENT_NAME),

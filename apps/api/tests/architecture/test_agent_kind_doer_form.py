@@ -42,7 +42,12 @@ _DOER_SUFFIXES = ("er", "or", "ist", "ant", "tor")
 # who witnesses, exactly as a monitor is one who monitors, but "witness"
 # has no suffix to match against). Checked against the compound's final
 # PascalCase segment, not the whole value.
-_ZERO_CHANGE_DOER_WORDS = frozenset({"Witness"})
+#
+# "Registrar" (DurableCopyRegistrar) is the same shape: a registrar is
+# one who registers, via the "-ar" agentive suffix rather than "-er",
+# which `_DOER_SUFFIXES` does not carry because no other agent kind in
+# the fleet uses it.
+_ZERO_CHANGE_DOER_WORDS = frozenset({"Registrar", "Witness"})
 
 _AGENT_DIR = CORA_ROOT / "agent"
 

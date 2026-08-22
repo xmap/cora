@@ -69,6 +69,7 @@ from cora.agent import (
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
+    seed_durable_copy_registrar_agent,
     seed_experiment_steerer_agent,
     seed_language_models,
     seed_procedure_watcher_agent,
@@ -1115,6 +1116,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # be revoked without blinding the witness, progress feed, or
             # baseline reads).
             await seed_capture_scan_ingestor_agent(deps)
+            # same shape for DurableCopyRegistrar (deterministic sweep agent;
+            # its own principal so the RegisterDistribution grant can be
+            # revoked without blinding the scan ingestor).
+            await seed_durable_copy_registrar_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row

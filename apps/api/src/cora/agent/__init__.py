@@ -78,6 +78,10 @@ from cora.agent.seed_clearance_watcher import (
     CLEARANCE_WATCHER_AGENT_ID,
     seed_clearance_watcher_agent,
 )
+from cora.agent.seed_durable_copy_registrar import (
+    DURABLE_COPY_REGISTRAR_AGENT_ID,
+    seed_durable_copy_registrar_agent,
+)
 from cora.agent.seed_experiment_steerer import (
     EXPERIMENT_STEERER_AGENT_ID,
     seed_experiment_steerer_agent,
@@ -116,6 +120,7 @@ __all__ = [
     "CAUTION_PROMOTER_AGENT_ID",
     "CLEARANCE_EXPIRER_AGENT_ID",
     "CLEARANCE_WATCHER_AGENT_ID",
+    "DURABLE_COPY_REGISTRAR_AGENT_ID",
     "EXPERIMENT_STEERER_AGENT_ID",
     "PROCEDURE_WATCHER_AGENT_ID",
     "RATIFICATION_ENFORCER_AGENT_ID",
@@ -146,6 +151,7 @@ __all__ = [
     "seed_caution_promoter_agent",
     "seed_clearance_expirer_agent",
     "seed_clearance_watcher_agent",
+    "seed_durable_copy_registrar_agent",
     "seed_experiment_steerer_agent",
     "seed_language_models",
     "seed_procedure_watcher_agent",
