@@ -27,6 +27,7 @@ _CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM",),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=5.0,
+    max_walk_seconds=60.0,
 )
 
 _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
@@ -247,6 +248,7 @@ async def test_run_probe_floors_a_sub_second_connect_timeout_to_one(
         allowed_roots=("/local1/2BM",),
         connect_timeout_seconds=0.2,
         command_timeout_seconds=5.0,
+        max_walk_seconds=60.0,
     )
     await run_probe({"op": "describe", "locator_uri": "file:///local1/2BM/scan.h5"}, config=config)
 
@@ -312,6 +314,7 @@ async def test_run_probe_times_out_and_kills_the_process(monkeypatch: pytest.Mon
         allowed_roots=("/local1/2BM",),
         connect_timeout_seconds=5.0,
         command_timeout_seconds=0.05,
+        max_walk_seconds=60.0,
     )
     response = await run_probe(
         {"op": "describe", "locator_uri": "file:///local1/2BM/scan.h5"}, config=config
@@ -458,6 +461,7 @@ _DURABLE_CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM", "/gdata/dm/2BM"),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=5.0,
+    max_walk_seconds=60.0,
 )
 
 

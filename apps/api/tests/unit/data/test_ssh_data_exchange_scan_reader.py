@@ -22,6 +22,7 @@ _CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM",),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=30.0,
+    max_walk_seconds=60.0,
 )
 
 

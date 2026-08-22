@@ -55,7 +55,12 @@ class SshPosixChecksumComputer:
         supply_id: UUID,
     ) -> ChecksumComputationResult:
         response = await run_probe(
-            {"op": "checksum", "locator_uri": locator_uri, "supply_id": str(supply_id)},
+            {
+                "op": "checksum",
+                "locator_uri": locator_uri,
+                "supply_id": str(supply_id),
+                "max_walk_seconds": self._config.max_walk_seconds,
+            },
             config=self._config,
         )
         result = _response_to_result(response)

@@ -24,6 +24,7 @@ _CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM",),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=60.0,
+    max_walk_seconds=60.0,
 )
 
 
@@ -42,6 +43,7 @@ async def test_compute_sends_the_checksum_op_and_supply_id(monkeypatch: pytest.M
 
     assert captured["request"]["op"] == "checksum"
     assert captured["request"]["supply_id"] == str(supply_id)
+    assert captured["request"]["max_walk_seconds"] == _CONFIG.max_walk_seconds
 
 
 @pytest.mark.unit

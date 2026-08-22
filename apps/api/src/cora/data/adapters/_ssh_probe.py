@@ -90,6 +90,14 @@ class SshProbeConfig:
 
     `allowed_roots` are roots as valid ON `host`, never on CORA's own
     filesystem; see `Settings.scan_probe_allowed_roots`.
+
+    `max_walk_seconds` bounds a remote `checksum` op's digest walk (see
+    `SshPosixChecksumComputer.compute`); it has no bearing on `describe`
+    or `locate`. No default: the composition root always sources it from
+    `Settings.posix_checksum_max_walk_seconds`, the same setting the
+    local (non-SSH) `PosixChecksumAdapter` already uses, so a deployment
+    with tens-of-gigabytes files raises one setting rather than two
+    drifting copies of it.
     """
 
     host: str
@@ -97,6 +105,7 @@ class SshProbeConfig:
     allowed_roots: tuple[str, ...]
     connect_timeout_seconds: float
     command_timeout_seconds: float
+    max_walk_seconds: float
 
 
 def raw_path_from_file_uri(uri: str) -> str | None:
