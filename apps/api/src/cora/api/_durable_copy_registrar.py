@@ -38,7 +38,7 @@ partial unique index, which excludes `Discarded` rows so a re-register is
 legal), and re-deriving the SAME id would collide with a non-empty
 (discarded) stream forever.
 
-The fix is a chain: `uuid5(_NAMESPACE, f"{dataset_id}:{supply_id}:{locator}#{n}")`
+The fix is a chain: `uuid5(_DISTRIBUTION_ID_NAMESPACE, f"{dataset_id}:{supply_id}:{locator}#{n}")`
 for `n = 0, 1, 2, 3`. Walked via `load_distribution` (the WRITE model,
 never the lagging projection) BEFORE any digest:
 
@@ -164,7 +164,7 @@ times over, which has no operational precedent."""
 # agent's own 2679-block identity constants (`0010`/`0012`/`0013`/`0014`);
 # `0002` mirrors CautionPromoter's own derived-id namespace suffix within
 # its agent's block.
-_NAMESPACE = UUID("01900000-0000-7000-8000-000026790002")
+_DISTRIBUTION_ID_NAMESPACE = UUID("01900000-0000-7000-8000-000026790002")
 
 _DECIDER_ERRORS = (
     InvalidDistributionUriError,
@@ -180,10 +180,10 @@ _DECIDER_ERRORS = (
 )
 
 
-def _candidate_distribution_id(
+def _derive_candidate_distribution_id(
     *, dataset_id: UUID, supply_id: UUID, locator: str, generation: int
 ) -> UUID:
-    return uuid5(_NAMESPACE, f"{dataset_id}:{supply_id}:{locator}#{generation}")
+    return uuid5(_DISTRIBUTION_ID_NAMESPACE, f"{dataset_id}:{supply_id}:{locator}#{generation}")
 
 
 class DigestingDurableCopyRegistrar:
@@ -321,7 +321,7 @@ class DigestingDurableCopyRegistrar:
     ) -> UUID | DurableCopyRegistration:
         """Walk the generation chain from the WRITE model; see the module docstring."""
         for generation in range(_MAX_GENERATIONS):
-            candidate_id = _candidate_distribution_id(
+            candidate_id = _derive_candidate_distribution_id(
                 dataset_id=dataset_id, supply_id=supply_id, locator=locator, generation=generation
             )
             state = await load_distribution(self._event_store, candidate_id)

@@ -400,7 +400,7 @@ async def test_a_durable_copy_whose_bytes_disagree_with_the_dataset_is_refused(
     # landed on (generation 0 of this triple) must still be empty.
     from cora.api import _durable_copy_registrar as registrar_module
 
-    target_id = registrar_module._candidate_distribution_id(  # pyright: ignore[reportPrivateUsage]
+    target_id = registrar_module._derive_candidate_distribution_id(  # pyright: ignore[reportPrivateUsage]
         dataset_id=_DATASET_ID, supply_id=_SUPPLY_ID, locator=_LOCATOR, generation=0
     )
     events, version = await store.load("Distribution", target_id)
