@@ -208,3 +208,38 @@ async def test_verify_does_not_confuse_prefix_sibling_root(tmp_path: Path) -> No
 
 def test_adapter_advertises_its_kind() -> None:
     assert PosixChecksumAdapter(allowed_roots=()).kind == "PosixChecksum"
+
+
+_PERSONAL_PATH_FRAGMENT = "Smith-1015116"
+
+
+async def test_verify_missing_file_error_detail_never_carries_the_path(tmp_path: Path) -> None:
+    """A missing file's `FileNotFoundError` renders its own path in
+    `str(exc)`, and 2-BM's directory layout embeds a PI surname in
+    exactly that path. The reported detail must carry the exception
+    TYPE, never its message."""
+    root = tmp_path / "root" / _PERSONAL_PATH_FRAGMENT
+    root.mkdir(parents=True)
+    missing = root / "scan.h5"
+
+    result = await _adapter(root).verify(
+        distribution_uri=missing.as_uri(),
+        expected_checksum="a" * 64,
+        supply_id=_SUPPLY_ID,
+    )
+
+    assert isinstance(result, Unreachable)
+    assert _PERSONAL_PATH_FRAGMENT not in result.error_detail
+    assert "FileNotFoundError" in result.error_detail
+
+
+async def test_compute_missing_file_error_detail_never_carries_the_path(tmp_path: Path) -> None:
+    root = tmp_path / "root" / _PERSONAL_PATH_FRAGMENT
+    root.mkdir(parents=True)
+    missing = root / "scan.h5"
+
+    result = await _adapter(root).compute(locator_uri=missing.as_uri(), supply_id=_SUPPLY_ID)
+
+    assert isinstance(result, Unreachable)
+    assert _PERSONAL_PATH_FRAGMENT not in result.error_detail
+    assert "FileNotFoundError" in result.error_detail

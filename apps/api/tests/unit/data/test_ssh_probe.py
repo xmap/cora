@@ -115,6 +115,22 @@ async def test_run_probe_refusal_detail_never_carries_the_locator(
 
 
 @pytest.mark.unit
+async def test_run_probe_checksum_op_refusal_detail_never_carries_the_locator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same rule as `describe`, exercised on the `checksum` op: both ops
+    share the one client-side guard, and a fix pinned only on `describe`
+    would leave the sibling op unverified."""
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+    response = await run_probe(
+        {"op": "checksum", "locator_uri": f"file:///other-root/{_PERSONAL_PATH_FRAGMENT}/x.h5"},
+        config=_CONFIG,
+    )
+    assert response["kind"] == "ProbeError"
+    assert _PERSONAL_PATH_FRAGMENT not in response["detail"]
+
+
+@pytest.mark.unit
 async def test_run_probe_refuses_a_sibling_directory_sharing_a_prefix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -104,9 +104,9 @@ class PosixChecksumAdapter:
                 "posix_checksum.read_failed",
                 distribution_uri=distribution_uri,
                 supply_id=str(supply_id),
-                error=str(exc),
+                error=type(exc).__name__,
             )
-            return Unreachable(error_detail=f"read failed: {exc}")
+            return Unreachable(error_detail=f"read failed: {type(exc).__name__}")
 
     async def compute(
         self,
@@ -121,9 +121,9 @@ class PosixChecksumAdapter:
                 "posix_checksum.compute_failed",
                 locator_uri=locator_uri,
                 supply_id=str(supply_id),
-                error=str(exc),
+                error=type(exc).__name__,
             )
-            return Unreachable(error_detail=f"read failed: {exc}")
+            return Unreachable(error_detail=f"read failed: {type(exc).__name__}")
 
     def _resolve_and_hash(
         self,

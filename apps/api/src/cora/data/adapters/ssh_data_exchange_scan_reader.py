@@ -93,10 +93,11 @@ def _response_to_result(response: dict[str, object]) -> ScanReadResult:
     # "Unreadable", "ProbeError", or any response this adapter cannot
     # parse (a probe protocol change on one side but not the other):
     # fail toward Unreadable rather than raise, matching the port's
-    # never-raise contract.
-    reason = (
-        response.get("reason") or response.get("detail") or f"unexpected response: {response!r}"
-    )
+    # never-raise contract. The fallback is a fixed literal, never
+    # `{response!r}`: dumping the whole probe dict would relay
+    # whatever an unrecognized field holds verbatim into this
+    # adapter's own log line.
+    reason = response.get("reason") or response.get("detail") or "unexpected probe response"
     return Unreadable(reason=str(reason))
 
 

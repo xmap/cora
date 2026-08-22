@@ -142,9 +142,9 @@ class DataExchangeScanReader:
             _log.warning(
                 "data_exchange_scan_reader.read_failed",
                 locator_uri=locator_uri,
-                error=str(exc),
+                error=type(exc).__name__,
             )
-            return Unreadable(reason=f"read failed: {exc}")
+            return Unreadable(reason=f"read failed: {type(exc).__name__}")
 
     def _describe_sync(self, locator_uri: str) -> ScanReadResult:
         resolved = resolve_confined_file_uri(locator_uri, self._allowed_roots)
@@ -162,12 +162,12 @@ class DataExchangeScanReader:
         try:
             stat = os.stat(real_path)
         except OSError as exc:
-            return Unreadable(reason=f"stat failed: {exc}")
+            return Unreadable(reason=f"stat failed: {type(exc).__name__}")
 
         try:
             handle = h5py.File(real_path, "r", locking=False)
         except OSError as exc:
-            return Unreadable(reason=f"not readable as HDF5: {exc}")
+            return Unreadable(reason=f"not readable as HDF5: {type(exc).__name__}")
 
         with handle:
             data = _dataset(handle, _DATA)
