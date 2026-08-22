@@ -28,9 +28,10 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+import structlog.testing
 
 from cora.api._durable_distribution_driver import (  # pyright: ignore[reportPrivateUsage]
-    MAX_CANDIDATES_PER_TICK,
+    _MAX_CANDIDATES_PER_TICK,  # pyright: ignore[reportPrivateUsage]
     DurableCopyAlreadyRegistered,
     DurableCopyRegistered,
     DurableCopyRegisterRefused,
@@ -41,7 +42,10 @@ from cora.api._durable_distribution_driver import (  # pyright: ignore[reportPri
 from cora.api._durable_distribution_sweep import (  # pyright: ignore[reportPrivateUsage]
     DurableDistributionCandidate,
 )
-from cora.data.adapters.capture_path_locator import resolve_capture_path_locator
+from cora.data.adapters.capture_path_locator import (
+    mint_capture_path_locator,
+    resolve_capture_path_locator,
+)
 from cora.run.aggregates.run import InMemoryCapturePathStore
 from cora.shared.probe_error import (
     PROBE_ERROR_ORIGIN_CLIENT,
@@ -229,34 +233,34 @@ async def test_the_registered_locator_resolves_back_to_the_recorded_path() -> No
     assert resolved == f"file://{_FOUND}"
 
 
-async def test_a_locator_minted_against_the_acquisition_tier_would_not_resolve() -> None:
+@pytest.mark.parametrize(
+    ("host", "root"),
+    [(_HOST, _ACQUISITION_ROOT), ("arcturus", _DURABLE_ROOT)],
+)
+async def test_a_locator_minted_against_another_location_does_not_resolve(
+    host: str, root: str
+) -> None:
     """Pins the round-trip test above as a real check rather than a
-    decorative one: it must FAIL for the mutation it exists to catch.
-    Minting with the acquisition root instead of the durable one leaves
-    a well-formed locator naming a vault row that was never written."""
+    decorative one: it must FAIL for the mutations it exists to catch.
+
+    The wrong locator is built by the REAL minting function, not by
+    formatting a string here. A hand-written one is how the first
+    version of this test came to prove nothing: it spelled the run
+    segment `{run:...}` where the format is `run-...`, so resolution
+    refused on the shape long before it compared host or tier, and the
+    test passed for a CORRECT locator too.
+    """
     candidate = _candidate()
     driver, _, recorder, _ = _driver(candidates=[candidate], responses=[_FOUND_ONE])
 
     await driver.tick()
 
-    wrong_tier = (
-        f"cora-capture-path://{_HOST}{_ACQUISITION_ROOT}/{{run:{candidate.run_id}}}/scan_005.h5"
+    elsewhere = mint_capture_path_locator(
+        observed_path=_FOUND, run_id=candidate.run_id, host=host, root=root
     )
 
-    assert await resolve_capture_path_locator(wrong_tier, capture_path_store=recorder.store) is None
-
-
-async def test_a_locator_minted_against_another_host_would_not_resolve() -> None:
-    candidate = _candidate()
-    driver, _, recorder, _ = _driver(candidates=[candidate], responses=[_FOUND_ONE])
-
-    await driver.tick()
-
-    wrong_host = (
-        f"cora-capture-path://arcturus{_DURABLE_ROOT}/{{run:{candidate.run_id}}}/scan_005.h5"
-    )
-
-    assert await resolve_capture_path_locator(wrong_host, capture_path_store=recorder.store) is None
+    assert elsewhere is not None
+    assert await resolve_capture_path_locator(elsewhere, capture_path_store=recorder.store) is None
 
 
 async def test_a_root_spelled_with_a_trailing_slash_still_round_trips() -> None:
@@ -264,7 +268,7 @@ async def test_a_root_spelled_with_a_trailing_slash_still_round_trips() -> None:
     byte for byte. Normalizing in one place is what keeps a stray
     slash from minting an immutable locator that resolves to nothing."""
     candidate = _candidate()
-    driver, _, recorder, registrar = _driver(
+    driver, probe, recorder, registrar = _driver(
         candidates=[candidate],
         responses=[_FOUND_ONE],
         location=_Location(root=f"{_DURABLE_ROOT}/"),
@@ -272,6 +276,7 @@ async def test_a_root_spelled_with_a_trailing_slash_still_round_trips() -> None:
 
     await driver.tick()
 
+    assert probe.calls[0]["root"] == _DURABLE_ROOT
     assert recorder.rows[0]["root"] == _DURABLE_ROOT
     resolved = await resolve_capture_path_locator(
         str(registrar.calls[0]["locator"]), capture_path_store=recorder.store
@@ -427,8 +432,6 @@ async def test_a_refused_registration_does_not_stop_the_sweep_reaching_the_next(
 
 
 async def test_an_unauthorized_registration_stops_the_tick() -> None:
-    """A missing grant is identical for every candidate, so trying nine
-    more times only fills the log with the same line."""
     candidates = [_candidate(), _candidate(), _candidate()]
     driver, _, _, registrar = _driver(
         candidates=candidates,
@@ -485,8 +488,6 @@ async def test_an_unparseable_acquisition_folder_is_skipped_without_probing() ->
 
 
 async def test_a_skipped_candidate_is_not_reoffered_within_the_same_tick() -> None:
-    """Without the exclusion the driver would take the same stuck head
-    ten times and make no progress on anything behind it."""
     candidates = [_candidate(), _candidate()]
     driver, probe, _, _ = _driver(candidates=candidates, responses=[_FOUND_NONE])
 
@@ -498,9 +499,122 @@ async def test_a_skipped_candidate_is_not_reoffered_within_the_same_tick() -> No
 async def test_a_tick_past_its_attempt_cap_stops_walking_candidates() -> None:
     """Without the cap, a population of stuck candidates larger than
     the cap would be re-walked in full on every tick forever."""
-    candidates = [_candidate() for _ in range(MAX_CANDIDATES_PER_TICK + 5)]
+    candidates = [_candidate() for _ in range(_MAX_CANDIDATES_PER_TICK + 5)]
     driver, probe, _, _ = _driver(candidates=candidates, responses=[_FOUND_NONE])
 
     await driver.tick()
 
-    assert len(probe.calls) == MAX_CANDIDATES_PER_TICK
+    assert len(probe.calls) == _MAX_CANDIDATES_PER_TICK
+
+
+async def test_a_stuck_queue_head_longer_than_the_cap_still_lets_the_rest_through() -> None:
+    """The starvation the per-tick skip list did not prevent. The
+    candidate query is ordered and the head is stable, and three skip
+    reasons never clear on their own, so with more permanently-stuck
+    Datasets than one tick can walk, a driver that forgot them between
+    ticks would spend every tick on the same ten and never reach the
+    eleventh. Ambiguity alone is expected one month in eight, which
+    makes ten a steady state rather than a pathological case."""
+    stuck = [_candidate() for _ in range(_MAX_CANDIDATES_PER_TICK + 2)]
+    healthy = _candidate()
+    ambiguous = _located(match_count=2, paths=[_FOUND, _OTHER])
+    driver, _, _, registrar = _driver(
+        candidates=[*stuck, healthy],
+        responses=[*([ambiguous] * len(stuck)), _FOUND_ONE],
+    )
+
+    # Two ticks is what it takes to walk twelve stuck Datasets at ten
+    # attempts each. A driver that forgot them between ticks spends both
+    # on the same first ten and registers nothing.
+    await driver.tick()
+    await driver.tick()
+
+    assert {call["dataset_id"] for call in registrar.calls} == {healthy.dataset_id}
+
+
+async def test_a_drained_cycle_starts_over_so_a_waiting_dataset_is_looked_at_again() -> None:
+    """The other half of carrying the walked set: "not there yet" is
+    the normal state for days, so a Dataset skipped for it has to come
+    back round rather than be excluded for the life of the process."""
+    candidate = _candidate()
+    driver, probe, _, _ = _driver(candidates=[candidate], responses=[_FOUND_NONE])
+
+    await driver.tick()
+    await driver.tick()
+
+    assert len(probe.calls) == 2
+
+
+async def test_a_registered_dataset_is_not_reprobed_for_the_rest_of_the_cycle() -> None:
+    """Candidacy is read from a projection that lags behind the append,
+    so the Dataset keeps coming back as a candidate after a successful
+    register. Remembering it for the rest of the cycle is what keeps
+    that lag from costing a probe per tick."""
+    done, pending = _candidate(), _candidate()
+    driver, probe, _, _ = _driver(candidates=[done, pending], responses=[_FOUND_ONE])
+
+    await driver.tick()
+    await driver.tick()
+
+    assert [call["filename"] for call in probe.calls] == ["scan_005.h5", "scan_005.h5"]
+    assert len(probe.calls) == 2
+
+
+async def test_a_successful_registration_ends_the_tick() -> None:
+    """One digest per tick. The register reads the whole file over SSH,
+    so a tick that carried on would hold the sweep open for as long as
+    there were candidates."""
+    first, second = _candidate(), _candidate()
+    driver, _, _, registrar = _driver(candidates=[first, second], responses=[_FOUND_ONE])
+
+    await driver.tick()
+
+    assert len(registrar.calls) == 1
+
+
+async def test_no_log_line_from_a_tick_carries_the_experiment_folder() -> None:
+    """The surname reaches CORA only through the vault, which is
+    erasable. A log sink is not, and every branch here has an id or a
+    count that says the same thing without the path."""
+    candidates = [
+        _candidate(),
+        _candidate(observed_path=f"{_ACQUISITION_ROOT}/no-month-here/scan_005.h5"),
+        _candidate(),
+        _candidate(),
+    ]
+    responses = [
+        _located(match_count=2, paths=[_FOUND, _OTHER]),
+        _FOUND_ONE,
+        _REQUEST_REFUSED,
+        _FOUND_ONE,
+    ]
+    driver, _, _, _ = _driver(candidates=candidates, responses=responses)
+
+    with structlog.testing.capture_logs() as captured:
+        await driver.tick()
+
+    rendered = repr(captured)
+    assert "Haridy" not in rendered
+    assert _FOUND not in rendered
+    assert "no-month-here" not in rendered
+
+
+async def test_the_locator_names_the_file_the_probe_found_not_the_one_it_searched_for() -> None:
+    """They are the same string at 2-BM, since the probe searches by
+    the acquisition filename. A facility that renamed on archive would
+    make them differ, and minting from the candidate rather than the
+    verdict would then mint a locator naming a file the vault row does
+    not describe."""
+    candidate = _candidate()
+    renamed = "/gdata/dm/2BM/2026-08/2026-08-Haridy-1015116/data/scan_005_archived.h5"
+    driver, _, recorder, registrar = _driver(
+        candidates=[candidate], responses=[_located(match_count=1, paths=[renamed])]
+    )
+
+    await driver.tick()
+
+    resolved = await resolve_capture_path_locator(
+        str(registrar.calls[0]["locator"]), capture_path_store=recorder.store
+    )
+
+    assert resolved == f"file://{renamed}"

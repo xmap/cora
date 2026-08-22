@@ -53,6 +53,8 @@ error), not against an adversary who has not yet arrived here.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import sys
 from dataclasses import asdict
@@ -231,19 +233,33 @@ async def _handle(request: dict[str, Any]) -> dict[str, Any]:
 
 async def _main() -> None:
     line = sys.stdin.readline()
-    try:
-        parsed: Any = json.loads(line)
-        if not isinstance(parsed, dict):
-            raise TypeError("request is not a JSON object")
-        response = await _handle(cast("dict[str, Any]", parsed))
-    except Exception as exc:
-        # The exception TYPE only, never `str(exc)`. The paths this
-        # process walks embed a PI surname, and the exceptions most
-        # likely to land here are `OSError` subclasses that render the
-        # filename they failed on. A class name cannot carry one, which
-        # makes the no-path guarantee structural rather than a promise
-        # about the correctness of every call above.
-        response = {"kind": "ProbeError", "detail": f"unhandled {type(exc).__name__}"}
+    # Stdout IS the protocol: the client reads the FIRST line and parses
+    # it as the verdict. Anything else written there corrupts the answer,
+    # and structlog's default logger writes to stdout, so any `_log` call
+    # reached from `_handle` puts a log line where the verdict belongs.
+    # `describe` and `checksum` already make such calls. Guarding here is
+    # cheaper than auditing every library on this path forever, and it
+    # catches a stray `print` too.
+    #
+    # DISCARDED rather than sent to stderr, which is the tempting
+    # version. The client folds the tail of stderr into its own refusal
+    # text, so redirecting there would trade a corrupted protocol for a
+    # path in a log line. Nothing is lost: these writes were already
+    # being swallowed by the SSH pipe, where no operator could read them.
+    with contextlib.redirect_stdout(io.StringIO()):
+        try:
+            parsed: Any = json.loads(line)
+            if not isinstance(parsed, dict):
+                raise TypeError("request is not a JSON object")
+            response = await _handle(cast("dict[str, Any]", parsed))
+        except Exception as exc:
+            # The exception TYPE only, never `str(exc)`. The paths this
+            # process walks embed a PI surname, and the exceptions most
+            # likely to land here are `OSError` subclasses that render
+            # the filename they failed on. A class name cannot carry
+            # one, which makes this arm's no-path guarantee structural
+            # rather than a promise about every call above it.
+            response = {"kind": "ProbeError", "detail": f"unhandled {type(exc).__name__}"}
     sys.stdout.write(json.dumps(response))
     sys.stdout.write("\n")
     sys.stdout.flush()

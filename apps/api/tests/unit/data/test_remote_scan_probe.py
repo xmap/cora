@@ -24,7 +24,7 @@ import h5py
 import numpy as np
 import pytest
 
-from cora.data._remote_scan_probe import _handle
+from cora.data._remote_scan_probe import MAX_LOCATE_MATCHES, _handle
 
 pytestmark = pytest.mark.unit
 
@@ -263,6 +263,39 @@ async def test_main_catch_all_never_renders_the_exceptions_message(
     assert secret_fragment not in response["detail"]
 
 
+async def test_main_discards_a_stray_stdout_write_from_handle_and_never_leaks_it(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`describe` and `checksum` both make `_log` calls that write to
+    stdout by default, and stdout IS the protocol: the client parses the
+    FIRST line as the verdict. `_handle` here stands in for a call that
+    logs (and even `print`s) a path carrying a surname before returning
+    its real verdict; only that verdict may reach stdout."""
+    import json
+
+    from cora.data import _remote_scan_probe
+
+    secret_fragment = "Smith-1015116/scan_005.h5"
+
+    async def _noisy_handle(request: dict[str, Any]) -> dict[str, Any]:
+        print(f"resolved locator to {secret_fragment}")
+        print(f"also logged: {secret_fragment}")
+        return {"kind": "Located", "matches": [], "match_count": 0}
+
+    monkeypatch.setattr(_remote_scan_probe, "_handle", _noisy_handle)
+    monkeypatch.setattr(
+        "sys.stdin", io.StringIO(json.dumps({"op": "describe", "locator_uri": "file:///x"}) + "\n")
+    )
+
+    await _remote_scan_probe._main()
+
+    out = capsys.readouterr().out
+    lines = out.splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0]) == {"kind": "Located", "matches": [], "match_count": 0}
+    assert secret_fragment not in out
+
+
 def _durable_tree(
     root: Path, *, experiment: str, filename: str = "scan_005.h5", month: str = "2026-08"
 ) -> Path:
@@ -437,3 +470,142 @@ async def test_locate_op_refuses_a_symlink_that_escapes_the_allowed_root(
 
     assert response["kind"] == "Located"
     assert response["match_count"] == 0
+
+
+def _raise_on_second_call(
+    monkeypatch: pytest.MonkeyPatch, *, method_name: str, target: Path, detail: str
+) -> None:
+    """Let the first call to `Path.<method_name>` on `target` behave
+    normally, then raise a bare `OSError(detail)` on every call after
+    that. Isolates a specific call site (one that calls the method a
+    second time) from an earlier call the same code path also makes
+    internally (`is_file` calls `stat` itself), so a guard can be pinned
+    without also tripping over that internal call."""
+    original = getattr(Path, method_name)
+    calls = {"count": 0}
+
+    def _patched(self: Path, *args: Any, **kwargs: Any) -> Any:
+        if self == target:
+            calls["count"] += 1
+            if calls["count"] > 1:
+                raise OSError(detail)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, method_name, _patched)
+
+
+def _raise_always(
+    monkeypatch: pytest.MonkeyPatch, *, method_name: str, target: Path, detail: str
+) -> None:
+    original = getattr(Path, method_name)
+
+    def _patched(self: Path, *args: Any, **kwargs: Any) -> Any:
+        if self == target:
+            raise OSError(detail)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, method_name, _patched)
+
+
+async def test_locate_op_keeps_stat_inside_the_error_guard_and_never_leaks_the_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`stat` must raise from INSIDE the same `try/except OSError` that
+    guards `resolve` and `is_file`. `is_file` calls `stat` internally, so
+    the first call on the candidate is left alone (it is how `is_file`
+    itself succeeds) and only the explicit `resolved.stat()` call --
+    the second one -- is made to fail."""
+    import json
+
+    scan_path = _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+    secret_fragment = "Haridy-1015116"
+    _raise_on_second_call(
+        monkeypatch,
+        method_name="stat",
+        target=scan_path.resolve(),
+        detail=f"could not stat {scan_path.resolve()}",
+    )
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["kind"] == "Located"
+    assert response["matches"] == []
+    assert secret_fragment not in json.dumps(response)
+
+
+async def test_locate_op_keeps_is_file_inside_the_error_guard_and_never_leaks_the_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The mutation this whole commit was written to fix: `is_file`
+    raising outside the guard used to leak a path embedding a PI
+    surname through `_main`'s catch-all."""
+    import json
+
+    scan_path = _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+    secret_fragment = "Haridy-1015116"
+    _raise_always(
+        monkeypatch,
+        method_name="stat",
+        target=scan_path.resolve(),
+        detail=f"could not stat {scan_path.resolve()}",
+    )
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["kind"] == "Located"
+    assert response["matches"] == []
+    assert secret_fragment not in json.dumps(response)
+
+
+def _many_matching_experiments(root: Path, count: int) -> None:
+    for index in range(count):
+        _durable_tree(root, experiment=f"2026-08-Person{index:02d}-1015116")
+
+
+async def test_locate_op_caps_returned_matches_at_max_locate_matches(tmp_path: Path) -> None:
+    _many_matching_experiments(tmp_path, MAX_LOCATE_MATCHES + 3)
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["kind"] == "Located"
+    assert len(response["matches"]) == MAX_LOCATE_MATCHES
+
+
+async def test_locate_op_reports_match_count_uncapped_beyond_max_locate_matches(
+    tmp_path: Path,
+) -> None:
+    """`match_count` is deliberately reported UNCAPPED beside a truncated
+    `matches` list, so a caller can tell 2 matches from 50 even though it
+    only ever sees the first few."""
+    total = MAX_LOCATE_MATCHES + 3
+    _many_matching_experiments(tmp_path, total)
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["match_count"] == total
+    assert response["match_count"] > MAX_LOCATE_MATCHES
+
+
+async def test_locate_op_directory_suffix_match_is_endswith_not_substring(
+    tmp_path: Path,
+) -> None:
+    """The proposal suffix carries a leading hyphen precisely so a
+    directory that merely contains it in the middle, rather than ending
+    with it, is refused."""
+    _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116-extra")
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["kind"] == "Located"
+    assert response["match_count"] == 0
+
+
+async def test_locate_op_orders_matches_deterministically_by_sorted_directory_name(
+    tmp_path: Path,
+) -> None:
+    zeta_path = _durable_tree(tmp_path, experiment="2026-08-Zeta-1015116")
+    alpha_path = _durable_tree(tmp_path, experiment="2026-08-Alpha-1015116")
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert [match["path"] for match in response["matches"]] == [str(alpha_path), str(zeta_path)]

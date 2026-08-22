@@ -62,28 +62,54 @@ def test_no_match_is_not_yet_there_and_carries_no_reason() -> None:
     assert read_locate_response(_located(match_count=0, matches=[])) == DurableCopyNotYetThere()
 
 
-def test_several_matches_refuse_and_name_the_colliding_folders() -> None:
+def test_several_matches_refuse_rather_than_pick_one() -> None:
     """Measured on the real archive, internal beamtime collides in 8 of
-    14 months, so this fires in production. An operator who cannot see
-    WHICH folders collided cannot resolve it."""
+    14 months, so this fires in production. Guessing would name the
+    wrong bytes as this Dataset's durable copy, permanently."""
     verdict = read_locate_response(
         _located(match_count=2, matches=[_match(_DURABLE), _match(_OTHER)])
     )
 
-    assert verdict == DurableCopyAmbiguous(match_count=2, paths=(_DURABLE, _OTHER))
+    assert verdict == DurableCopyAmbiguous(match_count=2)
+
+
+def test_an_ambiguous_verdict_carries_no_path() -> None:
+    """The colliding paths embed a surname and have no reader: the only
+    consumer logs the count. A personal-data field kept for a future
+    consumer is a field one keyword away from a log line."""
+    verdict = read_locate_response(
+        _located(match_count=2, matches=[_match(_DURABLE), _match(_OTHER)])
+    )
+
+    assert _DURABLE not in repr(verdict)
+    assert "Haridy" not in repr(verdict)
 
 
 def test_ambiguity_reports_the_true_count_even_when_matches_are_capped() -> None:
-    """The probe caps how many matches one verdict carries. Reporting
-    `len(paths)` instead would tell an operator two when the truth is
-    fifty, and a truncated list reads like the whole story."""
+    """The probe caps how many matches one verdict carries. Reading the
+    list length instead would tell an operator two when the truth is
+    fifty, and would read a `{count: 5, matches: [one]}` response as a
+    single confident match."""
     verdict = read_locate_response(
         _located(match_count=50, matches=[_match(_DURABLE), _match(_OTHER)])
     )
 
-    assert isinstance(verdict, DurableCopyAmbiguous)
-    assert verdict.match_count == 50
-    assert len(verdict.paths) == 2
+    assert verdict == DurableCopyAmbiguous(match_count=50)
+
+
+def test_a_count_above_one_is_ambiguous_however_few_matches_came_back() -> None:
+    verdict = read_locate_response(_located(match_count=5, matches=[_match(_DURABLE)]))
+
+    assert verdict == DurableCopyAmbiguous(match_count=5)
+
+
+def test_a_negative_match_count_is_refused_rather_than_read_as_a_match() -> None:
+    """Unreachable from the probe as written. Refused explicitly because
+    falling through to the single-match branch with one entry present
+    would record those bytes as the durable copy."""
+    verdict = read_locate_response(_located(match_count=-1, matches=[_match(_DURABLE)]))
+
+    assert isinstance(verdict, DurableCopyRefused)
 
 
 def test_a_transport_origin_failure_is_unreachable() -> None:
@@ -182,11 +208,7 @@ def test_a_single_match_missing_its_path_or_timestamp_is_refused(entry: dict[str
     )
 
 
-def test_non_dict_entries_in_matches_are_dropped_rather_than_carried() -> None:
-    verdict = read_locate_response(
-        {"kind": "Located", "match_count": 2, "matches": [_match(_DURABLE), 7]}
-    )
+def test_a_non_dict_entry_beside_a_real_one_is_refused_not_read_as_found() -> None:
+    verdict = read_locate_response({"kind": "Located", "match_count": 1, "matches": [7]})
 
-    assert isinstance(verdict, DurableCopyAmbiguous)
-    assert verdict.paths == (_DURABLE,)
-    assert verdict.match_count == 2
+    assert isinstance(verdict, DurableCopyRefused)

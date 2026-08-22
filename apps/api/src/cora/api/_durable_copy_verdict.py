@@ -45,13 +45,19 @@ default is deliberate and is the fail-safe direction: over-reporting
 per-request costs one wasted probe, while over-reporting systemic
 stops a sweep that had no reason to stop.
 
-## Why the refusal carries paths at all
+## Why the ambiguous verdict does NOT carry the colliding paths
 
-Those paths embed a PI surname. They are carried here so the caller can
-put them in front of a human, and the caller is responsible for routing
-them somewhere erasable rather than into a log sink. Naming the
-collision is what makes the refusal actionable, and an unactionable
-refusal on a recurring case is just a stuck sweep.
+It did, and the reasoning was that an operator who cannot see WHICH
+folders collided cannot resolve the collision. That reasoning is
+sound and the field was still wrong, because the operator read it was
+carried for does not exist: the only consumer logs the count and drops
+the paths. What remained was a tuple of personal data with no reader,
+one keyword away from a log call, justified by a future.
+
+So the paths are dropped rather than held. When the authenticated
+operator read is built it will re-probe anyway, since a collision an
+hour old may already have been resolved on disk, and a value object
+cannot be the place personal data waits for a consumer.
 """
 
 from __future__ import annotations
@@ -92,13 +98,9 @@ class DurableCopyAmbiguous:
     this Run's file."""
 
     match_count: int
-    """The TRUE count, which may exceed `len(paths)` because the probe
-    caps how many paths one verdict carries. Reported separately so an
-    operator sees two versus fifty rather than a truncated list that
-    reads like the whole story."""
-    paths: tuple[str, ...]
-    """Personal data, and the whole value of this verdict: the operator
-    needs to see which experiment folders collided."""
+    """How many experiment folders held a file of this name. The TRUE
+    count, uncapped, so an operator sees two versus fifty rather than
+    the handful the probe chose to send back."""
 
 
 @dataclass(frozen=True)
@@ -156,10 +158,16 @@ def read_locate_response(response: dict[str, object]) -> DurableCopyVerdict:
         if isinstance(entry, dict)
     ]
 
+    if raw_count < 0:
+        # Not reachable from the probe as written, and refused rather
+        # than left to fall through: a negative count that reached the
+        # single-match branch below with one entry present would be read
+        # as `Found` and record those bytes permanently.
+        return DurableCopyRefused(detail="probe reported a negative match count")
     if raw_count == 0:
         return DurableCopyNotYetThere()
     if raw_count > 1:
-        return DurableCopyAmbiguous(match_count=raw_count, paths=_paths_of(matches))
+        return DurableCopyAmbiguous(match_count=raw_count)
 
     if len(matches) != 1:
         # One match counted but nothing usable came back. Treating this
@@ -183,10 +191,6 @@ def _failure(response: dict[str, object]) -> DurableCopyRefused | DurableCopyUnr
     if response.get("origin") == PROBE_ERROR_ORIGIN_TRANSPORT:
         return DurableCopyUnreachable(detail=text)
     return DurableCopyRefused(detail=text)
-
-
-def _paths_of(matches: list[dict[str, object]]) -> tuple[str, ...]:
-    return tuple(path for entry in matches if isinstance(path := entry.get("path"), str))
 
 
 __all__ = [

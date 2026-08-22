@@ -28,9 +28,11 @@ because the false version is the intuitive one:
 
   - Crash after recording, before registering. The vault row is a TRUE
     statement (the file is there), the Dataset is still a candidate,
-    and the next tick redoes the whole thing. The re-record is an
-    upsert on the same key carrying the same substrate timestamp, so
-    it is a no-op. This part was always fine.
+    and the next tick redoes the whole thing. The re-record carries the
+    same substrate timestamp on the same key, so it states the same
+    fact: value-stable, though not write-free, since the upsert's guard
+    is `>=` and an equal `observed_at` still refreshes `updated_at`.
+    This part was always fine.
   - Crash after registering, or simply the tick after a success.
     Candidacy is NOT read from the write model. It is read from
     `proj_data_distribution_summary`, a projection advanced by
@@ -39,7 +41,7 @@ because the false version is the intuitive one:
     Dataset is still returned as a candidate. Nothing about the
     successful register makes it stop being one.
 
-That second point is why `DurableCopyRegistrar` is required to be
+That second point is why `DurableCopyRegistrar` is REQUIRED to be
 idempotent and to establish that from the WRITE model, before it
 digests anything. Without it, a stalled projector does not merely
 duplicate an event: it re-reads tens of gigabytes over SSH on every
@@ -47,12 +49,12 @@ tick, indefinitely. The projection's partial unique index would keep
 the READ model correct throughout, which is precisely what makes the
 failure invisible while it burns the network.
 
-The residue that remains, stated rather than papered over: while the
-projection lags, each tick still re-probes an already-registered
-Dataset. That costs one directory listing over an already-open hop,
-and it is self-correcting the moment the projector advances. It is not
-worth a second source of truth in process memory, which would lie
-after a restart.
+Stated plainly, because a requirement is not a fix: no implementor of
+that Protocol exists yet. Until the composition root builds one, the
+obligation above is written down and unmet, and the hole it describes
+is open. Whoever wires this is closing it, not inheriting it closed.
+The test fake here returns a canned answer and proves nothing about
+any real implementation's idempotence.
 
 What this deliberately does NOT do is try to make the digest and the
 append atomic. They cannot be: one reads bytes on another host over
@@ -69,21 +71,59 @@ wedge the sweep for every other. This mirrors `CaptureScanIngestor`,
 where a gate review removed exactly this head-of-line blocking once
 already.
 
+## Why the walked set outlives the tick
+
+Skipping within a tick is not enough, and the difference is the whole
+reason this state is on the instance rather than the stack. The
+candidate query is `ORDER BY created_at ASC LIMIT 1`, so the queue head
+is stable, and three of the skip conditions never clear on their own:
+a capture code with no durable location, an acquisition folder with no
+month in its name, and an ambiguous match. That last one is expected
+roughly one month in eight and has no resolution path today. A tick
+that forgot what it walked would therefore spend all ten of its
+attempts on the first ten permanently-stuck Datasets, forever, and
+never reach the eleventh. Ten is not a pathological number here; given
+the stated ambiguity rate it is the steady state.
+
+Carrying the set turns that into a cycle: each tick resumes where the
+last left off, and when nothing is left the set clears and the sweep
+starts over, so a Dataset that was merely waiting gets looked at again.
+It also suppresses the re-probe residue described above, since a
+Dataset registered this cycle is not re-offered until the cycle ends.
+
+The honest limit: this lives in process memory, so a restart begins a
+fresh cycle from the head. That is acceptable because a cycle is cheap
+(one directory listing per stuck Dataset) and because the alternative,
+persisting a skip list, would need its own erasure story for a table
+keyed by Dataset.
+
 ## Personal data
 
-The observed path and the colliding paths in an ambiguous verdict both
-embed a PI surname. Neither is ever logged. An ambiguous verdict logs
-the ids and the COUNT, which is actionable through CORA's own
-access-controlled read and leaks nothing into a sink that cannot be
-erased. Surfacing which folders collided needs an authenticated
-operator read that does not exist yet; that gap is real and named here
-rather than papered over by logging the paths.
+The candidate's observed path and the found path both embed a PI
+surname. Neither is ever logged: every branch here has an id or a count
+that says the same thing, and ids are resolvable through CORA's own
+access-controlled read while a log sink cannot be erased. An ambiguous
+verdict no longer even carries the colliding paths, so this discipline
+is one field shorter than it was; see `_durable_copy_verdict` for why
+that field went away rather than being carefully not-logged.
 
-Refusal text IS logged, and that is safe for a structural reason
-rather than a promise: client-side refusals are fixed strings, and the
-remote probe renders exception TYPES rather than messages, so a
-filesystem error cannot carry the filename it failed on into this log
-line. See `cora.data._remote_scan_probe._main`.
+Surfacing which folders collided still needs an authenticated operator
+read that does not exist yet. That gap is real and named rather than
+closed by putting the paths somewhere convenient.
+
+Refusal text IS logged. That is safe for the `locate` op specifically,
+and the scope of that claim matters: every refusal string `locate`,
+`_handle` and `run_locate_probe` can produce is a fixed literal, and
+`_main`'s catch-all renders the exception TYPE rather than its message,
+so a filesystem error cannot carry the filename it failed on.
+
+It is NOT a property of the remote probe as a whole. The `describe` and
+`checksum` ops on the same module build their `reason` /
+`error_detail` from `str(exc)`, which does embed the path, and their
+own SSH adapters log it. That is a real leak, it predates this module,
+and nothing here fixes it. Do not read the paragraph above as covering
+it, and do not add an op to `locate`'s neighbourhood assuming the
+guarantee is ambient.
 """
 
 from __future__ import annotations
@@ -117,10 +157,15 @@ if TYPE_CHECKING:
 
 _log = get_logger(__name__)
 
-MAX_CANDIDATES_PER_TICK = 10
+_MAX_CANDIDATES_PER_TICK = 10
 """Bound on how many Datasets one tick will walk past before giving up.
 Mirrors `CaptureScanIngestor.tick`: without it, a population of stuck
 candidates would be re-walked in full on every tick forever."""
+
+_MAX_WALKED_CARRIED = 500
+"""Bound on the cycle's memory of what it has already walked. Not a
+memory bound: the set is bound into the candidate query as an array, so
+this is a bound on how big that query's parameter may get."""
 
 
 class _Outcome(Enum):
@@ -169,6 +214,21 @@ DurableCopyRegistration = (
     | DurableCopyRegisterRefused
     | DurableCopyRegisterUnauthorized
 )
+"""Four members for three outcomes, which is deliberate.
+
+`AlreadyRegistered` and `RegisterRefused` both make the tick move on,
+so it is fair to ask why they are separate: one says the work was
+already done and the other says it could not be, and a sweep whose logs
+cannot tell those apart cannot be diagnosed.
+
+The axis NOT split on is retryable versus permanent, which is the more
+tempting one, since `RegisterRefused` covers unreadable bytes (retry
+helps) and a missing cross-reference (it does not). That distinction
+would matter if permanence starved the queue, and it no longer does:
+the walked set rotates past a stuck Dataset rather than re-attempting
+it. Split it when something needs to ACT on the difference, not to
+record it.
+"""
 
 
 class DurableLocationBinding(Protocol):
@@ -285,20 +345,37 @@ class DurableDistributionDriver:
         self._registrar = registrar
         self._host = host
         self._clock = clock
+        self._walked: set[UUID] = set()
 
     async def tick(self) -> None:
-        excluded: set[UUID] = set()
-        for _ in range(MAX_CANDIDATES_PER_TICK):
-            candidate = await self._candidate_lookup.next_candidate(exclude=frozenset(excluded))
+        for _ in range(_MAX_CANDIDATES_PER_TICK):
+            candidate = await self._candidate_lookup.next_candidate(exclude=frozenset(self._walked))
             if candidate is None:
+                # Every candidate has been walked at least once this
+                # cycle. Starting over is the only way a Dataset that
+                # was merely waiting gets looked at again.
+                self._walked.clear()
                 return
             outcome = await self._sweep_one(candidate)
             if outcome is _Outcome.STOP_TICK:
                 return
+            self._walked.add(candidate.dataset_id)
             if outcome is _Outcome.SUCCESS:
                 return
-            excluded.add(candidate.dataset_id)
-        _log.info("durable_distribution.tick_exhausted_attempts", attempts=MAX_CANDIDATES_PER_TICK)
+            if len(self._walked) >= _MAX_WALKED_CARRIED:
+                # More permanently-stuck Datasets than one cycle can
+                # carry. Restarting the cycle re-starves whatever sits
+                # behind them, so this is deliberately loud: it is a
+                # deployment that needs an operator, not a condition the
+                # sweep can work around. The fix, if it ever fires, is a
+                # `(created_at, dataset_id)` cursor in place of the
+                # exclusion list, which is bounded by construction.
+                _log.warning(
+                    "durable_distribution.walked_set_overflowed",
+                    carried=len(self._walked),
+                )
+                self._walked.clear()
+        _log.info("durable_distribution.tick_exhausted_attempts", attempts=_MAX_CANDIDATES_PER_TICK)
 
     async def _sweep_one(self, candidate: DurableDistributionCandidate) -> _Outcome:
         location = self._durable_locations.durable_location_for(candidate.capture_code)
@@ -468,7 +545,6 @@ class DurableDistributionDriver:
 
 
 __all__ = [
-    "MAX_CANDIDATES_PER_TICK",
     "CapturePathRecorder",
     "DurableCopyAlreadyRegistered",
     "DurableCopyRegisterRefused",

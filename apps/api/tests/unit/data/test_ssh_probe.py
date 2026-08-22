@@ -398,7 +398,7 @@ async def test_run_probe_reports_an_unparseable_probe_response(
 
     assert response["kind"] == "ProbeError"
     assert "unparseable probe response" in response["detail"]
-    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
+    assert "origin" not in response
 
 
 @pytest.mark.unit
@@ -414,7 +414,7 @@ async def test_run_probe_rejects_probe_output_that_is_not_a_json_object(
 
     assert response["kind"] == "ProbeError"
     assert "not a JSON object" in response["detail"]
-    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
+    assert "origin" not in response
 
 
 @pytest.mark.unit
@@ -428,7 +428,7 @@ async def test_run_probe_with_empty_probe_output_returns_a_probe_error(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
-    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
+    assert "origin" not in response
 
 
 _DURABLE_CONFIG = SshProbeConfig(

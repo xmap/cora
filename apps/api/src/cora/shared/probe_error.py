@@ -22,7 +22,14 @@ time one of them is edited alone.
 
 PROBE_ERROR_ORIGIN_CLIENT = "client"
 """The request was refused before the transport was touched, so it says
-nothing about whether the next request will succeed. Per-item."""
+nothing about whether the next request will succeed. Per-item.
+
+Belt and braces today: a reader treats the ABSENCE of an origin as
+per-item too, so nothing yet behaves differently for this value than
+for an unmarked refusal. It is set anyway, because the refusals it
+marks are the ones where the distinction is least obvious from the
+text, and because a reader that later changes its default should find
+these already labelled rather than silently reclassified."""
 
 PROBE_ERROR_ORIGIN_TRANSPORT = "transport"
 """The hop itself failed: could not launch, timed out, or exited

@@ -254,12 +254,17 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
         tail = stderr.decode(errors="replace").strip()[-300:]
         return _transport_failure(f"ssh exited {process.returncode}: {tail}")
 
+    # No origin on either of these. The hop carried the request and the
+    # remote exited 0, so calling it a transport failure would be false,
+    # and it is the one origin a sweeping caller stops on. Leaving it
+    # unset falls to the fail-safe reading: this response is unusable,
+    # the next one may be fine.
     try:
         parsed: Any = json.loads(stdout.decode("utf-8").splitlines()[0])
     except (IndexError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        return _transport_failure(f"unparseable probe response: {exc}")
+        return {"kind": "ProbeError", "detail": f"unparseable probe response: {exc}"}
     if not isinstance(parsed, dict):
-        return _transport_failure("probe response is not a JSON object")
+        return {"kind": "ProbeError", "detail": "probe response is not a JSON object"}
     return cast("dict[str, Any]", parsed)
 
 
