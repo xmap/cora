@@ -335,6 +335,18 @@ class DurableCopyRegistrar(Protocol):
     and dedupes afterwards satisfies the letter of idempotence and none
     of its purpose.
 
+    ## `observed_modified_at`
+
+    The `locate` verdict's own `modified_at` (`DurableCopyFound.modified_at`),
+    carried so the implementor can refuse cheaply instead of digesting in
+    full every cycle. A copy still being rsync'd in changes size and
+    content between `locate` and the digest walk that follows it; an
+    implementor MUST compare this value against the digest's own
+    `mtime_ns` and refuse rather than register when they disagree,
+    because a disagreement means the file moved under the read and the
+    checksum just computed may not describe the bytes this Distribution
+    would claim to be.
+
     ## Why no principal is passed in
 
     The identity the register runs as belongs to the implementor, which
@@ -353,6 +365,7 @@ class DurableCopyRegistrar(Protocol):
         locator: str,
         durable_path: str,
         access_protocol: str,
+        observed_modified_at: datetime,
     ) -> DurableCopyRegistration: ...
 
 
@@ -528,6 +541,7 @@ class DurableDistributionDriver:
             locator=locator,
             durable_path=verdict.path,
             access_protocol=location.access_protocol,
+            observed_modified_at=verdict.modified_at,
         )
 
         if isinstance(registration, DurableCopyRegisterUnauthorized):
