@@ -89,6 +89,7 @@ from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
+from cora.api._durable_distribution import durable_distribution_lifespan
 from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._flag_watcher import probe_read_grant
@@ -1359,6 +1360,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         ingest_scan=app.state.data.ingest_scan,
                     ),
+                    durable_distribution_lifespan(deps),
                 ):
                     yield
             finally:
