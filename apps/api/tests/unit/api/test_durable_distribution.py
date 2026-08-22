@@ -144,11 +144,17 @@ async def test_sweep_loop_survives_a_tick_that_raises() -> None:
     driver = _RaisingDriver()
     task = asyncio.create_task(_sweep_loop(driver, interval_seconds=0.01))  # type: ignore[arg-type]
     await asyncio.sleep(0.05)
+    still_running = not task.done()
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
 
-    assert driver.calls >= 2
+    # Not an exact tick count: a contended runner can render the logged
+    # traceback slowly enough to fit only one tick in the window, and the
+    # property under test is survival, not throughput. Mirrors
+    # CaptureScanIngestor's own version of this test.
+    assert still_running
+    assert driver.calls >= 1
 
 
 async def test_sweep_loop_propagates_cancellation_instead_of_swallowing_it() -> None:
