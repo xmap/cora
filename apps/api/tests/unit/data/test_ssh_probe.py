@@ -19,6 +19,7 @@ from cora.data.adapters._ssh_probe import (
     run_locate_probe,
     run_probe,
 )
+from cora.shared.probe_error import PROBE_ERROR_ORIGIN_CLIENT, PROBE_ERROR_ORIGIN_TRANSPORT
 
 _CONFIG = SshProbeConfig(
     host="tomdet",
@@ -81,6 +82,20 @@ async def test_run_probe_refuses_a_path_outside_allowed_roots_without_spawning(
     )
     assert response["kind"] == "ProbeError"
     assert "outside the configured allowed roots" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_refusal_carries_the_client_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A refusal before the transport is touched says nothing about
+    whether the next request will succeed, unlike a transport failure;
+    `origin` is how a sweeping caller tells the two apart."""
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+    response = await run_probe(
+        {"op": "describe", "locator_uri": "file:///etc/passwd"}, config=_CONFIG
+    )
+    assert response["origin"] == PROBE_ERROR_ORIGIN_CLIENT
 
 
 @pytest.mark.unit
@@ -288,6 +303,7 @@ async def test_run_probe_times_out_and_kills_the_process(monkeypatch: pytest.Mon
     assert response["kind"] == "ProbeError"
     assert "timed out" in response["detail"]
     assert killed["called"] is True
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 class _ScriptedProcess:
@@ -347,6 +363,7 @@ async def test_run_probe_reports_a_failed_ssh_launch_instead_of_raising(
 
     assert response["kind"] == "ProbeError"
     assert "could not launch ssh" in response["detail"]
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 @pytest.mark.unit
@@ -366,6 +383,7 @@ async def test_run_probe_reports_a_nonzero_ssh_exit_with_the_stderr_tail(
     assert response["kind"] == "ProbeError"
     assert "ssh exited 255" in response["detail"]
     assert "publickey" in response["detail"]
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 @pytest.mark.unit
@@ -380,6 +398,7 @@ async def test_run_probe_reports_an_unparseable_probe_response(
 
     assert response["kind"] == "ProbeError"
     assert "unparseable probe response" in response["detail"]
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 @pytest.mark.unit
@@ -395,6 +414,7 @@ async def test_run_probe_rejects_probe_output_that_is_not_a_json_object(
 
     assert response["kind"] == "ProbeError"
     assert "not a JSON object" in response["detail"]
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 @pytest.mark.unit
@@ -408,6 +428,7 @@ async def test_run_probe_with_empty_probe_output_returns_a_probe_error(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 _DURABLE_CONFIG = SshProbeConfig(
@@ -441,6 +462,7 @@ async def test_run_locate_probe_refuses_a_root_outside_allowed_roots_without_spa
 
     assert response["kind"] == "ProbeError"
     assert "outside the configured allowed roots" in response["detail"]
+    assert response["origin"] == PROBE_ERROR_ORIGIN_CLIENT
 
 
 @pytest.mark.unit
@@ -506,7 +528,7 @@ async def test_run_locate_probe_fills_allowed_roots_from_config_not_the_caller(
         async def __call__(self, *argv: str, **kwargs: Any) -> Any:
             captured["argv"] = argv
             return _ScriptedProcess(
-                returncode=0, stdout=b'{"kind": "Located", "paths": [], "match_count": 0}\n'
+                returncode=0, stdout=b'{"kind": "Located", "matches": [], "match_count": 0}\n'
             )
 
     monkeypatch.setattr("asyncio.create_subprocess_exec", _Capturing())

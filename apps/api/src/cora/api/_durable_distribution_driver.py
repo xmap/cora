@@ -10,7 +10,10 @@ Every dependency below is a narrow Protocol declaring only the calls
 this module makes, following the `CapturePathLookup` precedent: the
 full `CapturePathStore` carries `get` and `get_latest` too, and taking
 the whole thing would let a later edit reach for them without anyone
-noticing the widening.
+noticing the widening. The one exception is `Clock`, which is imported
+from `infrastructure.ports.clock` rather than redeclared: it is already
+the narrowest possible port, and a second copy of it would be two
+names for one idea.
 
 ## The order of writes, and what a crash between them leaves
 
@@ -19,25 +22,52 @@ resolved by looking the row up on `(run_id, host, root)`: mint before
 write and the locator resolves to nothing. So the order is record,
 mint, digest, register, and a crash can land between any two.
 
-That is safe, and by construction rather than by retry luck:
+An earlier version of this module claimed that was safe by
+construction. It was not, and the correction is worth stating plainly
+because the false version is the intuitive one:
 
   - Crash after recording, before registering. The vault row is a TRUE
-    statement (the file is there), the Dataset is still a candidate
-    because candidacy turns on the Distribution and not the vault row,
+    statement (the file is there), the Dataset is still a candidate,
     and the next tick redoes the whole thing. The re-record is an
-    upsert on the same key, so it is a no-op.
-  - Crash after registering. The Distribution exists, so the candidate
-    query no longer returns this Dataset and nothing repeats.
-  - Registration landing twice despite that. The locator is derived
-    from `(run_id, host, root, filename)` and is therefore identical on
-    a retry, so the projection's partial unique index on
-    `(dataset_id, supply_id, uri)` catches it and the writer swallows
-    it. The read model stays correct; a duplicate event is the residue.
+    upsert on the same key carrying the same substrate timestamp, so
+    it is a no-op. This part was always fine.
+  - Crash after registering, or simply the tick after a success.
+    Candidacy is NOT read from the write model. It is read from
+    `proj_data_distribution_summary`, a projection advanced by
+    `infrastructure.projection.worker` on its own asyncio task with
+    exponential backoff to 60s. Until that worker catches up, the
+    Dataset is still returned as a candidate. Nothing about the
+    successful register makes it stop being one.
+
+That second point is why `DurableCopyRegistrar` is required to be
+idempotent and to establish that from the WRITE model, before it
+digests anything. Without it, a stalled projector does not merely
+duplicate an event: it re-reads tens of gigabytes over SSH on every
+tick, indefinitely. The projection's partial unique index would keep
+the READ model correct throughout, which is precisely what makes the
+failure invisible while it burns the network.
+
+The residue that remains, stated rather than papered over: while the
+projection lags, each tick still re-probes an already-registered
+Dataset. That costs one directory listing over an already-open hop,
+and it is self-correcting the moment the projector advances. It is not
+worth a second source of truth in process memory, which would lie
+after a restart.
 
 What this deliberately does NOT do is try to make the digest and the
 append atomic. They cannot be: one reads bytes on another host over
 SSH, and holding a transaction open across that is worse than the
 duplicate it would prevent.
+
+## What stops a tick, and what merely skips a candidate
+
+Only two conditions are systemic, meaning the next candidate would hit
+exactly the same wall: a transport that will not carry a request, and
+an agent whose grant to register is missing. Everything else is scoped
+to one Dataset and must skip, so that one misconfigured Run cannot
+wedge the sweep for every other. This mirrors `CaptureScanIngestor`,
+where a gate review removed exactly this head-of-line blocking once
+already.
 
 ## Personal data
 
@@ -48,10 +78,17 @@ access-controlled read and leaks nothing into a sink that cannot be
 erased. Surfacing which folders collided needs an authenticated
 operator read that does not exist yet; that gap is real and named here
 rather than papered over by logging the paths.
+
+Refusal text IS logged, and that is safe for a structural reason
+rather than a promise: client-side refusals are fixed strings, and the
+remote probe renders exception TYPES rather than messages, so a
+filesystem error cannot carry the filename it failed on into this log
+line. See `cora.data._remote_scan_probe._main`.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Protocol
 
@@ -59,12 +96,14 @@ from cora.api._durable_copy_verdict import (
     DurableCopyAmbiguous,
     DurableCopyFound,
     DurableCopyNotYetThere,
+    DurableCopyRefused,
     DurableCopyUnreachable,
     read_locate_response,
 )
 from cora.api._durable_distribution_sweep import months_to_search
 from cora.data.adapters.capture_path_locator import mint_capture_path_locator
 from cora.infrastructure.logging import get_logger
+from cora.shared.storage_root import normalize_storage_root
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -74,6 +113,7 @@ if TYPE_CHECKING:
         DurableDistributionCandidate,
         DurableDistributionCandidateLookup,
     )
+    from cora.infrastructure.ports.clock import Clock
 
 _log = get_logger(__name__)
 
@@ -89,10 +129,46 @@ class _Outcome(Enum):
     STOP_TICK = auto()
 
 
-class Clock(Protocol):
-    """The one clock call this module makes."""
+@dataclass(frozen=True)
+class DurableCopyRegistered:
+    """The digest ran and a new Distribution was appended."""
 
-    def now(self) -> datetime: ...
+    distribution_id: UUID
+
+
+@dataclass(frozen=True)
+class DurableCopyAlreadyRegistered:
+    """Already registered, established from the write model without
+    digesting anything. The expected answer while the Distribution
+    projection is catching up, and the reason that lag costs a
+    directory listing rather than a re-read of the whole file."""
+
+    distribution_id: UUID
+
+
+@dataclass(frozen=True)
+class DurableCopyRegisterRefused:
+    """One registration did not happen: the bytes would not read, a
+    cross-reference was missing, or the command was rejected. Scoped
+    to one Dataset, so the sweep carries on to the next."""
+
+    detail: str
+    """Never the path. Same discipline as the probe's refusal text."""
+
+
+@dataclass(frozen=True)
+class DurableCopyRegisterUnauthorized:
+    """The registering agent holds no grant for this command. Identical
+    for every candidate, so the sweep stops instead of failing the same
+    way ten more times."""
+
+
+DurableCopyRegistration = (
+    DurableCopyRegistered
+    | DurableCopyAlreadyRegistered
+    | DurableCopyRegisterRefused
+    | DurableCopyRegisterUnauthorized
+)
 
 
 class DurableLocationBinding(Protocol):
@@ -151,9 +227,30 @@ class DurableCopyRegistrar(Protocol):
     wasted work, and splitting them here would put the composition
     root's transaction shape into this module's vocabulary.
 
-    Returns the new Distribution id, or `None` when the bytes could not
-    be read, which is distinct from a refusal and is the caller's cue
-    to leave the Dataset a candidate.
+    ## Two obligations an implementor MUST meet
+
+    **Idempotent on `(dataset_id, supply_id, locator)`, established
+    from the WRITE model.** The caller's candidate list comes from a
+    projection that lags, so this method WILL be called again for a
+    copy it already registered. Answering `DurableCopyAlreadyRegistered`
+    is not an optimization; it is what keeps a stalled projector from
+    re-reading the file on every tick forever. Checking the projection
+    instead would be no check at all, since that is the same lagging
+    source that produced the duplicate call.
+
+    **Check before digesting.** The check is cheap and the digest is
+    tens of gigabytes over SSH. An implementation that digests first
+    and dedupes afterwards satisfies the letter of idempotence and none
+    of its purpose.
+
+    ## Why no principal is passed in
+
+    The identity the register runs as belongs to the implementor, which
+    is the composition root that also owns the handler and its
+    correlation id. Threading it through here would be pass-through
+    with no decision attached. What this module DOES need is the
+    authorization OUTCOME, because that alone decides whether to stop
+    the tick, and `DurableCopyRegisterUnauthorized` carries it.
     """
 
     async def register(
@@ -164,7 +261,7 @@ class DurableCopyRegistrar(Protocol):
         locator: str,
         durable_path: str,
         access_protocol: str,
-    ) -> UUID | None: ...
+    ) -> DurableCopyRegistration: ...
 
 
 class DurableDistributionDriver:
@@ -223,8 +320,15 @@ class DurableDistributionDriver:
             )
             return _Outcome.SKIP
 
+        # Normalized once, here, and then used for the probe, the vault
+        # key and the locator alike. `resolve` looks the vault row up by
+        # this exact string, so a deployment that spelled the root with
+        # a trailing slash would otherwise mint an immutable locator
+        # that resolves to nothing.
+        root = normalize_storage_root(location.root)
+
         response = await self._probe.locate(
-            root=location.root,
+            root=root,
             months=months,
             directory_suffix=candidate.directory_suffix,
             filename=candidate.filename,
@@ -243,14 +347,23 @@ class DurableDistributionDriver:
             return _Outcome.SKIP
 
         if isinstance(verdict, DurableCopyUnreachable):
-            # The probe could not look. Stop the tick rather than walk
-            # every remaining candidate into the same dead transport.
+            # The hop itself failed, so every remaining candidate would
+            # fail the same way. This is one of only two systemic
+            # conditions; a refusal of THIS request is not one.
             _log.warning(
                 "durable_distribution.probe_unreachable",
                 dataset_id=str(candidate.dataset_id),
                 detail=verdict.detail,
             )
             return _Outcome.STOP_TICK
+
+        if isinstance(verdict, DurableCopyRefused):
+            _log.warning(
+                "durable_distribution.probe_refused",
+                dataset_id=str(candidate.dataset_id),
+                detail=verdict.detail,
+            )
+            return _Outcome.SKIP
 
         if isinstance(verdict, DurableCopyAmbiguous):
             # Expected roughly one month in eight, for internal
@@ -264,12 +377,13 @@ class DurableDistributionDriver:
             )
             return _Outcome.SKIP
 
-        return await self._record_and_register(candidate, location, verdict)
+        return await self._record_and_register(candidate, location, root, verdict)
 
     async def _record_and_register(
         self,
         candidate: DurableDistributionCandidate,
         location: DurableLocationBinding,
+        root: str,
         verdict: DurableCopyFound,
     ) -> _Outcome:
         """Record the location, then register the copy found at it.
@@ -277,25 +391,29 @@ class DurableDistributionDriver:
         Recording first is required, not stylistic: the locator the
         Distribution carries resolves by looking this row up.
         """
-        observed_at = self._clock.now()
         await self._capture_paths.upsert(
             run_id=candidate.run_id,
             observed_path=verdict.path,
-            observed_at=observed_at,
-            created_at=observed_at,
+            # The FILE's timestamp, not `clock.now()`. That is what the
+            # column means, and it is also what makes the re-record on a
+            # retry a true no-op: the upsert is monotonic in
+            # `observed_at`, so CORA's clock would write a newer value
+            # every time while claiming to state the same fact.
+            observed_at=verdict.modified_at,
+            created_at=self._clock.now(),
             host=self._host,
-            root=location.root,
+            root=root,
         )
 
-        # Minted from the location just recorded, not from a fresh
-        # read of settings: `resolve` looks the row up by exactly these
-        # two values, so deriving them twice is how a locator comes to
-        # resolve to nothing.
+        # Minted from the same `root` and `host` just recorded, not from
+        # a fresh read of settings: `resolve` looks the row up by
+        # exactly these two values, so deriving them twice is how a
+        # locator comes to resolve to nothing.
         locator = mint_capture_path_locator(
             observed_path=verdict.path,
             run_id=candidate.run_id,
             host=self._host,
-            root=location.root,
+            root=root,
         )
         if locator is None:
             _log.warning(
@@ -304,27 +422,47 @@ class DurableDistributionDriver:
             )
             return _Outcome.SKIP
 
-        distribution_id = await self._registrar.register(
+        registration = await self._registrar.register(
             dataset_id=candidate.dataset_id,
             supply_id=location.supply_id,
             locator=locator,
             durable_path=verdict.path,
             access_protocol=location.access_protocol,
         )
-        if distribution_id is None:
-            # The bytes could not be read or the register was refused.
-            # The vault row stays: it is a true statement either way,
-            # and the Dataset stays a candidate for the next tick.
+
+        if isinstance(registration, DurableCopyRegisterUnauthorized):
             _log.warning(
-                "durable_distribution.register_failed",
+                "durable_distribution.register_unauthorized",
                 dataset_id=str(candidate.dataset_id),
+            )
+            return _Outcome.STOP_TICK
+
+        if isinstance(registration, DurableCopyRegisterRefused):
+            # The vault row stays: it is a true statement whether or not
+            # the register succeeded, and the Dataset stays a candidate.
+            _log.warning(
+                "durable_distribution.register_refused",
+                dataset_id=str(candidate.dataset_id),
+                detail=registration.detail,
+            )
+            return _Outcome.SKIP
+
+        if isinstance(registration, DurableCopyAlreadyRegistered):
+            # The projection has not caught up with a register this
+            # sweep already did. SKIP rather than SUCCESS: no work
+            # happened, so the tick should spend its turn on a Dataset
+            # that still needs one.
+            _log.info(
+                "durable_distribution.already_registered",
+                dataset_id=str(candidate.dataset_id),
+                distribution_id=str(registration.distribution_id),
             )
             return _Outcome.SKIP
 
         _log.info(
             "durable_distribution.registered",
             dataset_id=str(candidate.dataset_id),
-            distribution_id=str(distribution_id),
+            distribution_id=str(registration.distribution_id),
         )
         return _Outcome.SUCCESS
 
@@ -332,8 +470,12 @@ class DurableDistributionDriver:
 __all__ = [
     "MAX_CANDIDATES_PER_TICK",
     "CapturePathRecorder",
-    "Clock",
+    "DurableCopyAlreadyRegistered",
+    "DurableCopyRegisterRefused",
+    "DurableCopyRegisterUnauthorized",
+    "DurableCopyRegistered",
     "DurableCopyRegistrar",
+    "DurableCopyRegistration",
     "DurableDistributionDriver",
     "DurableLocationBinding",
     "DurableLocationLookup",

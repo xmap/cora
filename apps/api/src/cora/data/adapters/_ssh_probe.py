@@ -43,6 +43,11 @@ a dead host, a timed-out probe, a malformed response, or a refused
 locator all return a `{"kind": "ProbeError", ...}` dict, never an
 exception. The two adapter classes translate that into the shape their
 own port expects (`Unreadable` / `Unreachable`).
+
+Every `ProbeError` this module itself produces carries an `origin` (see
+`cora.shared.probe_error`) saying whether the transport was touched.
+Responses relayed from the remote process carry none, and correctly so:
+they arrived over a transport that demonstrably works.
 """
 
 from __future__ import annotations
@@ -55,6 +60,10 @@ from typing import Any, cast
 from urllib.parse import unquote, urlparse
 
 from cora.shared.path_segment import is_safe_path_segment
+from cora.shared.probe_error import (
+    PROBE_ERROR_ORIGIN_CLIENT,
+    PROBE_ERROR_ORIGIN_TRANSPORT,
+)
 from cora.shared.storage_root import matched_storage_root
 
 _PROBE_MODULE = "cora.data._remote_scan_probe"
@@ -107,7 +116,22 @@ def _refuse(reason: str) -> dict[str, Any]:
     # log verbatim on refusal (`reason=` / `error_detail=`), and the
     # locator is the same personal-data value
     # `run.aggregates.run.capture_path` vaults rather than logs.
-    return {"kind": "ProbeError", "detail": f"refused before probing: {reason}"}
+    #
+    # `origin` separates "this ONE request was malformed" from "the hop
+    # is down", which a sweeping caller must not conflate: the first
+    # says skip this item, the second says stop trying. A refusal here
+    # has not touched the transport at all, so it says nothing about
+    # the next request.
+    return {
+        "kind": "ProbeError",
+        "origin": PROBE_ERROR_ORIGIN_CLIENT,
+        "detail": f"refused before probing: {reason}",
+    }
+
+
+def _transport_failure(detail: str) -> dict[str, Any]:
+    """A failure of the hop itself, which the next request will hit too."""
+    return {"kind": "ProbeError", "origin": PROBE_ERROR_ORIGIN_TRANSPORT, "detail": detail}
 
 
 async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
@@ -213,7 +237,7 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
             stderr=asyncio.subprocess.PIPE,
         )
     except OSError as exc:
-        return {"kind": "ProbeError", "detail": f"could not launch ssh: {exc}"}
+        return _transport_failure(f"could not launch ssh: {exc}")
 
     try:
         stdout, stderr = await asyncio.wait_for(
@@ -224,21 +248,18 @@ async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[st
         process.kill()
         with contextlib.suppress(ProcessLookupError):
             await process.wait()
-        return {
-            "kind": "ProbeError",
-            "detail": f"timed out after {config.command_timeout_seconds}s",
-        }
+        return _transport_failure(f"timed out after {config.command_timeout_seconds}s")
 
     if process.returncode != 0:
         tail = stderr.decode(errors="replace").strip()[-300:]
-        return {"kind": "ProbeError", "detail": f"ssh exited {process.returncode}: {tail}"}
+        return _transport_failure(f"ssh exited {process.returncode}: {tail}")
 
     try:
         parsed: Any = json.loads(stdout.decode("utf-8").splitlines()[0])
     except (IndexError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        return {"kind": "ProbeError", "detail": f"unparseable probe response: {exc}"}
+        return _transport_failure(f"unparseable probe response: {exc}")
     if not isinstance(parsed, dict):
-        return {"kind": "ProbeError", "detail": "probe response is not a JSON object"}
+        return _transport_failure("probe response is not a JSON object")
     return cast("dict[str, Any]", parsed)
 
 

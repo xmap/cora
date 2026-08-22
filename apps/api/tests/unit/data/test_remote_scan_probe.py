@@ -16,7 +16,9 @@ verdict `_response_to_result` on the client side can round-trip.
 # pyright: reportPrivateUsage=false
 
 import io
+import os
 from pathlib import Path
+from typing import Any
 
 import h5py
 import numpy as np
@@ -232,6 +234,35 @@ async def test_main_rejects_a_json_request_that_is_not_an_object(
     assert json.loads(capsys.readouterr().out.splitlines()[0])["kind"] == "ProbeError"
 
 
+async def test_main_catch_all_never_renders_the_exceptions_message(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The exception TYPE only, never `str(exc)`: the paths this process
+    walks embed a PI surname, and an `OSError` subclass renders the
+    filename it failed on. A message carrying that fragment must never
+    reach the response, only the class name."""
+    import json
+
+    from cora.data import _remote_scan_probe
+
+    secret_fragment = "Smith-1015116/scan_005.h5"
+
+    async def _boom(request: dict[str, Any]) -> dict[str, Any]:
+        raise OSError(f"could not stat {secret_fragment}")
+
+    monkeypatch.setattr(_remote_scan_probe, "_handle", _boom)
+    monkeypatch.setattr(
+        "sys.stdin", io.StringIO(json.dumps({"op": "describe", "locator_uri": "file:///x"}) + "\n")
+    )
+
+    await _remote_scan_probe._main()
+
+    response = json.loads(capsys.readouterr().out.splitlines()[0])
+    assert response["kind"] == "ProbeError"
+    assert response["detail"] == "unhandled OSError"
+    assert secret_fragment not in response["detail"]
+
+
 def _durable_tree(
     root: Path, *, experiment: str, filename: str = "scan_005.h5", month: str = "2026-08"
 ) -> Path:
@@ -271,7 +302,24 @@ async def test_locate_op_finds_the_experiment_directory_by_proposal_suffix(
 
     assert response["kind"] == "Located"
     assert response["match_count"] == 1
-    assert response["paths"] == [str(scan_path)]
+    assert response["matches"] == [
+        {"path": str(scan_path), "modified_at": scan_path.stat().st_mtime}
+    ]
+
+
+async def test_locate_op_reports_the_matched_files_own_modification_time(
+    tmp_path: Path,
+) -> None:
+    """`modified_at` is the SUBSTRATE's timestamp, read on the side that
+    can see the file, not derived or defaulted; a known `st_mtime` set
+    via `os.utime` must come back unchanged."""
+    scan_path = _durable_tree(tmp_path, experiment="2026-08-Haridy-1015116")
+    known_mtime = 1755000000.0
+    os.utime(scan_path, (known_mtime, known_mtime))
+
+    response = await _handle(_locate_request(tmp_path))
+
+    assert response["matches"][0]["modified_at"] == known_mtime
 
 
 async def test_locate_op_reports_every_match_when_the_suffix_is_ambiguous(
@@ -292,7 +340,7 @@ async def test_locate_op_with_no_match_reports_zero_rather_than_failing(tmp_path
 
     assert response["kind"] == "Located"
     assert response["match_count"] == 0
-    assert response["paths"] == []
+    assert response["matches"] == []
 
 
 async def test_locate_op_with_an_absent_month_directory_reports_zero(tmp_path: Path) -> None:
@@ -315,7 +363,9 @@ async def test_locate_op_finds_an_experiment_filed_under_a_neighbouring_month(
     response = await _handle(_locate_request(tmp_path, months=["2026-08", "2026-07"]))
 
     assert response["match_count"] == 1
-    assert response["paths"] == [str(scan_path)]
+    assert response["matches"] == [
+        {"path": str(scan_path), "modified_at": scan_path.stat().st_mtime}
+    ]
 
 
 async def test_locate_op_refuses_an_empty_month_list(tmp_path: Path) -> None:

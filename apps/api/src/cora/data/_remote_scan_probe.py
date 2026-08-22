@@ -80,7 +80,7 @@ the experiment month plus its neighbours because beamtime can straddle
 a month boundary; it has no reason to sweep the archive."""
 
 MAX_LOCATE_MATCHES = 8
-"""Cap on the paths one `locate` verdict carries. `match_count` is
+"""Cap on the matches one `locate` verdict carries. `match_count` is
 reported UNCAPPED beside them, so a caller can tell 2 matches from 50
 even though it only ever sees the first few: the caller refuses
 anything but exactly one match, and a silently truncated list would let
@@ -123,6 +123,14 @@ def _locate(request: dict[str, Any], *, allowed_roots: tuple[str, ...]) -> dict[
     re-confined afterwards so a symlink out of the tree is refused
     rather than followed. Deciding what a given match COUNT means is
     the caller's policy, not this process's: it reports what it found.
+
+    Each match carries the file's own `st_mtime` beside its path. The
+    caller vaults that as `observed_at`, a column whose stated meaning
+    is the SUBSTRATE's timestamp rather than CORA's clock, and only
+    this side can read it. Sending it with the match is also what makes
+    a retry idempotent: the vault's upsert is monotonic in
+    `observed_at`, so a re-probe of an unchanged file writes the same
+    value instead of a newer one.
     """
     root = request.get("root")
     if not isinstance(root, str):
@@ -160,22 +168,32 @@ def _locate(request: dict[str, Any], *, allowed_roots: tuple[str, ...]) -> dict[
             continue
     entries.sort()
 
-    matches: list[str] = []
+    matches: list[dict[str, Any]] = []
     for entry in entries:
         if not entry.name.endswith(directory_suffix):
             continue
         candidate = entry / subdirectory / filename if subdirectory else entry / filename
+        # Every filesystem call on `candidate` stays inside this block.
+        # `resolve`, `is_file` and `stat` all raise `OSError` subclasses
+        # whose `str()` embeds the filename they failed on, and this
+        # tree's filenames sit under a directory named for a person. One
+        # such call left outside the guard is all it takes for that
+        # string to reach the caller through `_main`'s catch-all, which
+        # is exactly how `is_file` leaked before.
         try:
             resolved = candidate.resolve(strict=True)
+            if not resolved.is_file():
+                continue
+            modified_at = resolved.stat().st_mtime
         except OSError:
             continue
-        if not resolved.is_file() or matched_storage_root(str(resolved), allowed_roots) is None:
+        if matched_storage_root(str(resolved), allowed_roots) is None:
             continue
-        matches.append(str(resolved))
+        matches.append({"path": str(resolved), "modified_at": modified_at})
 
     return {
         "kind": "Located",
-        "paths": matches[:MAX_LOCATE_MATCHES],
+        "matches": matches[:MAX_LOCATE_MATCHES],
         "match_count": len(matches),
     }
 
@@ -219,7 +237,13 @@ async def _main() -> None:
             raise TypeError("request is not a JSON object")
         response = await _handle(cast("dict[str, Any]", parsed))
     except Exception as exc:
-        response = {"kind": "ProbeError", "detail": f"{type(exc).__name__}: {exc}"}
+        # The exception TYPE only, never `str(exc)`. The paths this
+        # process walks embed a PI surname, and the exceptions most
+        # likely to land here are `OSError` subclasses that render the
+        # filename they failed on. A class name cannot carry one, which
+        # makes the no-path guarantee structural rather than a promise
+        # about the correctness of every call above.
+        response = {"kind": "ProbeError", "detail": f"unhandled {type(exc).__name__}"}
     sys.stdout.write(json.dumps(response))
     sys.stdout.write("\n")
     sys.stdout.flush()
