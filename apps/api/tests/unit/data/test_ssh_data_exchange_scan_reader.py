@@ -22,6 +22,7 @@ _CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM",),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=30.0,
+    max_walk_seconds=60.0,
 )
 
 
@@ -195,6 +196,28 @@ async def test_describe_leaves_captured_at_none_when_the_probe_cannot_date_the_s
 
     assert isinstance(result, Description)
     assert result.captured_at is None
+
+
+@pytest.mark.unit
+async def test_describe_unrecognized_response_shape_does_not_dump_the_whole_dict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mirrors the checksum computer's identical fix: a response this
+    adapter cannot recognize must never fall back to dumping the whole
+    probe dict, which could relay a path through an unrecognized field."""
+    secret_fragment = "Smith-1015116"
+
+    async def _fake_run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
+        return {"kind": "SomeFutureKind", "path": f"/gdata/dm/2BM/2026-08-{secret_fragment}/x.h5"}
+
+    monkeypatch.setattr(
+        "cora.data.adapters.ssh_data_exchange_scan_reader.run_probe", _fake_run_probe
+    )
+    reader = SshDataExchangeScanReader(config=_CONFIG)
+    result = await reader.describe(locator_uri="file:///local1/2BM/scan.h5")
+
+    assert isinstance(result, Unreadable)
+    assert secret_fragment not in result.reason
 
 
 @pytest.mark.unit

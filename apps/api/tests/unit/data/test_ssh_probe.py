@@ -27,6 +27,7 @@ _CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM",),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=5.0,
+    max_walk_seconds=60.0,
 )
 
 _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
@@ -108,6 +109,22 @@ async def test_run_probe_refusal_detail_never_carries_the_locator(
     monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
     response = await run_probe(
         {"op": "describe", "locator_uri": f"file:///other-root/{_PERSONAL_PATH_FRAGMENT}/x.h5"},
+        config=_CONFIG,
+    )
+    assert response["kind"] == "ProbeError"
+    assert _PERSONAL_PATH_FRAGMENT not in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_checksum_op_refusal_detail_never_carries_the_locator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same rule as `describe`, exercised on the `checksum` op: both ops
+    share the one client-side guard, and a fix pinned only on `describe`
+    would leave the sibling op unverified."""
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+    response = await run_probe(
+        {"op": "checksum", "locator_uri": f"file:///other-root/{_PERSONAL_PATH_FRAGMENT}/x.h5"},
         config=_CONFIG,
     )
     assert response["kind"] == "ProbeError"
@@ -231,6 +248,7 @@ async def test_run_probe_floors_a_sub_second_connect_timeout_to_one(
         allowed_roots=("/local1/2BM",),
         connect_timeout_seconds=0.2,
         command_timeout_seconds=5.0,
+        max_walk_seconds=60.0,
     )
     await run_probe({"op": "describe", "locator_uri": "file:///local1/2BM/scan.h5"}, config=config)
 
@@ -296,6 +314,7 @@ async def test_run_probe_times_out_and_kills_the_process(monkeypatch: pytest.Mon
         allowed_roots=("/local1/2BM",),
         connect_timeout_seconds=5.0,
         command_timeout_seconds=0.05,
+        max_walk_seconds=60.0,
     )
     response = await run_probe(
         {"op": "describe", "locator_uri": "file:///local1/2BM/scan.h5"}, config=config
@@ -442,6 +461,7 @@ _DURABLE_CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM", "/gdata/dm/2BM"),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=5.0,
+    max_walk_seconds=60.0,
 )
 
 

@@ -50,7 +50,10 @@ def resolve_confined_file_uri(uri: str, allowed_roots: tuple[str, ...]) -> Resol
         real_path = os.path.realpath(raw_path)
     except (OSError, ValueError) as exc:
         # ValueError covers an embedded null byte in the decoded path.
-        return Refused(reason=f"path resolution failed: {exc}")
+        # The exception TYPE only: `str(exc)` on an OSError re-embeds
+        # the very path this whole module exists to keep confined, and
+        # this reason string is logged verbatim by both callers.
+        return Refused(reason=f"path resolution failed: {type(exc).__name__}")
 
     for root in allowed_roots:
         try:

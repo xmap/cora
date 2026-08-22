@@ -158,6 +158,70 @@ async def test_describe_op_on_hdf5_without_the_exchange_layout_returns_unrecogni
     assert response["kind"] == "Unrecognized"
 
 
+async def test_checksum_op_honors_a_configured_max_walk_seconds(tmp_path: Path) -> None:
+    """A `max_walk_seconds` in the request must reach the composed
+    `PosixChecksumAdapter`, not the module's own hardcoded default: an
+    effectively-zero (but valid) walk budget must time the digest out
+    even on tiny bytes, proving the value is READ rather than ignored."""
+    scan_path = tmp_path / "scan.h5"
+    scan_path.write_bytes(b"x" * 10)
+
+    response = await _handle(
+        {
+            "op": "checksum",
+            "locator_uri": scan_path.as_uri(),
+            "allowed_roots": [str(tmp_path)],
+            "supply_id": "01900000-0000-7000-8000-000000000001",
+            "max_walk_seconds": 1e-9,
+        }
+    )
+
+    assert response["kind"] == "Unreachable"
+    assert "max_walk_seconds" in response["error_detail"]
+
+
+@pytest.mark.parametrize("value", [0, -5, "60", True, [60]])
+async def test_checksum_op_rejects_a_malformed_max_walk_seconds(
+    tmp_path: Path, value: object
+) -> None:
+    scan_path = tmp_path / "scan.h5"
+    scan_path.write_bytes(b"x")
+
+    response = await _handle(
+        {
+            "op": "checksum",
+            "locator_uri": scan_path.as_uri(),
+            "allowed_roots": [str(tmp_path)],
+            "supply_id": "01900000-0000-7000-8000-000000000001",
+            "max_walk_seconds": value,
+        }
+    )
+
+    assert response["kind"] == "ProbeError"
+    assert "max_walk_seconds" in response["detail"]
+
+
+async def test_checksum_op_with_no_max_walk_seconds_falls_back_to_the_adapter_default(
+    tmp_path: Path,
+) -> None:
+    """Backward-compatible: a request with no `max_walk_seconds` at all
+    (an older client) must still succeed, using the composed adapter's
+    own default rather than being refused as malformed."""
+    scan_path = tmp_path / "scan.h5"
+    scan_path.write_bytes(b"deterministic bytes for a digest")
+
+    response = await _handle(
+        {
+            "op": "checksum",
+            "locator_uri": scan_path.as_uri(),
+            "allowed_roots": [str(tmp_path)],
+            "supply_id": "01900000-0000-7000-8000-000000000001",
+        }
+    )
+
+    assert response["kind"] == "ComputedChecksum"
+
+
 async def test_checksum_op_outside_allowed_roots_returns_unreachable(tmp_path: Path) -> None:
     scan_path = tmp_path / "scan.h5"
     scan_path.write_bytes(b"x")

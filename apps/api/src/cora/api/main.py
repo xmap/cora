@@ -69,6 +69,7 @@ from cora.agent import (
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
+    seed_durable_copy_registrar_agent,
     seed_experiment_steerer_agent,
     seed_language_models,
     seed_procedure_watcher_agent,
@@ -88,6 +89,7 @@ from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
+from cora.api._durable_distribution import durable_distribution_lifespan
 from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._flag_watcher import probe_read_grant
@@ -195,6 +197,7 @@ from cora.federation.adapters.in_memory_signature_port import InMemorySignatureP
 from cora.infrastructure.adapters.in_memory_signer import InMemorySigner
 from cora.infrastructure.auth.bearer_auth_middleware import BearerAuthMiddleware
 from cora.infrastructure.auth.exception_handlers import register_auth_exception_handlers
+from cora.infrastructure.capture_scan_ingestor_binding import durable_roots
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import build_kernel
 from cora.infrastructure.idempotency_pruner import idempotency_pruner_lifespan
@@ -246,6 +249,7 @@ from cora.safety import (
     wire_safety,
 )
 from cora.safety.adapters import PostgresClearanceLookup, PostgresClearanceTemplateLookup
+from cora.shared.storage_root import normalize_storage_root
 from cora.subject import (
     SubjectHandlers,
     register_subject_projections,
@@ -464,6 +468,21 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     header), so its value is realized precisely while recording is off.
     It needs only the shadow observer running to have anything to write
     from.
+
+    Also refuses to boot with durable_distribution_sweep_enabled=True
+    unless four conditions all hold: capture_path_recording_enabled is
+    itself True (the sweep's candidate signal is the same resolved
+    run_capture_path row CaptureScanIngestor reads); scan_probe_remote_host
+    is set (SshLocateProbe is the only LocateProbe this codebase ships,
+    so with no remote host there is no way to find a durable copy at
+    all); at least one location across capture_scan_ingestor_bindings is
+    marked durable (with none, the sweep can never find a copy to
+    record); and every durable root is a member of
+    scan_probe_allowed_roots SPECIFICALLY, not merely the union of it and
+    posix_checksum_roots that CaptureScanIngestorBinding's own validator
+    checks -- a durable root reachable only by the local pair is
+    boot-legal for ingest but would make every SshLocateProbe call
+    refuse.
     """
     if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
         msg = (
@@ -511,6 +530,46 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
             "observer to record reach from without it."
         )
         raise RuntimeError(msg)
+    if settings.durable_distribution_sweep_enabled:
+        if not settings.capture_path_recording_enabled:
+            msg = (
+                "DURABLE_DISTRIBUTION_SWEEP_ENABLED=true requires "
+                "CAPTURE_PATH_RECORDING_ENABLED=true. The sweep's only candidate "
+                "signal is a resolved run_capture_path row; with path recording "
+                "off no Dataset ever becomes a candidate."
+            )
+            raise RuntimeError(msg)
+        if settings.scan_probe_remote_host is None:
+            msg = (
+                "DURABLE_DISTRIBUTION_SWEEP_ENABLED=true requires "
+                "SCAN_PROBE_REMOTE_HOST to be set. SshLocateProbe is the only "
+                "LocateProbe this codebase ships; with no remote host configured "
+                "there is no way to find the durable copy at all, only a way to "
+                "digest one CORA's own host happens to mount (SCAN_PROBE_ALLOWED_ROOTS "
+                "has no effect without this setting either)."
+            )
+            raise RuntimeError(msg)
+        durable = durable_roots(settings.capture_scan_ingestor_bindings)
+        if not durable:
+            msg = (
+                "DURABLE_DISTRIBUTION_SWEEP_ENABLED=true requires at least one "
+                "location marked durable in CAPTURE_SCAN_INGESTOR_BINDINGS. "
+                "With none configured the sweep can never find a durable copy "
+                "to record."
+            )
+            raise RuntimeError(msg)
+        probed = {normalize_storage_root(root) for root in settings.scan_probe_allowed_roots}
+        unreachable = sorted(durable - probed)
+        if unreachable:
+            msg = (
+                "DURABLE_DISTRIBUTION_SWEEP_ENABLED=true requires every durable "
+                f"root to be in SCAN_PROBE_ALLOWED_ROOTS specifically: {unreachable} "
+                "is not. CaptureScanIngestorBinding's own validator only checks "
+                "the union of POSIX_CHECKSUM_ROOTS and SCAN_PROBE_ALLOWED_ROOTS, "
+                "so a root reachable only by the local pair passes that check "
+                "and then makes every SshLocateProbe call refuse."
+            )
+            raise RuntimeError(msg)
     if not settings.run_witness_recording_enabled:
         return
     missing: list[str] = []
@@ -1115,6 +1174,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # be revoked without blinding the witness, progress feed, or
             # baseline reads).
             await seed_capture_scan_ingestor_agent(deps)
+            # same shape for DurableCopyRegistrar (deterministic sweep agent;
+            # its own principal so the RegisterDistribution grant can be
+            # revoked without blinding the scan ingestor).
+            await seed_durable_copy_registrar_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1297,6 +1360,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         ingest_scan=app.state.data.ingest_scan,
                     ),
+                    durable_distribution_lifespan(deps),
                 ):
                     yield
             finally:

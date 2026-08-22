@@ -229,6 +229,7 @@ async def test_one_match_records_the_location_then_registers_it() -> None:
     assert len(registrar.calls) == 1
     assert registrar.calls[0]["supply_id"] == _SUPPLY_ID
     assert registrar.calls[0]["durable_path"] == _FOUND
+    assert registrar.calls[0]["observed_modified_at"] == _MTIME_AS_DATETIME
 
 
 async def test_the_registered_locator_resolves_back_to_the_recorded_path() -> None:

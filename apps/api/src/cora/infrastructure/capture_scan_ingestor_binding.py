@@ -42,6 +42,7 @@ other per-code table's optionality.
 """
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
@@ -214,9 +215,55 @@ def durable_supply_ids(bindings: Mapping[str, CaptureScanIngestorBinding]) -> fr
     )
 
 
+@dataclass(frozen=True)
+class DurableLocationBinding:
+    """The one durable location configured for a capture code.
+
+    Structurally satisfies
+    `cora.api._durable_distribution_driver.DurableLocationBinding` (same
+    four properties, by name) without importing it: `cora.infrastructure`
+    may not depend on `cora.api` per `tach.toml`, and duck typing is
+    exactly what that Protocol asks a caller to provide.
+    """
+
+    root: str
+    supply_id: UUID
+    access_protocol: str
+    subdirectory: str | None
+
+
+class CaptureScanIngestorDurableLocationLookup:
+    """`DurableLocationLookup` read directly off the validated binding
+    config; no derived index kept alongside it to fall out of sync.
+
+    `CaptureScanIngestorBinding._validate_locations` already enforces at
+    most one durable location per capture code, so the scan below always
+    finds zero or one match.
+    """
+
+    def __init__(self, bindings: Mapping[str, CaptureScanIngestorBinding]) -> None:
+        self._bindings = bindings
+
+    def durable_location_for(self, capture_code: str) -> DurableLocationBinding | None:
+        binding = self._bindings.get(capture_code)
+        if binding is None:
+            return None
+        for root, location in binding.locations.items():
+            if location.durable:
+                return DurableLocationBinding(
+                    root=root,
+                    supply_id=location.supply_id,
+                    access_protocol=location.access_protocol,
+                    subdirectory=location.subdirectory,
+                )
+        return None
+
+
 __all__ = [
     "CaptureScanIngestorBinding",
+    "CaptureScanIngestorDurableLocationLookup",
     "CaptureScanIngestorLocation",
+    "DurableLocationBinding",
     "durable_roots",
     "durable_supply_ids",
 ]

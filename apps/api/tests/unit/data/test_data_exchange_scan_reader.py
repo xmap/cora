@@ -422,3 +422,35 @@ async def test_describe_non_file_scheme_reads_unreadable(tmp_path: Path) -> None
     result = await _reader(tmp_path).describe(locator_uri="https://example.org/scan.h5")
 
     assert isinstance(result, Unreadable)
+
+
+_PERSONAL_PATH_FRAGMENT = "Smith-1015116"
+
+
+async def test_describe_missing_file_reason_never_carries_the_path(tmp_path: Path) -> None:
+    """A missing file's `os.stat` raises `FileNotFoundError`, whose
+    `str()` renders its own path -- and 2-BM's directory layout embeds a
+    PI surname in exactly that path. The reason must carry the
+    exception TYPE, never its message."""
+    root = tmp_path / _PERSONAL_PATH_FRAGMENT
+    root.mkdir()
+    missing = root / "scan.h5"
+
+    result = await _reader(tmp_path).describe(locator_uri=missing.as_uri())
+
+    assert isinstance(result, Unreadable)
+    assert _PERSONAL_PATH_FRAGMENT not in result.reason
+    assert "FileNotFoundError" in result.reason
+
+
+async def test_describe_non_hdf5_bytes_reason_never_carries_the_path(tmp_path: Path) -> None:
+    root = tmp_path / _PERSONAL_PATH_FRAGMENT
+    root.mkdir()
+    bogus = root / "scan.h5"
+    bogus.write_bytes(b"this is not an HDF5 file")
+
+    result = await _reader(tmp_path).describe(locator_uri=bogus.as_uri())
+
+    assert isinstance(result, Unreadable)
+    assert _PERSONAL_PATH_FRAGMENT not in result.reason
+    assert "OSError" in result.reason

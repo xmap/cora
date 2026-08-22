@@ -24,6 +24,7 @@ _CONFIG = SshProbeConfig(
     allowed_roots=("/local1/2BM",),
     connect_timeout_seconds=5.0,
     command_timeout_seconds=60.0,
+    max_walk_seconds=60.0,
 )
 
 
@@ -42,6 +43,7 @@ async def test_compute_sends_the_checksum_op_and_supply_id(monkeypatch: pytest.M
 
     assert captured["request"]["op"] == "checksum"
     assert captured["request"]["supply_id"] == str(supply_id)
+    assert captured["request"]["max_walk_seconds"] == _CONFIG.max_walk_seconds
 
 
 @pytest.mark.unit
@@ -99,3 +101,25 @@ async def test_compute_malformed_response_fails_toward_unreachable_not_an_except
 
     assert isinstance(result, Unreachable)
     assert "malformed probe response" in result.error_detail
+
+
+@pytest.mark.unit
+async def test_compute_unrecognized_response_shape_does_not_dump_the_whole_dict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A response this adapter cannot recognize (a probe protocol
+    change) used to fall back to `f"unexpected response: {response!r}"`,
+    which relays every field of the probe dict -- including anything
+    unrecognized carrying a path -- into this adapter's own log line.
+    The fallback must be a fixed literal instead."""
+    secret_fragment = "Smith-1015116"
+
+    async def _fake_run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
+        return {"kind": "SomeFutureKind", "path": f"/gdata/dm/2BM/2026-08-{secret_fragment}/x.h5"}
+
+    monkeypatch.setattr("cora.data.adapters.ssh_posix_checksum_computer.run_probe", _fake_run_probe)
+    computer = SshPosixChecksumComputer(config=_CONFIG)
+    result = await computer.compute(locator_uri="file:///local1/2BM/scan.h5", supply_id=uuid4())
+
+    assert isinstance(result, Unreachable)
+    assert secret_fragment not in result.error_detail

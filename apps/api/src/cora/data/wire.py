@@ -182,6 +182,7 @@ def _build_scan_ingest_pair(deps: Kernel) -> tuple[ScanReader, ChecksumComputer]
             allowed_roots=roots,
             connect_timeout_seconds=deps.settings.scan_probe_ssh_connect_timeout_seconds,
             command_timeout_seconds=deps.settings.scan_probe_ssh_command_timeout_seconds,
+            max_walk_seconds=deps.settings.posix_checksum_max_walk_seconds,
         )
         return (
             SshDataExchangeScanReader(

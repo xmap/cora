@@ -33,7 +33,7 @@ Request:
     {"op": "describe", "locator_uri": "file://...", "allowed_roots": [...],
      "captured_at_source": "start_date"|"end_date"}
     {"op": "checksum", "locator_uri": "file://...", "allowed_roots": [...],
-     "supply_id": "<uuid>"}
+     "supply_id": "<uuid>", "max_walk_seconds": 60.0}
 
 Response, one line, always valid JSON, always exit 0: a malformed request
 or an uncaught exception is a `ProbeError` verdict, not a process failure,
@@ -228,7 +228,20 @@ async def _handle(request: dict[str, Any]) -> dict[str, Any]:
             supply_id = UUID(raw_supply_id)
         except ValueError:
             return {"kind": "ProbeError", "detail": "malformed request: supply_id is not a UUID"}
-        computer = PosixChecksumAdapter(allowed_roots=allowed_roots)
+        raw_max_walk_seconds = request.get("max_walk_seconds")
+        if raw_max_walk_seconds is not None and (
+            isinstance(raw_max_walk_seconds, bool)
+            or not isinstance(raw_max_walk_seconds, int | float)
+            or raw_max_walk_seconds <= 0
+        ):
+            return {"kind": "ProbeError", "detail": "malformed request: max_walk_seconds"}
+        computer = (
+            PosixChecksumAdapter(allowed_roots=allowed_roots)
+            if raw_max_walk_seconds is None
+            else PosixChecksumAdapter(
+                allowed_roots=allowed_roots, max_walk_seconds=float(raw_max_walk_seconds)
+            )
+        )
         return _checksum_to_json(
             await computer.compute(locator_uri=locator_uri, supply_id=supply_id)
         )

@@ -55,7 +55,12 @@ class SshPosixChecksumComputer:
         supply_id: UUID,
     ) -> ChecksumComputationResult:
         response = await run_probe(
-            {"op": "checksum", "locator_uri": locator_uri, "supply_id": str(supply_id)},
+            {
+                "op": "checksum",
+                "locator_uri": locator_uri,
+                "supply_id": str(supply_id),
+                "max_walk_seconds": self._config.max_walk_seconds,
+            },
             config=self._config,
         )
         result = _response_to_result(response)
@@ -84,11 +89,11 @@ def _response_to_result(response: dict[str, object]) -> ChecksumComputationResul
             return Unreachable(error_detail=f"malformed probe response: {exc}")
     # "Unreachable", "ProbeError", or any unparseable response: fail
     # toward Unreachable, matching the port's never-raise contract.
-    detail = (
-        response.get("error_detail")
-        or response.get("detail")
-        or f"unexpected response: {response!r}"
-    )
+    # The fallback is a fixed literal, never `{response!r}`: the probe
+    # dict can carry a `detail` this adapter does not recognize, and
+    # dumping the whole dict would relay whatever that value holds
+    # verbatim into this adapter's own log line.
+    detail = response.get("error_detail") or response.get("detail") or "unexpected probe response"
     return Unreachable(error_detail=str(detail))
 
 
