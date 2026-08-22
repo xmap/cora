@@ -43,6 +43,26 @@ a dead host, a timed-out probe, a malformed response, or a refused
 locator all return a `{"kind": "ProbeError", ...}` dict, never an
 exception. The two adapter classes translate that into the shape their
 own port expects (`Unreadable` / `Unreachable`).
+
+Every `ProbeError` this module itself produces carries an `origin` (see
+`cora.shared.probe_error`) saying whether the transport was touched.
+Responses relayed from the remote process carry none, and correctly so:
+they arrived over a transport that demonstrably works.
+
+## No `detail` this module writes can carry a path
+
+Callers log `detail` verbatim, and the trees these probes walk are
+organized into directories named for people. So every `detail`
+constructed here is built only from a fixed literal, a configured
+value (the timeout), an exit code, or an exception TYPE name. Nothing
+interpolates an exception message, the remote's stderr, or its stdout,
+all three of which have carried a path at some point in this module's
+history. Keep it that way: the property holds only because each site
+holds it, and one `{exc}` puts it back.
+
+The property is about what THIS module writes. A `detail` relayed from
+the remote process is that module's to guarantee, and it does so for
+the `locate` op only; see `_remote_scan_probe`.
 """
 
 from __future__ import annotations
@@ -53,6 +73,13 @@ import json
 from dataclasses import dataclass
 from typing import Any, cast
 from urllib.parse import unquote, urlparse
+
+from cora.shared.path_segment import is_safe_path_segment
+from cora.shared.probe_error import (
+    PROBE_ERROR_ORIGIN_CLIENT,
+    PROBE_ERROR_ORIGIN_TRANSPORT,
+)
+from cora.shared.storage_root import matched_storage_root
 
 _PROBE_MODULE = "cora.data._remote_scan_probe"
 
@@ -104,7 +131,22 @@ def _refuse(reason: str) -> dict[str, Any]:
     # log verbatim on refusal (`reason=` / `error_detail=`), and the
     # locator is the same personal-data value
     # `run.aggregates.run.capture_path` vaults rather than logs.
-    return {"kind": "ProbeError", "detail": f"refused before probing: {reason}"}
+    #
+    # `origin` separates "this ONE request was malformed" from "the hop
+    # is down", which a sweeping caller must not conflate: the first
+    # says skip this item, the second says stop trying. A refusal here
+    # has not touched the transport at all, so it says nothing about
+    # the next request.
+    return {
+        "kind": "ProbeError",
+        "origin": PROBE_ERROR_ORIGIN_CLIENT,
+        "detail": f"refused before probing: {reason}",
+    }
+
+
+def _transport_failure(detail: str) -> dict[str, Any]:
+    """A failure of the hop itself, which the next request will hit too."""
+    return {"kind": "ProbeError", "origin": PROBE_ERROR_ORIGIN_TRANSPORT, "detail": detail}
 
 
 async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
@@ -125,7 +167,65 @@ async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[
     if not _prefix_allowed(raw_path, config.allowed_roots):
         return _refuse("path is outside the configured allowed roots")
 
-    payload = {**request, "allowed_roots": list(config.allowed_roots)}
+    return await _invoke({**request, "allowed_roots": list(config.allowed_roots)}, config=config)
+
+
+async def run_locate_probe(
+    *,
+    root: str,
+    months: tuple[str, ...],
+    directory_suffix: str,
+    filename: str,
+    subdirectory: str | None,
+    config: SshProbeConfig,
+) -> dict[str, Any]:
+    """Run one `locate` request against `config.host`; never raises.
+
+    The odd one out: `locate` carries no `locator_uri`, because its job
+    is to find a path CORA cannot yet name, so `run_probe`'s
+    locator-shaped guard does not apply and this validates the
+    locate-shaped request instead. Both go through the same transport
+    and both fill `allowed_roots` from `config` here rather than from
+    the caller, so the allowlist the client checked is the one the
+    remote enforces.
+
+    Every segment is checked against the same `is_safe_path_segment`
+    rule the remote applies. Checking on both sides is deliberate
+    duplication, not redundancy: the values come from PVs writable by
+    anyone with Channel Access, and the two processes are separately
+    reachable. The remote also caps how many months one request may
+    scan; the client does not duplicate that bound, since it is a
+    resource limit on the side that pays for it.
+    """
+    if matched_storage_root(root, config.allowed_roots) is None:
+        return _refuse("root is outside the configured allowed roots")
+    if not months:
+        return _refuse("no months to search")
+    unsafe = [
+        value for value in (*months, directory_suffix, filename) if not is_safe_path_segment(value)
+    ]
+    if unsafe or (subdirectory is not None and not is_safe_path_segment(subdirectory)):
+        return _refuse("request carries a value that is not one safe path segment")
+
+    payload: dict[str, Any] = {
+        "op": "locate",
+        "root": root,
+        "months": list(months),
+        "directory_suffix": directory_suffix,
+        "filename": filename,
+        "allowed_roots": list(config.allowed_roots),
+    }
+    if subdirectory is not None:
+        payload["subdirectory"] = subdirectory
+    return await _invoke(payload, config=config)
+
+
+async def _invoke(payload: dict[str, Any], *, config: SshProbeConfig) -> dict[str, Any]:
+    """Transport only: ssh out, one JSON line in, one JSON line back.
+
+    Shared by both entry points so the timeout handling, the never-raise
+    contract and the response parsing cannot drift apart between them.
+    """
     # `max(1, ...)`: OpenSSH reads `ConnectTimeout=0` as "no timeout
     # configured here, use the default" -- silently removing the bound
     # for a sub-1s config value instead of enforcing a very short one.
@@ -152,7 +252,7 @@ async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[
             stderr=asyncio.subprocess.PIPE,
         )
     except OSError as exc:
-        return {"kind": "ProbeError", "detail": f"could not launch ssh: {exc}"}
+        return _transport_failure(f"could not launch ssh: {type(exc).__name__}")
 
     try:
         stdout, stderr = await asyncio.wait_for(
@@ -163,22 +263,45 @@ async def run_probe(request: dict[str, Any], *, config: SshProbeConfig) -> dict[
         process.kill()
         with contextlib.suppress(ProcessLookupError):
             await process.wait()
-        return {
-            "kind": "ProbeError",
-            "detail": f"timed out after {config.command_timeout_seconds}s",
-        }
+        return _transport_failure(f"timed out after {config.command_timeout_seconds}s")
 
     if process.returncode != 0:
-        tail = stderr.decode(errors="replace").strip()[-300:]
-        return {"kind": "ProbeError", "detail": f"ssh exited {process.returncode}: {tail}"}
+        # The exit code, NOT the tail of the remote's stderr. That tail
+        # is arbitrary text from a process walking a tree whose
+        # directories are named for people, and this string is logged
+        # verbatim by every caller. Carrying it would have been a path
+        # in a log line reachable from any failing probe.
+        #
+        # Yes, this costs diagnosis: `Permission denied` and `Host key
+        # verification failed` came through here. They are recoverable
+        # by running the probe by hand, which an operator with access to
+        # the host can do; a surname in an append-only log sink is not
+        # recoverable by anyone. `255` is OpenSSH's own "the connection
+        # or authentication failed" code and says which half to look at.
+        _ = stderr
+        return _transport_failure(f"ssh exited {process.returncode}")
 
+    # No origin on either of these. The hop carried the request and the
+    # remote exited 0, so calling it a transport failure would be false,
+    # and it is the one origin a sweeping caller stops on. Leaving it
+    # unset falls to the fail-safe reading: this response is unusable,
+    # the next one may be fine.
     try:
         parsed: Any = json.loads(stdout.decode("utf-8").splitlines()[0])
     except (IndexError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        return {"kind": "ProbeError", "detail": f"unparseable probe response: {exc}"}
+        # The exception TYPE, not its message. None of the three types
+        # caught here renders the input it choked on, so this is
+        # defense in depth rather than a fix for a live leak: it keeps
+        # the rule uniform across every `detail` in the module, so a
+        # reader does not have to re-derive per site which exceptions
+        # happen to be safe to render.
+        return {
+            "kind": "ProbeError",
+            "detail": f"unparseable probe response: {type(exc).__name__}",
+        }
     if not isinstance(parsed, dict):
         return {"kind": "ProbeError", "detail": "probe response is not a JSON object"}
     return cast("dict[str, Any]", parsed)
 
 
-__all__ = ["SshProbeConfig", "raw_path_from_file_uri", "run_probe"]
+__all__ = ["SshProbeConfig", "raw_path_from_file_uri", "run_locate_probe", "run_probe"]

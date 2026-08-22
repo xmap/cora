@@ -53,22 +53,45 @@ error), not against an adversary who has not yet arrived here.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 import sys
 from dataclasses import asdict
-from typing import TYPE_CHECKING, Any, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, TextIO, cast
 from uuid import UUID
 
 from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.posix_checksum import PosixChecksumAdapter
 from cora.data.ports.checksum_computer import ComputedChecksum
 from cora.data.ports.scan_reader import Description, Unreadable, Unrecognized
+from cora.shared.path_segment import is_safe_path_segment
+from cora.shared.storage_root import matched_storage_root
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cora.data.ports.checksum_verifier import Unreachable as ChecksumUnreachable
+
+_STDOUT_FD = 1
 
 _OP_DESCRIBE = "describe"
 _OP_CHECKSUM = "checksum"
+_OP_LOCATE = "locate"
+
+MAX_LOCATE_MONTHS = 4
+"""Cap on the month directories one `locate` may scan. A caller sends
+the experiment month plus its neighbours because beamtime can straddle
+a month boundary; it has no reason to sweep the archive."""
+
+MAX_LOCATE_MATCHES = 8
+"""Cap on the matches one `locate` verdict carries. `match_count` is
+reported UNCAPPED beside them, so a caller can tell 2 matches from 50
+even though it only ever sees the first few: the caller refuses
+anything but exactly one match, and a silently truncated list would let
+a pathological request return a response sized by the directory rather
+than by the answer."""
 
 
 def _description_to_json(result: Description | Unreadable | Unrecognized) -> dict[str, Any]:
@@ -90,12 +113,106 @@ def _checksum_to_json(result: ComputedChecksum | ChecksumUnreachable) -> dict[st
     return {"kind": "Unreachable", "error_detail": result.error_detail}
 
 
+def _locate(request: dict[str, Any], *, allowed_roots: tuple[str, ...]) -> dict[str, Any]:
+    """Find the durable copy of a file whose directory CORA cannot name.
+
+    At 2-BM an experiment folder is `{yyyy-mm}-{PIsurname}-{GUP}`, and
+    CORA deliberately holds no surname (`run_experiment_identity`
+    carries proposal, ESAF and ESAF-DOI numbers and nothing else), so
+    the durable copy has to be found from the parts CORA does hold. The
+    request therefore names each path segment literally except the
+    experiment directory, which it matches by suffix.
+
+    No pattern is ever built from the request. Every segment is checked
+    against `is_safe_path_segment` first, matching is `str.endswith` on
+    entries this process itself enumerated, and the resolved match is
+    re-confined afterwards so a symlink out of the tree is refused
+    rather than followed. Deciding what a given match COUNT means is
+    the caller's policy, not this process's: it reports what it found.
+
+    Each match carries the file's own `st_mtime` beside its path. The
+    caller vaults that as `observed_at`, a column whose stated meaning
+    is the SUBSTRATE's timestamp rather than CORA's clock, and only
+    this side can read it. Sending it with the match is also what makes
+    a retry idempotent: the vault's upsert is monotonic in
+    `observed_at`, so a re-probe of an unchanged file writes the same
+    value instead of a newer one.
+    """
+    root = request.get("root")
+    if not isinstance(root, str):
+        return {"kind": "ProbeError", "detail": "malformed request: root"}
+    if matched_storage_root(root, allowed_roots) is None:
+        return {"kind": "ProbeError", "detail": "root is not under an allowed root"}
+
+    segments = {name: request.get(name) for name in ("directory_suffix", "filename")}
+    for name, value in segments.items():
+        if not isinstance(value, str) or not is_safe_path_segment(value):
+            return {"kind": "ProbeError", "detail": f"malformed request: {name}"}
+    directory_suffix = str(segments["directory_suffix"])
+    filename = str(segments["filename"])
+
+    raw_months = request.get("months")
+    if not isinstance(raw_months, list) or not raw_months:
+        return {"kind": "ProbeError", "detail": "malformed request: months"}
+    months = cast("list[Any]", raw_months)
+    if len(months) > MAX_LOCATE_MONTHS or not all(
+        isinstance(month, str) and is_safe_path_segment(month) for month in months
+    ):
+        return {"kind": "ProbeError", "detail": "malformed request: months"}
+
+    subdirectory = request.get("subdirectory")
+    if subdirectory is not None and (
+        not isinstance(subdirectory, str) or not is_safe_path_segment(subdirectory)
+    ):
+        return {"kind": "ProbeError", "detail": "malformed request: subdirectory"}
+
+    entries: list[Path] = []
+    for month in months:
+        try:
+            entries.extend(entry for entry in (Path(root) / str(month)).iterdir() if entry.is_dir())
+        except OSError:
+            continue
+    entries.sort()
+
+    matches: list[dict[str, Any]] = []
+    for entry in entries:
+        if not entry.name.endswith(directory_suffix):
+            continue
+        candidate = entry / subdirectory / filename if subdirectory else entry / filename
+        # Every filesystem call on `candidate` stays inside this block.
+        # `resolve`, `is_file` and `stat` all raise `OSError` subclasses
+        # whose `str()` embeds the filename they failed on, and this
+        # tree's filenames sit under a directory named for a person. One
+        # such call left outside the guard is all it takes for that
+        # string to reach the caller through `_main`'s catch-all, which
+        # is exactly how `is_file` leaked before.
+        try:
+            resolved = candidate.resolve(strict=True)
+            if not resolved.is_file():
+                continue
+            modified_at = resolved.stat().st_mtime
+        except OSError:
+            continue
+        if matched_storage_root(str(resolved), allowed_roots) is None:
+            continue
+        matches.append({"path": str(resolved), "modified_at": modified_at})
+
+    return {
+        "kind": "Located",
+        "matches": matches[:MAX_LOCATE_MATCHES],
+        "match_count": len(matches),
+    }
+
+
 async def _handle(request: dict[str, Any]) -> dict[str, Any]:
     op = request.get("op")
+    allowed_roots = tuple(request.get("allowed_roots") or ())
+    if op == _OP_LOCATE:
+        return _locate(request, allowed_roots=allowed_roots)
+
     locator_uri = request.get("locator_uri")
     if not isinstance(locator_uri, str):
         return {"kind": "ProbeError", "detail": "malformed request: locator_uri"}
-    allowed_roots = tuple(request.get("allowed_roots") or ())
 
     if op == _OP_DESCRIBE:
         captured_at_source = request.get("captured_at_source") or "start_date"
@@ -115,21 +232,97 @@ async def _handle(request: dict[str, Any]) -> dict[str, Any]:
         return _checksum_to_json(
             await computer.compute(locator_uri=locator_uri, supply_id=supply_id)
         )
-    return {"kind": "ProbeError", "detail": f"unknown op: {op!r}"}
+    # The op is NOT echoed. Every other refusal in this module is a
+    # fixed literal so that a caller may log it, and interpolating a
+    # request value here would make that true of all but one.
+    return {"kind": "ProbeError", "detail": "unknown op"}
+
+
+@contextlib.contextmanager
+def _stdout_reserved_for_the_verdict() -> Generator[TextIO]:
+    """Give the caller the ONLY writable handle on real stdout.
+
+    Stdout is the protocol: the client reads the first line and parses
+    it as the verdict, so anything else written there corrupts the
+    answer. `describe` and `checksum` both log, and structlog writes to
+    stdout, which puts a log line exactly where the verdict belongs.
+
+    Done at the file-descriptor level rather than by rebinding
+    `sys.stdout`, and the difference is not academic. A rebind is
+    defeated the moment anyone calls `configure_logging()`, because its
+    `StreamHandler` captures the stream OBJECT once and keeps writing to
+    the real descriptor afterwards. Pointing fd 1 itself at `/dev/null`
+    catches that, plus a stray `print`, plus anything a library writes
+    from C. What comes back is a private duplicate of the original fd,
+    which only this function's caller holds.
+
+    Discarded rather than folded into stderr, which is the tempting
+    version: the client puts nothing from stderr into its refusal text
+    precisely so a path cannot reach a log, and sending the probe's own
+    log lines there would undo that. Nothing is lost, since these writes
+    were already being swallowed by the SSH pipe.
+    """
+    sys.stdout.flush()
+    saved = os.dup(_STDOUT_FD)
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    try:
+        os.dup2(devnull, _STDOUT_FD)
+        os.close(devnull)
+        with os.fdopen(saved, "w", closefd=False) as verdict_stream:
+            yield verdict_stream
+    finally:
+        # Flush BEFORE restoring, so anything `print` left sitting in
+        # `sys.stdout`'s buffer drains into `/dev/null` rather than onto
+        # the real descriptor once it is back. Without this the guard
+        # holds for line-buffered writers and leaks for block-buffered
+        # ones, which is what a pipe gives you, which is what SSH is.
+        with contextlib.suppress(ValueError):
+            sys.stdout.flush()
+        os.dup2(saved, _STDOUT_FD)
+        os.close(saved)
 
 
 async def _main() -> None:
     line = sys.stdin.readline()
+    # The guard itself does syscalls (`dup`, `open`, `dup2`) and they can
+    # fail, on fd exhaustion most plausibly. Outside this try that would
+    # exit non-zero with nothing on stdout, which the client reads as a
+    # dead TRANSPORT rather than a bad request, and a dead transport is
+    # the one verdict that stops a sweep without moving past the
+    # candidate. So the module's never-raise, always-one-JSON-line
+    # promise has to cover the guard, not just what runs inside it.
     try:
-        parsed: Any = json.loads(line)
-        if not isinstance(parsed, dict):
-            raise TypeError("request is not a JSON object")
-        response = await _handle(cast("dict[str, Any]", parsed))
+        await _respond(line)
     except Exception as exc:
-        response = {"kind": "ProbeError", "detail": f"{type(exc).__name__}: {exc}"}
-    sys.stdout.write(json.dumps(response))
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+        sys.stdout.write(json.dumps({"kind": "ProbeError", "detail": _unhandled(exc)}))
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+
+def _unhandled(exc: BaseException) -> str:
+    """The exception TYPE only, never `str(exc)`.
+
+    The paths this process walks embed a PI surname, and the exceptions
+    most likely to reach a catch-all are `OSError` subclasses that
+    render the filename they failed on. A class name cannot carry one,
+    which makes the no-path property of these two arms structural
+    rather than a promise about every call beneath them.
+    """
+    return f"unhandled {type(exc).__name__}"
+
+
+async def _respond(line: str) -> None:
+    with _stdout_reserved_for_the_verdict() as verdict_stream:
+        try:
+            parsed: Any = json.loads(line)
+            if not isinstance(parsed, dict):
+                raise TypeError("request is not a JSON object")
+            response = await _handle(cast("dict[str, Any]", parsed))
+        except Exception as exc:
+            response = {"kind": "ProbeError", "detail": _unhandled(exc)}
+        verdict_stream.write(json.dumps(response))
+        verdict_stream.write("\n")
+        verdict_stream.flush()
 
 
 if __name__ == "__main__":

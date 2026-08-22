@@ -16,8 +16,10 @@ import pytest
 from cora.data.adapters._ssh_probe import (
     SshProbeConfig,
     raw_path_from_file_uri,
+    run_locate_probe,
     run_probe,
 )
+from cora.shared.probe_error import PROBE_ERROR_ORIGIN_CLIENT, PROBE_ERROR_ORIGIN_TRANSPORT
 
 _CONFIG = SshProbeConfig(
     host="tomdet",
@@ -80,6 +82,20 @@ async def test_run_probe_refuses_a_path_outside_allowed_roots_without_spawning(
     )
     assert response["kind"] == "ProbeError"
     assert "outside the configured allowed roots" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_probe_refusal_carries_the_client_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A refusal before the transport is touched says nothing about
+    whether the next request will succeed, unlike a transport failure;
+    `origin` is how a sweeping caller tells the two apart."""
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+    response = await run_probe(
+        {"op": "describe", "locator_uri": "file:///etc/passwd"}, config=_CONFIG
+    )
+    assert response["origin"] == PROBE_ERROR_ORIGIN_CLIENT
 
 
 @pytest.mark.unit
@@ -287,6 +303,7 @@ async def test_run_probe_times_out_and_kills_the_process(monkeypatch: pytest.Mon
     assert response["kind"] == "ProbeError"
     assert "timed out" in response["detail"]
     assert killed["called"] is True
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 class _ScriptedProcess:
@@ -345,26 +362,33 @@ async def test_run_probe_reports_a_failed_ssh_launch_instead_of_raising(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
-    assert "could not launch ssh" in response["detail"]
+    assert response["detail"] == "could not launch ssh: OSError"
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 @pytest.mark.unit
-async def test_run_probe_reports_a_nonzero_ssh_exit_with_the_stderr_tail(
+async def test_run_probe_reports_a_nonzero_ssh_exit_without_the_stderr_tail(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The likeliest real failure at 2-BM: the host is unreachable, the
-    key is refused, or the remote interpreter does not exist. The
-    operator needs the reason, so the stderr tail is carried through."""
+    """The tail used to be carried through, because an operator wants
+    the reason. It cannot be: stderr on this hop is whatever a process
+    walking a tree of person-named directories chose to write, and this
+    string is logged verbatim. The exit code says which half to look at,
+    and the reason is recoverable by running the probe by hand."""
     _scripted(
         monkeypatch,
-        _ScriptedProcess(returncode=255, stdout=b"", stderr=b"Permission denied (publickey)."),
+        _ScriptedProcess(
+            returncode=255,
+            stdout=b"",
+            stderr=b"Permission denied. /gdata/dm/2BM/2026-08/2026-08-Haridy-1015116/s.h5",
+        ),
     )
 
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
-    assert response["kind"] == "ProbeError"
-    assert "ssh exited 255" in response["detail"]
-    assert "publickey" in response["detail"]
+    assert response["detail"] == "ssh exited 255"
+    assert "Haridy" not in str(response["detail"])
+    assert response["origin"] == PROBE_ERROR_ORIGIN_TRANSPORT
 
 
 @pytest.mark.unit
@@ -378,7 +402,8 @@ async def test_run_probe_reports_an_unparseable_probe_response(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
-    assert "unparseable probe response" in response["detail"]
+    assert response["detail"] == "unparseable probe response: JSONDecodeError"
+    assert "origin" not in response
 
 
 @pytest.mark.unit
@@ -394,6 +419,7 @@ async def test_run_probe_rejects_probe_output_that_is_not_a_json_object(
 
     assert response["kind"] == "ProbeError"
     assert "not a JSON object" in response["detail"]
+    assert "origin" not in response
 
 
 @pytest.mark.unit
@@ -407,3 +433,118 @@ async def test_run_probe_with_empty_probe_output_returns_a_probe_error(
     response = await run_probe({"op": "describe", "locator_uri": _GOOD_LOCATOR}, config=_CONFIG)
 
     assert response["kind"] == "ProbeError"
+    assert "origin" not in response
+
+
+_DURABLE_CONFIG = SshProbeConfig(
+    host="tomdet",
+    remote_python="/path/to/venv/bin/python3",
+    allowed_roots=("/local1/2BM", "/gdata/dm/2BM"),
+    connect_timeout_seconds=5.0,
+    command_timeout_seconds=5.0,
+)
+
+
+async def _locate(monkeypatch: pytest.MonkeyPatch, **overrides: Any) -> dict[str, Any]:
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _NeverCalledExec())
+    kwargs: dict[str, Any] = {
+        "root": "/gdata/dm/2BM",
+        "months": ("2026-08", "2026-07"),
+        "directory_suffix": "-1015116",
+        "filename": "scan_005.h5",
+        "subdirectory": "data",
+        "config": _DURABLE_CONFIG,
+    }
+    kwargs.update(overrides)
+    return await run_locate_probe(**kwargs)
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_refuses_a_root_outside_allowed_roots_without_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = await _locate(monkeypatch, root="/etc")
+
+    assert response["kind"] == "ProbeError"
+    assert "outside the configured allowed roots" in response["detail"]
+    assert response["origin"] == PROBE_ERROR_ORIGIN_CLIENT
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_refuses_an_empty_month_list_without_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No months means the caller could not parse an experiment month.
+    Searching everything instead would scan an archive going back to
+    2020 to find, at best, a folder whose naming scheme predates
+    proposal numbers entirely."""
+    response = await _locate(monkeypatch, months=())
+
+    assert response["kind"] == "ProbeError"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("months", ("../2026-08",)),
+        ("months", ("2026-08", "..")),
+        ("directory_suffix", "-1015116/etc"),
+        ("filename", "../../etc/passwd"),
+        ("filename", ""),
+        ("subdirectory", "data/../.."),
+    ],
+)
+async def test_run_locate_probe_refuses_a_value_that_is_not_one_safe_segment(
+    monkeypatch: pytest.MonkeyPatch, field: str, value: Any
+) -> None:
+    """Checked here as well as on the remote. The proposal number and
+    filename both reach CORA from PVs writable by anyone with Channel
+    Access, and the two processes are separately reachable, so one
+    check is one place to be wrong."""
+    response = await _locate(monkeypatch, **{field: value})
+
+    assert response["kind"] == "ProbeError"
+    assert "safe path segment" in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_refusal_detail_never_carries_the_searched_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same rule the locator refusals follow: a refusal detail is
+    logged verbatim, and the experiment folder these values reconstruct
+    is the personal data the vault exists to keep out of logs."""
+    response = await _locate(monkeypatch, filename=f"{_PERSONAL_PATH_FRAGMENT}/x")
+
+    assert response["kind"] == "ProbeError"
+    assert _PERSONAL_PATH_FRAGMENT not in response["detail"]
+
+
+@pytest.mark.unit
+async def test_run_locate_probe_fills_allowed_roots_from_config_not_the_caller(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The client-side guard and the remote's own confinement must read
+    the same allowlist, so the caller never supplies it."""
+    captured: dict[str, Any] = {}
+
+    class _Capturing:
+        async def __call__(self, *argv: str, **kwargs: Any) -> Any:
+            captured["argv"] = argv
+            return _ScriptedProcess(
+                returncode=0, stdout=b'{"kind": "Located", "matches": [], "match_count": 0}\n'
+            )
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", _Capturing())
+    response = await run_locate_probe(
+        root="/gdata/dm/2BM",
+        months=("2026-08",),
+        directory_suffix="-1015116",
+        filename="scan_005.h5",
+        subdirectory="data",
+        config=_DURABLE_CONFIG,
+    )
+
+    assert response["kind"] == "Located"
+    assert "-1015116" not in " ".join(captured["argv"])

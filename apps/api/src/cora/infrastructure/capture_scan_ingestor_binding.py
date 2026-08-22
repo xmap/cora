@@ -29,7 +29,9 @@ CAPTURE_SCAN_INGESTOR_BINDINGS as JSON, keyed by capture code:
           },
           "/gdata/dm/2BM": {
             "supply_id": "77f0...-storage-supply-uuid",
-            "access_protocol": "NFS"
+            "access_protocol": "NFS",
+            "durable": true,
+            "subdirectory": "data"
           }
         }
       }
@@ -39,11 +41,13 @@ A code absent from this map is never auto-ingested, mirroring every
 other per-code table's optionality.
 """
 
+from collections.abc import Mapping
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from cora.shared.path_segment import is_safe_path_segment
 from cora.shared.storage_root import normalize_storage_root, require_nonempty_absolute_root
 
 # Local mirror of `cora.data.aggregates.distribution.state.AccessProtocol`.
@@ -57,7 +61,14 @@ _AccessProtocolLiteral = Literal["HTTPS", "Globus", "S3", "POSIX", "NFS", "OAI_P
 
 
 class CaptureScanIngestorLocation(BaseModel):
-    """One location a capture code's file may reach: which Supply holds it, over what protocol."""
+    """One location a capture code's file may reach: which Supply holds it, over what protocol.
+
+    `durable` lives here, on the location, rather than in a separate
+    top-level setting listing durable roots. A separate list would be a
+    second place to keep in sync with this one, and the two would
+    drift; the fact that a tier is the durable one belongs with the
+    tier it describes.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -70,6 +81,39 @@ class CaptureScanIngestorLocation(BaseModel):
             "Dataset minted from this location."
         )
     )
+    durable: bool = Field(
+        default=False,
+        description=(
+            "Whether this is the durable copy: the one the sweep should "
+            "find and register as a second Distribution on the same "
+            "Dataset once the acquisition-tier copy risks being purged. "
+            "At most one location per capture code may set this."
+        ),
+    )
+    subdirectory: str | None = Field(
+        default=None,
+        description=(
+            "The path segment below the experiment folder where files "
+            "at this location live, such as APS Data Management's "
+            "`data` directory under DMagic's layout. None when files "
+            "sit directly in the experiment folder, which is the "
+            "acquisition tier's shape and most locations'."
+        ),
+    )
+
+    @field_validator("subdirectory")
+    @classmethod
+    def _validate_subdirectory(cls, value: str | None) -> str | None:
+        """Refuse anything that is not one safe path segment.
+
+        Uses the same `is_safe_path_segment` rule both ends of the scan
+        probe already apply to `subdirectory`, rather than a second
+        rule that could disagree with it.
+        """
+        if value is not None and not is_safe_path_segment(value):
+            msg = f"subdirectory {value!r} is not one safe path segment."
+            raise ValueError(msg)
+        return value
 
 
 class CaptureScanIngestorBinding(BaseModel):
@@ -104,6 +148,12 @@ class CaptureScanIngestorBinding(BaseModel):
         collapsing to whichever one iteration visited last, since that
         would drop a Supply/protocol pairing an operator wrote on
         purpose with no signal that it happened.
+
+        At most one location may be marked `durable`: two would leave
+        the sweep no way to choose between them, and failing here beats
+        discovering the ambiguity on the first sweep tick. Zero is
+        fine; it means this code has no durable tier configured yet and
+        the sweep simply skips it.
         """
         if not value:
             msg = "locations is empty. A binding with no location can never ingest anything."
@@ -122,7 +172,51 @@ class CaptureScanIngestorBinding(BaseModel):
                 raise ValueError(msg)
             normalized[key] = location
             original_spelling[key] = root
+        durable_keys = [key for key, location in normalized.items() if location.durable]
+        if len(durable_keys) > 1:
+            msg = (
+                f"locations marks {len(durable_keys)} roots durable: "
+                f"{sorted(durable_keys)!r}. At most one location per capture "
+                "code may be durable, or the sweep has no way to choose."
+            )
+            raise ValueError(msg)
         return normalized
 
 
-__all__ = ["CaptureScanIngestorBinding", "CaptureScanIngestorLocation"]
+def durable_roots(bindings: Mapping[str, CaptureScanIngestorBinding]) -> frozenset[str]:
+    """The normalized storage roots marked durable, across every capture code.
+
+    Derived from `bindings` rather than read from a separate Settings
+    field, since deriving it is what keeps it from drifting out of sync
+    with the per-location flag it is computed from. Empty when nothing
+    is marked durable, which the caller treats as the sweep being off.
+    """
+    return frozenset(
+        root
+        for binding in bindings.values()
+        for root, location in binding.locations.items()
+        if location.durable
+    )
+
+
+def durable_supply_ids(bindings: Mapping[str, CaptureScanIngestorBinding]) -> frozenset[UUID]:
+    """The Supply ids of the locations marked durable, across every capture code.
+
+    Empty under the same condition as `durable_roots`, and derived the
+    same way: from `bindings` directly, never from a Settings field
+    that could fall out of step with it.
+    """
+    return frozenset(
+        location.supply_id
+        for binding in bindings.values()
+        for location in binding.locations.values()
+        if location.durable
+    )
+
+
+__all__ = [
+    "CaptureScanIngestorBinding",
+    "CaptureScanIngestorLocation",
+    "durable_roots",
+    "durable_supply_ids",
+]

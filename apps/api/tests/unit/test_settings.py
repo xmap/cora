@@ -848,6 +848,292 @@ def test_settings_capture_scan_ingestor_bindings_accepts_a_root_only_in_scan_pro
     assert "/local1/2BM" in settings.capture_scan_ingestor_bindings["2bmb-tomoscan"].locations
 
 
+# ---------------------------------------------------------------------------
+# CaptureScanIngestorLocation.durable / .subdirectory, and the two derived reads
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_durable_defaults_to_false_when_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    settings = Settings()
+    location = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"].locations["/local1/2BM"]
+    assert location.durable is False
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_durable_round_trips_on_the_flagged_location_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only the location that sets `durable` in the env var comes back
+    `True`; its sibling, which does not set it, stays `False`. Both
+    assertions are needed, since a validator that ignored the field and
+    always returned one fixed value would pass either assertion alone."""
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/gdata/dm/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {'
+        '"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}, "
+        '"/gdata/dm/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000003", '
+        '"access_protocol": "NFS", '
+        '"durable": true'
+        "}"
+        "}}}",
+    )
+    settings = Settings()
+    binding = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"]
+
+    assert binding.locations["/local1/2BM"].durable is False
+    assert binding.locations["/gdata/dm/2BM"].durable is True
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_two_durable_locations_under_one_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two durable locations would leave the sweep no way to choose
+    between them; refusing at boot beats discovering the ambiguity on
+    the first sweep tick."""
+    import pydantic
+
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/gdata/dm/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {'
+        '"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX", '
+        '"durable": true'
+        "}, "
+        '"/gdata/dm/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000003", '
+        '"access_protocol": "NFS", '
+        '"durable": true'
+        "}"
+        "}}}",
+    )
+    with pytest.raises(
+        pydantic.ValidationError, match="At most one location per capture code may be durable"
+    ):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_allows_one_durable_location_per_code_across_codes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The one-durable-per-code rule is scoped to a single binding: two
+    DIFFERENT capture codes each naming their own durable location is
+    not the ambiguity the validator guards against."""
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM", "/local2/2BMB"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX", '
+        '"durable": true'
+        "}}}, "
+        '"2bmb-pco": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000004", '
+        '"locations": {"/local2/2BMB": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000005", '
+        '"access_protocol": "POSIX", '
+        '"durable": true'
+        "}}}}",
+    )
+    settings = Settings()
+
+    assert settings.capture_scan_ingestor_bindings["2bmb-tomoscan"].locations["/local1/2BM"].durable
+    assert settings.capture_scan_ingestor_bindings["2bmb-pco"].locations["/local2/2BMB"].durable
+
+
+@pytest.mark.unit
+def test_capture_scan_ingestor_durable_roots_and_supply_ids_span_capture_codes_and_skip_others(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both derived reads union across every capture code, and both
+    exclude a location that is present but NOT marked durable: a
+    read that returned every configured root or supply id regardless
+    of the flag would still pass a same-code-only assertion, so the
+    non-durable sibling location has to be there to catch it."""
+    from cora.infrastructure.capture_scan_ingestor_binding import (
+        durable_roots,
+        durable_supply_ids,
+    )
+
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM", "/local2/2BMB"]')
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/gdata/dm/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {'
+        '"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}, "
+        '"/gdata/dm/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000003", '
+        '"access_protocol": "NFS", '
+        '"durable": true'
+        "}"
+        "}}, "
+        '"2bmb-pco": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000004", '
+        '"locations": {"/local2/2BMB": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000005", '
+        '"access_protocol": "POSIX", '
+        '"durable": true'
+        "}}}}",
+    )
+    settings = Settings()
+    bindings = settings.capture_scan_ingestor_bindings
+
+    assert durable_roots(bindings) == frozenset({"/gdata/dm/2BM", "/local2/2BMB"})
+    assert durable_supply_ids(bindings) == frozenset(
+        {
+            UUID("01900000-0000-7000-8000-000000000003"),
+            UUID("01900000-0000-7000-8000-000000000005"),
+        }
+    )
+
+
+@pytest.mark.unit
+def test_capture_scan_ingestor_durable_roots_and_supply_ids_are_empty_when_none_are_durable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cora.infrastructure.capture_scan_ingestor_binding import (
+        durable_roots,
+        durable_supply_ids,
+    )
+
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    settings = Settings()
+    bindings = settings.capture_scan_ingestor_bindings
+
+    assert durable_roots(bindings) == frozenset()
+    assert durable_supply_ids(bindings) == frozenset()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_subdirectory_defaults_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}}}",
+    )
+    settings = Settings()
+    location = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"].locations["/local1/2BM"]
+    assert location.subdirectory is None
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_subdirectory_round_trips_on_one_location(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The location that sets `subdirectory` comes back with that exact
+    segment; its sibling, which does not set it, stays `None` rather
+    than inheriting the value."""
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/gdata/dm/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"locations": {'
+        '"/local1/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}, "
+        '"/gdata/dm/2BM": {'
+        '"supply_id": "01900000-0000-7000-8000-000000000003", '
+        '"access_protocol": "NFS", '
+        '"durable": true, '
+        '"subdirectory": "data"'
+        "}"
+        "}}}",
+    )
+    settings = Settings()
+    binding = settings.capture_scan_ingestor_bindings["2bmb-tomoscan"]
+
+    assert binding.locations["/local1/2BM"].subdirectory is None
+    assert binding.locations["/gdata/dm/2BM"].subdirectory == "data"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "subdirectory",
+    ["", "..", "sub/dir", "sub\\dir"],
+    ids=["empty", "traversal", "separator", "backslash"],
+)
+def test_settings_capture_scan_ingestor_bindings_rejects_an_unsafe_subdirectory(
+    monkeypatch: pytest.MonkeyPatch, subdirectory: str
+) -> None:
+    import json
+
+    import pydantic
+
+    monkeypatch.setenv("POSIX_CHECKSUM_ROOTS", '["/local1/2BM"]')
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        json.dumps(
+            {
+                "2bmb-tomoscan": {
+                    "producing_asset_id": "01900000-0000-7000-8000-000000000001",
+                    "locations": {
+                        "/local1/2BM": {
+                            "supply_id": "01900000-0000-7000-8000-000000000002",
+                            "access_protocol": "POSIX",
+                            "subdirectory": subdirectory,
+                        }
+                    },
+                }
+            }
+        ),
+    )
+    with pytest.raises(pydantic.ValidationError, match="is not one safe path segment"):
+        Settings()
+
+
 @pytest.mark.unit
 def test_settings_scan_probe_remote_host_without_remote_python_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
