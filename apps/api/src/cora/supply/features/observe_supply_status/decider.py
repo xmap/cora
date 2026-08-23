@@ -148,13 +148,21 @@ def decide(
     if command.new_status is state.status:
         return []
 
-    reason = SupplyReason(command.reason)
+    # Source-state allowlist BEFORE reason validation, matching the
+    # module docstring's documented order (step 4 then step 5): a
+    # command that both targets a disallowed transition AND carries an
+    # invalid reason must raise the specific `SupplyCannot<Verb>Error`
+    # the target names, not the generic `InvalidSupplyReasonError` that
+    # would otherwise mask it. Parsing `reason` only after the allowlist
+    # check per branch (rather than once, up front) is what keeps that
+    # order correct for whichever branch actually applies.
     trigger = TriggerSource.MONITOR.value
     monitor_ref_str = f"{command.monitor_ref.source_kind}:{command.monitor_ref.source_id}"
 
     if command.new_status is SupplyStatus.DEGRADED:
         if state.status not in _DEGRADABLE_SOURCES:
             raise SupplyCannotDegradeError(state.id, state.status)
+        reason = SupplyReason(command.reason)
         return [
             SupplyDegraded(
                 supply_id=state.id,
@@ -170,6 +178,7 @@ def decide(
     if command.new_status is SupplyStatus.UNAVAILABLE:
         if state.status not in _UNAVAILABLE_SOURCES:
             raise SupplyCannotMarkUnavailableError(state.id, state.status)
+        reason = SupplyReason(command.reason)
         return [
             SupplyMarkedUnavailable(
                 supply_id=state.id,
@@ -185,6 +194,7 @@ def decide(
     if command.new_status is SupplyStatus.RECOVERING:
         if state.status not in _RECOVERING_SOURCES:
             raise SupplyCannotMarkRecoveringError(state.id, state.status)
+        reason = SupplyReason(command.reason)
         return [
             SupplyMarkedRecovering(
                 supply_id=state.id,

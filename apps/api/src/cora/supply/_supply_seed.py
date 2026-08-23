@@ -76,9 +76,10 @@ from cora.supply.aggregates.supply import (
     event_type_name,
     to_payload,
 )
+from cora.supply.errors import UnknownSupplyNameError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
     from uuid import UUID
 
     from cora.infrastructure.kernel import Kernel
@@ -110,6 +111,14 @@ def supply_kind_from_name(name: str) -> str | None:
     gate can never match against a Method's `needed_supplies`.
     """
     return _KIND_BY_NAME.get(name)
+
+
+def validate_supply_names(names: Iterable[str]) -> None:
+    """Raise `UnknownSupplyNameError` (see `cora.supply.errors`) if any
+    name has no known kind."""
+    unknown = frozenset(name for name in names if supply_kind_from_name(name) is None)
+    if unknown:
+        raise UnknownSupplyNameError(unknown)
 
 
 async def seed_observed_supplies(deps: Kernel, *, supply_names: frozenset[str]) -> dict[str, UUID]:
@@ -179,4 +188,9 @@ async def seed_observed_supplies(deps: Kernel, *, supply_names: frozenset[str]) 
     return seeded
 
 
-__all__ = ["seed_observed_supplies", "supply_kind_from_name"]
+__all__ = [
+    "UnknownSupplyNameError",
+    "seed_observed_supplies",
+    "supply_kind_from_name",
+    "validate_supply_names",
+]

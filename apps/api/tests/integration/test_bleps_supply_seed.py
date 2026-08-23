@@ -21,7 +21,12 @@ from cora.infrastructure.config import BlepsSupplyChannelConfig, Settings
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.supply._projections import register_supply_projections
-from cora.supply._supply_seed import seed_observed_supplies, supply_kind_from_name
+from cora.supply._supply_seed import (
+    UnknownSupplyNameError,
+    seed_observed_supplies,
+    supply_kind_from_name,
+    validate_supply_names,
+)
 from cora.supply.adapters.postgres_supply_lookup import PostgresSupplyLookup
 from cora.supply.aggregates.supply import SupplyStatus, fold, from_stored
 from tests.integration._helpers import build_postgres_deps
@@ -127,6 +132,25 @@ def test_the_kind_table_covers_both_bleps_resources() -> None:
     assert supply_kind_from_name(_WATER) == "CoolingWater"
     assert supply_kind_from_name(_VACUUM) == "Vacuum"
     assert supply_kind_from_name("something else") is None
+
+
+@pytest.mark.unit
+def test_validate_supply_names_passes_every_recognized_name() -> None:
+    validate_supply_names([_WATER, _VACUUM])  # must not raise
+
+
+@pytest.mark.unit
+def test_validate_supply_names_raises_loud_on_an_unrecognized_name() -> None:
+    """The composition-root counterpart to
+    test_an_unknown_supply_name_is_skipped_not_guessed above: that test
+    pins seed_observed_supplies's own defensive skip-and-warn; this pins
+    that main.py's boot-time call is what actually turns an unrecognized
+    BLEPS_SUPPLY_CHANNELS entry into a hard failure instead of a
+    permanently-unmonitored channel with one log line to show for it.
+    """
+    with pytest.raises(UnknownSupplyNameError) as excinfo:
+        validate_supply_names([_WATER, "not a supply CORA knows"])
+    assert excinfo.value.unknown_names == frozenset({"not a supply CORA knows"})
 
 
 @pytest.mark.integration

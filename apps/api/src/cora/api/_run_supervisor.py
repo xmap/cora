@@ -1471,6 +1471,14 @@ async def _supervise_tick(
             extra_inputs={"failed_gate": failed_gate} if failed_gate else None,
         )
         if outcome.issue_hold:
+            # Held: leaving the running list means this pass will not see
+            # the Run again until an operator resumes it. Popping here
+            # (mirroring the resume settle counter's own pop right after
+            # `_issue_resume`) is what makes a later resume, while the
+            # same gate is still failing, require a FRESH settle window
+            # rather than immediately re-holding on the very next tick
+            # against a stale count.
+            envelope_hold_settle.pop(item.run_id, None)
             await _issue_hold(deps, hold_run, run_id=item.run_id, decision_id=decision_id)
 
     # Shadow observation rules (Rule Q + Rule R): OBSERVE-ONLY, reusing the

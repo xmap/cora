@@ -438,6 +438,31 @@ async def test_available_is_never_emitted() -> None:
 
 
 @pytest.mark.unit
+async def test_a_readings_effect_is_scoped_to_its_own_supply_not_every_configured_one() -> None:
+    """A reading on one Supply's channel must never touch a sibling Supply.
+
+    Regression: an earlier version recomputed and yielded an entry for
+    EVERY configured Supply on every single reading, which defeats the
+    probe trail's whole purpose -- a vacuum-section PV ticking would
+    refresh the cooling-water Supply's `entries_supply_probes` row too,
+    making a genuinely silent Supply look continuously watched for as
+    long as any sibling kept talking. Flow2 (water) is read to a full,
+    conclusive verdict first; the single vacuum reading that follows
+    must produce exactly one entry, for vacuum, not two.
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2.trip_pv: [_reading(1)],
+            _FLOW2.fault_pv or "": [_reading(0)],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2, _VS1]), {_WATER, _VACUUM})
+    assert {o.supply_code for o in observed} == {_WATER}, (
+        "no channel of _VS1 (vacuum) was ever read, so vacuum must never appear"
+    )
+
+
+@pytest.mark.unit
 def test_losing_the_tripped_channel_does_not_read_as_the_trip_clearing() -> None:
     """The fail-open bug gate review caught, pinned as a regression.
 
@@ -464,12 +489,16 @@ def test_losing_the_tripped_channel_does_not_read_as_the_trip_clearing() -> None
         _FLOW6.trip_pv: False,
     }
 
-    while_believed = observer._observations(channels, latest)
+    while_believed = observer._observations(
+        channels, latest, affected_supply_codes=frozenset({_WATER})
+    )
     assert [o.observed_status for o in while_believed] == ["Unavailable"]
 
     # Flow2's own sensor goes over-range. Its trip never cleared.
     latest[_FLOW2.fault_pv or ""] = True
-    after_going_blind = observer._observations(channels, latest)
+    after_going_blind = observer._observations(
+        channels, latest, affected_supply_codes=frozenset({_WATER})
+    )
 
     assert [o.observed_status for o in after_going_blind] == [None], (
         "losing sight of the tripped channel must withhold, not report clear"
@@ -597,7 +626,7 @@ def test_a_tripped_channels_own_warning_reading_is_moot() -> None:
         _FLOW2_W.trip_pv: True,
         _FLOW2_W.warning_pv or "": True,
     }
-    observed = observer._observations(channels, latest)
+    observed = observer._observations(channels, latest, affected_supply_codes=frozenset({_WATER}))
     assert [o.observed_status for o in observed] == ["Unavailable"]
 
 

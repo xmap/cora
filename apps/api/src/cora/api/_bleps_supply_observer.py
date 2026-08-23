@@ -33,7 +33,8 @@ implements the two axes:
 stands, or while its own PV cannot be believably read, no observation is
 emitted at all.
 
-Warnings are deliberately NOT wired. See the module note at the bottom.
+Warnings are wired, gated off by default. See "Warnings, gated off by
+default" below.
 
 ## Clear requires ALL channels, tripped requires only one
 
@@ -265,6 +266,8 @@ class BlepsSupplyObserver:
             return
 
         pvs = self._subscribed_pvs(channels)
+        all_supply_codes = frozenset(c.supply_code for c in channels)
+        pv_supply_codes = self._pv_supply_codes(channels)
         # Latest believed value per PV. Absent means never read; None
         # means read but not believable. Both are "unknown", and neither
         # is "low". This is a read cache, not a verdict: it is rebuilt
@@ -283,7 +286,22 @@ class BlepsSupplyObserver:
                     continue
                 pv, value = item
                 latest[pv] = value
-                for observation in self._observations(channels, latest):
+                # A reading affects only the Supply(s) its own channel
+                # feeds, EXCEPT the comms flag, which is a fact about the
+                # whole feed and so affects every configured Supply.
+                # Scoping this way is what keeps the probe trail honest:
+                # without it, any one Supply's chatty PV would refresh
+                # every OTHER Supply's `entries_supply_probes` row too,
+                # making a genuinely silent Supply look continuously
+                # watched for as long as its siblings kept talking.
+                affected = (
+                    all_supply_codes
+                    if pv == self._communications_fault_pv
+                    else pv_supply_codes.get(pv, frozenset())
+                )
+                for observation in self._observations(
+                    channels, latest, affected_supply_codes=affected
+                ):
                     yield observation
         finally:
             for task in tasks:
@@ -310,23 +328,49 @@ class BlepsSupplyObserver:
         # Dedupe, preserving that order.
         return list(dict.fromkeys(pvs))
 
-    def _observations(
-        self, channels: Sequence[BlepsChannel], latest: Mapping[str, bool | None]
-    ) -> list[SupplyObservation]:
-        """Recompute and report every Supply's verdict, or its reach probe. Stateless.
+    def _pv_supply_codes(self, channels: Iterable[BlepsChannel]) -> dict[str, frozenset[str]]:
+        """Map each channel-owned PV to the Supply code(s) it feeds.
 
-        Every configured Supply gets exactly one entry per call: a real
-        verdict (`reach_tier=RELAYED`) when one can be concluded, or a
-        probe-only entry (`observed_status=None`, `reach_tier=UNREACHED`)
-        when it cannot. Silently emitting nothing for the inconclusive
-        case, as an earlier version did, is exactly the coverage gap the
-        probe trail exists to close: a Supply CORA cannot currently
-        assess must not look identical, from the trail's perspective, to
-        one nobody configured a channel for.
+        Excludes the comms flag deliberately: that PV's effect is
+        system-wide and `_drain` handles it as its own case, not via
+        this per-channel map.
+        """
+        by_pv: dict[str, set[str]] = {}
+        for channel in channels:
+            for pv in (channel.fault_pv, channel.trip_pv, channel.warning_pv):
+                if pv:
+                    by_pv.setdefault(pv, set()).add(channel.supply_code)
+        return {pv: frozenset(codes) for pv, codes in by_pv.items()}
+
+    def _observations(
+        self,
+        channels: Sequence[BlepsChannel],
+        latest: Mapping[str, bool | None],
+        *,
+        affected_supply_codes: frozenset[str],
+    ) -> list[SupplyObservation]:
+        """Recompute and report the affected Supplies' verdict, or their reach probe.
+
+        Stateless, and scoped to `affected_supply_codes` (the Supply or
+        Supplies the triggering reading's own channel feeds, or every
+        configured Supply when the reading was the comms flag): a
+        Supply not in scope gets no entry from this call at all, so an
+        unrelated Supply's chatty channel can never refresh this one's
+        `entries_supply_probes` row.
+
+        Every affected Supply gets exactly one entry: a real verdict
+        (`reach_tier=RELAYED`) when one can be concluded, or a probe-only
+        entry (`observed_status=None`, `reach_tier=UNREACHED`) when it
+        cannot. Silently emitting nothing for the inconclusive case, as
+        an earlier version did, is exactly the coverage gap the probe
+        trail exists to close: a Supply CORA cannot currently assess
+        must not look identical, from the trail's perspective, to one
+        nobody configured a channel for.
         """
         by_supply: dict[str, list[BlepsChannel]] = {}
         for channel in channels:
-            by_supply.setdefault(channel.supply_code, []).append(channel)
+            if channel.supply_code in affected_supply_codes:
+                by_supply.setdefault(channel.supply_code, []).append(channel)
         if self._communications_lost(latest):
             return [
                 self._probe_only(supply_code, pv=supply_channels[0].trip_pv)

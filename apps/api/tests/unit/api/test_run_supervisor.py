@@ -1211,6 +1211,9 @@ async def test_envelope_hold_fires_after_settle_window_and_records_decision(
     assert held.cause == HOLD_CAUSE_SUPERVISOR
     assert held.decided_by_decision_id is not None
     assert memory[run_id] == _MEM_HELD
+    # The settle counter must not survive the hold: see
+    # test_envelope_hold_settle_clears_after_a_hold_fires below for why.
+    assert run_id not in envelope_hold_settle
 
     decision = await load_decision(kernel.event_store, held.decided_by_decision_id)
     assert decision is not None
@@ -1218,6 +1221,41 @@ async def test_envelope_hold_fires_after_settle_window_and_records_decision(
     assert decision.inputs is not None
     assert decision.inputs["trigger"] == "envelope"
     assert decision.inputs["failed_gate"] == "supply"
+
+
+@pytest.mark.unit
+async def test_envelope_hold_settle_clears_after_a_hold_fires(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without this, an operator resuming a still-failing Run outside the
+    supervisor's own resume path would find `envelope_hold_settle` already
+    at or past threshold on the very next tick, instead of starting the
+    settle window over -- the counter would no longer mean 'consecutive
+    bad ticks since this Run was last seen good or not-yet-evaluated'.
+    """
+    _patch_envelope(monkeypatch, ok=False, failed_gate="supply")
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+    memory: dict[UUID, str] = {}
+    envelope_hold_settle: dict[UUID, int] = {}
+
+    for _ in range(2):
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory=memory,
+            envelope_hold_enabled=True,
+            envelope_hold_settle_ticks=2,
+            envelope_hold_settle=envelope_hold_settle,
+        )
+
+    assert len(hold_calls) == 1
+    assert envelope_hold_settle == {}
 
 
 @pytest.mark.unit

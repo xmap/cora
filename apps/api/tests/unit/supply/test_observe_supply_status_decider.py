@@ -207,3 +207,23 @@ def test_decide_invalid_reason_raises() -> None:
             now=_NOW,
             triggered_by=_MONITOR_SOURCE_ID,
         )
+
+
+@pytest.mark.unit
+def test_decide_disallowed_transition_raises_its_own_error_even_with_an_invalid_reason() -> None:
+    """Source-state check before reason validation, matching the documented order.
+
+    Unavailable is not in `_DEGRADABLE_SOURCES`, so this observation is
+    disallowed on its target alone. It must raise `SupplyCannotDegradeError`
+    naming that, not the generic `InvalidSupplyReasonError` the blank
+    reason would also trigger -- the specific error must not be masked by
+    a coincidentally-also-invalid reason.
+    """
+    s = _state(SupplyStatus.UNAVAILABLE)
+    with pytest.raises(SupplyCannotDegradeError):
+        decide(
+            s,
+            _cmd(s.id, SupplyStatus.DEGRADED, reason="   "),
+            now=_NOW,
+            triggered_by=_MONITOR_SOURCE_ID,
+        )

@@ -267,7 +267,7 @@ from cora.supply import (
     wire_supply,
 )
 from cora.supply._monitor import supply_status_monitor_lifespan
-from cora.supply._supply_seed import seed_observed_supplies
+from cora.supply._supply_seed import seed_observed_supplies, validate_supply_names
 from cora.supply.adapters import PostgresSupplyLookup
 from cora.trust import (
     TrustHandlers,
@@ -1300,6 +1300,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_supply_projections(supply_only_registry, deps)
             if deps.pool is not None:
                 await drain_projections(deps.pool, supply_only_registry, deadline_seconds=5.0)
+            # Fail loud on a misnamed BLEPS_SUPPLY_CHANNELS entry rather
+            # than let seed_observed_supplies silently warn-and-skip it:
+            # an unrecognized name would otherwise drop that channel from
+            # both seeding and observation, leaving an equipment-
+            # protection channel permanently unmonitored with nothing
+            # but a boot-time log line to show for it. Matches
+            # Settings._require_communications_fault_pv_with_bleps_channels's
+            # posture for the sibling misconfiguration on the same list.
+            validate_supply_names(channel.supply for channel in settings.bleps_supply_channels)
             bleps_supply_ids = await seed_observed_supplies(
                 deps,
                 supply_names=frozenset(
