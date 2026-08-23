@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__capture_progress_feeder_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-23 14:56 +0000
+            created at 2026-08-23 20:35 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -656,7 +656,7 @@
     <p class="pln"><span class="n"><a id="t572" href="#t572">572</a></span><span class="t"><span class="str">        real `Begun` and its `status` transitions. `None` return means</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t573" href="#t573">573</a></span><span class="t"><span class="str">        the caller enqueues nothing.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t574" href="#t574">574</a></span><span class="t"><span class="str">        &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t">        <span class="key">if</span> <span class="nam">binary_code</span><span class="op">(</span><span class="nam">reading</span><span class="op">.</span><span class="nam">value</span><span class="op">)</span> <span class="op">!=</span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t575" href="#t575">575</a></span><span class="t">        <span class="key">if</span> <span class="nam">binary_code</span><span class="op">(</span><span class="nam">reading</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span> <span class="nam">ordinal</span><span class="op">=</span><span class="nam">reading</span><span class="op">.</span><span class="nam">ordinal</span><span class="op">)</span> <span class="op">!=</span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t576" href="#t576">576</a></span><span class="t">            <span class="key">return</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t577" href="#t577">577</a></span><span class="t">        <span class="key">return</span> <span class="nam">CaptureLifecycleObservation</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t578" href="#t578">578</a></span><span class="t">            <span class="nam">capture_code</span><span class="op">=</span><span class="nam">code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -707,7 +707,7 @@
     <p class="pln"><span class="n"><a id="t623" href="#t623">623</a></span><span class="t"><span class="str">        constructs an observation; there is no reading here that means</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t624" href="#t624">624</a></span><span class="t"><span class="str">        &quot;nothing happened&quot;.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t625" href="#t625">625</a></span><span class="t"><span class="str">        &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t626" href="#t626">626</a></span><span class="t">        <span class="nam">code_value</span> <span class="op">=</span> <span class="nam">binary_code</span><span class="op">(</span><span class="nam">reading</span><span class="op">.</span><span class="nam">value</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t626" href="#t626">626</a></span><span class="t">        <span class="nam">code_value</span> <span class="op">=</span> <span class="nam">binary_code</span><span class="op">(</span><span class="nam">reading</span><span class="op">.</span><span class="nam">value</span><span class="op">,</span> <span class="nam">ordinal</span><span class="op">=</span><span class="nam">reading</span><span class="op">.</span><span class="nam">ordinal</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t627" href="#t627">627</a></span><span class="t">        <span class="nam">bypassed</span> <span class="op">=</span> <span class="key">None</span> <span class="key">if</span> <span class="nam">code_value</span> <span class="key">is</span> <span class="key">None</span> <span class="key">else</span> <span class="nam">code_value</span> <span class="op">==</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t628" href="#t628">628</a></span><span class="t">        <span class="key">return</span> <span class="nam">CapturePreconditionBypassObservation</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t629" href="#t629">629</a></span><span class="t">            <span class="nam">capture_code</span><span class="op">=</span><span class="nam">code</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -813,7 +813,7 @@
             <a class="nav" href="z_f875772e35c93dd9__capture_progress_feeder_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-23 14:56 +0000
+            created at 2026-08-23 20:35 +0000
         </p>
     </div>
 </footer>
