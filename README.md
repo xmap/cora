@@ -245,7 +245,7 @@
 | src/cora/agent/wire.py                                                                   |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_\_init\_\_.py                                                             |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_agent\_decision\_signing.py                                               |       10 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/api/\_bleps\_supply\_observer.py                                                |      128 |        4 |       50 |        2 |     96.6% |447-448, 573, 586 |
+| src/cora/api/\_bleps\_supply\_observer.py                                                |      128 |        4 |       50 |        2 |     96.6% |525-526, 659, 672 |
 | src/cora/api/\_calibration\_watcher.py                                                   |       59 |        1 |       10 |        1 |     97.1% |       145 |
 | src/cora/api/\_campaign\_watcher.py                                                      |       61 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_capture\_baseline\_reader.py                                              |       85 |        2 |       20 |        0 |     98.1% |  191, 224 |
