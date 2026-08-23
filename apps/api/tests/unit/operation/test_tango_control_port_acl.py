@@ -350,6 +350,32 @@ async def test_a_devstate_delivered_as_a_bare_int_still_withholds_the_ordinal(
 
 
 @pytest.mark.unit
+async def test_a_named_devenum_value_that_will_not_cast_yields_a_label_and_no_ordinal(
+    fake_tango: None,
+) -> None:
+    """The one adapter where the ordinal cast can actually fail.
+
+    The EPICS siblings cast in their unpack step first, so an uncastable
+    value raises before an ordinal is ever asked for and a guard there
+    would be unreachable. Tango's unpack returns `value.name` early for
+    any named value and skips its own cast, so a `DevEnum` carrying a
+    named-but-not-numeric value reaches `_enum_ordinal` uncast.
+
+    The reading stays usable: the label is what the operator sees and
+    what the record stores, and the missing ordinal only costs a
+    two-state consumer its shortcut, which then falls back to the label.
+    """
+
+    class _NameOnly:
+        name = "TRIP"
+
+    port = _make_port(read_result=_DeviceAttribute(value=_NameOnly(), attr_type="DevEnum"))
+    reading = await port.read(_ADDR)
+    assert reading.value == "TRIP"
+    assert reading.ordinal is None
+
+
+@pytest.mark.unit
 async def test_a_devenum_value_exposing_a_name_still_publishes_its_ordinal(
     fake_tango: None,
 ) -> None:

@@ -263,23 +263,20 @@ def _produced_at_for(timestamp: float) -> datetime | None:
     return datetime.fromtimestamp(timestamp, tz=UTC)
 
 
-def _enum_ordinal(value: Any) -> int | None:
-    """The NTEnum index behind a Categorical reading, or `None`.
+def _enum_ordinal(value: Any) -> int:
+    """The NTEnum index behind a Categorical reading.
 
     NTEnum carries `value.index` and `value.choices` in one response, so
     unlike the CA and Tango adapters this side never pays a round trip
     for either half. The index is the portable one and rides on the
     `Measurement` beside the label (see `Measurement.ordinal`).
 
-    The `except` is defensive depth, not a live path: `_to_reading`
-    unpacks the value first and its Categorical branch performs this
-    identical cast unguarded, so anything that will not cast has already
-    raised before this runs. Same shape as the CA adapter's sibling.
+    Deliberately UNGUARDED, same reasoning as the CA adapter's sibling:
+    `_to_reading` unpacks the value first and its Categorical arm casts
+    this identical object, so anything that will not cast has already
+    raised. A guard here could never execute.
     """
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+    return int(value)
 
 
 def _to_reading(value: Any) -> Measurement:

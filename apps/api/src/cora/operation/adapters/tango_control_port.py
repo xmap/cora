@@ -258,6 +258,15 @@ def _enum_ordinal(attr: Any, kind: MeasurementKind) -> int | None:
 
     `DevEnum`'s ordinal has no such problem: the attribute's own
     `enum_labels` define its axis, and index 0 / 1 is that axis.
+
+    The cast IS guarded here, unlike the EPICS siblings where the same
+    guard would be dead code. Those adapters cast in `_unpack_value`
+    first, so an uncastable value raises before the ordinal is asked
+    for. This one does not: `_unpack_value` returns `value.name` early
+    for any named value and never reaches its own cast, so a `DevEnum`
+    carrying a named-but-not-numeric value arrives here uncast. It
+    yields a reading with a usable label and no ordinal, which is the
+    right outcome, and is covered rather than asserted.
     """
     if kind != "Categorical":
         return None

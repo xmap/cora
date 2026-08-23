@@ -330,8 +330,8 @@ def _decode_char_waveform(augmented: Any) -> str:
     return bytes(raw).split(b"\x00", 1)[0].decode("utf-8", errors="replace")
 
 
-def _enum_ordinal(augmented: Any) -> int | None:
-    """The DBR_ENUM index behind a Categorical reading, or `None`.
+def _enum_ordinal(augmented: Any) -> int:
+    """The DBR_ENUM index behind a Categorical reading.
 
     The index is what `_unpack_value` resolves the label FROM, and it is
     the half that means the same thing at every facility, so it rides on
@@ -340,18 +340,18 @@ def _enum_ordinal(augmented: Any) -> int | None:
     `_unpack_value` so that function keeps its single-value contract; the
     cast is cheap and local, not a second round trip.
 
-    The `except` is defensive depth, NOT a live path, and saying so is
-    the honest version: `_to_reading` calls `_unpack_value` first, whose
-    Categorical branch performs this identical cast unguarded, so a
-    value that will not cast has already raised out of `read` before
-    this runs. Do not describe it as a graceful degradation that keeps
-    the label: by the time it could fire, there is no reading left to
-    keep.
+    Deliberately UNGUARDED, and the return type says so. An earlier
+    version wrapped this in `try / except (TypeError, ValueError)` and
+    described it as defensive depth, which was wrong twice over: the
+    branch cannot execute, because `_to_reading` calls `_unpack_value`
+    first and its Categorical arm performs this identical cast on this
+    identical object, so anything that will not cast has already raised
+    out of `read`. A guard that cannot fire is not depth, it is an
+    untestable line asserting a behavior the module does not have, and
+    the diff-coverage gate said so before a reader had to. Failing the
+    same way as the cast one line earlier is the coherent choice.
     """
-    try:
-        return int(augmented)
-    except (TypeError, ValueError):
-        return None
+    return int(augmented)
 
 
 def _to_reading(
