@@ -422,6 +422,7 @@ def _tick_kwargs(
         "truncate_settle": {},
         "quality_act_settle": {},
         "stall_act_settle": {},
+        "envelope_hold_settle": {},
         "liveness_ceiling_seconds": None,
         "advise_enabled": False,
         "resume_enabled": True,
@@ -432,6 +433,8 @@ def _tick_kwargs(
         "quality_settle_ticks": 3,
         "stall_act_enabled": False,
         "stall_settle_ticks": 2,
+        "envelope_hold_enabled": False,
+        "envelope_hold_settle_ticks": 2,
     }
 
 

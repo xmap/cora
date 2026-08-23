@@ -347,6 +347,21 @@ class Settings(BaseSettings):
     run_supervisor_resume_enabled: bool = False
     run_supervisor_resume_settle_ticks: int = 2
 
+    # `run_supervisor_envelope_hold_enabled` is a SEPARATE opt-in widening the
+    # hold trigger beyond beam: a Running Run also holds when a non-beam
+    # start-safety gate (clearance, supply, or enclosure -- the same four
+    # gates `check_safety_envelope` enforces at start, minus beam, which the
+    # v1 hold rule already covers) confirms-fails and stays failed through
+    # the settle window below. Default off: this pays for a full envelope
+    # assembly (aggregate loads + cross-BC lookups) per Running Run per tick
+    # whenever beam is open, a real cost the v1 beam-only hold never paid.
+    # `run_supervisor_envelope_hold_settle_ticks` is its own anti-flap window
+    # (>= 1), separate from the resume settle window above: a transient
+    # eventual-consistency miss on one aggregate load must not hold a Run
+    # that a moment later reads fine.
+    run_supervisor_envelope_hold_enabled: bool = False
+    run_supervisor_envelope_hold_settle_ticks: int = 2
+
     # `run_supervisor_advise_enabled` promotes the supervisor's shadow rules
     # (run-liveness, signal-quality, signal-stall) one rung from observe to
     # advise: on each breach EDGE the supervisor records ONE
@@ -1589,6 +1604,18 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_resume_settle_ticks must be >= 1, got {value}; "
                 "an autonomous resume requires at least one good envelope read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_envelope_hold_settle_ticks")
+    @classmethod
+    def _validate_run_supervisor_envelope_hold_settle_ticks(cls, value: int) -> int:
+        """Floor of 1: a hold needs at least one confirmed-bad envelope read."""
+        if value < 1:
+            msg = (
+                f"run_supervisor_envelope_hold_settle_ticks must be >= 1, got {value}; "
+                "an autonomous envelope hold requires at least one confirmed-failed read"
             )
             raise ValueError(msg)
         return value

@@ -15,7 +15,16 @@ ONCE and decides a disposition:
   - `Continue`  -- beam is available (or its quality is unknown): no action.
   - `Hold`      -- beam is DEFINITELY down while the Run is Running: record a
                    Decision(context=RunSupervision, choice=Hold) and issue
-                   `hold_run` (linked via `decided_by_decision_id`).
+                   `hold_run` (linked via `decided_by_decision_id`). Off
+                   `run_supervisor_envelope_hold_enabled` (default off), beam
+                   open no longer guarantees Continue: a non-beam start-safety
+                   gate (clearance, supply, or enclosure) that confirms-fails
+                   and stays failed through its own settle window
+                   (`run_supervisor_envelope_hold_settle_ticks`) holds the Run
+                   too, through the SAME operator-override cool-down, `Hold`
+                   cause (`HOLD_CAUSE_SUPERVISOR`), and Decision context --
+                   only `inputs.trigger` ("beam" or "envelope") and
+                   `inputs.failed_gate` distinguish which gate fired.
   - `Resume`    -- the gated wind-up. A Run the supervisor itself held is
                    resumed only when the FULL start-safety envelope is good
                    again (an Active clearance covers the scope, every enclosure
@@ -100,6 +109,7 @@ from cora.recipe.aggregates.plan import load_plan
 from cora.recipe.aggregates.practice import load_practice
 from cora.run.adapters import PostgresRunChannelLookup
 from cora.run.aggregates.run import (
+    HOLD_CAUSE_SUPERVISOR,
     RunBeamAvailabilityUnknownError,
     RunCannotAbortError,
     RunCannotHoldError,
@@ -191,6 +201,17 @@ _ENVELOPE_GATE: dict[type[Exception], str] = {
 }
 _ENVELOPE_ERRORS = tuple(_ENVELOPE_GATE)
 
+# The `EnvelopeCheck.failed_gate` labels the envelope-hold trigger may act
+# on. Deliberately excludes "beam" (the dedicated beam branch already
+# covers it, from the SAME tick's beam reading; letting the envelope path
+# double-trigger on it would just duplicate that branch under a different
+# name) and every `*_missing` structural label `_assemble_and_check_envelope`
+# can also produce (plan_missing / practice_missing / method_missing /
+# asset_missing): those mean the envelope could not be EVALUATED, not that
+# a gate was confirmed to have failed, and Lock 4 (never act on missing
+# data) applies to that case exactly as it does to unknown beam quality.
+_HOLD_WORTHY_GATES: frozenset[str] = frozenset({"clearance", "supply", "enclosure"})
+
 
 @dataclass(frozen=True)
 class EnvelopeCheck:
@@ -213,12 +234,21 @@ def decide_supervision(
     prior: str | None,
     envelope_ok: bool | None = None,
     settle_ticks_met: bool = False,
+    envelope_hold_ready: bool = False,
 ) -> SupervisionOutcome:
     """Pure supervision rule for one Run (no I/O).
 
     Hold path (Running): beam is "definitely down" only when the read
     quality is Good and a shutter/permit is closed; a non-Good read is
-    "unknown" and yields no action (Lock 4).
+    "unknown" and yields no action (Lock 4). `envelope_hold_ready`
+    widens the hold trigger symmetrically with the resume path below:
+    beam OPEN no longer means unconditional Continue if the caller has
+    also confirmed (with its own settle window) that a non-beam
+    start-safety gate -- clearance, supply, or enclosure -- has FAILED,
+    not merely gone unevaluated. The caller is responsible for keeping
+    "confirmed failure" and "could not evaluate" (a missing upstream
+    aggregate) distinct before setting this True; the latter must stay
+    Lock-4 unknown, never hold-worthy.
 
     Resume path (Held): the gated wind-up. A Held Run the supervisor
     itself holds (`prior == _MEM_HELD`) is resumed only when the full
@@ -257,9 +287,28 @@ def decide_supervision(
         )
     beam_open = beam.fes_open and beam.sbs_open and beam.fes_permit
     if beam_open:
-        return SupervisionOutcome(
-            choice="Continue", new_memory=None, record=False, issue_hold=False
-        )
+        if not envelope_hold_ready:
+            return SupervisionOutcome(
+                choice="Continue", new_memory=None, record=False, issue_hold=False
+            )
+        # Beam is fine but a non-beam start-safety gate has confirmed-failed
+        # (and stayed failed through the caller's settle window). Same
+        # operator-override cool-down as the beam-down branch below.
+        if prior == _MEM_HELD:
+            return SupervisionOutcome(
+                choice="SupervisionDeferred",
+                new_memory=_MEM_DEFERRED,
+                record=True,
+                issue_hold=False,
+            )
+        if prior == _MEM_DEFERRED:
+            return SupervisionOutcome(
+                choice="SupervisionDeferred",
+                new_memory=_MEM_DEFERRED,
+                record=False,
+                issue_hold=False,
+            )
+        return SupervisionOutcome(choice="Hold", new_memory=_MEM_HELD, record=True, issue_hold=True)
     # Beam is definitely down and the Run is Running.
     if prior == _MEM_HELD:
         # The supervisor held this Run, and the operator resumed it while beam
@@ -362,8 +411,22 @@ def decide_signal_stall(
     return SignalDisposition(would_flag=False, reason="arriving")
 
 
-def _reasoning_for(choice: str) -> str:
+def _reasoning_for(choice: str, *, trigger: str = "beam") -> str:
+    """`trigger` distinguishes what actually fired for `choice in {Hold,
+    SupervisionDeferred}`: `"beam"` (the original v1 rule) or
+    `"envelope"` (a non-beam start-safety gate; see `inputs.failed_gate`
+    on the recorded Decision for which one). Ignored for every other
+    choice, which has only ever had one cause.
+    """
     if choice == "Hold":
+        if trigger == "envelope":
+            return (
+                "A start-safety gate (clearance, supply, or enclosure) failed while "
+                "beam was available, and stayed failed through the settle window; "
+                "held the Run because it can no longer draw on what it started "
+                "against. See inputs.failed_gate. Resumable once the envelope is "
+                "satisfied again."
+            )
         return (
             "Beam unavailable (a shutter or the FES permit is closed); held the "
             "Run to avoid acquiring on absent beam. Resumable once beam returns."
@@ -393,6 +456,11 @@ def _reasoning_for(choice: str) -> str:
             "while the beam was up and the feeder alive; stopped the Run (controlled "
             "exit) because acquisition is wedged. Data up to the stop point is valid."
         )
+    if trigger == "envelope":
+        return (
+            "A start-safety gate is still failing but the operator resumed the "
+            "Run; deferring to the operator (no re-hold for this outage)."
+        )
     return (
         "Beam still unavailable but the operator resumed the Run; deferring to "
         "the operator (no re-hold for this outage)."
@@ -406,6 +474,7 @@ async def _record_decision(
     run_id: UUID,
     choice: str,
     beam: BeamAvailabilityLookupResult,
+    trigger: str = "beam",
     extra_inputs: dict[str, str] | None = None,
 ) -> None:
     """Compose and append one DecisionRegistered (Decision BC genesis).
@@ -414,10 +483,15 @@ async def _record_decision(
     only). A ConcurrencyError means a prior tick already wrote this id (rare
     cross-restart re-derivation); treat as success. `extra_inputs` adds
     disposition-specific evidence (e.g. the resume envelope + settle count).
+    `trigger` selects which `_reasoning_for` template applies for `choice
+    in {Hold, SupervisionDeferred}` ("beam" or "envelope"); always carried
+    into `inputs.trigger` too, so a reader does not have to parse `reasoning`
+    to tell the two apart.
     """
     now = deps.clock.now()
     decision_inputs = {
         "run_id": str(run_id),
+        "trigger": trigger,
         "beam_fes_open": str(beam.fes_open),
         "beam_sbs_open": str(beam.sbs_open),
         "beam_fes_permit": str(beam.fes_permit),
@@ -433,7 +507,7 @@ async def _record_decision(
         parent_id=None,
         override_kind=None,
         rule=DecisionRule(_RULE).value,
-        reasoning=validate_reasoning(_reasoning_for(choice)),
+        reasoning=validate_reasoning(_reasoning_for(choice, trigger=trigger)),
         confidence=validate_confidence(None),
         confidence_source=DecisionConfidenceSource.SELF_REPORTED,
         alternatives=(),
@@ -599,10 +673,18 @@ async def _issue_hold(
     run_id: UUID,
     decision_id: UUID,
 ) -> None:
-    """Issue HoldRun through the authorized handler; benign no-op on state race."""
+    """Issue HoldRun through the authorized handler; benign no-op on state race.
+
+    `cause=HOLD_CAUSE_SUPERVISOR`: without it, the command's default
+    `HOLD_CAUSE_OPERATOR` placed the supervisor's hold under the SAME
+    claim an operator's own hold/resume uses, so a routine operator
+    `resume_run` (default cause) would silently discharge a hold the
+    supervisor placed because beam (or, with the envelope-hold gate on,
+    a supply/clearance/enclosure gate) was down, and vice versa.
+    """
     try:
         await hold_run(
-            HoldRun(run_id=run_id, decided_by_decision_id=decision_id),
+            HoldRun(run_id=run_id, decided_by_decision_id=decision_id, cause=HOLD_CAUSE_SUPERVISOR),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
             surface_id=NIL_SENTINEL_ID,
@@ -624,10 +706,18 @@ async def _issue_resume(
     run_id: UUID,
     decision_id: UUID,
 ) -> None:
-    """Issue ResumeRun through the authorized handler; benign no-op on state race."""
+    """Issue ResumeRun through the authorized handler; benign no-op on state race.
+
+    `cause=HOLD_CAUSE_SUPERVISOR`, matching `_issue_hold`: a resume's
+    `cause` must match the hold's to discharge the same claim, and
+    own-holds-only (Lock 9) means this is always releasing a hold this
+    same runtime placed.
+    """
     try:
         await resume_run(
-            ResumeRun(run_id=run_id, decided_by_decision_id=decision_id),
+            ResumeRun(
+                run_id=run_id, decided_by_decision_id=decision_id, cause=HOLD_CAUSE_SUPERVISOR
+            ),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
             surface_id=NIL_SENTINEL_ID,
@@ -1157,6 +1247,7 @@ async def _supervise_tick(
     feed_dead_warned: set[UUID],
     quality_act_settle: dict[UUID, int],
     stall_act_settle: dict[UUID, int],
+    envelope_hold_settle: dict[UUID, int],
     resume_enabled: bool,
     resume_settle_ticks: int,
     liveness_ceiling_seconds: float | None,
@@ -1167,6 +1258,8 @@ async def _supervise_tick(
     stall_act_enabled: bool,
     stall_settle_ticks: int,
     advise_enabled: bool,
+    envelope_hold_enabled: bool,
+    envelope_hold_settle_ticks: int,
 ) -> None:
     """One supervision pass over all in-flight Runs (hold + gated resume +
     shadow liveness + optional advise + optional observation act rungs)."""
@@ -1240,6 +1333,9 @@ async def _supervise_tick(
     for run_id in list(stall_act_settle):
         if run_id not in inflight_ids:
             del stall_act_settle[run_id]
+    for run_id in list(envelope_hold_settle):
+        if run_id not in inflight_ids:
+            del envelope_hold_settle[run_id]
 
     # Run-liveness pass (the run-liveness rule): flags a Running Run that has
     # been Running implausibly long (now - running_since past the operator
@@ -1332,17 +1428,47 @@ async def _supervise_tick(
 
     beam = await beam_lookup.read()
 
-    # Hold pass (Running Runs).
+    # Hold pass (Running Runs). Beam-down is checked first and, when it
+    # applies, dominates: the envelope-hold gate below is consulted only
+    # while beam is open, matching decide_supervision's own precedence, so
+    # a Run already going down for beam never pays for the envelope
+    # assembly at all.
     for item in running:
+        beam_open = beam.quality_ok and beam.fes_open and beam.sbs_open and beam.fes_permit
+        envelope_hold_ready = False
+        failed_gate: str | None = None
+        if envelope_hold_enabled and beam_open:
+            check = await _assemble_and_check_envelope(deps, item, beam)
+            failed_gate = check.failed_gate
+            if check.ok or failed_gate not in _HOLD_WORTHY_GATES:
+                # Genuinely clear, OR the only failure was a beam gate
+                # (already covered above) or a `*_missing` structural
+                # short-circuit (Lock 4: unevaluable is not confirmed-failed).
+                envelope_hold_settle.pop(item.run_id, None)
+            else:
+                envelope_hold_settle[item.run_id] = envelope_hold_settle.get(item.run_id, 0) + 1
+                envelope_hold_ready = (
+                    envelope_hold_settle[item.run_id] >= envelope_hold_settle_ticks
+                )
         outcome = decide_supervision(
-            run_status=item.status, beam=beam, prior=memory.get(item.run_id)
+            run_status=item.status,
+            beam=beam,
+            prior=memory.get(item.run_id),
+            envelope_hold_ready=envelope_hold_ready,
         )
         _apply_memory(memory, item.run_id, outcome)
         if not outcome.record:
             continue
         decision_id = deps.id_generator.new_id()
+        trigger = "beam" if not beam_open else "envelope"
         await _record_decision(
-            deps, decision_id=decision_id, run_id=item.run_id, choice=outcome.choice, beam=beam
+            deps,
+            decision_id=decision_id,
+            run_id=item.run_id,
+            choice=outcome.choice,
+            beam=beam,
+            trigger=trigger,
+            extra_inputs={"failed_gate": failed_gate} if failed_gate else None,
         )
         if outcome.issue_hold:
             await _issue_hold(deps, hold_run, run_id=item.run_id, decision_id=decision_id)
@@ -1395,13 +1521,16 @@ async def _supervise_tick(
         if not outcome.record:
             continue
         decision_id = deps.id_generator.new_id()
+        resume_inputs = {"envelope_ok": str(check.ok), "settle_ticks": str(settle_count)}
+        if check.failed_gate:
+            resume_inputs["failed_gate"] = check.failed_gate
         await _record_decision(
             deps,
             decision_id=decision_id,
             run_id=item.run_id,
             choice=outcome.choice,
             beam=beam,
-            extra_inputs={"envelope_ok": str(check.ok), "settle_ticks": str(settle_count)},
+            extra_inputs=resume_inputs,
         )
         if outcome.issue_resume:
             # Resumed: drop the settle counter (the Run is leaving the
@@ -1432,6 +1561,8 @@ async def _supervise_loop(
     stall_act_enabled: bool,
     stall_settle_ticks: int,
     advise_enabled: bool,
+    envelope_hold_enabled: bool,
+    envelope_hold_settle_ticks: int,
 ) -> None:
     """Periodic supervision loop. A failed tick is logged; the next tick retries."""
     memory: dict[UUID, str] = {}
@@ -1444,6 +1575,7 @@ async def _supervise_loop(
     feed_dead_warned: set[UUID] = set()
     quality_act_settle: dict[UUID, int] = {}
     stall_act_settle: dict[UUID, int] = {}
+    envelope_hold_settle: dict[UUID, int] = {}
     read_denied = False
     while True:
         try:
@@ -1468,6 +1600,7 @@ async def _supervise_loop(
                 feed_dead_warned=feed_dead_warned,
                 quality_act_settle=quality_act_settle,
                 stall_act_settle=stall_act_settle,
+                envelope_hold_settle=envelope_hold_settle,
                 resume_enabled=resume_enabled,
                 resume_settle_ticks=resume_settle_ticks,
                 liveness_ceiling_seconds=liveness_ceiling_seconds,
@@ -1478,6 +1611,8 @@ async def _supervise_loop(
                 stall_act_enabled=stall_act_enabled,
                 stall_settle_ticks=stall_settle_ticks,
                 advise_enabled=advise_enabled,
+                envelope_hold_enabled=envelope_hold_enabled,
+                envelope_hold_settle_ticks=envelope_hold_settle_ticks,
             )
             if read_denied:
                 _log.info("run_supervisor.read_authorized_recovered")
@@ -1566,6 +1701,8 @@ async def run_supervisor_lifespan(
     stall_act_enabled = deps.settings.run_supervisor_stall_act_enabled
     stall_settle_ticks = deps.settings.run_supervisor_stall_settle_ticks
     advise_enabled = deps.settings.run_supervisor_advise_enabled
+    envelope_hold_enabled = deps.settings.run_supervisor_envelope_hold_enabled
+    envelope_hold_settle_ticks = deps.settings.run_supervisor_envelope_hold_settle_ticks
     rules_config = ObservationRuleConfig(
         quality_channel_name=deps.settings.run_quality_channel_name,
         stall_channel_name=deps.settings.run_stall_channel_name,
@@ -1584,6 +1721,7 @@ async def run_supervisor_lifespan(
         quality_act_enabled=quality_act_enabled,
         stall_act_enabled=stall_act_enabled,
         advise_enabled=advise_enabled,
+        envelope_hold_enabled=envelope_hold_enabled,
     )
     task = asyncio.create_task(
         _supervise_loop(
@@ -1608,6 +1746,8 @@ async def run_supervisor_lifespan(
             stall_act_enabled,
             stall_settle_ticks,
             advise_enabled,
+            envelope_hold_enabled,
+            envelope_hold_settle_ticks,
         ),
         name="run-supervisor",
     )

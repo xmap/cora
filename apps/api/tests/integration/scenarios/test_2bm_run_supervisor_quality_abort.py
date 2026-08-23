@@ -365,6 +365,7 @@ async def _tick(
         feed_dead_warned=set(),
         quality_act_settle=quality_act_settle,
         stall_act_settle={},
+        envelope_hold_settle={},
         resume_enabled=False,
         resume_settle_ticks=1,
         liveness_ceiling_seconds=None,
@@ -375,6 +376,8 @@ async def _tick(
         stall_act_enabled=False,
         stall_settle_ticks=2,
         advise_enabled=False,
+        envelope_hold_enabled=False,
+        envelope_hold_settle_ticks=2,
     )
 
 

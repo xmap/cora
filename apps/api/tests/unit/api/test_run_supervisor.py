@@ -52,6 +52,7 @@ from cora.infrastructure.ports.beam_availability_lookup import (
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
+    HOLD_CAUSE_SUPERVISOR,
     RunCannotAbortError,
     RunCannotResumeError,
     RunCannotTruncateError,
@@ -408,6 +409,9 @@ async def _tick(
     quality_settle_ticks: int = 3,
     stall_act_enabled: bool = False,
     stall_settle_ticks: int = 2,
+    envelope_hold_settle: dict[UUID, int] | None = None,
+    envelope_hold_enabled: bool = False,
+    envelope_hold_settle_ticks: int = 2,
 ) -> None:
     """Call _supervise_tick, defaulting the resume + truncate + observation-act
     wiring (off) for hold-only tests."""
@@ -440,6 +444,7 @@ async def _tick(
         feed_dead_warned=feed_dead_warned if feed_dead_warned is not None else set(),
         quality_act_settle=quality_act_settle if quality_act_settle is not None else {},
         stall_act_settle=stall_act_settle if stall_act_settle is not None else {},
+        envelope_hold_settle=envelope_hold_settle if envelope_hold_settle is not None else {},
         resume_enabled=resume_enabled,
         resume_settle_ticks=resume_settle_ticks,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
@@ -450,6 +455,8 @@ async def _tick(
         stall_act_enabled=stall_act_enabled,
         stall_settle_ticks=stall_settle_ticks,
         advise_enabled=advise_enabled,
+        envelope_hold_enabled=envelope_hold_enabled,
+        envelope_hold_settle_ticks=envelope_hold_settle_ticks,
     )
 
 
@@ -475,6 +482,7 @@ async def test_tick_holds_running_run_when_beam_down_and_records_decision() -> N
     held = hold_calls[0]
     assert held.run_id == run_id
     assert held.decided_by_decision_id is not None
+    assert held.cause == HOLD_CAUSE_SUPERVISOR
     assert memory[run_id] == _MEM_HELD
 
     decision = await load_decision(kernel.event_store, held.decided_by_decision_id)
@@ -482,6 +490,8 @@ async def test_tick_holds_running_run_when_beam_down_and_records_decision() -> N
     assert decision.context.value == "RunSupervision"
     assert decision.choice.value == "Hold"
     assert decision.decided_by == ActorId(RUN_SUPERVISOR_AGENT_ID)
+    assert decision.inputs is not None
+    assert decision.inputs["trigger"] == "beam"
 
 
 @pytest.mark.unit
@@ -904,12 +914,17 @@ def _make_list_runs_split(
     return list_runs
 
 
-def _patch_envelope(monkeypatch: pytest.MonkeyPatch, *, ok: bool) -> None:
+def _patch_envelope(
+    monkeypatch: pytest.MonkeyPatch, *, ok: bool, failed_gate: str = "clearance"
+) -> None:
     """Stub the (I/O-heavy) envelope assembly; the real load + lookups path is
-    covered end-to-end by the 2-BM auto-resume scenario."""
+    covered end-to-end by the 2-BM auto-resume scenario. `failed_gate`
+    (ignored when `ok=True`) lets envelope-hold tests distinguish a
+    hold-worthy gate (clearance/supply/enclosure) from a `*_missing`
+    structural short-circuit, which must NOT be hold-worthy (Lock 4)."""
 
     async def _fake(deps: Kernel, item: RunSummaryItem, beam: BeamAvailabilityLookupResult):
-        return EnvelopeCheck(ok=ok, failed_gate=None if ok else "clearance")
+        return EnvelopeCheck(ok=ok, failed_gate=None if ok else failed_gate)
 
     monkeypatch.setattr("cora.api._run_supervisor._assemble_and_check_envelope", _fake)
 
@@ -959,6 +974,7 @@ async def test_tick_resumes_held_run_after_settle_window(monkeypatch: pytest.Mon
     resumed = resume_calls[0]
     assert resumed.run_id == run_id
     assert resumed.decided_by_decision_id is not None
+    assert resumed.cause == HOLD_CAUSE_SUPERVISOR
     assert memory[run_id] == _MEM_DEFERRED
 
     decision = await load_decision(kernel.event_store, resumed.decided_by_decision_id)
@@ -1120,6 +1136,201 @@ async def test_tick_beam_open_running_is_noop_and_clears_memory() -> None:
     await _tick(kernel, list_runs=list_runs, hold_run=hold_run, beam_lookup=_BeamOpen(), memory={})
 
     assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_envelope_hold_disabled_never_holds_on_a_failed_gate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The default-off gate: even a confirmed supply-gate failure never holds
+    a Running Run unless `envelope_hold_enabled` is explicitly True."""
+    _patch_envelope(monkeypatch, ok=False, failed_gate="supply")
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        envelope_hold_enabled=False,
+    )
+
+    assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_envelope_hold_fires_after_settle_window_and_records_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Beam is open, but a supply gate fails and stays failed through the
+    settle window: the Run holds under the SAME cause and cool-down as a
+    beam-triggered hold, with `failed_gate` carried as Decision evidence."""
+    _patch_envelope(monkeypatch, ok=False, failed_gate="supply")
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+    memory: dict[UUID, str] = {}
+    envelope_hold_settle: dict[UUID, int] = {}
+
+    # Tick 1: first confirmed-bad read, settle=1 (< 2): no hold yet.
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory=memory,
+        envelope_hold_enabled=True,
+        envelope_hold_settle_ticks=2,
+        envelope_hold_settle=envelope_hold_settle,
+    )
+    assert hold_calls == []
+    assert memory.get(run_id) is None
+
+    # Tick 2: settle window met: hold.
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory=memory,
+        envelope_hold_enabled=True,
+        envelope_hold_settle_ticks=2,
+        envelope_hold_settle=envelope_hold_settle,
+    )
+
+    assert len(hold_calls) == 1
+    held = hold_calls[0]
+    assert held.run_id == run_id
+    assert held.cause == HOLD_CAUSE_SUPERVISOR
+    assert held.decided_by_decision_id is not None
+    assert memory[run_id] == _MEM_HELD
+
+    decision = await load_decision(kernel.event_store, held.decided_by_decision_id)
+    assert decision is not None
+    assert decision.choice.value == "Hold"
+    assert decision.inputs is not None
+    assert decision.inputs["trigger"] == "envelope"
+    assert decision.inputs["failed_gate"] == "supply"
+
+
+@pytest.mark.unit
+async def test_envelope_hold_settle_resets_on_a_good_tick(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A single good envelope read between two bad ones restarts the settle
+    count, mirroring the resume settle window's own anti-flap shape."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+    memory: dict[UUID, str] = {}
+    envelope_hold_settle: dict[UUID, int] = {}
+
+    _patch_envelope(monkeypatch, ok=False, failed_gate="supply")
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory=memory,
+        envelope_hold_enabled=True,
+        envelope_hold_settle_ticks=2,
+        envelope_hold_settle=envelope_hold_settle,
+    )
+    assert envelope_hold_settle[run_id] == 1
+
+    _patch_envelope(monkeypatch, ok=True)
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamOpen(),
+        memory=memory,
+        envelope_hold_enabled=True,
+        envelope_hold_settle_ticks=2,
+        envelope_hold_settle=envelope_hold_settle,
+    )
+    assert run_id not in envelope_hold_settle
+    assert hold_calls == []
+
+
+@pytest.mark.unit
+async def test_envelope_hold_ignores_a_missing_aggregate_structural_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Lock 4: a `*_missing` short-circuit means the envelope could not be
+    EVALUATED, not that a gate confirmed-failed, so it must never hold a Run
+    even with the feature enabled and repeated across the settle window."""
+    _patch_envelope(monkeypatch, ok=False, failed_gate="asset_missing")
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+    memory: dict[UUID, str] = {}
+    envelope_hold_settle: dict[UUID, int] = {}
+
+    for _ in range(3):
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=hold_run,
+            beam_lookup=_BeamOpen(),
+            memory=memory,
+            envelope_hold_enabled=True,
+            envelope_hold_settle_ticks=2,
+            envelope_hold_settle=envelope_hold_settle,
+        )
+
+    assert hold_calls == []
+    assert run_id not in envelope_hold_settle
+
+
+@pytest.mark.unit
+async def test_envelope_hold_skipped_entirely_when_beam_already_down(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Beam-down dominates: the envelope assembly is never even called, so a
+    Run already holding for beam pays no extra cost and the trigger reads
+    'beam', not 'envelope'."""
+    calls: list[UUID] = []
+
+    async def _fake_envelope(
+        deps: Kernel, item: RunSummaryItem, beam: BeamAvailabilityLookupResult
+    ) -> EnvelopeCheck:
+        calls.append(item.run_id)
+        raise AssertionError("envelope assembly must not run while beam is down")
+
+    monkeypatch.setattr("cora.api._run_supervisor._assemble_and_check_envelope", _fake_envelope)
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id)])
+    hold_run, hold_calls = _make_recording_hold()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamDown(),
+        memory={},
+        envelope_hold_enabled=True,
+    )
+
+    assert calls == []
+    assert len(hold_calls) == 1
+    held = hold_calls[0]
+    assert held.decided_by_decision_id is not None
+    decision = await load_decision(kernel.event_store, held.decided_by_decision_id)
+    assert decision is not None
+    assert decision.inputs is not None
+    assert decision.inputs["trigger"] == "beam"
 
 
 @pytest.mark.unit
