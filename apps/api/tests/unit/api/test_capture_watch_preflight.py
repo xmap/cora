@@ -226,7 +226,7 @@ async def test_preflight_read_full_file_name_role_redacts_the_real_value() -> No
 
     report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
 
-    (line,) = report.lines
+    line = next(x for x in report.lines if x.pv_key == "full_file_name")
     assert line.ok
     assert "Smith" not in str(line.value)
     assert "Smith" not in line.render()
@@ -242,7 +242,7 @@ async def test_preflight_read_full_file_name_role_empty_string_is_ok() -> None:
 
     report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
 
-    (line,) = report.lines
+    line = next(x for x in report.lines if x.pv_key == "full_file_name")
     assert line.ok
     assert line.verdict == "empty"
     assert line.value == "<redacted, len=0>"
@@ -257,7 +257,7 @@ async def test_preflight_read_full_file_name_role_suspected_truncated_is_bad() -
 
     report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
 
-    (line,) = report.lines
+    line = next(x for x in report.lines if x.pv_key == "full_file_name")
     assert not line.ok
     assert line.verdict == "suspected-truncated"
     assert "a" * 10 not in str(line.value)  # never the real (redacted) content
@@ -272,7 +272,7 @@ async def test_preflight_read_full_file_name_role_just_under_the_threshold_is_ok
 
     report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
 
-    (line,) = report.lines
+    line = next(x for x in report.lines if x.pv_key == "full_file_name")
     assert line.ok
     assert line.verdict == f"text(len={FULL_FILE_NAME_TRUNCATION_THRESHOLD - 1})"
 
@@ -283,7 +283,7 @@ async def test_preflight_read_full_file_name_role_non_text_is_bad() -> None:
 
     report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
 
-    (line,) = report.lines
+    line = next(x for x in report.lines if x.pv_key == "full_file_name")
     assert not line.ok
     assert line.verdict == "non-text"
     assert line.value == "<redacted, non-text>"
@@ -433,13 +433,31 @@ async def test_preflight_read_camera_prefix_check_unrecognized_reading_is_bad() 
 
 
 @pytest.mark.unit
-async def test_preflight_read_camera_prefix_check_skipped_without_camera_selected_role() -> None:
-    """A code with `full_file_name` alone (no `camera_selected` role
-    declared) gets no cross-check line: this is the pre-existing
-    behavior for every deployment that has not yet opted in."""
+async def test_preflight_read_camera_prefix_check_undeclared_role_is_bad_not_absent() -> None:
+    """A code with `full_file_name` alone reports BAD `undeclared(...)`,
+    not silence. 2-BM ran in exactly this state from the check shipping
+    until 2026-08-22: the role was never added, so the cross-check never
+    ran once and the report's `N/N PVs OK` tail counted a config it had
+    not checked."""
     port = _FakeControlPort({"pv:file": _reading("2bmSP2:HDF1:FullFileName_RBV")})
 
     report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    by_key = {line.pv_key: line for line in report.lines}
+    check = by_key["camera_prefix_check"]
+    assert not check.ok
+    assert check.verdict == "undeclared('camera_selected' role not in capture_watch_pvs)"
+    assert report.problem
+
+
+@pytest.mark.unit
+async def test_preflight_read_camera_prefix_check_absent_when_no_full_file_name_role() -> None:
+    """The BAD above is scoped to codes that actually declare
+    `full_file_name`. A code without it has no hardcoded camera prefix
+    to strand, so there is nothing to cross-check and no line is owed."""
+    port = _FakeControlPort({"pv:status": _reading("Collecting projections")})
+
+    report = await _preflight(port, {"code": {"status": "pv:status"}})
 
     assert "camera_prefix_check" not in {line.pv_key for line in report.lines}
 

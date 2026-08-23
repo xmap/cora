@@ -138,6 +138,16 @@ unrecognized reading, an empty mapping table, or an unreadable PV are
 all BAD, never a silent pass: this check either confirms the two agree
 or says plainly that it cannot.
 
+A code declaring `full_file_name` WITHOUT `camera_selected` is that
+same "cannot confirm", so it reports BAD `undeclared(...)` rather than
+no line at all. It read as a silent pass until 2026-08-22, and 2-BM
+was in exactly that state: `camera_selected` was never added to the
+deployment's `capture_watch_pvs`, so the cross-check that shipped to
+catch a camera switch never ran once, and the preflight's own
+`N/N PVs OK` tail counted a config it had not checked. An optional
+role is a reasonable thing for a deployment not to declare; a safety
+check that disappears when it is missing is not.
+
 Exit codes: 0 every configured PV connected and decoded clean; 2 anything
 disconnected, timed out, was access-denied, or a decoder rejected it.
 """
@@ -281,16 +291,19 @@ async def preflight_read_capture_pvs(
             pv_report = await _read_one(control_port, code, role, pv, status_phases)
             report.lines.append(pv_report)
             role_reports[role] = pv_report
-        if ROLE_FULL_FILE_NAME in roles and ROLE_CAMERA_SELECTED in roles:
-            report.lines.append(
-                _camera_prefix_check(
-                    code=code,
-                    full_file_name_pv=roles[ROLE_FULL_FILE_NAME],
-                    camera_selected_pv=roles[ROLE_CAMERA_SELECTED],
-                    camera_selected_report=role_reports[ROLE_CAMERA_SELECTED],
-                    camera_select_prefixes=camera_select_prefixes or {},
+        if ROLE_FULL_FILE_NAME in roles:
+            if ROLE_CAMERA_SELECTED in roles:
+                report.lines.append(
+                    _camera_prefix_check(
+                        code=code,
+                        full_file_name_pv=roles[ROLE_FULL_FILE_NAME],
+                        camera_selected_pv=roles[ROLE_CAMERA_SELECTED],
+                        camera_selected_report=role_reports[ROLE_CAMERA_SELECTED],
+                        camera_select_prefixes=camera_select_prefixes or {},
+                    )
                 )
-            )
+            else:
+                report.lines.append(_camera_prefix_check_undeclared(code=code, roles=roles))
     for code in sorted(baseline_pvs or {}):
         for channel_name, pv in sorted((baseline_pvs or {})[code].items()):
             report.lines.append(await _read_one_baseline(control_port, code, channel_name, pv))
@@ -518,6 +531,31 @@ def _camera_prefix_check(
         kind="PrefixCheck",
         value=configured_prefix,
         verdict="match",
+    )
+
+
+def _camera_prefix_check_undeclared(*, code: str, roles: Mapping[str, str]) -> _PvReport:
+    """A code declaring `full_file_name` but NOT `camera_selected`.
+
+    This reports BAD rather than emitting nothing, because the absence
+    of the role is not the absence of the risk: `full_file_name`'s PV
+    is still a hardcoded prefix that an operator's camera switch can
+    strand on the idle camera's stale readback, and that value still
+    reaches the `run_capture_path` PII vault. Every other way this
+    cross-check can fail to confirm already reports BAD (see
+    `_camera_prefix_check`); leaving this one case silent made "not
+    configured yet" indistinguishable from "checked and agreed" in the
+    one report an operator reads before flipping the recording switch.
+    """
+    return _PvReport(
+        code=code,
+        pv_key="camera_prefix_check",
+        pv=roles[ROLE_FULL_FILE_NAME],
+        ok=False,
+        connected=True,
+        kind="PrefixCheck",
+        value=_configured_pv_prefix(roles[ROLE_FULL_FILE_NAME]),
+        verdict=f"undeclared({ROLE_CAMERA_SELECTED!r} role not in capture_watch_pvs)",
     )
 
 
