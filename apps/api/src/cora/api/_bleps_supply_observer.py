@@ -186,9 +186,87 @@ def flag_state_from_reading(reading: Measurement) -> bool | None:
     """Is this BLEPS flag high? `None` when the reading cannot be believed.
 
     Named `<value>_from_reading` rather than `is_*` because the third
-    answer is load-bearing: a non-Good quality reading, or a value this
-    function cannot interpret, is not a LOW reading, and conflating the
-    two would let a dead PV read as "no fault here".
+    answer is load-bearing: a reading this function cannot believe or
+    cannot interpret is not a LOW reading, and conflating the two would
+    let a dead PV read as "no fault here".
+
+    ## The quality floor is `Bad`, because on an interlock the alarm IS
+    ## the signal
+
+    This asks "can I believe this value", not "can I act on it", and for
+    an equipment-protection interlock those come apart completely. A
+    BLEPS record raises a MAJOR alarm PRECISELY WHEN ITS FLAG ASSERTS:
+    that is what the alarm is for, to put the trip on an operator's
+    screen. `EpicsCaControlPort` collapses MINOR and MAJOR to
+    `Uncertain` (only INVALID is `Bad`, because only INVALID says the
+    value itself is untrustworthy), so a `!= "Good"` floor here does not
+    discard SOME readings, it discards EXACTLY THE ASSERTED ONES and
+    keeps only the quiet ones. The observer could see a clear beamline
+    and nothing else.
+
+    Measured on arcturus 2026-08-23, 67 PVs, no exceptions, and stated
+    PER ROLE because this one function reads three kinds of PV and they
+    do not share a label pair:
+
+      - process axis (`*_TRIP`, `*_WRN`, `NO_FAULT` / `TRIP`): every
+        reading of `TRIP` carried `STATE MAJOR`; every `NO_FAULT`
+        carried no alarm. All eight cooling-water circuits, three of
+        seven vacuum sections, two ion pumps and six ion gauges were
+        asserted, and a Good-only floor saw none of them.
+      - trust axis (`*_OVER_RANGE`, `*_UNDER_RANGE`, `*_FAULTED`,
+        `*_FAIL_TO_CLOSE`, `""` / `Present`): all sixteen read clear,
+        all with no alarm.
+      - system axis (`COMMUNICATIONS_FAULT`, same pair): clear, no
+        alarm.
+
+    The PSS agrees on the process axis: `S02BM-PSS:Sta[AB]:SecureM` and
+    `SR-ACIS:2BM:FesPermitM` all sit at MAJOR while asserting. Nothing
+    at 2-BM reported MINOR.
+
+    What that sweep does NOT establish, and the difference matters for
+    how far to trust the paragraph below: no trust-axis or system-axis
+    flag was observed ASSERTED, because none were faulted that day. So
+    "asserted implies MAJOR" is measured for the process axis and only
+    inferred for the other two from the shared IOC template. The
+    direction this function actually depends on is the other one, that
+    a CLEAR reading carries no alarm, and that IS measured for all
+    three.
+
+    So the floor is `Bad`, matching `_enclosure_permit_observer`
+    (loosened for this exact reason after 2-BM's SecureM read `Unknown`
+    forever) and `_capture_baseline_reader` (which already records that
+    "a MAJOR alarm is still a believable value"). Both of those wrote
+    the principle down; this observer was written later and took the
+    strict floor without asking which question it was answering.
+
+    The loosening widens BOTH directions, and the second one deserves
+    naming rather than burying. It can now call a Supply DOWN on an
+    alarmed reading, which is the whole point. It can also now believe
+    an alarmed CLEAR reading, which previously withheld the verdict, and
+    that lands differently on each axis:
+
+      - process axis: an alarmed clear trip flag counts toward "every
+        channel clear", so a Supply can reach `Recovering` where it
+        previously stayed silent.
+      - trust axis: an alarmed clear `fault_pv` no longer blinds its
+        channel, so that channel's trip reading is believed instead of
+        being dropped from the fold (`_verdict`).
+      - system axis: an alarmed clear comms flag no longer reads as a
+        dark feed, so observations flow instead of being suppressed
+        (`_communications_lost`).
+
+    Each of those is a real widening, none is reachable on the measured
+    2-BM data (every clear reading there carries no alarm, on all three
+    axes), and all three are pinned by tests so a future facility where
+    it IS reachable fails loudly rather than drifting. The counterweight
+    is that the strict floor's conservatism was not free: it meant ANY
+    standing alarm on a fault or comms record blinded the observer
+    permanently, which is the same failure that made the process axis
+    useless, just further upstream.
+
+    CORA actuates nothing on any of these verdicts: it records what the
+    interlock reported, and the interlock, not CORA, protects the
+    equipment.
 
     ## Enum-valued records decode by index, not by label
 
@@ -219,7 +297,7 @@ def flag_state_from_reading(reading: Measurement) -> bool | None:
     facility is free to edit them for a nicer operator screen. The index
     is the half that does not move.
     """
-    if reading.quality != "Good":
+    if reading.quality == "Bad":
         return None
     code = binary_code(reading.value, ordinal=reading.ordinal)
     return None if code is None else code != 0
@@ -557,7 +635,15 @@ class BlepsSupplyObserver:
         try:
             async for reading in self._control_port.subscribe(pv):
                 state = flag_state_from_reading(reading)
-                if state is None and reading.quality == "Good":
+                if state is None and reading.quality != "Bad":
+                    # Tracks `flag_state_from_reading`'s floor rather than
+                    # naming "Good" independently: an alarmed reading is
+                    # believable here, so an alarmed one CORA still cannot
+                    # resolve is exactly as loud a problem as a quiet one.
+                    # Testing "Good" would have gone quiet for every
+                    # asserted BLEPS flag, which is the population most
+                    # worth hearing about.
+                    #
                     # A believable reading CORA still cannot resolve. Two
                     # shapes reach here, and the ordinal tells them apart:
                     # with no ordinal the reading carried only a label
