@@ -227,6 +227,60 @@ def _unpack_value(attr: Any, kind: MeasurementKind, enum_labels: tuple[str, ...]
     return scalar
 
 
+def _enum_ordinal(attr: Any, kind: MeasurementKind) -> int | None:
+    """The `DevEnum` ordinal behind a Categorical reading, or `None`.
+
+    DEVSTATE IS DELIBERATELY EXCLUDED. A `DevState` arrives as an
+    IntEnum, so an index is available, but it indexes Tango's global
+    device-state vocabulary (`ON = 0`, `OFF = 1`, `CLOSE = 2`,
+    `OPEN = 3`, ...), not a two-state axis. Publishing it would resolve
+    `ON` to 0 and a flag consumer would read a device that is ON as
+    false: inverted, silent, and only on Tango floors.
+
+    The exclusion keys on `attr.type`, the SAME field `_kind_for` reads
+    to classify the reading, rather than on a property of the value.
+    An earlier version tested `hasattr(value, "name")`, which is true of
+    a real PyTango `DevState` today and so worked, but it is a proxy for
+    the question rather than the question. It admitted two silent
+    failures: a `DevState` delivered as a bare int (a different
+    extraction mode, a PyTango change, a test double built the plain
+    way) would bypass the carve-out and publish the inversion, and any
+    `DevEnum` value that happened to expose `.name` would withhold its
+    ordinal and quietly revert that floor to label matching.
+
+    Withholding is NOT a full answer for `DevState`, only the safe one.
+    The label path resolves `ON` / `OFF` and nothing else, so `OPEN`,
+    `CLOSE`, `RUNNING` and `FAULT` all read as unbelievable. That is
+    correct-by-refusal rather than correct: a consumer that genuinely
+    needs "is this shutter open" from a `DevState` needs a mapping this
+    module does not have, and should not get a confident answer from
+    either half until it does.
+
+    `DevEnum`'s ordinal has no such problem: the attribute's own
+    `enum_labels` define its axis, and index 0 / 1 is that axis.
+
+    The cast IS guarded here, unlike the EPICS siblings where the same
+    guard would be dead code. Those adapters cast in `_unpack_value`
+    first, so an uncastable value raises before the ordinal is asked
+    for. This one does not: `_unpack_value` returns `value.name` early
+    for any named value and never reaches its own cast, so a `DevEnum`
+    carrying a named-but-not-numeric value arrives here uncast. It
+    yields a reading with a usable label and no ordinal, which is the
+    right outcome, and is covered rather than asserted.
+    """
+    if kind != "Categorical":
+        return None
+    if getattr(getattr(attr, "type", None), "name", "") == "DevState":
+        return None
+    value = getattr(attr, "value", None)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _produced_at_for(time_val: Any) -> datetime | None:
     """Substrate time from a Tango `TimeVal`, or None when absent.
 
@@ -267,6 +321,7 @@ def _to_reading(attr: Any, enum_labels: tuple[str, ...] | None = None) -> Measur
         kind=kind,
         quality=_quality_for(quality),
         produced_at=produced_at,
+        ordinal=_enum_ordinal(attr, kind),
         quality_detail=_quality_detail_for(quality),
         name=str(getattr(attr, "name", "")),
     )

@@ -572,7 +572,7 @@ class ControlPortCaptureObserver:
         real `Begun` and its `status` transitions. `None` return means
         the caller enqueues nothing.
         """
-        if binary_code(reading.value) != 1:
+        if binary_code(reading.value, ordinal=reading.ordinal) != 1:
             return None
         return CaptureLifecycleObservation(
             capture_code=code,
@@ -623,7 +623,7 @@ class ControlPortCaptureObserver:
         constructs an observation; there is no reading here that means
         "nothing happened".
         """
-        code_value = binary_code(reading.value)
+        code_value = binary_code(reading.value, ordinal=reading.ordinal)
         bypassed = None if code_value is None else code_value == 1
         return CapturePreconditionBypassObservation(
             capture_code=code,

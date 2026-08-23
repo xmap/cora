@@ -103,11 +103,13 @@ On an energy change the DMM monochromator, its Bragg arms, and the tracking slit
 
 ## Equipment protection
 
-BLEPS-1, BLEPS-2 and BLEPS-3 are answered and folded (#562, #563, #564): the utility-versus-device boundary, the PV names, and the beamline-level aggregates are all recorded on [Operations](operations.md#equipment-protection). One item is left, and it surfaced while building the reader rather than while describing the beamline.
+BLEPS-1, BLEPS-2 and BLEPS-3 are answered and folded (#562, #563, #564): the utility-versus-device boundary, the PV names, and the beamline-level aggregates are all recorded on [Operations](operations.md#equipment-protection).
 
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-| BLEPS-4 | `Blocks-go-live` | What EPICS record type do the BLEPS flag PVs use: `bi` / `mbbi`, or a numeric `longin` / `ai`? The distinction decides whether a reader sees a number or a text label. An enum record returns its state label rather than 0 or 1; the reader now decodes the conventional EPICS binary label pairs (`ON` / `OFF`, `TRUE` / `FALSE`, `YES` / `NO`), the same convention the enclosure-permit, beam-availability and capture observers already read, but CORA will not guess beyond that. If BLEPS's own `bi` records use a facility-chosen pair outside it (`"TRIP"` / `"OK"` is one hypothesized example, unconfirmed), a channel using them still records nothing and says so in its log. `bleps.substitutions` states the record types and their ZNAM/ONAM strings; a single `caget 2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP` pasted verbatim answers it just as well. | numeric flags (0 / 1) and the conventional ON/OFF/TRUE/FALSE/YES/NO enum labels, which is what the reader parses today | not yet | [Equipment protection](operations.md#equipment-protection) |
+BLEPS-4 is now answered too, and it needed no one's time: it was settled by reading the running IOC on 2026-08-23 rather than by asking. The flags are `bi` records, so they arrive as state labels rather than numbers, and the labels are facility-chosen ones no general reader would recognize. Trips and warnings declare `ZNAM="NO_FAULT"` / `ONAM="TRIP"`; faults and the system-wide communications flag declare `ZNAM=""`, the empty string, with `ONAM="Present"`. The empty one is the awkward case, because it is the HEALTHY state of the flag that says whether BLEPS is talking at all.
+
+CORA no longer reads any of those words. An enum reading carries both its label and the index behind it, and the reader now uses the index, which is a plain 0 or 1 on every control system rather than something each site words for itself. So no BLEPS vocabulary is written into CORA anywhere, and a future relabelling for a nicer operator screen cannot break the reader. Nothing further is needed from beamline staff on this.
+
+One thing is still worth mentioning to them rather than asking: an empty `ZNAM` is legal but unusual, and it means any other tool reading that flag by label sees a blank where it expects a word. That is a small wart in the IOC, not a defect CORA needs fixed.
 
 ## Proposals, users and scheduling
 

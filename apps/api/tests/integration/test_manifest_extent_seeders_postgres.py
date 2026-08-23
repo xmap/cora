@@ -389,7 +389,7 @@ async def _seed_supply_probe(db_pool: asyncpg.Pool) -> None:
                 event_id=uuid4(),
                 supply_id=uuid4(),
                 source_kind="EpicsPv",
-                source_id="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
+                source_id="2bmBLEPS:BLEPS:FLOW2_TRIP",
                 reach_tier=ReachTier.RELAYED,
                 status_claimed=True,
             )

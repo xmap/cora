@@ -17,11 +17,14 @@ sets `quality_ok=False` AND that flag to its fail-closed value, so a dead
 gateway can never read as "beam open".
 
 All three PVs are `bi` records at 2-BM, so a real read arrives as
-`kind="Categorical"` with `EpicsCaControlPort` having already resolved
-the DBR_ENUM index to its label; the index never reaches this module.
-`cora.shared.binary_signal.binary_code` resolves that label (or a
-plain numeric reading) to 0 / 1 before `_read_open` / `_read_permit`
-apply the polarity above.
+`kind="Categorical"` with `EpicsCaControlPort` having resolved the
+DBR_ENUM index to its label. Both halves reach this module: the label
+on `Measurement.value` and the index on `Measurement.ordinal`.
+`cora.shared.binary_signal.binary_code` prefers the index, because the
+label is whatever the facility's IOC author typed and the index is
+0 / 1 everywhere, and falls back to the label only when no index came
+with the reading. `_read_open` / `_read_permit` then apply the polarity
+above.
 """
 
 from __future__ import annotations
@@ -97,7 +100,7 @@ class ControlPortBeamAvailabilityLookup:
         # non-integral float the same as a bad read (fail closed).
         if isinstance(raw, float) and not raw.is_integer():
             return None, False
-        value = binary_code(raw)
+        value = binary_code(raw, ordinal=reading.ordinal)
         if value is None:
             return None, False
         return value, True

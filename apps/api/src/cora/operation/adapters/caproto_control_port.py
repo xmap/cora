@@ -231,6 +231,13 @@ def _to_reading(response: Any) -> Measurement:
         kind=kind,
         quality=quality,
         produced_at=produced_at,
+        # This adapter never resolves enum labels (its TIME_ENUM read
+        # carries none), so a Categorical `value` is ALREADY the raw
+        # index. Publishing the same number as `ordinal` is what makes
+        # this adapter answer a two-state question the same way the
+        # three label-resolving adapters now do, closing a divergence
+        # that only `binary_code`'s dual int/str handling was hiding.
+        ordinal=value if kind == "Categorical" and isinstance(value, int) else None,
         quality_detail=quality_detail,
     )
 

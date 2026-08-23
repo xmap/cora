@@ -249,7 +249,7 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         # operations.md, "Equipment protection"), the same system CLASS as the PSS
         # permit_probe protects against, not experiment instrumentation like
         # TomoScan. If anything the case for DROP is stronger here: a BLEPS channel
-        # PV name (e.g. "2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP") embeds which
+        # PV name (e.g. "2bmBLEPS:BLEPS:FLOW2_TRIP") embeds which
         # physical circuit it protects directly in the string, so it discloses more
         # of the interlock's own topology than a bare SecureM permit PV does.
         "reach_tier": KEEP,  # proved closed: ReachTier StrEnum

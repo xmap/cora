@@ -27,7 +27,7 @@ from cora.api._bleps_supply_observer import (
     flag_state_from_reading,
 )
 from cora.infrastructure.ports.clock import FakeClock
-from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
+from cora.operation.ports.control_port import ControlNotConnectedError, Measurement, Quality
 from cora.supply.ports.supply_observer import ReachTier, SupplyObservation, SupplyObserverScope
 
 _T = datetime(2026, 7, 29, 12, 0, 0, tzinfo=UTC)
@@ -40,14 +40,14 @@ _COMMS = "2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT"
 _FLOW2 = BlepsChannel(
     supply_code=_WATER,
     label="Flow2 (M1 and DMM circuit)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT",
+    trip_pv="2bmBLEPS:BLEPS:FLOW2_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE",
 )
 _FLOW6 = BlepsChannel(
     supply_code=_WATER,
     label="Flow6 (Station B entrance slits)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW6_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE_FAULT",
+    trip_pv="2bmBLEPS:BLEPS:FLOW6_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE",
 )
 _VS1 = BlepsChannel(
     supply_code=_VACUUM,
@@ -57,21 +57,92 @@ _VS1 = BlepsChannel(
 _FLOW2_W = BlepsChannel(
     supply_code=_WATER,
     label="Flow2 (M1 and DMM circuit)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT",
-    warning_pv="2bmBLEPS:BLEPS:FLOW2_UNDER_RANGE_WARNING",
+    trip_pv="2bmBLEPS:BLEPS:FLOW2_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE",
+    warning_pv="2bmBLEPS:BLEPS:FLOW_2_UNDER_WRN",
 )
 _FLOW6_W = BlepsChannel(
     supply_code=_WATER,
     label="Flow6 (Station B entrance slits)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW6_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE_FAULT",
-    warning_pv="2bmBLEPS:BLEPS:FLOW6_UNDER_RANGE_WARNING",
+    trip_pv="2bmBLEPS:BLEPS:FLOW6_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE",
+    warning_pv="2bmBLEPS:BLEPS:FLOW_6_UNDER_WRN",
 )
 
 
 def _reading(value: object, quality: str = "Good") -> Measurement:
     return Measurement(value=value, kind="Scalar", quality=quality, produced_at=_T)  # type: ignore[arg-type]
+
+
+def _enum_reading(label: str, ordinal: int | None, quality: Quality = "Good") -> Measurement:
+    """A DBR_ENUM-shaped reading: the label plus the index behind it.
+
+    Kept distinct from `_reading` above, and the distinction is
+    load-bearing rather than tidiness. A real `bi` record NEVER arrives
+    as `kind="Scalar"` carrying a number; it arrives as `Categorical`
+    carrying a facility-authored label. Every test in this file used the
+    Scalar shape, which is why none of them could see the defect that
+    stopped BLEPS reading at 2-BM: the shape under test was one the
+    substrate cannot produce. The same blind spot shipped twice before,
+    on the hutch permit and the beam permits.
+    """
+    return Measurement(
+        value=label,
+        kind="Categorical",
+        quality=quality,
+        produced_at=_T,
+        ordinal=ordinal,
+    )
+
+
+@pytest.mark.unit
+def test_real_bleps_enum_labels_read_through_the_ordinal() -> None:
+    """The four label pairs the deployed 2-BM IOC publishes, at the observer.
+
+    Measured on arcturus 2026-08-23: trips and warnings are
+    `NO_FAULT` / `TRIP`, faults and the comms flag are `""` / `Present`.
+    Asserted here and not only at `binary_code` because this is the
+    function the pump actually calls, and because the observer adds a
+    quality floor on top that the decoder knows nothing about.
+    """
+    assert flag_state_from_reading(_enum_reading("TRIP", 1)) is True
+    assert flag_state_from_reading(_enum_reading("NO_FAULT", 0)) is False
+    assert flag_state_from_reading(_enum_reading("Present", 1)) is True
+    assert flag_state_from_reading(_enum_reading("", 0)) is False
+
+
+@pytest.mark.unit
+def test_real_bleps_enum_labels_are_unreadable_without_an_ordinal() -> None:
+    """The negative half: these labels carry no meaning CORA can decode.
+
+    Pins WHY the ordinal is load-bearing rather than a convenience. If
+    someone later widens the shared label set to include these words,
+    this test fails and says so, because that is the wrong fix: it puts
+    one facility's vocabulary in `cora.shared` and the next facility
+    breaks anyway.
+    """
+    assert flag_state_from_reading(_enum_reading("TRIP", None)) is None
+    assert flag_state_from_reading(_enum_reading("NO_FAULT", None)) is None
+    assert flag_state_from_reading(_enum_reading("Present", None)) is None
+    assert flag_state_from_reading(_enum_reading("", None)) is None
+
+
+@pytest.mark.unit
+def test_an_out_of_range_ordinal_reads_as_unbelievable() -> None:
+    """A channel pointed at a multi-state record is a config error, not a flag.
+
+    Fails closed to `None` (excluded from the verdict) rather than
+    collapsing to asserted or clear. The label is one the fallback would
+    decode, so only the ordinal short-circuit can produce this answer.
+    """
+    assert flag_state_from_reading(_enum_reading("ON", 2)) is None
+
+
+@pytest.mark.unit
+def test_a_bad_quality_enum_reading_is_unbelievable_even_with_an_ordinal() -> None:
+    """The quality floor still wins. An ordinal is not a reason to trust a bad read."""
+    assert flag_state_from_reading(_enum_reading("TRIP", 1, quality="Bad")) is None
+    assert flag_state_from_reading(_enum_reading("TRIP", 1, quality="Uncertain")) is None
 
 
 @pytest.mark.unit

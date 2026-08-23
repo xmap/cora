@@ -36,6 +36,15 @@ state without trying to call the unsafe `ca_context_destroy`.
     the naive "any DBR_CHAR is a waveform" version of the decode crashed
     here before the `element_count > 1` guard was added)
   - `enum_value`   (DBR_ENUM,   `mbbo` with 3 strings) -> `Measurement(kind="Categorical")`
+  - `unconventional_flag` (DBR_ENUM, `bo` labelled `NO_FAULT` / `TRIP`) and
+    `empty_zero_label_flag` (DBR_ENUM, `bo` whose ZNAM is the EMPTY STRING,
+    ONAM `Present`) -> the two label pairs 2-BM's BLEPS IOC actually
+    publishes, measured on arcturus 2026-08-23. Neither is in any
+    conventional set, so both are undecodable from the label alone and
+    exist to pin that `Measurement.ordinal` carries the answer. A real
+    DBR_ENUM is the point: the equivalent defect shipped twice behind
+    unit fakes built as `kind="Scalar"` with a numeric value, a shape no
+    `bi` record ever produces.
   - `major_alarm_value` (`ao` with HIHI threshold tripped, HHSV=MAJOR)
     -> `Measurement(quality="Uncertain")`
   - `invalid_alarm_value` (`ao` with HIHI threshold tripped, HHSV=INVALID)
@@ -168,6 +177,23 @@ record(mbbo, "$(P)enum_value") {
   field(ZRST, "off")
   field(ONST, "on")
   field(TWST, "fault")
+  field(VAL, "0")
+  field(PINI, "YES")
+}
+
+record(bo, "$(P)unconventional_flag") {
+  field(DESC, "Enum labels outside conventional set")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "NO_FAULT")
+  field(ONAM, "TRIP")
+  field(VAL, "1")
+  field(PINI, "YES")
+}
+
+record(bo, "$(P)empty_zero_label_flag") {
+  field(DESC, "Enum with empty zero-state label")
+  field(DTYP, "Soft Channel")
+  field(ONAM, "Present")
   field(VAL, "0")
   field(PINI, "YES")
 }

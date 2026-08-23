@@ -192,9 +192,26 @@ the PSS protects people. CORA holds the same posture toward both, the one descri
 [hutch permits](enclosures.md): it reads outcomes, never drives the chain, and never models the
 interlock matrix. BLEPS decides; CORA records what BLEPS decided.
 
-Every signal is readable over Channel Access under the prefix `2bmBLEPS:BLEPS:`. The PLC's tag names use
-dots and the EPICS names replace them with underscores, so the PLC tag `GV1.Faulted` is the PV
-`2bmBLEPS:BLEPS:GV1_FAULTED`.
+Every signal is readable over Channel Access under the prefix `2bmBLEPS:BLEPS:`. This page names the
+PLC's own tags, which use dots, and those are not the PV names. Some PVs do follow the tag with dots
+swapped for underscores, so the tag `GV1.Faulted` is the PV `2bmBLEPS:BLEPS:GV1_FAULTED`, but many are
+abbreviated instead and a few change shape entirely:
+
+| PLC tag | EPICS PV |
+| --- | --- |
+| `Flow2.Below_Set_Point_Trip` | `2bmBLEPS:BLEPS:FLOW2_TRIP` |
+| `Flow2.Over_Range_Fault` | `2bmBLEPS:BLEPS:FLOW2_OVER_RANGE` |
+| `Flow2.Under_Range_Warning` | `2bmBLEPS:BLEPS:FLOW_2_UNDER_WRN` |
+| `Temp1.Above_Set_Point_Trip` | `2bmBLEPS:BLEPS:TEMP1_TRIP` |
+| `Temp1.Over_Range_Warning` | `2bmBLEPS:BLEPS:TEMP1_OVER_WRN` |
+| `Temp1.Under_Range_Fault` | `2bmBLEPS:BLEPS:TEMP1_UNDER_RANGE` |
+| `Communications_Fault` | `2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT` |
+
+Note the flow warning: it is `FLOW_2_UNDER_WRN`, with an underscore before the digit, while its own trip
+is `FLOW2_TRIP` without one. Do not derive a PV name; read it from the IOC. The authoritative list is
+`iocBoot/ioc2bmBLEPS/dbl-all.txt` in the IOC tree, or `bleps.substitutions` for the tag-to-PV pairing.
+An earlier version of this page stated the dots-to-underscores rule as general, and the PV names built
+from it do not exist.
 
 ### Two questions, not one severity scale
 
