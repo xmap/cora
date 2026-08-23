@@ -28,7 +28,7 @@ from cora.api._bleps_supply_observer import (
 )
 from cora.infrastructure.ports.clock import FakeClock
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
-from cora.supply.ports.supply_observer import SupplyObservation, SupplyObserverScope
+from cora.supply.ports.supply_observer import ReachTier, SupplyObservation, SupplyObserverScope
 
 _T = datetime(2026, 7, 29, 12, 0, 0, tzinfo=UTC)
 _T_CLOCK = datetime(2026, 7, 29, 13, 0, 0, tzinfo=UTC)
@@ -53,6 +53,20 @@ _VS1 = BlepsChannel(
     supply_code=_VACUUM,
     label="Vacuum section 1",
     trip_pv="2bmBLEPS:BLEPS:VS1_TRIP",
+)
+_FLOW2_W = BlepsChannel(
+    supply_code=_WATER,
+    label="Flow2 (M1 and DMM circuit)",
+    trip_pv="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT",
+    warning_pv="2bmBLEPS:BLEPS:FLOW2_UNDER_RANGE_WARNING",
+)
+_FLOW6_W = BlepsChannel(
+    supply_code=_WATER,
+    label="Flow6 (Station B entrance slits)",
+    trip_pv="2bmBLEPS:BLEPS:FLOW6_BELOW_SET_POINT_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE_FAULT",
+    warning_pv="2bmBLEPS:BLEPS:FLOW6_UNDER_RANGE_WARNING",
 )
 
 
@@ -123,6 +137,24 @@ async def _collect(observer: BlepsSupplyObserver, codes: set[str]) -> list[Suppl
     return [observation async for observation in observer.observe(scope)]
 
 
+def _statuses(observed: list[SupplyObservation]) -> list[str]:
+    """The real-verdict sequence, filtering out probe-only entries.
+
+    Every tick now yields something for every configured Supply in
+    scope, either a real verdict or a probe-only reach fact
+    (`observed_status=None`, see `_bleps_supply_observer`'s "Probes"
+    section). Most of this file's tests are about the verdict sequence,
+    not the reach trail, so this helper recovers the pre-probe
+    assertion shape; the probe-specific tests below check
+    `observed_status is None` and `reach_tier` directly instead.
+    """
+    return [o.observed_status for o in observed if o.observed_status is not None]
+
+
+def _is_probe(observation: SupplyObservation) -> bool:
+    return observation.observed_status is None
+
+
 @pytest.mark.unit
 async def test_empty_scope_yields_nothing() -> None:
     observer = _observer(_ScriptedControlPort(readings={}), [_FLOW2])
@@ -155,7 +187,7 @@ async def test_a_healthy_beamline_reports_clear_as_recovering() -> None:
         readings={_FLOW2.trip_pv: [_reading(0)], _FLOW2.fault_pv or "": [_reading(0)]}
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Recovering"]
+    assert _statuses(observed) == ["Recovering"]
 
 
 @pytest.mark.unit
@@ -164,9 +196,10 @@ async def test_a_trip_drives_unavailable_and_names_the_circuit() -> None:
         readings={_FLOW2.trip_pv: [_reading(1)], _FLOW2.fault_pv or "": [_reading(0)]}
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"]
-    assert "Flow2 (M1 and DMM circuit)" in observed[0].reason
-    assert observed[0].source_kind == "EpicsPv"
+    assert _statuses(observed) == ["Unavailable"]
+    verdict = next(o for o in observed if not _is_probe(o))
+    assert "Flow2 (M1 and DMM circuit)" in verdict.reason
+    assert verdict.source_kind == "EpicsPv"
 
 
 @pytest.mark.unit
@@ -181,9 +214,10 @@ async def test_one_trip_among_many_circuits_is_enough() -> None:
         }
     )
     observed = await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"]
-    assert "Flow6" in observed[0].reason
-    assert "Flow2" not in observed[0].reason
+    assert _statuses(observed) == ["Unavailable"]
+    verdict = next(o for o in observed if not _is_probe(o))
+    assert "Flow6" in verdict.reason
+    assert "Flow2" not in verdict.reason
 
 
 @pytest.mark.unit
@@ -196,8 +230,9 @@ async def test_clearing_a_trip_emits_recovering_not_available() -> None:
         }
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable", "Recovering"]
-    assert "awaiting operator confirmation" in observed[1].reason
+    assert _statuses(observed) == ["Unavailable", "Recovering"]
+    verdicts = [o for o in observed if not _is_probe(o)]
+    assert "awaiting operator confirmation" in verdicts[1].reason
 
 
 @pytest.mark.unit
@@ -215,7 +250,7 @@ async def test_a_still_tripped_channel_re_asserts_the_same_level() -> None:
         }
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"] * 3
+    assert _statuses(observed) == ["Unavailable"] * 3
 
 
 @pytest.mark.unit
@@ -224,6 +259,9 @@ async def test_an_instrument_fault_withholds_rather_than_clearing() -> None:
 
     Flow6 being believable and clear is NOT enough. Clear requires every
     channel, because a blind channel might be the one that is tripped.
+    A withhold is a reach probe now, not silence: see
+    `test_a_withheld_verdict_reports_as_a_probe_not_silence` for that
+    behavior pinned directly; this test's own job stays the verdict.
     """
     port = _ScriptedControlPort(
         readings={
@@ -233,7 +271,8 @@ async def test_an_instrument_fault_withholds_rather_than_clearing() -> None:
             _FLOW6.fault_pv or "": [_reading(0)],
         }
     )
-    assert await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER}) == []
+    observed = await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER})
+    assert _statuses(observed) == []
 
 
 @pytest.mark.unit
@@ -247,7 +286,8 @@ async def test_all_instruments_faulted_says_nothing_rather_than_clear() -> None:
             _FLOW6.fault_pv or "": [_reading(1)],
         }
     )
-    assert await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER}) == []
+    observed = await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER})
+    assert _statuses(observed) == []
 
 
 @pytest.mark.unit
@@ -259,12 +299,39 @@ async def test_an_unreadable_trip_is_not_treated_as_clear() -> None:
             _FLOW2.fault_pv or "": [_reading(0)],
         }
     )
-    assert await _collect(_observer(port, [_FLOW2]), {_WATER}) == []
+    observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
+    assert _statuses(observed) == []
+
+
+@pytest.mark.unit
+async def test_a_withheld_verdict_reports_as_a_probe_not_silence() -> None:
+    """The coverage fix: an inconclusive verdict is a reach fact, not nothing.
+
+    Same shape as `test_an_instrument_fault_withholds_rather_than_clearing`,
+    checked from the probe side: every entry the withheld tick produces
+    is probe-only and UNREACHED, so the trail can tell "CORA looked and
+    could not tell" from "CORA was not watching this Supply at all".
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2.trip_pv: [_reading(1)],
+            _FLOW2.fault_pv or "": [_reading(1)],
+            _FLOW6.trip_pv: [_reading(0)],
+            _FLOW6.fault_pv or "": [_reading(0)],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER})
+    assert observed
+    assert all(_is_probe(o) for o in observed)
+    assert all(o.reach_tier == ReachTier.UNREACHED for o in observed)
+    assert all(o.supply_code == _WATER for o in observed)
 
 
 @pytest.mark.unit
 async def test_comms_fault_suppresses_every_supply() -> None:
-    """While BLEPS cannot be reached, nothing it said is repeatable."""
+    """While BLEPS cannot be reached, nothing it said is repeatable, but
+    each configured Supply still gets a probe recording that CORA was
+    blind, not silence."""
     port = _ScriptedControlPort(
         readings={
             _COMMS: [_reading(1)],
@@ -274,7 +341,11 @@ async def test_comms_fault_suppresses_every_supply() -> None:
         }
     )
     observer = _observer(port, [_FLOW2, _VS1], communications_fault_pv=_COMMS)
-    assert await _collect(observer, {_WATER, _VACUUM}) == []
+    observed = await _collect(observer, {_WATER, _VACUUM})
+    assert _statuses(observed) == []
+    assert observed
+    assert all(_is_probe(o) and o.reach_tier == ReachTier.UNREACHED for o in observed)
+    assert {o.supply_code for o in observed} == {_WATER, _VACUUM}
 
 
 @pytest.mark.unit
@@ -284,7 +355,8 @@ async def test_an_unread_comms_flag_also_suppresses() -> None:
         readings={_FLOW2.trip_pv: [_reading(1)], _FLOW2.fault_pv or "": [_reading(0)]}
     )
     observer = _observer(port, [_FLOW2], communications_fault_pv=_COMMS)
-    assert await _collect(observer, {_WATER}) == []
+    observed = await _collect(observer, {_WATER})
+    assert _statuses(observed) == []
 
 
 @pytest.mark.unit
@@ -298,7 +370,7 @@ async def test_comms_clear_then_a_trip_is_reported() -> None:
     )
     observer = _observer(port, [_FLOW2], communications_fault_pv=_COMMS)
     observed = await _collect(observer, {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"]
+    assert _statuses(observed) == ["Unavailable"]
 
 
 @pytest.mark.unit
@@ -306,10 +378,12 @@ async def test_a_disconnect_does_not_read_as_a_cleared_trip() -> None:
     """Losing the channel must never look like the trip going away.
 
     The trip is reported while it is believable. Then the subscription
-    drops, the channel is voided, and the adapter falls silent: no
-    `Recovering` is emitted, so the Supply stays Unavailable rather than
-    being walked back toward Available by a dead PV. That is the whole
-    reason an unbelievable reading is distinct from a low one.
+    drops and the channel is voided: no `Recovering` verdict is ever
+    emitted, so the Supply stays Unavailable rather than being walked
+    back toward Available by a dead PV. That is the whole reason an
+    unbelievable reading is distinct from a low one. The disconnect
+    itself now surfaces as a probe (the withhold is a reach fact, not
+    silence), which this test also pins.
     """
     port = _ScriptedControlPort(
         readings={
@@ -319,8 +393,10 @@ async def test_a_disconnect_does_not_read_as_a_cleared_trip() -> None:
         disconnect=frozenset({_FLOW2.trip_pv}),
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"]
-    assert "Recovering" not in [o.observed_status for o in observed]
+    assert _statuses(observed) == ["Unavailable"]
+    assert "Recovering" not in _statuses(observed)
+    assert _is_probe(observed[-1])
+    assert observed[-1].reach_tier == ReachTier.UNREACHED
 
 
 @pytest.mark.unit
@@ -341,8 +417,9 @@ async def test_a_clean_stream_end_keeps_the_last_reading() -> None:
         }
     )
     observed = await _collect(_observer(port, [_FLOW6, _FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"]
-    assert "Flow2" in observed[0].reason
+    assert _statuses(observed) == ["Unavailable"]
+    verdict = next(o for o in observed if not _is_probe(o))
+    assert "Flow2" in verdict.reason
 
 
 @pytest.mark.unit
@@ -357,7 +434,7 @@ async def test_available_is_never_emitted() -> None:
     )
     observed = await _collect(_observer(port, [_FLOW2, _VS1]), {_WATER, _VACUUM})
     assert observed
-    assert {o.observed_status for o in observed} <= {"Unavailable", "Recovering"}
+    assert set(_statuses(observed)) <= {"Unavailable", "Recovering"}
 
 
 @pytest.mark.unit
@@ -394,9 +471,10 @@ def test_losing_the_tripped_channel_does_not_read_as_the_trip_clearing() -> None
     latest[_FLOW2.fault_pv or ""] = True
     after_going_blind = observer._observations(channels, latest)
 
-    assert [o.observed_status for o in after_going_blind] == [], (
+    assert [o.observed_status for o in after_going_blind] == [None], (
         "losing sight of the tripped channel must withhold, not report clear"
     )
+    assert after_going_blind[0].reach_tier == ReachTier.UNREACHED
 
 
 @pytest.mark.unit
@@ -410,7 +488,8 @@ async def test_a_blind_channel_blocks_clear_even_when_siblings_are_clear() -> No
             _FLOW2.trip_pv: [_reading(0)],
         }
     )
-    assert await _collect(_observer(port, [_FLOW6, _FLOW2]), {_WATER}) == []
+    observed = await _collect(_observer(port, [_FLOW6, _FLOW2]), {_WATER})
+    assert _statuses(observed) == []
 
 
 @pytest.mark.unit
@@ -452,3 +531,119 @@ def test_an_enum_label_is_uninterpretable_not_low() -> None:
     # The cold-label-cache fallback stringifies the index, which parses.
     assert flag_state_from_reading(_reading("1")) is True
     assert flag_state_from_reading(_reading("0")) is False
+
+
+@pytest.mark.unit
+def test_conventional_epics_binary_labels_decode() -> None:
+    """A `bi` record naming ITS states with the stock EPICS ZNAM/ONAM
+    pair decodes via `binary_signal.binary_code`, the same convention
+    the enclosure permit, beam-availability and capture observers
+    already read. This is the one case `test_an_enum_label_is_
+    uninterpretable_not_low` above deliberately does NOT cover: BLEPS's
+    OWN label pair (hypothesized as "TRIP" / "OK", unconfirmed) is a
+    facility choice this function still refuses to guess at, so both
+    behaviors stand side by side rather than one replacing the other.
+    """
+    assert flag_state_from_reading(_reading("ON")) is True
+    assert flag_state_from_reading(_reading("OFF")) is False
+
+
+@pytest.mark.unit
+async def test_a_believable_warning_alone_drives_degraded() -> None:
+    """No trip, one believable warning: the Supply degrades, not trips."""
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2_W.fault_pv or "": [_reading(0)],
+            _FLOW2_W.trip_pv: [_reading(0)],
+            _FLOW2_W.warning_pv or "": [_reading(1)],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2_W]), {_WATER})
+    assert _statuses(observed) == ["Degraded"]
+    verdict = next(o for o in observed if not _is_probe(o))
+    assert "Flow2" in verdict.reason
+    assert verdict.source_id == _FLOW2_W.warning_pv
+
+
+@pytest.mark.unit
+async def test_a_trip_dominates_a_sibling_channels_warning() -> None:
+    """Flow6 warns, Flow2 trips: the Supply reports the worse fact."""
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2_W.fault_pv or "": [_reading(0)],
+            _FLOW2_W.trip_pv: [_reading(1)],
+            _FLOW6_W.fault_pv or "": [_reading(0)],
+            _FLOW6_W.trip_pv: [_reading(0)],
+            _FLOW6_W.warning_pv or "": [_reading(1)],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2_W, _FLOW6_W]), {_WATER})
+    assert set(_statuses(observed)) == {"Unavailable"}
+
+
+@pytest.mark.unit
+def test_a_tripped_channels_own_warning_reading_is_moot() -> None:
+    """The same physical quantity cannot be both; the trip already dominates.
+
+    Driven through `_observations` directly so the tripped channel's
+    warning PV can be asserted in `latest` alongside its trip, a
+    combination a real transducer would never actually report but which
+    the fold must still handle without contradicting itself.
+    """
+    observer = _observer(_ScriptedControlPort(readings={}), [_FLOW2_W])
+    channels = [_FLOW2_W]
+    latest: dict[str, bool | None] = {
+        _FLOW2_W.fault_pv or "": False,
+        _FLOW2_W.trip_pv: True,
+        _FLOW2_W.warning_pv or "": True,
+    }
+    observed = observer._observations(channels, latest)
+    assert [o.observed_status for o in observed] == ["Unavailable"]
+
+
+@pytest.mark.unit
+async def test_an_unread_warning_channel_blocks_clear() -> None:
+    """Clear needs every channel's warning reading believable too, not just its trip."""
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2_W.fault_pv or "": [_reading(0)],
+            _FLOW2_W.trip_pv: [_reading(0)],
+            # warning_pv never reads: latest[warning_pv] stays absent (None).
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2_W]), {_WATER})
+    assert _statuses(observed) == []
+    assert observed
+    assert all(_is_probe(o) and o.reach_tier == ReachTier.UNREACHED for o in observed)
+
+
+@pytest.mark.unit
+async def test_warnings_stay_off_when_channel_carries_no_warning_pv() -> None:
+    """`warning_pv=None` (the default, and every pre-existing fixture) behaves
+    exactly as before this feature existed: no warning axis at all."""
+    port = _ScriptedControlPort(
+        readings={_FLOW2.trip_pv: [_reading(0)], _FLOW2.fault_pv or "": [_reading(0)]}
+    )
+    observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
+    assert _statuses(observed) == ["Recovering"]
+
+
+@pytest.mark.unit
+async def test_recovering_from_a_trip_through_the_warning_band_reaches_degraded() -> None:
+    """Tripped, then still within the warning band on the way down: the
+    observer reports Degraded, not a repeated Unavailable or a bare clear.
+
+    `cora.supply._monitor`'s own skip for this exact sequence (a monitor
+    cannot un-downgrade a Supply already Unavailable) is pinned at the
+    integration level, against a real Supply aggregate; this test only
+    covers what the observer itself reports.
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2_W.fault_pv or "": [_reading(0)],
+            _FLOW2_W.trip_pv: [_reading(1), _reading(0)],
+            _FLOW2_W.warning_pv or "": [_reading(0), _reading(1)],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2_W]), {_WATER})
+    assert "Degraded" in _statuses(observed)

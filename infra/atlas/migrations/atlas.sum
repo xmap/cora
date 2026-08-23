@@ -1,4 +1,4 @@
-h1:8jBtW3w+VoneGyTdKa3HDCUbZeDDOAqUSJtN0hilEUw=
+h1:GXaDRkimhQzfidNK/a0p9SB6Oqm8kcgesxwkit8cT+0=
 20260509120000_init_events.sql h1:GmgCZKfaqXu1m96/cKAks2vhaLWTdEaHTLkFtUo9FXg=
 20260509170000_init_idempotency.sql h1:Nbu8DIE4Sv1WiHw3G22+tYffPhKc5Jryw3PMK8wB2zY=
 20260510010000_add_event_id.sql h1:RbtYP6uMnOB20zhJ9dNXUi4YVqbmlEzf562pmygnRW8=
@@ -172,3 +172,4 @@ h1:8jBtW3w+VoneGyTdKa3HDCUbZeDDOAqUSJtN0hilEUw=
 20260820120000_add_run_capture_path_location.sql h1:GmPYI5w9hF9wfVZ7iEhGvSpoef+T0hJ434+5LpIxw8c=
 20260821145224_add_inference_cache_tokens.sql h1:gx0kaWkvy+Wg4ebFprbxfm/LYztnjGh2kxJlN8NCX3Q=
 20260821173142_add_inference_gpu_seconds.sql h1:TQieAB0LQ4mdz8MMs7ee6m7AqWBsjAqZrlrWY5UFUKY=
+20260822120000_init_entries_supply_probes.sql h1:gfEsaebN/G9d9MvndvMDPB51/jkfKav9FQTTRaRNGJA=

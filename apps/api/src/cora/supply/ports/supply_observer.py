@@ -65,10 +65,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from cora.shared.reach import ReachTier
+
 
 @dataclass(frozen=True)
 class SupplyObservation:
-    """One status reading drained from the substrate.
+    """One status reading, or reach probe, drained from the substrate.
 
     `supply_code` is the BC-local Supply identity surface adapters
     know. The Supply address is a four-tuple
@@ -81,7 +83,20 @@ class SupplyObservation:
     `observed_status` is the raw status string the adapter produced
     after flattening whatever the substrate said. The runtime parses it
     against the `SupplyStatus` codomain and skips the observation if it
-    does not match, so an adapter must not invent values.
+    does not match, so an adapter must not invent values. `None` means
+    this observation is probe-only and makes no status claim at all:
+    the aggregating verdict this tick was inconclusive (some channel
+    behind this Supply could not be believed), which is a fact worth
+    recording in the probe trail even though nothing can be said about
+    the Supply's actual status. A `None` status never causes a Supply
+    transition, by construction: there is nothing to parse.
+
+    `reach_tier` is required, not optional, mirroring the Enclosure
+    seam: it grades CORA's own reach to the substrate this tick,
+    independent of what (if anything) was believed. `RELAYED` on every
+    real verdict (tripped or clear -- a channel spoke and was believed);
+    `UNREACHED` on the inconclusive case (a channel behind this Supply
+    could not be believed, or the whole feed is dark).
 
     `observed_at` is the adapter's wall-clock at observation time,
     carried for diagnostics and for adapters that batch. The runtime
@@ -92,9 +107,10 @@ class SupplyObservation:
 
     `reason` is the adapter's human-readable account of what it saw
     ("Flow2 below set point"). It lands verbatim in the transition's
-    reason, which is where the per-channel detail lives: the status
-    says a run cannot draw on the resource, the reason says which of
-    the eight circuits said so.
+    reason when `observed_status` is set, which is where the per-channel
+    detail lives: the status says a run cannot draw on the resource, the
+    reason says which of the eight circuits said so. Unused (and may be
+    empty) on a probe-only observation, since no transition reads it.
 
     `source_kind` and `source_id` ship as separate strings and are
     joined into the colon-delimited `monitor_ref` payload string by the
@@ -102,7 +118,8 @@ class SupplyObservation:
     """
 
     supply_code: str
-    observed_status: str
+    observed_status: str | None
+    reach_tier: ReachTier
     observed_at: datetime
     reason: str
     source_kind: str
@@ -172,6 +189,7 @@ class AlwaysQuietSupplyObserver:
 
 __all__ = [
     "AlwaysQuietSupplyObserver",
+    "ReachTier",
     "SupplyObservation",
     "SupplyObserver",
     "SupplyObserverScope",

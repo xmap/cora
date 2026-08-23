@@ -37,7 +37,7 @@ from cora.infrastructure.record_export._redaction import RedactionResult
 from cora.infrastructure.record_export._registry import all_specs
 from cora.infrastructure.record_export._tokens import TokenMap
 
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
 """Versions the registered logbook-kind SET a manifest was built
 against: literally "which universe of kinds the claim was made
 against", `project_record_completeness_design.md`'s "Two authorities,
@@ -45,6 +45,10 @@ two times" in its own words. Bump this, together with
 `registered_kinds_hash` and the pin in
 `tests/architecture/test_manifest_registered_kinds_pin.py`, only when
 that SET changes (a tenth `EntriesTableSpec`, or one retired).
+
+Bumped 1 -> 2 for the `supply_probe` kind (the BLEPS supply observer's
+probe trail), the tenth `EntriesTableSpec` this docstring names as the
+trigger case by number.
 
 Adding an unrelated field to `Manifest` itself does not need a bump,
 and neither does a kind's status moving between `included` / `excluded`

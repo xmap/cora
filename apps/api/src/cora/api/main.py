@@ -1323,6 +1323,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         label=channel.label or channel.trip,
                         trip_pv=channel.trip,
                         fault_pv=channel.fault or None,
+                        warning_pv=(
+                            channel.warning or None
+                            if settings.bleps_supply_warnings_enabled
+                            else None
+                        ),
                     )
                     for channel in settings.bleps_supply_channels
                 ],
@@ -1348,6 +1353,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         observer=bleps_supply_observer,
                         kernel=deps,
                         code_to_id=bleps_supply_ids,
+                        probe_store=app.state.supply.probe_store,
                     ),
                     run_supervisor_lifespan(
                         deps,

@@ -28,6 +28,9 @@ Subject / Equipment (composition order matters — innermost first):
   - `get_supply` (query)
   - `list_supplies` (query)
 
+The bundle also carries `probe_store` (not a handler; see its own
+docstring on `SupplyHandlers`).
+
 All six transition handlers are built via the
 `make_supply_update_handler` factory (hoisted at the
 rule-of-three trigger; mirrors `_asset_update_handler`).
@@ -39,6 +42,11 @@ from uuid import UUID
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
+from cora.supply.aggregates.supply import (
+    InMemorySupplyProbeStore,
+    PostgresSupplyProbeStore,
+    SupplyProbeStore,
+)
 from cora.supply.features import (
     degrade_supply,
     deregister_supply,
@@ -77,11 +85,20 @@ class SupplyHandlers:
     observe_supply_status: observe_supply_status.Handler
     get_supply: get_supply.Handler
     list_supplies: list_supplies.Handler
+    probe_store: SupplyProbeStore
+    """The Supply-probe trail's write store. Surfaced on the bundle, not
+    a handler, mirroring `EnclosureHandlers.permit_probe_store`: the
+    FastAPI lifespan needs it at `supply_status_monitor_lifespan`'s call
+    site, a dependency that isn't itself a command handler."""
 
 
 def wire_supply(deps: Kernel) -> SupplyHandlers:
     """Build the Supply BC handlers from shared dependencies."""
+    probe_store: SupplyProbeStore = (
+        PostgresSupplyProbeStore(deps.pool) if deps.pool is not None else InMemorySupplyProbeStore()
+    )
     return SupplyHandlers(
+        probe_store=probe_store,
         register_supply=with_tracing(
             with_idempotency(
                 register_supply.bind(deps),

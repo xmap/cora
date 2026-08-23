@@ -9,6 +9,7 @@ are not promoted to infrastructure.
 
 from cora.supply.ports.supply_observer import (
     AlwaysQuietSupplyObserver,
+    ReachTier,
     SupplyObservation,
     SupplyObserver,
     SupplyObserverScope,
@@ -16,6 +17,7 @@ from cora.supply.ports.supply_observer import (
 
 __all__ = [
     "AlwaysQuietSupplyObserver",
+    "ReachTier",
     "SupplyObservation",
     "SupplyObserver",
     "SupplyObserverScope",

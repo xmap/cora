@@ -114,6 +114,7 @@ from cora.run.ports.capture_observer import (
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
+from cora.shared.binary_signal import binary_code
 from cora.shared.reach import ReachTier
 
 if TYPE_CHECKING:
@@ -167,42 +168,11 @@ Module-public (not `_`-prefixed): `capture_watch_preflight` imports this
 directly so its own truncation check can never drift from production's.
 """
 
-# Conventional EPICS binary state labels, mirroring
-# `_enclosure_permit_observer._PERMITTED_LABELS` / `_NOT_PERMITTED_LABELS`
-# exactly: a DBR_ENUM reading through `EpicsCaControlPort` reaches this
-# module as its resolved label, never as its index (2-BM's `AbortScan`
-# is confirmed live as one such ENUM, resolving to `'No'`), so the label
-# is the only thing left to compare against. `CaprotoControlPort`, by
-# contrast, leaves the raw integer unresolved; the `int(value)` fallback
-# below covers that shape too.
-_ASSERTED_LABELS = frozenset({"1", "ON", "TRUE", "YES"})
-_CLEAR_LABELS = frozenset({"0", "OFF", "FALSE", "NO"})
-
-
-def binary_code(value: object) -> int | None:
-    """Resolve a binary-role reading to 1 / 0, or None when it is neither.
-
-    Unrecognized resolves to `None`, never a guess: same fail-toward-
-    silence posture as `_enclosure_permit_observer._binary_code`, whose
-    docstring documents the production incident (`int('ON')` raising)
-    that made string-label matching necessary in the first place.
-
-    Module-public (not `_`-prefixed): `capture_watch_preflight` calls this
-    directly to report whether the `abort` role's reading decodes, and
-    must not carry a second copy of this logic.
-    """
-    if isinstance(value, str):
-        token = value.strip().upper()
-        if token in _ASSERTED_LABELS:
-            return 1
-        if token in _CLEAR_LABELS:
-            return 0
-        return None
-    try:
-        code = int(value)  # type: ignore[call-overload]
-    except (TypeError, ValueError):
-        return None
-    return code if code in (0, 1) else None
+# `binary_code` (imported above from `cora.shared.binary_signal`) is
+# re-exported by this module's `__all__`: it moved there once a fourth
+# occurrence (the BLEPS supply observer) made it the rule-of-three hoist
+# trigger, but `capture_watch_preflight` imports it from this module by
+# name and must not carry a second copy of the logic.
 
 
 def finite_float(value: object) -> float | None:

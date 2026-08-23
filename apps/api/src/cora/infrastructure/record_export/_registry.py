@@ -7,21 +7,23 @@ bare ``str``, not a closed enum) and resolves it through this ONE
 registry to the entries table that holds the fine-grained doing. An
 unknown ``kind`` refuses loudly rather than being skipped.
 
-Nine entries, not six. Six kinds come from an envelope event on the
-main stream; three tables, `entries_run_feed_heartbeats`,
-`entries_enclosure_permit_probes`, and `entries_run_capture_probes`,
-have no envelope at all and are declared here explicitly, with
-`envelope_class` set to `None`, per `project_record_is_two_tier.md`'s
-"declare or exclude, in writing" finding. The operator decided at S4
-(`project_record_completeness_design.md`) that all three are pulled
+Ten entries, not six. Six kinds come from an envelope event on the
+main stream; four tables, `entries_run_feed_heartbeats`,
+`entries_enclosure_permit_probes`, `entries_run_capture_probes`, and
+`entries_supply_probes`, have no envelope at all and are declared here
+explicitly, with `envelope_class` set to `None`, per
+`project_record_is_two_tier.md`'s "declare or exclude, in writing"
+finding. The operator decided at S4
+(`project_record_completeness_design.md`) that all four are pulled
 into the published bundle rather than excluded as operational
-telemetry; `unscoped_reader` below is how S5a/S5b/S5c carried that
-decision into code. This registry's own job stays the same regardless:
-make every table reachable and refuse to silently drop any of them.
+telemetry; `unscoped_reader` below is how S5a/S5b/S5c/the BLEPS supply
+observer slice carried that decision into code. This registry's own job
+stays the same regardless: make every table reachable and refuse to
+silently drop any of them.
 
 The order key lives per kind because `sampled_at` exists on only four of
-the nine tables (activity, diagnostic, outcome, observation). The other
-five order by `event_id` alone: CORA mints it with `UUIDv7Generator`, so
+the ten tables (activity, diagnostic, outcome, observation). The other
+six order by `event_id` alone: CORA mints it with `UUIDv7Generator`, so
 it is total and insertion-ordered without a separate timestamp column,
 and `occurred_at` is never the tiebreak because it ties across a whole
 append batch (one Clock read per handler call).
@@ -30,13 +32,13 @@ The six envelope-driven tables are scoped by `logbook_id`, the join
 column the envelope carries. Heartbeats and probes are not
 Logbook-and-Entry instances (no `logbook_id` column at all) and are
 scoped by their owning aggregate's id instead: `run_id` for heartbeats,
-`enclosure_id` for permit probes. `entries_run_capture_probes` differs
-from BOTH: a capture code has no backing aggregate at all (see that
-table's migration header and `run.aggregates.run.capture_probes`'s
-module docstring), so it scopes on `capture_code`, a deployment-declared
-string, not a UUID. `EntriesReader`'s scope-id type is widened
-(`UUID | str`) for exactly this one case; every other spec still passes
-a `UUID` at runtime, unaffected.
+`enclosure_id` for permit probes, `supply_id` for Supply probes.
+`entries_run_capture_probes` differs from ALL of those: a capture code
+has no backing aggregate at all (see that table's migration header and
+`run.aggregates.run.capture_probes`'s module docstring), so it scopes on
+`capture_code`, a deployment-declared string, not a UUID. `EntriesReader`'s
+scope-id type is widened (`UUID | str`) for exactly this one case; every
+other spec still passes a `UUID` at runtime, unaffected.
 
 `unscoped_reader` (S5,
 `project_record_completeness_design.md`) is a SEPARATE, optional field
@@ -45,12 +47,13 @@ rather than a nullable scope argument on `reader`: an unscoped read
 operation from a scoped one, and letting a caller pass `None` as a
 scope id against one of the six envelope specs would silently read the
 whole table where the exporter meant to read one logbook's slice.
-`heartbeat` (S5a), `capture_probe` (S5b) and `permit_probe` (S5c) all
-set it now; every other spec's `reader` and its own call sites are
-unchanged. Every kind owed its own disclosure review before a bundle
-could carry it; see each kind's disposition entries in
-`_redact_tier2.py` and its own slice's commit message for the
-reasoning, including `permit_probe.status_claimed`'s verdict (S5c).
+`heartbeat` (S5a), `capture_probe` (S5b), `permit_probe` (S5c) and
+`supply_probe` (the BLEPS supply observer slice) all set it now; every
+other spec's `reader` and its own call sites are unchanged. Every kind
+owed its own disclosure review before a bundle could carry it; see each
+kind's disposition entries in `_redact_tier2.py` and its own slice's
+commit message for the reasoning, including `permit_probe.status_claimed`'s
+verdict (S5c) and `supply_probe`'s inherited application of it.
 """
 
 from collections.abc import Awaitable, Callable
@@ -105,8 +108,9 @@ class EntriesTableSpec:
     docstring for what this count can and cannot prove per kind."""
     unscoped_reader: UnscopedEntriesReader | None = None
     """Reads every row of `table`, unscoped, when set. `heartbeat` (S5a),
-    `capture_probe` (S5b) and `permit_probe` (S5c) all set it today;
-    every six-envelope spec leaves it `None`. See the module docstring."""
+    `capture_probe` (S5b), `permit_probe` (S5c) and `supply_probe` all
+    set it today; every six-envelope spec leaves it `None`. See the
+    module docstring."""
 
 
 class UnknownLogbookKindError(LookupError):
@@ -314,6 +318,14 @@ _ENTRIES: tuple[EntriesTableSpec, ...] = (
         scope_column="capture_code",
         order_by=("event_id",),
         scope_type=str,
+        unscoped=True,
+    ),
+    _spec(
+        kind="supply_probe",
+        table="entries_supply_probes",
+        envelope_class=None,
+        scope_column="supply_id",
+        order_by=("event_id",),
         unscoped=True,
     ),
 )

@@ -57,10 +57,14 @@ Observers report levels and hold no memory of where a Supply has been
 aggregate, and this is the only place both the observation and the
 aggregate are in hand, so the translation happens here: a `Recovering`
 observation is recorded only when the Supply is actually `Unavailable`,
-and dropped otherwise. Without that, a healthy beamline's first readings
-would each be a rejected transition, and with an adapter-side memory
-instead, a re-subscribe or a hand-moved Supply would silently disagree
-with the record.
+and a `Degraded` observation is dropped when the Supply is already
+`Unavailable` (a warning cannot un-downgrade a harder trip); both are
+otherwise recorded as-is. Without the first gate, a healthy beamline's
+first readings would each be a rejected transition; without the second,
+a channel passing back through its own warning band on the way to clear
+would log an exception every tick. With an adapter-side memory instead
+of these state-aware gates, a re-subscribe or a hand-moved Supply would
+silently disagree with the record.
 """
 
 from __future__ import annotations
@@ -77,6 +81,7 @@ from cora.shared.identity import MonitorSourceId
 from cora.supply.aggregates.supply import (
     MonitorRef,
     SupplyEvent,
+    SupplyProbe,
     SupplyStatus,
     event_type_name,
     fold,
@@ -91,6 +96,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
 
     from cora.infrastructure.kernel import Kernel
+    from cora.supply.aggregates.supply import SupplyProbeStore
     from cora.supply.ports.supply_observer import SupplyObservation, SupplyObserver
 
 _STREAM_TYPE = "Supply"
@@ -110,16 +116,64 @@ async def record_observation(
     kernel: Kernel,
     observation: SupplyObservation,
     code_to_id: Mapping[str, UUID],
+    probe_store: SupplyProbeStore,
 ) -> None:
-    """Record one observation as a Supply transition (raw, authz-bypassed).
+    """Record one observation: a Supply-probe row, then, when status-bearing,
+    a Supply transition (raw, authz-bypassed).
 
-    No-op when the code is unmapped, the status is unparseable, or the
-    decider returns `[]` (unchanged status, status-change-only).
+    No-op entirely when the code is unmapped: the row cannot be
+    attributed to a Supply. Otherwise the probe row is written
+    unconditionally (except see the degraded-schema case below), in its
+    own try/except: a probe-store failure must never suppress the
+    transition below it, mirroring `cora.enclosure._monitor`.
+
+    `kernel.schema_posture == "degraded"` skips the probe write entirely:
+    a degraded boot runs a read-only event store, so a probe row
+    asserting reach during that window would claim coverage over a
+    process that cannot actually record what it observed. A GAP in the
+    trail is the correct signal there, not a bug.
+
+    `observation.observed_status is None` means this observation is
+    probe-only and makes no status claim, so no transition is attempted
+    past the probe write. Otherwise, an unparseable status, or the
+    decider returning `[]` (unchanged status, status-change-only), are
+    no-ops on the transition path only; the probe row still stands.
     """
     supply_id = code_to_id.get(observation.supply_code)
     if supply_id is None:
         _log.warning("supply_monitor.unknown_code", supply_code=observation.supply_code)
         return
+
+    if kernel.schema_posture == "degraded":
+        _log.warning(
+            "supply_monitor.probe_skipped_degraded_schema",
+            supply_code=observation.supply_code,
+        )
+    else:
+        try:
+            await probe_store.append(
+                [
+                    SupplyProbe(
+                        event_id=kernel.id_generator.new_id(),
+                        supply_id=supply_id,
+                        source_kind=observation.source_kind,
+                        source_id=observation.source_id,
+                        reach_tier=observation.reach_tier,
+                        status_claimed=observation.observed_status is not None,
+                    )
+                ]
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.exception(
+                "supply_monitor.probe_write_failed",
+                supply_code=observation.supply_code,
+            )
+
+    if observation.observed_status is None:
+        return
+
     try:
         new_status = SupplyStatus(observation.observed_status)
     except ValueError:
@@ -151,6 +205,22 @@ async def record_observation(
         new_status is SupplyStatus.RECOVERING
         and state is not None
         and state.status is not SupplyStatus.UNAVAILABLE
+    ):
+        return
+
+    # A warning observed while the Supply is already Unavailable from a
+    # harder trip is not "un-downgradable" by a monitor: the decider's
+    # `_DEGRADABLE_SOURCES` excludes UNAVAILABLE, by the same latched-
+    # alarm precedent as the Recovering skip above (only an operator's
+    # `mark_supply_recovering` / `restore_supply` walks a resource back
+    # once it has been fully down). Skipping here, rather than letting
+    # the decider raise `SupplyCannotDegradeError`, keeps a channel
+    # passing back through its own warning band on the way to clear from
+    # logging an exception on every tick.
+    if (
+        new_status is SupplyStatus.DEGRADED
+        and state is not None
+        and state.status is SupplyStatus.UNAVAILABLE
     ):
         return
 
@@ -188,6 +258,7 @@ async def run_supply_status_monitor(
     observer: SupplyObserver,
     kernel: Kernel,
     code_to_id: Mapping[str, UUID],
+    probe_store: SupplyProbeStore,
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
 ) -> None:
     """Drain the observer, recording each observation; re-subscribe on stream end."""
@@ -203,7 +274,7 @@ async def run_supply_status_monitor(
             # enclosure precedent.
             async for observation in observer.observe(scope):
                 try:
-                    await record_observation(kernel, observation, code_to_id)
+                    await record_observation(kernel, observation, code_to_id, probe_store)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -227,6 +298,7 @@ async def supply_status_monitor_lifespan(
     observer: SupplyObserver,
     kernel: Kernel,
     code_to_id: Mapping[str, UUID],
+    probe_store: SupplyProbeStore,
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
 ) -> AsyncGenerator[None]:
     """Run the monitor for the lifetime of the context, cancelling on exit."""
@@ -240,6 +312,7 @@ async def supply_status_monitor_lifespan(
             observer=observer,
             kernel=kernel,
             code_to_id=code_to_id,
+            probe_store=probe_store,
             reconnect_delay_seconds=reconnect_delay_seconds,
         ),
         name="supply-status-monitor",

@@ -27,13 +27,19 @@ class BlepsSupplyChannelConfig(BaseModel):
 
     `supply` is the Supply name this channel contributes to; `trip` is the
     process-axis PV; `fault` is the optional trust-axis PV (that same
-    channel's instrumentation fault). `label` is what an operator reads in
+    channel's instrumentation fault). `warning` is the optional, less-
+    severe process-axis PV on the same physical quantity (e.g.
+    `Flow2.Under_Range_Warning`); it is read from config unconditionally,
+    but `main.py` only passes it through to `BlepsChannel` when
+    `bleps_supply_warnings_enabled` is set, so declaring it here has no
+    effect until that flag is on. `label` is what an operator reads in
     the transition reason, and defaults to the trip PV when omitted.
     """
 
     supply: str
     trip: str
     fault: str = ""
+    warning: str = ""
     label: str = ""
 
 
@@ -816,6 +822,19 @@ class Settings(BaseSettings):
     # are configured either; `_require_communications_fault_pv_with_bleps_channels`
     # enforces that pairing rather than leaving it as a comment.
     bleps_communications_fault_pv: str = ""
+
+    # Whether a configured channel's optional `warning` PV is passed
+    # through to the observer at all. Default false: nobody has measured
+    # how often BLEPS warnings latch at 2-BM, and a channel that warns
+    # routinely would park its Supply in `Degraded` semi-permanently,
+    # which fails the run-start supply gate (`Degraded` does not satisfy
+    # it). `main.py` reads this flag when building each `BlepsChannel`;
+    # the observer itself is unconditionally warning-aware and has no
+    # setting of its own. Flip a deployment to True to observe the real
+    # base rate directly instead of asking staff to estimate it. See
+    # `cora.api._bleps_supply_observer`'s "Warnings, gated off by
+    # default" section.
+    bleps_supply_warnings_enabled: bool = False
 
     @model_validator(mode="after")
     def _require_communications_fault_pv_with_bleps_channels(self) -> "Settings":
