@@ -797,12 +797,23 @@ class Settings(BaseSettings):
     #   BLEPS_SUPPLY_CHANNELS='[
     #     {"supply":"2-BM cooling water",
     #      "label":"Flow2 (M1 and DMM circuit)",
-    #      "trip":"2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
-    #      "fault":"2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT"},
+    #      "trip":"2bmBLEPS:BLEPS:FLOW2_TRIP",
+    #      "fault":"2bmBLEPS:BLEPS:FLOW2_OVER_RANGE",
+    #      "warning":"2bmBLEPS:BLEPS:FLOW_2_UNDER_WRN"},
     #     {"supply":"2-BM beamline vacuum",
     #      "label":"Vacuum section 1",
     #      "trip":"2bmBLEPS:BLEPS:VS1_TRIP"}
     #   ]'
+    #
+    # Those are the REAL 2-BM PV names, read off the running IOC on
+    # 2026-08-23, not names derived from the PLC tags. The tags use dots
+    # and the PVs are abbreviated inconsistently: PLC
+    # `Flow2.Below_Set_Point_Trip` is `FLOW2_TRIP`, and its sibling
+    # warning `Flow2.Under_Range_Warning` is `FLOW_2_UNDER_WRN`, with an
+    # underscore before the digit that the trip does not have. An earlier
+    # version of this example spelled them out longhand and none of those
+    # PVs exist, so the config it suggested would have bound nothing.
+    # `iocBoot/ioc2bmBLEPS/dbl-all.txt` is the authoritative list.
     #
     # A typed model rather than bare dicts, because a missing key used to
     # surface as a `KeyError` inside the lifespan, which fails the whole

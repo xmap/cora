@@ -40,14 +40,14 @@ _COMMS = "2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT"
 _FLOW2 = BlepsChannel(
     supply_code=_WATER,
     label="Flow2 (M1 and DMM circuit)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT",
+    trip_pv="2bmBLEPS:BLEPS:FLOW2_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE",
 )
 _FLOW6 = BlepsChannel(
     supply_code=_WATER,
     label="Flow6 (Station B entrance slits)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW6_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE_FAULT",
+    trip_pv="2bmBLEPS:BLEPS:FLOW6_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE",
 )
 _VS1 = BlepsChannel(
     supply_code=_VACUUM,
@@ -57,16 +57,16 @@ _VS1 = BlepsChannel(
 _FLOW2_W = BlepsChannel(
     supply_code=_WATER,
     label="Flow2 (M1 and DMM circuit)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT",
-    warning_pv="2bmBLEPS:BLEPS:FLOW2_UNDER_RANGE_WARNING",
+    trip_pv="2bmBLEPS:BLEPS:FLOW2_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW2_OVER_RANGE",
+    warning_pv="2bmBLEPS:BLEPS:FLOW_2_UNDER_WRN",
 )
 _FLOW6_W = BlepsChannel(
     supply_code=_WATER,
     label="Flow6 (Station B entrance slits)",
-    trip_pv="2bmBLEPS:BLEPS:FLOW6_BELOW_SET_POINT_TRIP",
-    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE_FAULT",
-    warning_pv="2bmBLEPS:BLEPS:FLOW6_UNDER_RANGE_WARNING",
+    trip_pv="2bmBLEPS:BLEPS:FLOW6_TRIP",
+    fault_pv="2bmBLEPS:BLEPS:FLOW6_OVER_RANGE",
+    warning_pv="2bmBLEPS:BLEPS:FLOW_6_UNDER_WRN",
 )
 
 
