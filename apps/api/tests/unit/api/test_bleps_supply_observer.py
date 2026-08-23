@@ -140,9 +140,35 @@ def test_an_out_of_range_ordinal_reads_as_unbelievable() -> None:
 
 @pytest.mark.unit
 def test_a_bad_quality_enum_reading_is_unbelievable_even_with_an_ordinal() -> None:
-    """The quality floor still wins. An ordinal is not a reason to trust a bad read."""
+    """`Bad` still wins. An ordinal is not a reason to trust an invalid read."""
     assert flag_state_from_reading(_enum_reading("TRIP", 1, quality="Bad")) is None
-    assert flag_state_from_reading(_enum_reading("TRIP", 1, quality="Uncertain")) is None
+    assert flag_state_from_reading(_enum_reading("NO_FAULT", 0, quality="Bad")) is None
+
+
+@pytest.mark.unit
+def test_an_alarming_trip_is_believed_because_the_alarm_is_the_signal() -> None:
+    """The case that made this observer blind at 2-BM.
+
+    A BLEPS record raises MAJOR precisely when its flag asserts, and the
+    CA adapter collapses MAJOR to `Uncertain`. Under the old `!= "Good"`
+    floor that discarded every tripped flag while keeping every clear
+    one, so the observer could only ever see a healthy beamline.
+
+    Measured on arcturus 2026-08-23: all eight cooling circuits read
+    `TRIP` with `STATE MAJOR`, and not one was visible.
+    """
+    assert flag_state_from_reading(_enum_reading("TRIP", 1, quality="Uncertain")) is True
+
+
+@pytest.mark.unit
+def test_an_alarming_clear_reading_is_believed_as_clear() -> None:
+    """The other direction of the same loosening, stated rather than assumed.
+
+    Not reachable at 2-BM, where a clear flag carries no alarm, but the
+    floor admits it and the record should say what it does: an alarmed
+    `NO_FAULT` counts as clear rather than withholding the verdict.
+    """
+    assert flag_state_from_reading(_enum_reading("NO_FAULT", 0, quality="Uncertain")) is False
 
 
 @pytest.mark.unit
@@ -160,9 +186,18 @@ def test_clear_flag_reads_low() -> None:
 
 @pytest.mark.unit
 def test_unreadable_flag_is_unknown_not_low() -> None:
-    """A dead PV must never read as "no fault here"."""
+    """A dead PV must never read as "no fault here".
+
+    The `Uncertain` case moved OUT of this test when the floor loosened
+    to `Bad`, and it moved rather than being deleted: an alarmed reading
+    is now believed, and
+    `test_an_alarming_clear_reading_is_believed_as_clear` pins that
+    directly. What remains here is the property that never changed, that
+    an unreadable or uninterpretable flag is withheld instead of being
+    reported as clear.
+    """
     assert flag_state_from_reading(_reading(1, quality="Bad")) is None
-    assert flag_state_from_reading(_reading(0, quality="Uncertain")) is None
+    assert flag_state_from_reading(_reading(0, quality="Bad")) is None
     assert flag_state_from_reading(_reading(None)) is None
     assert flag_state_from_reading(_reading("tripped")) is None
 
@@ -259,6 +294,118 @@ async def test_a_healthy_beamline_reports_clear_as_recovering() -> None:
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
     assert _statuses(observed) == ["Recovering"]
+
+
+@pytest.mark.unit
+async def test_an_alarmed_but_clear_fault_flag_no_longer_blinds_its_channel() -> None:
+    """The trust axis's half of the loosening, which the process-axis tests miss.
+
+    `flag_state_from_reading` serves three PV roles and they use
+    different label pairs, so a floor argument proved on trip flags does
+    not automatically hold for `fault_pv`. Under the strict floor an
+    alarmed fault reading was unbelievable, and `_verdict` blinds a
+    channel whose fault flag is anything but a believable `False`, so
+    ANY standing alarm on a fault record blinded that channel forever.
+
+    Now it is believed, the channel stays in the fold, and its clear
+    trip reading can be reported. Not reachable on measured 2-BM data,
+    where fault flags read clear with no alarm, and pinned here so a
+    facility where it IS reachable shows up as a test change rather
+    than as silence.
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2.trip_pv: [_enum_reading("NO_FAULT", 0)],
+            _FLOW2.fault_pv or "": [_enum_reading("", 0, quality="Uncertain")],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
+    assert _statuses(observed) == ["Recovering"]
+
+
+@pytest.mark.unit
+async def test_an_alarmed_but_clear_comms_flag_does_not_read_as_a_dark_feed() -> None:
+    """The system axis's half, which suppresses EVERY Supply when it trips.
+
+    `_communications_lost` treats the comms flag as dark unless it reads
+    a believable `False`, so under the strict floor an alarmed comms
+    reading suppressed the whole observer, not one channel. This is the
+    widest of the three widenings and so the one most worth pinning.
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2.trip_pv: [_enum_reading("TRIP", 1, quality="Uncertain")],
+            _FLOW2.fault_pv or "": [_enum_reading("", 0)],
+            _COMMS: [_enum_reading("", 0, quality="Uncertain")],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2], communications_fault_pv=_COMMS), {_WATER})
+    assert _statuses(observed) == ["Unavailable"]
+
+
+@pytest.mark.unit
+def test_an_alarming_scalar_reading_is_believed_too() -> None:
+    """The loosened floor is about quality, not about reading shape.
+
+    A BLEPS channel on a `longin` / `ai` arrives as `kind="Scalar"`
+    carrying a number rather than an enum label plus ordinal. The
+    Uncertain-quality Scalar case was covered before this change (as an
+    assertion that it read `None`) and would otherwise have been dropped
+    rather than relocated when that assertion moved to the enum-shaped
+    test.
+    """
+    assert flag_state_from_reading(_reading(1, quality="Uncertain")) is True
+    assert flag_state_from_reading(_reading(0, quality="Uncertain")) is False
+
+
+@pytest.mark.unit
+async def test_the_live_2bm_shape_drives_unavailable_end_to_end() -> None:
+    """The whole failure, reproduced as the beamline actually reports it.
+
+    Every ingredient is measured, not invented (arcturus 2026-08-23):
+    the flags are DBR_ENUM carrying `NO_FAULT` / `TRIP`, which no
+    conventional label set contains, so the ordinal is what resolves
+    them; a tripped flag carries `STATE MAJOR`, which the CA adapter
+    collapses to `Uncertain`; the instrument-fault flag reads the EMPTY
+    STRING for healthy with no alarm; and the comms flag likewise.
+
+    Both defects had to be fixed for this to pass, and either one alone
+    still yields silence: the label is undecodable without the ordinal,
+    and the reading is discarded without the loosened floor. Driving the
+    whole observer rather than `flag_state_from_reading` is the point,
+    since the comms gate and the verdict fold sit between them and each
+    can independently swallow the result.
+    """
+    tripped = _enum_reading("TRIP", 1, quality="Uncertain")
+    healthy_fault = _enum_reading("", 0)
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW2.trip_pv: [tripped],
+            _FLOW2.fault_pv or "": [healthy_fault],
+            _FLOW6.trip_pv: [tripped],
+            _FLOW6.fault_pv or "": [healthy_fault],
+            _COMMS: [_enum_reading("", 0)],
+        }
+    )
+    observed = await _collect(
+        _observer(port, [_FLOW2, _FLOW6], communications_fault_pv=_COMMS), {_WATER}
+    )
+    statuses = _statuses(observed)
+    assert statuses, "the observer claimed nothing at all, which is the bug this pins"
+    # Asserting the SET rather than the sequence: both channels are
+    # tripped from their first reading, so the verdict is re-emitted per
+    # reading and the count is an artifact of the scripted drain order.
+    # What matters is that every claim made was Unavailable and none
+    # said otherwise.
+    assert set(statuses) == {"Unavailable"}
+    # The LAST reason, not the first. Flow2 alone keeps the Supply
+    # Unavailable from its first reading onward, so `reasons[0]` names
+    # only Flow2 and a regression that dropped or mis-decoded Flow6
+    # entirely would leave both the status set and the first reason
+    # untouched. Only the final fold has seen every channel.
+    reasons = [o.reason for o in observed if o.observed_status is not None]
+    assert "Flow2 (M1 and DMM circuit)" in reasons[-1]
+    assert "Flow6 (Station B entrance slits)" in reasons[-1]
 
 
 @pytest.mark.unit
