@@ -8,7 +8,7 @@ environment variables directly.
 from typing import Literal
 from uuid import UUID
 
-from pydantic import SecretStr, ValidationInfo, field_validator
+from pydantic import BaseModel, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from cora.infrastructure.auth.config import IdentityProviderConfig
@@ -16,6 +16,32 @@ from cora.infrastructure.capture_scan_ingestor_binding import CaptureScanIngesto
 from cora.infrastructure.control_port_route import ControlPortRoute
 from cora.shared.capture_phase import CapturePhase
 from cora.shared.storage_root import normalize_storage_root, require_nonempty_absolute_root
+
+
+class BlepsSupplyChannelConfig(BaseModel):
+    """One BLEPS channel bound to the Supply it feeds.
+
+    Typed rather than a bare dict so a missing or misspelled key is a
+    startup validation error naming the field, instead of a `KeyError`
+    raised deep inside the lifespan with the whole boot failing around it.
+
+    `supply` is the Supply name this channel contributes to; `trip` is the
+    process-axis PV; `fault` is the optional trust-axis PV (that same
+    channel's instrumentation fault). `warning` is the optional, less-
+    severe process-axis PV on the same physical quantity (e.g.
+    `Flow2.Under_Range_Warning`); it is read from config unconditionally,
+    but `main.py` only passes it through to `BlepsChannel` when
+    `bleps_supply_warnings_enabled` is set, so declaring it here has no
+    effect until that flag is on. `label` is what an operator reads in
+    the transition reason, and defaults to the trip PV when omitted.
+    """
+
+    supply: str
+    trip: str
+    fault: str = ""
+    warning: str = ""
+    label: str = ""
+
 
 _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
@@ -320,6 +346,21 @@ class Settings(BaseSettings):
     # ticks before an autonomous resume fires (>= 1).
     run_supervisor_resume_enabled: bool = False
     run_supervisor_resume_settle_ticks: int = 2
+
+    # `run_supervisor_envelope_hold_enabled` is a SEPARATE opt-in widening the
+    # hold trigger beyond beam: a Running Run also holds when a non-beam
+    # start-safety gate (clearance, supply, or enclosure -- the same four
+    # gates `check_safety_envelope` enforces at start, minus beam, which the
+    # v1 hold rule already covers) confirms-fails and stays failed through
+    # the settle window below. Default off: this pays for a full envelope
+    # assembly (aggregate loads + cross-BC lookups) per Running Run per tick
+    # whenever beam is open, a real cost the v1 beam-only hold never paid.
+    # `run_supervisor_envelope_hold_settle_ticks` is its own anti-flap window
+    # (>= 1), separate from the resume settle window above: a transient
+    # eventual-consistency miss on one aggregate load must not hold a Run
+    # that a moment later reads fine.
+    run_supervisor_envelope_hold_enabled: bool = False
+    run_supervisor_envelope_hold_settle_ticks: int = 2
 
     # `run_supervisor_advise_enabled` promotes the supervisor's shadow rules
     # (run-liveness, signal-quality, signal-stall) one rung from observe to
@@ -748,6 +789,86 @@ class Settings(BaseSettings):
     # defaults drifted out of sync once already; if you change one, change
     # both.
     enclosure_permit_monitor_startup_timeout_seconds: float = 8.0
+
+    # BLEPS supply observer (BLEPS-1/2/3, #562-#564). Equipment-protection
+    # channels whose trips drive a Supply's status. Each entry binds one
+    # BLEPS channel to the Supply it feeds:
+    #
+    #   BLEPS_SUPPLY_CHANNELS='[
+    #     {"supply":"2-BM cooling water",
+    #      "label":"Flow2 (M1 and DMM circuit)",
+    #      "trip":"2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
+    #      "fault":"2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT"},
+    #     {"supply":"2-BM beamline vacuum",
+    #      "label":"Vacuum section 1",
+    #      "trip":"2bmBLEPS:BLEPS:VS1_TRIP"}
+    #   ]'
+    #
+    # A typed model rather than bare dicts, because a missing key used to
+    # surface as a `KeyError` inside the lifespan, which fails the whole
+    # boot with nothing naming the offending entry.
+    #
+    # `trip` is the process axis: the measured value crossed its limit, or
+    # a valve disobeyed. `fault` is the OPTIONAL trust axis, the same
+    # channel's instrumentation fault; while it stands, that channel is
+    # excluded from its Supply's verdict rather than obeyed. Many channels
+    # per Supply is the normal case (eight cooling circuits, seven vacuum
+    # sections); the failing channel's `label` lands in the transition
+    # reason. When empty (default) the supply monitor loop is a no-op, so
+    # a generic boot is unaffected.
+    #
+    # Read-only is enforced STRUCTURALLY, not by naming discipline: the
+    # composition root wraps the observer's port in `ReadOnlyControlPort`,
+    # so it cannot write whatever the route table says. That matters
+    # because route-level `read_only` defaults False, so a `2bmBLEPS:`
+    # route in a writes-enabled deployment would otherwise accept writes.
+    # `test_bleps_binding_is_read_only` is a tripwire against an
+    # accidental hardcode of a BLEPS write PV; it greps names and makes
+    # nothing read-only. See `cora.api._bleps_supply_observer`.
+    bleps_supply_channels: list[BlepsSupplyChannelConfig] = []
+
+    # The BLEPS system's own communications flag (PLC to EtherNet/IP
+    # gateway). While it is asserted, or while it cannot be believably
+    # read, NO BLEPS observation is recorded: a reading we cannot trust
+    # must not overwrite a Supply's status with a guess. Read from
+    # BLEPS_COMMUNICATIONS_FAULT_PV, for example
+    # `2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT`. Empty (default) disables the
+    # system-wide trust gate, which is only correct when no BLEPS channels
+    # are configured either; `_require_communications_fault_pv_with_bleps_channels`
+    # enforces that pairing rather than leaving it as a comment.
+    bleps_communications_fault_pv: str = ""
+
+    # Whether a configured channel's optional `warning` PV is passed
+    # through to the observer at all. Default false: nobody has measured
+    # how often BLEPS warnings latch at 2-BM, and a channel that warns
+    # routinely would park its Supply in `Degraded` semi-permanently,
+    # which fails the run-start supply gate (`Degraded` does not satisfy
+    # it). `main.py` reads this flag when building each `BlepsChannel`;
+    # the observer itself is unconditionally warning-aware and has no
+    # setting of its own. Flip a deployment to True to observe the real
+    # base rate directly instead of asking staff to estimate it. See
+    # `cora.api._bleps_supply_observer`'s "Warnings, gated off by
+    # default" section.
+    bleps_supply_warnings_enabled: bool = False
+
+    @model_validator(mode="after")
+    def _require_communications_fault_pv_with_bleps_channels(self) -> "Settings":
+        """BLEPS channels without the comms flag would trust a dark feed.
+
+        The comms flag is the only signal that says the whole BLEPS
+        reading is stale. Configuring channels without it silently
+        disables the system-wide trust gate, which is the one failure
+        mode where CORA keeps asserting a Supply's status from readings
+        that stopped arriving.
+        """
+        if self.bleps_supply_channels and not self.bleps_communications_fault_pv:
+            raise ValueError(
+                "BLEPS_SUPPLY_CHANNELS is configured without "
+                "BLEPS_COMMUNICATIONS_FAULT_PV; the comms flag is what makes a "
+                "stale BLEPS feed detectable, so channels without it would be "
+                "trusted indefinitely"
+            )
+        return self
 
     # Beam-availability pre-flight (BEAM-1, beam-availability slice).
     # Role -> read-only PV for the run / procedure start gate. `fes` and
@@ -1483,6 +1604,18 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_resume_settle_ticks must be >= 1, got {value}; "
                 "an autonomous resume requires at least one good envelope read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_envelope_hold_settle_ticks")
+    @classmethod
+    def _validate_run_supervisor_envelope_hold_settle_ticks(cls, value: int) -> int:
+        """Floor of 1: a hold needs at least one confirmed-bad envelope read."""
+        if value < 1:
+            msg = (
+                f"run_supervisor_envelope_hold_settle_ticks must be >= 1, got {value}; "
+                "an autonomous envelope hold requires at least one confirmed-failed read"
             )
             raise ValueError(msg)
         return value

@@ -7,14 +7,15 @@ checkout's registry has grown a kind a bundle's manifest never had a
 slot for, but only if the kind set and the schema version move
 together. Sibling to `test_record_export_registry_completeness.py`'s
 `test_exactly_six_logbook_opened_classes_exist`, which pins the six
-envelope classes; this pins the full nine-kind registry (`_registry.py`
+envelope classes; this pins the full ten-kind registry (`_registry.py`
 already pins the bare count in `tests/unit/infrastructure/record_export/
-test_registry.py::test_registry_has_nine_entries_not_six`, but not the
+test_registry.py::test_registry_has_ten_entries_not_six`, but not the
 SET, and not against the manifest's own version).
 
-A tenth `EntriesTableSpec` changes `_REGISTERED_KINDS` below, which is a
-deliberate, reviewed edit -- exactly the point: nothing here should
-change silently.
+The tenth `EntriesTableSpec` (`supply_probe`, the BLEPS supply
+observer's probe trail) landed exactly the way this docstring predicted:
+a deliberate, reviewed edit to `_REGISTERED_KINDS` below plus a
+`MANIFEST_SCHEMA_VERSION` bump (1 -> 2), not a silent one.
 
 `MANIFEST_SCHEMA_VERSION` versions the kind SET pinned above, not any
 kind's extent status; see the constant's own docstring in `_manifest.py`
@@ -47,15 +48,18 @@ _REGISTERED_KINDS = (
     "observation",
     "outcome",
     "permit_probe",
+    "supply_probe",
     "verdict",
 )
 
 # Every registered kind's current extent status, per the S4/S5 decisions
-# recorded in project_record_completeness_design.md: all nine kinds are
-# IN, and after S5a/S5b/S5c wired the last three unscoped readers, none
-# resolves UNTRAVERSED in production any more. A future kind losing its
-# reader (or a new kind registered with none) changes this dict, which
-# is the point: it must be a deliberate edit, not a silent one.
+# recorded in project_record_completeness_design.md, plus the BLEPS
+# supply observer slice for supply_probe: all ten kinds are IN, and
+# after S5a/S5b/S5c/the supply-probe slice wired every unscoped reader,
+# none resolves UNTRAVERSED in production any more. A future kind
+# losing its reader (or a new kind registered with none) changes this
+# dict, which is the point: it must be a deliberate edit, not a silent
+# one.
 _EXTENT_STATUS_BY_KIND = {kind: LogbookKindExtentStatus.INCLUDED for kind in _REGISTERED_KINDS}
 
 
@@ -66,7 +70,7 @@ def test_registered_kinds_pin_forces_a_deliberate_schema_version_bump() -> None:
         "in _manifest.py, update _REGISTERED_KINDS here, and update the S4 "
         "membership decision in project_record_completeness_design.md together"
     )
-    assert MANIFEST_SCHEMA_VERSION == 1, (
+    assert MANIFEST_SCHEMA_VERSION == 2, (
         "MANIFEST_SCHEMA_VERSION moved without updating this pin's expected "
         "value; update _REGISTERED_KINDS above in the same commit"
     )

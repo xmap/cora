@@ -774,9 +774,16 @@ resources:
     # on WHICH circuit failed, so the per-circuit PV names the failure inside the
     # Supply's status rather than multiplying the Supply. Split when a readiness
     # decision first differs by circuit.
+    # Each Flow/Temp channel publishes a WARNING, a TRIP and a FAULT (verified in
+    # 2bm-docs item_025.rst per-class PV inventory: Faults 46, Trips 19, Warnings 30).
+    # Those are not three severities: warning+trip answer "how bad is the measured
+    # value", fault answers "is the reading believable at all" (off-scale AWAY from
+    # danger is physically implausible, so BLEPS calls it a broken instrument). Only
+    # warning+trip drive status; Flow*.Over_Range_Fault / Temp*.Under_Range_Fault set
+    # that channel's readings aside instead. No new status value for the fault class.
     - kind: PhotonBeam            # facility-scope: the storage ring, recorded at APS
-    - kind: CoolingWater          # 8 circuits, observed via 2bmBLEPS:BLEPS:FLOW1-8_TRIP
-    - kind: Vacuum                # 7 sections, observed via VS1-7_TRIP + IP1-7 + IG1-8
+    - kind: CoolingWater          # 8 circuits: Flow1-8 Below_Set_Point_Trip + Under_Range_Warning
+    - kind: Vacuum                # 7 sections VS1-7.Trip + IP1-7/IG1-8 warnings + valve faults
     - kind: Power                 # facility-scope: BLEPS carries no beamline-power signal
     - kind: ComputePool
     - kind: LiquidNitrogen        # 2-BM detector LN2 dewar

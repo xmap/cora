@@ -403,6 +403,7 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         stop_run=stop_run,
         quality_act_settle={},
         stall_act_settle={},
+        envelope_hold_settle={},
         quality_act_enabled=False,
         quality_settle_ticks=3,
         stall_act_enabled=False,
@@ -411,6 +412,8 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
+        envelope_hold_enabled=False,
+        envelope_hold_settle_ticks=2,
     )
     assert memory[_RUN_ID] == _MEM_HELD
     assert await _run_event_types(deps) == ["RunStarted", "RunHeld"]
@@ -440,6 +443,7 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         stop_run=stop_run,
         quality_act_settle={},
         stall_act_settle={},
+        envelope_hold_settle={},
         quality_act_enabled=False,
         quality_settle_ticks=3,
         stall_act_enabled=False,
@@ -448,6 +452,8 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
+        envelope_hold_enabled=False,
+        envelope_hold_settle_ticks=2,
     )
 
     events, _ = await deps.event_store.load("Run", _RUN_ID)
@@ -508,6 +514,7 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         stop_run=stop_run,
         quality_act_settle={},
         stall_act_settle={},
+        envelope_hold_settle={},
         quality_act_enabled=False,
         quality_settle_ticks=3,
         stall_act_enabled=False,
@@ -516,6 +523,8 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
+        envelope_hold_enabled=False,
+        envelope_hold_settle_ticks=2,
     )
     assert memory[_RUN_ID] == _MEM_HELD
     await _drain_run(db_pool)
@@ -552,6 +561,7 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         stop_run=stop_run,
         quality_act_settle={},
         stall_act_settle={},
+        envelope_hold_settle={},
         quality_act_enabled=False,
         quality_settle_ticks=3,
         stall_act_enabled=False,
@@ -560,6 +570,8 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         advise_enabled=False,
         resume_enabled=True,
         resume_settle_ticks=1,
+        envelope_hold_enabled=False,
+        envelope_hold_settle_ticks=2,
     )
 
     assert memory[_RUN_ID] == _MEM_HELD

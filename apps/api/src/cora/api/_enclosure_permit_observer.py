@@ -54,6 +54,7 @@ from cora.enclosure.ports.enclosure_observer import (
     ReachTier,
 )
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
+from cora.shared.binary_signal import binary_code
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
@@ -65,12 +66,6 @@ _SOURCE_KIND = "EpicsPv"
 _PERMITTED = "Permitted"
 _NOT_PERMITTED = "NotPermitted"
 _UNKNOWN = "Unknown"
-
-# Conventional EPICS binary state labels. A DBR_ENUM reading reaches
-# this module as its resolved label, never as its index, so the label
-# is the only thing left to compare against.
-_PERMITTED_LABELS = frozenset({"1", "ON", "TRUE", "YES"})
-_NOT_PERMITTED_LABELS = frozenset({"0", "OFF", "FALSE", "NO"})
 
 
 def permit_status_from_reading(reading: Measurement) -> str:
@@ -113,28 +108,12 @@ def permit_status_from_reading(reading: Measurement) -> str:
     """
     if reading.quality == "Bad":
         return _UNKNOWN
-    code = _binary_code(reading.value)
+    code = binary_code(reading.value)
     if code == 1:
         return _PERMITTED
     if code == 0:
         return _NOT_PERMITTED
     return _UNKNOWN
-
-
-def _binary_code(value: object) -> int | None:
-    """Resolve a SecureM reading to 1 / 0, or None when it is neither."""
-    if isinstance(value, str):
-        token = value.strip().upper()
-        if token in _PERMITTED_LABELS:
-            return 1
-        if token in _NOT_PERMITTED_LABELS:
-            return 0
-        return None
-    try:
-        code = int(value)  # type: ignore[call-overload]
-    except (TypeError, ValueError):
-        return None
-    return code if code in (0, 1) else None
 
 
 class _PumpDone:

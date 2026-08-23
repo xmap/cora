@@ -19,10 +19,9 @@ gateway can never read as "beam open".
 All three PVs are `bi` records at 2-BM, so a real read arrives as
 `kind="Categorical"` with `EpicsCaControlPort` having already resolved
 the DBR_ENUM index to its label; the index never reaches this module.
-`_binary_code` resolves that label (or a plain numeric reading) to 0 / 1
-before `_read_open` / `_read_permit` apply the polarity above. See
-`_binary_code` for the label set and `cora.api._enclosure_permit_observer`
-for the sibling occurrence of this same mapping.
+`cora.shared.binary_signal.binary_code` resolves that label (or a
+plain numeric reading) to 0 / 1 before `_read_open` / `_read_permit`
+apply the polarity above.
 """
 
 from __future__ import annotations
@@ -37,50 +36,13 @@ from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlTimeoutError,
 )
+from cora.shared.binary_signal import binary_code
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookup
     from cora.operation.ports.control_port import ControlPort
-
-# Conventional EPICS binary state labels. A DBR_ENUM reading reaches
-# this module as its resolved label, never as its index, so the label
-# is the only thing left to compare against. Second occurrence of this
-# mapping; see `cora.api._enclosure_permit_observer._binary_code` for
-# the first. A third occurrence should hoist both into a shared module.
-_ONE_LABELS = frozenset({"1", "ON", "TRUE", "YES"})
-_ZERO_LABELS = frozenset({"0", "OFF", "FALSE", "NO"})
-
-
-def _binary_code(value: object) -> int | None:
-    """Resolve a beam PV reading to 1 / 0, or None when it is neither.
-
-    Polarity is NOT decided here: this only turns a raw reading (an
-    int, an integral float, or an EPICS enum label) into 0 / 1. The
-    caller (`_read_open` / `_read_permit`) applies the per-PV meaning.
-
-    A numeric reading outside {0, 1} (e.g. a stray 2) also resolves to
-    None, not to its raw value. The old `int(raw)` had no such floor,
-    so a PV reading 2 used to come back trusted (`quality_ok=True`)
-    and simply compare unequal to the open/permit code. These PVs are
-    `bi` records with exactly two states, so a reading outside {0, 1}
-    is not a third state to interpret, it is a signal that something
-    upstream is wrong, and that should fail closed like any other
-    unbelievable reading rather than be read with confidence.
-    """
-    if isinstance(value, str):
-        token = value.strip().upper()
-        if token in _ONE_LABELS:
-            return 1
-        if token in _ZERO_LABELS:
-            return 0
-        return None
-    try:
-        code = int(value)  # type: ignore[call-overload]
-    except (TypeError, ValueError):
-        return None
-    return code if code in (0, 1) else None
 
 
 class ControlPortBeamAvailabilityLookup:
@@ -135,7 +97,7 @@ class ControlPortBeamAvailabilityLookup:
         # non-integral float the same as a bad read (fail closed).
         if isinstance(raw, float) and not raw.is_integer():
             return None, False
-        value = _binary_code(raw)
+        value = binary_code(raw)
         if value is None:
             return None, False
         return value, True

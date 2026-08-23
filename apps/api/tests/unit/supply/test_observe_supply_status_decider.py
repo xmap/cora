@@ -27,7 +27,6 @@ from cora.supply.aggregates.supply import (
     Supply,
     SupplyCannotDegradeError,
     SupplyCannotMarkRecoveringError,
-    SupplyCannotMarkUnavailableError,
     SupplyDegraded,
     SupplyMarkedRecovering,
     SupplyMarkedUnavailable,
@@ -131,11 +130,38 @@ def test_decide_unavailable_from_permitted_source(source: SupplyStatus) -> None:
 
 
 @pytest.mark.unit
-def test_decide_unavailable_from_disallowed_source_raises() -> None:
-    """Only Unavailable itself disallows the Unavailable target."""
-    s = _state(SupplyStatus.UNAVAILABLE)
-    with pytest.raises(SupplyCannotMarkUnavailableError):
-        decide(s, _cmd(s.id, SupplyStatus.UNAVAILABLE), now=_NOW, triggered_by=_MONITOR_SOURCE_ID)
+@pytest.mark.parametrize(
+    "status",
+    [SupplyStatus.DEGRADED, SupplyStatus.UNAVAILABLE, SupplyStatus.RECOVERING],
+)
+def test_decide_unchanged_status_emits_no_event(status: SupplyStatus) -> None:
+    """A monitor re-asserting a still-true status is normal traffic, not an error.
+
+    Status-change-only, diverging from the strict operator-driven
+    siblings: a latched substrate signal re-asserts on every reconnect
+    and resend, so raising here would make the runtime raise
+    continuously in exactly the conditions it exists to record.
+    """
+    s = _state(status)
+    assert decide(s, _cmd(s.id, status), now=_NOW, triggered_by=_MONITOR_SOURCE_ID) == []
+
+
+@pytest.mark.unit
+def test_decide_unchanged_status_does_not_validate_reason() -> None:
+    """No fact means no event, so a bad reason on a no-op stays silent.
+
+    The no-op check precedes reason validation. An adapter resending a
+    still-true status with junk in the reason field is not a request
+    CORA needs to reject, because it is not asking for anything.
+    """
+    s = _state(SupplyStatus.DEGRADED)
+    events = decide(
+        s,
+        _cmd(s.id, SupplyStatus.DEGRADED, reason="   "),
+        now=_NOW,
+        triggered_by=_MONITOR_SOURCE_ID,
+    )
+    assert events == []
 
 
 @pytest.mark.unit
@@ -157,11 +183,15 @@ def test_decide_recovering_from_unavailable_succeeds() -> None:
         SupplyStatus.UNKNOWN,
         SupplyStatus.AVAILABLE,
         SupplyStatus.DEGRADED,
-        SupplyStatus.RECOVERING,
     ],
 )
 def test_decide_recovering_from_disallowed_source_raises(source: SupplyStatus) -> None:
-    """Recovering's source allowlist is {Unavailable} only."""
+    """Recovering's source allowlist is {Unavailable} only.
+
+    `Recovering` itself is excluded from the parameters: it is the
+    unchanged-status case, which returns `[]` rather than raising (see
+    `test_decide_unchanged_status_emits_no_event`).
+    """
     s = _state(source)
     with pytest.raises(SupplyCannotMarkRecoveringError):
         decide(s, _cmd(s.id, SupplyStatus.RECOVERING), now=_NOW, triggered_by=_MONITOR_SOURCE_ID)
@@ -171,6 +201,26 @@ def test_decide_recovering_from_disallowed_source_raises(source: SupplyStatus) -
 def test_decide_invalid_reason_raises() -> None:
     s = _state(SupplyStatus.AVAILABLE)
     with pytest.raises(InvalidSupplyReasonError):
+        decide(
+            s,
+            _cmd(s.id, SupplyStatus.DEGRADED, reason="   "),
+            now=_NOW,
+            triggered_by=_MONITOR_SOURCE_ID,
+        )
+
+
+@pytest.mark.unit
+def test_decide_disallowed_transition_raises_its_own_error_even_with_an_invalid_reason() -> None:
+    """Source-state check before reason validation, matching the documented order.
+
+    Unavailable is not in `_DEGRADABLE_SOURCES`, so this observation is
+    disallowed on its target alone. It must raise `SupplyCannotDegradeError`
+    naming that, not the generic `InvalidSupplyReasonError` the blank
+    reason would also trigger -- the specific error must not be masked by
+    a coincidentally-also-invalid reason.
+    """
+    s = _state(SupplyStatus.UNAVAILABLE)
+    with pytest.raises(SupplyCannotDegradeError):
         decide(
             s,
             _cmd(s.id, SupplyStatus.DEGRADED, reason="   "),

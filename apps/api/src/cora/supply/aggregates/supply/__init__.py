@@ -25,6 +25,12 @@ from cora.supply.aggregates.supply.events import (
     to_payload,
 )
 from cora.supply.aggregates.supply.evolver import evolve, fold
+from cora.supply.aggregates.supply.probes import (
+    InMemorySupplyProbeStore,
+    PostgresSupplyProbeStore,
+    SupplyProbe,
+    SupplyProbeStore,
+)
 from cora.supply.aggregates.supply.read import load_supply
 from cora.supply.aggregates.supply.state import (
     SUPPLY_KIND_MAX_LENGTH,
@@ -55,12 +61,14 @@ from cora.supply.aggregates.supply.state import (
 __all__ = [
     "SUPPLY_KIND_MAX_LENGTH",
     "SUPPLY_NAME_MAX_LENGTH",
+    "InMemorySupplyProbeStore",
     "InvalidMonitorRefError",
     "InvalidSupplyKindError",
     "InvalidSupplyNameError",
     "InvalidSupplyReasonError",
     "MonitorRef",
     "MonitorTriggerNotPermittedError",
+    "PostgresSupplyProbeStore",
     "Supply",
     "SupplyAlreadyExistsError",
     "SupplyCannotDegradeError",
@@ -79,6 +87,8 @@ __all__ = [
     "SupplyMarkedUnavailable",
     "SupplyName",
     "SupplyNotFoundError",
+    "SupplyProbe",
+    "SupplyProbeStore",
     "SupplyReason",
     "SupplyRegistered",
     "SupplyRestored",

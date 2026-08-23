@@ -14,15 +14,45 @@ carries `trigger=TriggerSource.MONITOR.value` and serializes the
 `monitor_ref` as `"{source_kind}:{source_id}"` on the event
 payload for downstream audit ("which sensor said so").
 
+## Status-change-only, unlike the operator-driven siblings
+
+An observation whose `new_status` already equals the current status
+returns `[]` and emits nothing. This deliberately DIVERGES from the
+operator-driven sibling slices, which are strict-not-idempotent and
+raise `SupplyCannot<Verb>Error` when re-asserting a status the Supply
+already holds.
+
+The divergence is the point. A monitor re-reporting a fact that is
+still true is normal traffic, not an operator's mistake: a latched
+substrate signal re-asserts on every reconnect and on every resend,
+and the first real consumer (BLEPS, [[project_bleps_ingest_design]])
+latches by design and clears asynchronously. Under the strict contract
+the runtime would raise continuously in exactly the conditions the
+feature exists to record.
+
+The guard lives HERE and not in the runtime loop because "no change
+means no fact" is a domain judgment, and the pure core is where such
+judgments belong; a loop that filtered would be the shell deciding
+what counts as a change. Matches
+`cora.enclosure.features.observe_enclosure_status.decider`, the
+in-codebase monitor-trigger precedent, which returns `[]` on an
+identical-status observation for the same reason.
+
+Note the ordering consequence below: the Monitor-forbidden check runs
+BEFORE the no-op check, so an observation of `Available` raises rather
+than quietly no-opping when the Supply is already `Available`. An
+adapter is never allowed to assert `Available`, and silently accepting
+it in the one case where it happens to match would hide the bug.
+
 ## Validation order
 
 1. State must not be None -> `SupplyNotFoundError`.
-2. Target transition (state.status -> command.new_status) must be
-   Monitor-permitted -> `MonitorTriggerNotPermittedError` for the
-   two operator-only target transitions; `SupplyCannot<Verb>Error`
-   for source-state-disallowed transitions (mirrors the
-   operator-driven decider checks).
-3. Reason validation via `SupplyReason` VO -> `InvalidSupplyReasonError`.
+2. Target must be Monitor-permitted -> `MonitorTriggerNotPermittedError`
+   for `Available` / `Decommissioned` / `Unknown` regardless of source.
+3. Unchanged status -> `[]`, no event (status-change-only, above).
+4. Source-state allowlist per target -> `SupplyCannot<Verb>Error`
+   (mirrors the operator-driven decider checks).
+5. Reason validation via `SupplyReason` VO -> `InvalidSupplyReasonError`.
 """
 
 from datetime import datetime
@@ -67,8 +97,13 @@ _RECOVERING_SOURCES: frozenset[SupplyStatus] = frozenset({SupplyStatus.UNAVAILAB
 # level regardless of source. DECOMMISSIONED is operator-only because
 # deregister_supply has no Monitor equivalent (no substream or timer
 # should ever auto-decommission a Supply); see project_supply_design.
+# UNKNOWN is genesis-only (set by the evolver from SupplyRegistered) and
+# is listed HERE rather than relying on the fall-through guard at the
+# bottom: the status-change-only check returns [] before that guard is
+# reached, so an Unknown observation of an Unknown Supply would no-op
+# silently instead of surfacing the adapter bug it is.
 _MONITOR_FORBIDDEN_TARGETS: frozenset[SupplyStatus] = frozenset(
-    {SupplyStatus.AVAILABLE, SupplyStatus.DECOMMISSIONED}
+    {SupplyStatus.AVAILABLE, SupplyStatus.DECOMMISSIONED, SupplyStatus.UNKNOWN}
 )
 
 
@@ -85,6 +120,8 @@ def decide(
       - State must not be None -> SupplyNotFoundError
       - new_status must be a Monitor-permitted target (not Available,
         not Decommissioned, not Unknown) -> MonitorTriggerNotPermittedError
+      - new_status equal to the current status -> [] (no event;
+        status-change-only, see the module docstring)
       - Source state must permit Degraded (Unknown / Available / Recovering)
         -> SupplyCannotDegradeError
       - Source state must permit Unavailable (not Unavailable)
@@ -104,13 +141,28 @@ def decide(
     if command.new_status in _MONITOR_FORBIDDEN_TARGETS:
         raise MonitorTriggerNotPermittedError(state.id, command.new_status, state.status)
 
-    reason = SupplyReason(command.reason)
+    # Status-change-only: a monitor re-asserting a still-true fact is
+    # normal traffic, not an error. Runs after the forbidden-target
+    # check so an `Available` observation is still rejected loudly even
+    # when it happens to match the current status.
+    if command.new_status is state.status:
+        return []
+
+    # Source-state allowlist BEFORE reason validation, matching the
+    # module docstring's documented order (step 4 then step 5): a
+    # command that both targets a disallowed transition AND carries an
+    # invalid reason must raise the specific `SupplyCannot<Verb>Error`
+    # the target names, not the generic `InvalidSupplyReasonError` that
+    # would otherwise mask it. Parsing `reason` only after the allowlist
+    # check per branch (rather than once, up front) is what keeps that
+    # order correct for whichever branch actually applies.
     trigger = TriggerSource.MONITOR.value
     monitor_ref_str = f"{command.monitor_ref.source_kind}:{command.monitor_ref.source_id}"
 
     if command.new_status is SupplyStatus.DEGRADED:
         if state.status not in _DEGRADABLE_SOURCES:
             raise SupplyCannotDegradeError(state.id, state.status)
+        reason = SupplyReason(command.reason)
         return [
             SupplyDegraded(
                 supply_id=state.id,
@@ -126,6 +178,7 @@ def decide(
     if command.new_status is SupplyStatus.UNAVAILABLE:
         if state.status not in _UNAVAILABLE_SOURCES:
             raise SupplyCannotMarkUnavailableError(state.id, state.status)
+        reason = SupplyReason(command.reason)
         return [
             SupplyMarkedUnavailable(
                 supply_id=state.id,
@@ -141,6 +194,7 @@ def decide(
     if command.new_status is SupplyStatus.RECOVERING:
         if state.status not in _RECOVERING_SOURCES:
             raise SupplyCannotMarkRecoveringError(state.id, state.status)
+        reason = SupplyReason(command.reason)
         return [
             SupplyMarkedRecovering(
                 supply_id=state.id,
@@ -153,6 +207,11 @@ def decide(
             )
         ]
 
-    # UNKNOWN is reachable only via genesis (SupplyRegistered), never
-    # via a Monitor transition. Defensive guard.
-    raise MonitorTriggerNotPermittedError(state.id, command.new_status, state.status)
+    # Unreachable today, and kept as enum-growth insurance: the forbidden
+    # set plus the three handled targets exhaust `SupplyStatus`, so this
+    # line only fires if a seventh member is added without a branch here.
+    # It used to catch the UNKNOWN target, which now sits in the forbidden
+    # set so the status-change-only return cannot swallow it.
+    raise MonitorTriggerNotPermittedError(  # pragma: no cover
+        state.id, command.new_status, state.status
+    )

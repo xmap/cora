@@ -1,10 +1,11 @@
 """Unit tests for the entries-tier registry: `kind -> (table, order key, reader)`.
 
-See `cora.infrastructure.record_export._registry` for the design: nine
-entries, six resolved from a `*LogbookOpened` envelope's `kind` and
-three (`heartbeat`, `permit_probe`, `capture_probe`) declared explicitly
-because they have no envelope. `permit_probe` was renamed from the bare
-`probe` (slice 16) once a second, unrelated probe kind existed.
+See `cora.infrastructure.record_export._registry` for the design: ten
+entries, six resolved from a `*LogbookOpened` envelope's `kind` and four
+(`heartbeat`, `permit_probe`, `capture_probe`, `supply_probe`) declared
+explicitly because they have no envelope. `permit_probe` was renamed
+from the bare `probe` (slice 16) once a second, unrelated probe kind
+existed.
 """
 
 import pytest
@@ -25,11 +26,11 @@ _ENVELOPE_DRIVEN_KINDS = (
     "outcome",
     "observation",
 )
-_DECLARED_KINDS = ("heartbeat", "permit_probe", "capture_probe")
+_DECLARED_KINDS = ("heartbeat", "permit_probe", "capture_probe", "supply_probe")
 
 
-def test_registry_has_nine_entries_not_six() -> None:
-    assert len(all_specs()) == 9
+def test_registry_has_ten_entries_not_six() -> None:
+    assert len(all_specs()) == 10
 
 
 @pytest.mark.parametrize("kind", [*_ENVELOPE_DRIVEN_KINDS, *_DECLARED_KINDS])
@@ -80,6 +81,7 @@ def test_order_by_uses_sampled_at_on_exactly_the_four_tables_that_have_it() -> N
         "heartbeat",
         "permit_probe",
         "capture_probe",
+        "supply_probe",
     }
 
 

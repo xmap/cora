@@ -4,20 +4,23 @@
 Per `project_record_completeness_design.md`'s S2a: `_SEEDERS` is keyed on
 `spec.kind` and parametrized over `all_specs()`. A kind with no entry
 here raises `KeyError` on `_SEEDERS[spec.kind]` -- a bracket lookup,
-never `.get()` -- so a tenth registered kind cannot be added without
-someone proving it is reachable (or genuinely not) by writing its
-seeder. Each seeder puts real rows into the database through the real
-production handler for its kind (never raw SQL), following the pattern
+never `.get()` -- so a registered kind cannot be added without someone
+proving it is reachable (or genuinely not) by writing its seeder. Each
+seeder puts real rows into the database through the real production
+handler for its kind (never raw SQL), following the pattern
 `test_record_export_shell_postgres.py` (added by S1) established for
-`activity`.
+`activity`. The BLEPS supply observer slice's `supply_probe` (the
+tenth registered kind) is the first kind to land exactly the way this
+docstring predicted.
 
-`heartbeat` (S5a), `capture_probe` (S5b) and `permit_probe` (S5c) each
-declare an `unscoped_reader` now, so all three are expected to come out
-`included` like the six envelope-driven kinds, even though none of them
-has an envelope of its own; the `reachable`/`included` branch below is
-computed from the registry, not hardcoded per kind, so it tracks
-whichever kinds are wired without needing an update here when a kind's
-spec changes. No registered kind is expected to come out `untraversed`
+`heartbeat` (S5a), `capture_probe` (S5b), `permit_probe` (S5c) and
+`supply_probe` each declare an `unscoped_reader` now, so all four are
+expected to come out `included` like the six envelope-driven kinds,
+even though none of them has an envelope of its own; the
+`reachable`/`included` branch below is computed from the registry, not
+hardcoded per kind, so it tracks whichever kinds are wired without
+needing an update here when a kind's spec changes. No registered kind
+is expected to come out `untraversed`
 in this test any more -- before S2a, the shipped
 `row_count_by_logbook_kind` field could not even describe that case
 (`{}` is what the original defect reported for two genuinely populated
@@ -82,6 +85,7 @@ from cora.run.features.append_observations import AppendObservations, Observatio
 from cora.run.features.append_observations import bind as bind_append_observations
 from cora.shared.identity import ActorId
 from cora.shared.reach import ReachTier
+from cora.supply.aggregates.supply import PostgresSupplyProbeStore, SupplyProbe
 from cora.trust.aggregates.conduit.entries import PostgresVerdictStore
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.features import define_conduit
@@ -374,6 +378,25 @@ async def _seed_capture_probe(db_pool: asyncpg.Pool) -> None:
     )
 
 
+async def _seed_supply_probe(db_pool: asyncpg.Pool) -> None:
+    """`entries_supply_probes` has no FK either; the real production
+    writer is `PostgresSupplyProbeStore.append`, called by the Supply
+    status monitor (`cora.supply._monitor`)."""
+    store = PostgresSupplyProbeStore(db_pool)
+    await store.append(
+        [
+            SupplyProbe(
+                event_id=uuid4(),
+                supply_id=uuid4(),
+                source_kind="EpicsPv",
+                source_id="2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
+                reach_tier=ReachTier.RELAYED,
+                status_claimed=True,
+            )
+        ]
+    )
+
+
 _SEEDERS: dict[str, Callable[[asyncpg.Pool], Awaitable[None]]] = {
     "verdict": _seed_verdict,
     "inference": _seed_inference,
@@ -384,6 +407,7 @@ _SEEDERS: dict[str, Callable[[asyncpg.Pool], Awaitable[None]]] = {
     "heartbeat": _seed_heartbeat,
     "permit_probe": _seed_permit_probe,
     "capture_probe": _seed_capture_probe,
+    "supply_probe": _seed_supply_probe,
 }
 
 
@@ -423,8 +447,8 @@ async def test_manifest_accounts_for_every_registered_kind(
         # the build-time raise in _extent_by_logbook_kind -- a
         # capture_source_row_count_by_logbook_kind that vacuously returned
         # 0 for every kind (the shape a broken counter takes, and the
-        # shape that would pass unnoticed on the pilot database, where six
-        # of nine kinds hold zero rows on an ordinary day) would make
+        # shape that would pass unnoticed on the pilot database, where most
+        # of the ten kinds hold zero rows on an ordinary day) would make
         # EVERY seeded kind here raise LogbookKindRowCountMismatchError
         # before this bundle ever existed, failing this whole test.
         assert extent[spec.kind]["source_row_count"] >= 1  # type: ignore[attr-defined]

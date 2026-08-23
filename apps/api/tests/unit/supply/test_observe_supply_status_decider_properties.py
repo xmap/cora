@@ -16,7 +16,11 @@ Load-bearing properties:
     total: a permitted source emits exactly one event of the matching
     class with trigger="Monitor", the injected `MonitorSourceId`, and a
     serialized `monitor_ref`; a disallowed source raises the matching
-    `SupplyCannot<Verb>Error`.
+    `SupplyCannot<Verb>Error`, EXCEPT the source that equals the target,
+    which is the status-change-only no-op below.
+  - Observing a Monitor-permitted target from itself emits nothing, for
+    any reason text: a latched signal re-asserting a still-true fact is
+    normal traffic, not an error.
   - The emitted event's supply_id is `state.id`, never command.supply_id.
   - Pure: same inputs return equal events.
 """
@@ -80,6 +84,26 @@ _RECOVERING_SOURCES = (SupplyStatus.UNAVAILABLE,)
 
 def _not_in(permitted: tuple[SupplyStatus, ...]) -> tuple[SupplyStatus, ...]:
     return tuple(s for s in SupplyStatus if s not in frozenset(permitted))
+
+
+def _rejecting_sources(
+    permitted: tuple[SupplyStatus, ...], target: SupplyStatus
+) -> tuple[SupplyStatus, ...]:
+    """Sources that make `target` RAISE, excluding the unchanged-status source.
+
+    A source equal to the target is the status-change-only no-op: the
+    decider returns `[]` there rather than raising, so it belongs to
+    `test_observe_unchanged_status_emits_no_event` and not to the
+    source-allowlist rejection properties.
+    """
+    return tuple(s for s in _not_in(permitted) if s is not target)
+
+
+_MONITOR_PERMITTED_TARGETS = (
+    SupplyStatus.DEGRADED,
+    SupplyStatus.UNAVAILABLE,
+    SupplyStatus.RECOVERING,
+)
 
 
 def _state(*, supply_id: UUID, status: SupplyStatus) -> Supply:
@@ -240,7 +264,7 @@ def test_observe_degraded_from_permitted_source_emits_single_event(
 @pytest.mark.unit
 @given(
     supply_id=st.uuids(),
-    source=st.sampled_from(_not_in(_DEGRADABLE_SOURCES)),
+    source=st.sampled_from(_rejecting_sources(_DEGRADABLE_SOURCES, SupplyStatus.DEGRADED)),
     source_kind=_MONITOR_KIND,
     source_id=_MONITOR_ID,
     monitor_source_uuid=st.uuids(),
@@ -324,7 +348,7 @@ def test_observe_unavailable_from_permitted_source_emits_single_event(
 @pytest.mark.unit
 @given(
     supply_id=st.uuids(),
-    source=st.sampled_from(_not_in(_UNAVAILABLE_SOURCES)),
+    source=st.sampled_from(_rejecting_sources(_UNAVAILABLE_SOURCES, SupplyStatus.UNAVAILABLE)),
     source_kind=_MONITOR_KIND,
     source_id=_MONITOR_ID,
     monitor_source_uuid=st.uuids(),
@@ -407,7 +431,7 @@ def test_observe_recovering_from_unavailable_emits_with_state_id(
 @pytest.mark.unit
 @given(
     supply_id=st.uuids(),
-    source=st.sampled_from(_not_in(_RECOVERING_SOURCES)),
+    source=st.sampled_from(_rejecting_sources(_RECOVERING_SOURCES, SupplyStatus.RECOVERING)),
     source_kind=_MONITOR_KIND,
     source_id=_MONITOR_ID,
     monitor_source_uuid=st.uuids(),
@@ -481,3 +505,49 @@ def test_observe_is_pure_same_input_same_output(
         state=state, command=command, now=now, triggered_by=triggered_by
     )
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    supply_id=st.uuids(),
+    status=st.sampled_from(_MONITOR_PERMITTED_TARGETS),
+    source_kind=_MONITOR_KIND,
+    source_id=_MONITOR_ID,
+    monitor_source_uuid=st.uuids(),
+    reason=_REASON,
+    now=aware_datetimes(),
+    triggered_by_uuid=st.uuids(),
+)
+def test_observe_unchanged_status_emits_no_event(
+    supply_id: UUID,
+    status: SupplyStatus,
+    source_kind: str,
+    source_id: str,
+    monitor_source_uuid: UUID,
+    reason: str,
+    now: datetime,
+    triggered_by_uuid: UUID,
+) -> None:
+    """For every Monitor-permitted target, observing it from itself emits nothing.
+
+    Status-change-only. Universal over the three permitted targets and
+    over every reason, so a re-asserting latched signal is silent
+    whatever it says about itself. The forbidden targets are excluded
+    because they raise before this check is reached, which
+    `test_observe_forbidden_target_always_raises_not_permitted`
+    already pins from every source including themselves.
+    """
+    events = observe_supply_status.decide(
+        state=_state(supply_id=supply_id, status=status),
+        command=_command(
+            supply_id=supply_id,
+            new_status=status,
+            source_kind=source_kind,
+            source_id=source_id,
+            monitor_source_uuid=monitor_source_uuid,
+            reason=reason,
+        ),
+        now=now,
+        triggered_by=MonitorSourceId(triggered_by_uuid),
+    )
+    assert events == []

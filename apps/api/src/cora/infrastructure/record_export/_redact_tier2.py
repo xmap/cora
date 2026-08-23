@@ -233,6 +233,35 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         "observed_at": KEEP,  # substrate timestamp, same standard as sampled_at/occurred_at
         "recorded_at": KEEP,
     },
+    "supply_probe": {
+        "event_id": TOKEN,
+        "supply_id": TOKEN,  # same standard as permit_probe.enclosure_id, and the
+        # residual re-identification risk is at least as strong: a 2-BM deployment
+        # registers exactly two BLEPS-observed Supplies (cooling water, vacuum), the
+        # same small cardinality permit_probe's comment names for a two-enclosure
+        # facility, so schedule correlation plausibly reattaches this token too.
+        "source_kind": KEEP,  # judged low risk, same standard as heartbeat.source_id
+        "source_id": DROP,  # Adversary (per feedback_claims_need_a_threat_model.md): a
+        # reader holding the published bundle plus the facility's public beamtime
+        # schedule, wanting to learn the interlock's own channel topology. Follows
+        # permit_probe.source_id's DROP, not capture_probe.source_id's KEEP: BLEPS is
+        # explicitly an equipment-protection interlock (docs/deployments/2-bm/
+        # operations.md, "Equipment protection"), the same system CLASS as the PSS
+        # permit_probe protects against, not experiment instrumentation like
+        # TomoScan. If anything the case for DROP is stronger here: a BLEPS channel
+        # PV name (e.g. "2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP") embeds which
+        # physical circuit it protects directly in the string, so it discloses more
+        # of the interlock's own topology than a bare SecureM permit PV does.
+        "reach_tier": KEEP,  # proved closed: ReachTier StrEnum
+        "status_claimed": DROP,  # same class-wide reasoning as permit_probe.
+        # status_claimed, not reargued from scratch: both tables sit on the same
+        # equipment-protection interlock class, and the bit distinguishes the
+        # substrate's own push cadence from CORA's self-scheduled polling clock for
+        # that system either way. permit_probe's comment carries the full argument
+        # (source_id's DROP above already draws the same line for this table); this
+        # entry does not repeat it, only confirms it applies unchanged.
+        "recorded_at": KEEP,
+    },
 }
 
 # (kind, column) -> the set of string-leaf json-pointers cleared inside
