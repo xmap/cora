@@ -22,7 +22,7 @@ from cora.enclosure.ports.enclosure_observer import (
     EnclosureObservation,
     EnclosureObserverScope,
 )
-from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
+from cora.operation.ports.control_port import ControlNotConnectedError, Measurement, Quality
 
 _T = datetime(2026, 6, 17, 12, 0, 0, tzinfo=UTC)
 
@@ -33,9 +33,50 @@ def _reading(
     return Measurement(value=value, kind="Scalar", quality=quality, produced_at=produced_at)  # type: ignore[arg-type]
 
 
-def _enum_reading(label: str, quality: str = "Good") -> Measurement:
-    """A DBR_ENUM reading as `EpicsCaControlPort` delivers it: label, no index."""
-    return Measurement(value=label, kind="Categorical", quality=quality, produced_at=_T)  # type: ignore[arg-type]
+def _enum_reading(label: str, quality: Quality = "Good", ordinal: int | None = None) -> Measurement:
+    """A DBR_ENUM reading as `EpicsCaControlPort` delivers it.
+
+    `ordinal` defaults to `None` so the existing cases below keep
+    exercising the LABEL fallback, which is still the live path for a
+    genuine string record. Pass it explicitly to exercise the index
+    path, which is what a real `bi` record now carries.
+    """
+    return Measurement(
+        value=label,
+        kind="Categorical",
+        quality=quality,
+        produced_at=_T,
+        ordinal=ordinal,
+    )
+
+
+@pytest.mark.unit
+def test_a_renamed_permit_state_still_resolves_through_the_ordinal() -> None:
+    """A facility that renames SecureM's states no longer costs CORA the hutch.
+
+    The pre-existing case below pins that an unrecognized label alone
+    yields `Unknown` (fail closed, correct). This pins the other half:
+    once the reading carries the index, the same unrecognized label
+    resolves, so a PSS whose ZNAM / ONAM are not the stock pair is
+    readable rather than permanently `Unknown`.
+
+    Uses labels no conventional set contains, so only the ordinal can
+    satisfy it.
+    """
+    assert permit_status_from_reading(_enum_reading("SEARCHED", ordinal=1)) == "Permitted"
+    assert permit_status_from_reading(_enum_reading("SEARCHING", ordinal=0)) == "NotPermitted"
+
+
+@pytest.mark.unit
+def test_the_ordinal_does_not_override_the_bad_quality_floor() -> None:
+    """`Bad` still means Unknown. An index is not a reason to trust a dead read.
+
+    Guards the loosened floor this observer deliberately runs (`Bad`
+    only, not `!= Good`, because 2-BM's SecureM sits at MAJOR whenever
+    the hutch is unsecured): the ordinal must not widen that any
+    further.
+    """
+    assert permit_status_from_reading(_enum_reading("SEARCHED", "Bad", ordinal=1)) == "Unknown"
 
 
 @pytest.mark.unit

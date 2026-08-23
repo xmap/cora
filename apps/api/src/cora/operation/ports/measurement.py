@@ -39,7 +39,10 @@ MeasurementKind = Literal["Scalar", "Array", "Image", "Categorical", "Tabular"]
 - `Image`: a 2-D pixel grid (NTNDArray / Tango IMAGE / OPC UA image
   variants); shape and dtype carried inside `value`.
 - `Categorical`: a string label from a closed substrate-defined set
-  (EPICS NTEnum / Tango DevEnum or DevState / OPC UA enum).
+  (EPICS NTEnum / Tango DevEnum or DevState / OPC UA enum). The set is
+  substrate-DEFINED, so the label is only as portable as the facility
+  that authored it; `Measurement.ordinal` carries the index behind it
+  for consumers that need a portable answer rather than a readable one.
 - `Tabular`: column-oriented record (NTTable / OPC UA table / Tango
   multi-attribute bundle).
 
@@ -131,6 +134,40 @@ class Measurement:
     it is empty when the consumer identifies the value by position or
     address instead. `units` is the optional unit string for the value,
     `None` when the value is dimensionless or units are unknown.
+
+    `ordinal` is the substrate's own numeric code for a `Categorical`
+    reading, carried BESIDE the label rather than instead of it, and
+    `None` for every other kind. The split matters because the two
+    halves have different owners: an EPICS `bi` record's ZNAM / ONAM, a
+    Tango `DevEnum`'s config labels and an NTEnum's `choices` are all
+    free text one engineer chose at one facility, while the index behind
+    them is fixed by the record's own definition. So a consumer
+    resolving a two-state signal reads `ordinal`, and a consumer
+    recording what an operator saw reads `value`. This is the same
+    division `quality` (domain-owned meaning) already makes with
+    `quality_detail` (substrate breadcrumb), applied to the one axis
+    that had been resolving facility vocabulary in shared code instead.
+
+    STATE THE PRECONDITION, because the field is easy to over-trust: the
+    ordinal is portable for a record that is genuinely two-state with
+    the conventional bit sense, which is what a `bi` is by construction
+    (0 is the false / clear / de-asserted state). It is NOT a universal
+    truth about enums. For a multi-state record, WHICH index means
+    tripped is exactly as facility-authored as the label, and for a
+    vocabulary indexed on some other axis the number answers a different
+    question entirely (Tango `DevState`, below). So `ordinal` says "here
+    is the substrate's code", never "here is a flag". Deciding whether a
+    given record is a flag at all remains the caller's problem, and
+    `binary_code` refusing an out-of-range ordinal catches only the
+    subset of wrong records that happen to be resting outside 0 / 1.
+
+    An adapter populates `ordinal` ONLY where the number sits on the
+    same axis as the label. Tango `DevState` is the standing exception:
+    its ordinal is a Tango-global state code (`ON = 0`, `OFF = 1`,
+    `OPEN = 3`, ...), so a flag consumer reading it would resolve `ON`
+    to false, exactly backwards. That adapter leaves `ordinal` unset
+    rather than offer a number that answers a different question, and
+    the label path still serves it correctly.
     """
 
     value: Any
@@ -140,6 +177,7 @@ class Measurement:
     quality_detail: str = ""
     name: str = ""
     units: str | None = None
+    ordinal: int | None = None
 
 
 __all__ = [

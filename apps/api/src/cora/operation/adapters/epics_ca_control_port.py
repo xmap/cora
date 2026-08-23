@@ -54,6 +54,8 @@ integer index for DBR_ENUM), `.datatype` (CA DBR type code),
   - `quality`: severity 0 -> Good, 1/2 -> Uncertain, 3 -> Bad
   - `quality_detail`: integer status code surfaced as a breadcrumb
     string when severity != NO_ALARM
+  - `ordinal`: the DBR_ENUM index for a Categorical reading, `None`
+    otherwise (see the DBR_ENUM paragraph below)
   - `produced_at`: `datetime.fromtimestamp(.timestamp, tz=UTC)`, or
     None when the record supplied no stamp (see `_produced_at_for`)
 
@@ -61,6 +63,17 @@ For DBR_ENUM specifically, FORMAT_TIME carries only the integer
 index; the adapter widens to FORMAT_CTRL on first encounter to grab
 `.enums` for label resolution, then caches the labels per-address so
 subsequent reads stay on the cheap FORMAT_TIME path.
+
+That index is ALSO published, on `Measurement.ordinal`, rather than
+being consumed by the label lookup and dropped. The two halves answer
+different questions and only one of them travels: `value` is what an
+operator reads and what the record stores, while `ordinal` is the same
+0 / 1 at every facility, since `ZNAM` / `ONAM` are free text a local
+engineer chose. Two-state consumers read the ordinal (see
+`cora.shared.binary_signal.binary_code`). Note the cost asymmetry this
+exposes: the index arrives free in every FORMAT_TIME read, and the
+LABEL is the half that costs the extra FORMAT_CTRL round trip and
+carries the cache, which is only invalidated on `aclose`.
 
 ## DBR_CHAR waveforms: bytes, or a string wearing bytes' clothes
 
@@ -317,6 +330,30 @@ def _decode_char_waveform(augmented: Any) -> str:
     return bytes(raw).split(b"\x00", 1)[0].decode("utf-8", errors="replace")
 
 
+def _enum_ordinal(augmented: Any) -> int | None:
+    """The DBR_ENUM index behind a Categorical reading, or `None`.
+
+    The index is what `_unpack_value` resolves the label FROM, and it is
+    the half that means the same thing at every facility, so it rides on
+    the `Measurement` beside the label rather than being discarded (see
+    `Measurement.ordinal`). Recomputed here rather than threaded out of
+    `_unpack_value` so that function keeps its single-value contract; the
+    cast is cheap and local, not a second round trip.
+
+    The `except` is defensive depth, NOT a live path, and saying so is
+    the honest version: `_to_reading` calls `_unpack_value` first, whose
+    Categorical branch performs this identical cast unguarded, so a
+    value that will not cast has already raised out of `read` before
+    this runs. Do not describe it as a graceful degradation that keeps
+    the label: by the time it could fire, there is no reading left to
+    keep.
+    """
+    try:
+        return int(augmented)
+    except (TypeError, ValueError):
+        return None
+
+
 def _to_reading(
     augmented: Any,
     enum_labels: tuple[str, ...] | None,
@@ -355,6 +392,7 @@ def _to_reading(
         quality=_quality_for(severity),
         produced_at=produced_at,
         quality_detail=_quality_detail_for(severity, status),
+        ordinal=_enum_ordinal(augmented) if kind == "Categorical" else None,
     )
 
 

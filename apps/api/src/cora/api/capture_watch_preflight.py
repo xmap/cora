@@ -399,14 +399,14 @@ def _decode_verdict(
         phase = classify_capture_status(str(reading.value), status_phases)
         return phase.value, phase is not CapturePhase.UNRECOGNIZED
     if role == ROLE_ABORT:
-        code = binary_code(reading.value)
+        code = binary_code(reading.value, ordinal=reading.ordinal)
         if code is None:
             return "unrecognized", False
         return ("asserted" if code == 1 else "clear"), True
     if role == ROLE_FULL_FILE_NAME:
         return _full_file_name_verdict(reading.value)
     if role == ROLE_TESTING:
-        code = binary_code(reading.value)
+        code = binary_code(reading.value, ordinal=reading.ordinal)
         if code is None:
             return "unrecognized", False
         return ("testing" if code == 1 else "real"), True

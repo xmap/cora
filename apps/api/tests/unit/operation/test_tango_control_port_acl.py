@@ -36,6 +36,7 @@ malformed-address guard moved to the registry boundary and are covered in
 
 from __future__ import annotations
 
+import enum
 import importlib.util
 import sys
 import types
@@ -51,6 +52,7 @@ from cora.operation.ports.control_port import (
     ControlValueCoercionError,
     ControlWriteRejectedError,
 )
+from cora.shared.binary_signal import binary_code
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -91,6 +93,23 @@ class _Enum:
 
     def __init__(self, name: str) -> None:
         self.name = name
+
+
+class _DevState(enum.IntEnum):
+    """Stand-in for a Tango `DevState` VALUE, which is a real `IntEnum`.
+
+    Distinct from `_Enum` above on purpose, and the distinction is
+    load-bearing rather than tidiness. A `DevState` member carries BOTH
+    a `.name` and an ordinal; `_Enum` carries only a name and raises on
+    `int()`. Using `_Enum` as a DevState value made the ordinal
+    carve-out test pass for the wrong reason: `_enum_ordinal` returned
+    `None` because the cast failed, not because the carve-out fired, so
+    deleting the carve-out left the test green. Mirrors the ordinals
+    PyTango actually assigns.
+    """
+
+    ON = 0
+    OFF = 1
 
 
 class _TimeVal:
@@ -273,6 +292,82 @@ async def test_read_devstate_uses_value_name_without_reading_config(fake_tango: 
     reading = await port.read(_ADDR)
     assert reading.kind == "Categorical"
     assert reading.value == "RUNNING"
+
+
+@pytest.mark.unit
+async def test_read_devenum_carries_the_ordinal_beside_the_label(fake_tango: None) -> None:
+    """DevEnum publishes its ordinal: its labels define a per-attribute axis."""
+    port = _make_port(
+        read_result=_DeviceAttribute(value=1, attr_type="DevEnum"),
+        enum_labels=("CLOSED", "OPEN", "FAULT"),
+    )
+    reading = await port.read(_ADDR)
+    assert reading.value == "OPEN"
+    assert reading.ordinal == 1
+
+
+@pytest.mark.unit
+async def test_read_devstate_withholds_the_ordinal(fake_tango: None) -> None:
+    """DevState has an ordinal and must NOT publish it. The carve-out.
+
+    Tango's device-state vocabulary is global and numbered `ON = 0`,
+    `OFF = 1`, so its ordinal answers "which device state" and not "is
+    this flag set". Publishing it would let a two-state consumer resolve
+    a device that is ON to 0, reading false for a true state, inverted
+    and only on Tango floors.
+
+    `value` stays `"ON"`, which the conventional label path resolves
+    correctly, so withholding the ordinal preserves a working answer
+    rather than removing one.
+    """
+    port = _make_port(read_result=_DeviceAttribute(value=_DevState.ON, attr_type="DevState"))
+    reading = await port.read(_ADDR)
+    assert reading.value == "ON"
+    assert reading.ordinal is None
+    assert binary_code(reading.value, ordinal=reading.ordinal) == 1
+
+
+@pytest.mark.unit
+async def test_a_devstate_delivered_as_a_bare_int_still_withholds_the_ordinal(
+    fake_tango: None,
+) -> None:
+    """The carve-out must key on the TYPE, not on a property of the value.
+
+    Real PyTango hands a `DevState` back as an IntEnum today, so an
+    earlier `hasattr(value, "name")` check happened to work. It was a
+    proxy for the question, and a `DevState` arriving as a bare int (a
+    different extraction mode, a PyTango change) would have slipped
+    past it and published `ON -> ordinal 0`, the exact inversion the
+    carve-out exists to stop.
+
+    Feeding a bare `0` with `attr_type="DevState"` is the shape that
+    distinguishes the two implementations: the type says DevState, the
+    value carries no name.
+    """
+    port = _make_port(read_result=_DeviceAttribute(value=0, attr_type="DevState"))
+    reading = await port.read(_ADDR)
+    assert reading.ordinal is None
+
+
+@pytest.mark.unit
+async def test_a_devenum_value_exposing_a_name_still_publishes_its_ordinal(
+    fake_tango: None,
+) -> None:
+    """The other direction of the same proxy bug, which failed quiet rather than loud.
+
+    A `DevEnum` whose value happened to expose `.name` would have had
+    its ordinal withheld under the old check, silently reverting that
+    Tango floor to label matching. Silent because nothing errors: the
+    reading still resolves whenever the labels are conventional, and
+    breaks only at a facility whose labels are not, which is the
+    failure this whole change exists to close.
+    """
+    port = _make_port(
+        read_result=_DeviceAttribute(value=_DevState.OFF, attr_type="DevEnum"),
+        enum_labels=("NO_FAULT", "TRIP"),
+    )
+    reading = await port.read(_ADDR)
+    assert reading.ordinal == 1
 
 
 @pytest.mark.unit

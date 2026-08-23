@@ -94,12 +94,15 @@ def permit_status_from_reading(reading: Measurement) -> str:
 
     Both shapes a CA adapter can hand back are accepted, because a
     real SecureM is a `bi` record and arrives as `kind="Categorical"`.
-    For DBR_ENUM, `EpicsCaControlPort` resolves the index to its label
-    and the index is no longer on the reading, so the label is all
-    there is to read. `ON` / `OFF` are the stock EPICS ZNAM / ONAM
-    defaults; `TRUE` / `FALSE` and `YES` / `NO` are the other
-    conventional binary pairs. A facility that renames its states
-    resolves to `Unknown`, which fails the gate closed and surfaces as
+    For DBR_ENUM the reading carries both halves: the resolved label on
+    `Measurement.value` and the index it was resolved from on
+    `Measurement.ordinal`. `binary_code` reads the index first, so a
+    facility that renames its states no longer costs CORA the permit:
+    `ON` / `OFF` are the stock EPICS ZNAM / ONAM defaults and the
+    label path still accepts them (plus `TRUE` / `FALSE`, `YES` / `NO`),
+    but that path is now the fallback for a reading with no index rather
+    than the only road in. A reading CORA can resolve by neither route
+    still yields `Unknown`, which fails the gate closed and surfaces as
     a seam question rather than as a wrong permit.
 
     Read against 2-BM on 2026-08-09, where `S02BM-PSS:StaA:SecureM`
@@ -108,7 +111,7 @@ def permit_status_from_reading(reading: Measurement) -> str:
     """
     if reading.quality == "Bad":
         return _UNKNOWN
-    code = binary_code(reading.value)
+    code = binary_code(reading.value, ordinal=reading.ordinal)
     if code == 1:
         return _PERMITTED
     if code == 0:

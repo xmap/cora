@@ -56,6 +56,7 @@ from cora.operation.ports.control_port import (
     ControlPort,
     Measurement,
 )
+from cora.shared.binary_signal import binary_code
 
 
 @pytest.mark.integration
@@ -264,6 +265,72 @@ async def test_read_enum_returns_categorical_with_label(softioc: str) -> None:
 
 
 @pytest.mark.integration
+async def test_read_enum_carries_the_ordinal_beside_the_label(softioc: str) -> None:
+    """A Categorical reading carries the index it was resolved FROM.
+
+    Both halves ride together: `value` stays the label an operator reads
+    and the record stores, `ordinal` is the substrate's own index, which
+    is what a two-state consumer acts on. Walked across all three states
+    of the `mbbo` so the assertion is that the ordinal TRACKS the label,
+    not that it happens to equal a constant.
+    """
+    port = EpicsCaControlPort()
+    try:
+        for label, expected_ordinal in (("off", 0), ("on", 1), ("fault", 2)):
+            await port.write(EpicsPvAddress(f"{softioc}enum_value"), label, wait=True)
+            reading = await port.read(EpicsPvAddress(f"{softioc}enum_value"))
+            assert reading.value == label
+            assert reading.ordinal == expected_ordinal
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_unconventional_enum_labels_still_resolve_to_a_flag(softioc: str) -> None:
+    """The 2-BM BLEPS shape, end to end against real Channel Access.
+
+    `NO_FAULT` / `TRIP` is what the deployed `2bmBLEPS` IOC publishes
+    (measured on arcturus 2026-08-23). The label is undecodable by any
+    conventional pair, which is exactly the condition that made a
+    label-only reader record nothing for every BLEPS channel; the
+    ordinal resolves it with no BLEPS vocabulary anywhere in CORA.
+    """
+    port = EpicsCaControlPort()
+    try:
+        address = EpicsPvAddress(f"{softioc}unconventional_flag")
+        reading = await port.read(address)
+        assert reading.kind == "Categorical"
+        assert reading.value == "TRIP"
+        assert binary_code(reading.value, ordinal=None) is None
+        assert binary_code(reading.value, ordinal=reading.ordinal) == 1
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_empty_zero_state_label_resolves_to_a_flag(softioc: str) -> None:
+    """An empty ZNAM is legal EPICS, and it is 2-BM's HEALTHY comms state.
+
+    This is the sharpest case in the family: `Communications_Fault`
+    declares `ZNAM=""`, so a healthy BLEPS reads back as the empty
+    string. A label-only reader resolves that to `None`, which the
+    observer treats as "the feed cannot be believed" and suppresses
+    EVERY channel, not just this one. Reading the ordinal turns a
+    system-wide blackout into a correct clear.
+    """
+    port = EpicsCaControlPort()
+    try:
+        address = EpicsPvAddress(f"{softioc}empty_zero_label_flag")
+        reading = await port.read(address)
+        assert reading.kind == "Categorical"
+        assert reading.value == ""
+        assert binary_code(reading.value, ordinal=None) is None
+        assert binary_code(reading.value, ordinal=reading.ordinal) == 0
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
 async def test_read_major_alarm_pv_returns_uncertain_quality(softioc: str) -> None:
     """MAJOR_ALARM severity (HIHI threshold tripped) translates to Quality='Uncertain'.
 
@@ -358,6 +425,47 @@ async def test_subscribe_yields_initial_value_then_writes(softioc: str) -> None:
         await port.write(EpicsPvAddress(f"{softioc}double_value"), 7.7, wait=True)
         second = await asyncio.wait_for(anext(iterator), timeout=2.0)
         assert second.value == 7.7
+
+        await iterator.aclose()
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_subscribe_carries_the_ordinal_on_every_update(softioc: str) -> None:
+    """The ordinal must ride the SUBSCRIBE path, not just `read`.
+
+    This is the path that actually matters in production: the BLEPS,
+    hutch-permit and capture observers all consume `subscribe`, not
+    `read`. A `read`-only proof would leave the live path untested while
+    looking complete, and an adapter that populated the ordinal on one
+    path only would silently fall back to label matching everywhere it
+    counts.
+
+    Covers the cold-cache first update as well as a warm one, because
+    the CA adapter resolves enum LABELS lazily inside the drain loop:
+    the first Categorical update pays a FORMAT_CTRL round trip and later
+    ones do not, so the two are genuinely different code paths through
+    `_to_reading`. The ordinal must be identical across both, since it
+    comes from the update itself rather than the label cache.
+    """
+    port = EpicsCaControlPort()
+    address = EpicsPvAddress(f"{softioc}unconventional_flag")
+    try:
+        await port.write(address, 0, wait=True)
+        iterator = port.subscribe(address)
+
+        first = await asyncio.wait_for(anext(iterator), timeout=2.0)
+        assert first.kind == "Categorical"
+        assert first.value == "NO_FAULT"
+        assert first.ordinal == 0
+        assert binary_code(first.value, ordinal=first.ordinal) == 0
+
+        await port.write(address, 1, wait=True)
+        second = await asyncio.wait_for(anext(iterator), timeout=2.0)
+        assert second.value == "TRIP"
+        assert second.ordinal == 1
+        assert binary_code(second.value, ordinal=second.ordinal) == 1
 
         await iterator.aclose()
     finally:

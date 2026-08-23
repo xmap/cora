@@ -190,30 +190,38 @@ def flag_state_from_reading(reading: Measurement) -> bool | None:
     function cannot interpret, is not a LOW reading, and conflating the
     two would let a dead PV read as "no fault here".
 
-    ## Enum-valued records decode through the shared convention
+    ## Enum-valued records decode by index, not by label
 
     BLEPS flags are binary on the PLC side, but how they surface over
     Channel Access depends on the record type the IOC declares. A
     `longin` / `ai` arrives as a number. A `bi` / `mbbi` is `DBR_ENUM`,
     and `EpicsCaControlPort` resolves those to their FORMAT_CTRL label
-    STRING, falling back to the stringified index when the label cache
-    is cold. `cora.shared.binary_signal.binary_code` handles both
-    shapes, matching the conventional EPICS binary labels (`ON` / `OFF`,
-    `TRUE` / `FALSE`, `YES` / `NO`) the same way the enclosure permit,
-    beam-availability and capture observers already do for their own
-    `bi` records.
+    STRING while carrying the index it resolved from on
+    `Measurement.ordinal`. `cora.shared.binary_signal.binary_code`
+    reads the index first and treats its conventional label set
+    (`ON` / `OFF`, `TRUE` / `FALSE`, `YES` / `NO`) as the fallback.
 
-    It does NOT guess beyond that convention: a label outside it (a
-    facility-chosen pair such as `"TRIP"` / `"OK"`, hypothesized but not
-    confirmed here) still returns `None` rather than being mapped,
-    because that would be inventing a fact about an IOC nobody here has
-    read. The caller logs an unrecognized-but-Good reading loudly, and
-    which label vocabulary the deployed BLEPS IOC actually uses is
-    BLEPS-4, still open for staff to confirm.
+    BLEPS-4 IS ANSWERED, and reading by index is why this observer works
+    at 2-BM at all. Measured on arcturus 2026-08-23 against the running
+    `2bmBLEPS` IOC (`iocBoot/ioc2bmBLEPS/bleps.substitutions`, records
+    built from `bleps_bi.db`): the trip and warning flags declare
+    `ZNAM="NO_FAULT"` / `ONAM="TRIP"`, and the fault and comms flags
+    declare `ZNAM=""` (the EMPTY STRING) / `ONAM="Present"`. Neither
+    pair is in any conventional set, and `caget` returns those literal
+    words, so a label-only reader resolves EVERY BLEPS channel to
+    `None`: the comms flag included, which would then read as a dark
+    feed and suppress the whole observer. The indices behind those
+    labels are a plain 0 / 1, the same as any other facility's.
+
+    So the labels are not decoded here and no BLEPS vocabulary is
+    hardcoded anywhere in CORA. That is deliberate beyond this one IOC:
+    `ZNAM` / `ONAM` are free text, nothing constrains them, and a
+    facility is free to edit them for a nicer operator screen. The index
+    is the half that does not move.
     """
     if reading.quality != "Good":
         return None
-    code = binary_code(reading.value)
+    code = binary_code(reading.value, ordinal=reading.ordinal)
     return None if code is None else code != 0
 
 
@@ -550,11 +558,16 @@ class BlepsSupplyObserver:
             async for reading in self._control_port.subscribe(pv):
                 state = flag_state_from_reading(reading)
                 if state is None and reading.quality == "Good":
-                    # Good quality and still unreadable means the label
-                    # is outside the conventional EPICS binary set
-                    # `binary_code` matches (ON/OFF, TRUE/FALSE, YES/NO,
-                    # 0/1) -- most likely BLEPS-4's open question, a
-                    # facility-chosen label pair. Loud, because the
+                    # A believable reading CORA still cannot resolve. Two
+                    # shapes reach here, and the ordinal tells them apart:
+                    # with no ordinal the reading carried only a label
+                    # outside the conventional set, which now means a
+                    # genuine string record rather than the enum case
+                    # BLEPS-4 covered; WITH an ordinal it is out of the
+                    # two-state range, which says this channel is pointed
+                    # at a record that is not a flag at all (an `mbbi`
+                    # mid-vocabulary), a configuration error rather than a
+                    # vocabulary one. Both are logged loudly because the
                     # alternative is a monitor that looks healthy and
                     # reports nothing.
                     _log.warning(
@@ -562,7 +575,11 @@ class BlepsSupplyObserver:
                         pv=pv,
                         value=repr(reading.value),
                         kind=reading.kind,
-                        detail="not a numeric flag or a conventional EPICS binary label; excluded",
+                        ordinal=reading.ordinal,
+                        detail=(
+                            "not resolvable to a two-state flag: out-of-range ordinal, "
+                            "or no ordinal and an unconventional label; excluded"
+                        ),
                     )
                 queue.put_nowait((pv, state))
         except asyncio.CancelledError:
