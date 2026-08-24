@@ -65,7 +65,8 @@ when a conduct halted, even if the halt was a crash or cancellation
 
 A `CheckStep` carries an address + an acceptance criterion. The
 Conductor reads from the address via `ControlPort.read`, requires
-`Measurement.quality == "Good"` (Uncertain or Bad fails the check), and
+the reading to be `actionable` (Uncertain or Bad fails the check, the
+strict floor of the two in `cora.shared.quality`), and
 evaluates the criterion against the observed value. The closed
 criterion union (`EqualsCriterion | WithinToleranceCriterion`) keeps the wire shape
 JSON-clean while leaving room for future variants (`OneOf`,
@@ -212,6 +213,7 @@ from cora.operation.ports.decide_port import (
     advice_to_audit_fields,
 )
 from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, SteeringRef
+from cora.shared.quality import actionable
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _CONTROL_ERRORS: tuple[type[Exception], ...] = (
@@ -462,8 +464,6 @@ marker is recorded even when the effect then raises or is cancelled
 point -- a crashed write leaves a marker-without-outcome behind so the
 step is recoverable. See [[project_resumable_conduct_design]] Tier 1."""
 
-_QUALITY_GOOD = "Good"
-
 _RESUME_HALT_ERROR_CLASS = "AcquisitionResumeRequiresOperator"
 """`error_class` on the `ConductorFailure` that `execute_from` returns when
 a resume reaches an `ActionStep` (an acquisition). It is NOT an exception
@@ -587,7 +587,7 @@ class CheckStep:
     """One post-condition verification: read `address`, evaluate `criterion`.
 
     The Conductor reads the address via `ControlPort.read`, requires
-    `Measurement.quality == "Good"`, then evaluates `criterion` against
+    the reading to be `actionable`, then evaluates `criterion` against
     `Measurement.value`. Any of (read raised `Control*Error`, quality
     not Good, criterion did not match) halts execution with a
     recorded failure entry. The recorded payload carries the
@@ -3256,7 +3256,7 @@ class Conductor:
                 message=str(exc),
             )
         body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
-        if reading.quality != _QUALITY_GOOD:
+        if not actionable(reading.quality):
             exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
                 envelope=envelope,
@@ -3360,7 +3360,7 @@ class Conductor:
                 message=str(exc),
             )
         body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
-        if reading.quality != _QUALITY_GOOD:
+        if not actionable(reading.quality):
             quality_exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
                 envelope=envelope,
@@ -3640,7 +3640,7 @@ class Conductor:
                 message=msg,
             )
         selected = matches[0]
-        if selected.quality != _QUALITY_GOOD:
+        if not actionable(selected.quality):
             quality_exc = CheckFailedError(capture_name, f"quality={selected.quality}")
             return await self._record_compute_capture_failure(
                 capture_name,

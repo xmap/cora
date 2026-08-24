@@ -75,6 +75,7 @@ from cora.operation.ports.decide_port import (
     SteeringSpace,
     SteeringVerdict,
 )
+from cora.shared.quality import actionable
 from cora.shared.steering import SteeringObjectiveKind
 
 if TYPE_CHECKING:
@@ -309,7 +310,7 @@ def _is_usable(obs: SteeringObservation, target: str) -> bool:
     if not obs.succeeded:
         return False
     return any(
-        m.name == target and m.quality == "Good" and isinstance(m.value, (int, float))
+        m.name == target and actionable(m.quality) and isinstance(m.value, (int, float))
         for m in obs.measurements
     )
 
@@ -317,7 +318,7 @@ def _is_usable(obs: SteeringObservation, target: str) -> bool:
 def _scalar_for(obs: SteeringObservation, target: str) -> float:
     """The target measurement's scalar value (the observation is pre-filtered usable)."""
     for m in obs.measurements:
-        if m.name == target and m.quality == "Good" and isinstance(m.value, (int, float)):
+        if m.name == target and actionable(m.quality) and isinstance(m.value, (int, float)):
             return float(m.value)
     raise DecideEvidenceRejectedError(  # pragma: no cover  # _is_usable pre-filters
         f"observation missing usable target measurement {target!r}"
