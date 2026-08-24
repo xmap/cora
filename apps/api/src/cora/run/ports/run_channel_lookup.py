@@ -63,6 +63,30 @@ class RunChannelLatest:
 
 
 @dataclass(frozen=True)
+class RunChannelCategoricalLatest:
+    """The most recent CATEGORICAL observation on one channel of one Run.
+
+    Sibling to `RunChannelLatest`, not a variant of it: `entries_run_observations`
+    stores a categorical reading (an EPICS `mbbo`/`bo` ENUM label, e.g. a
+    scan-configuration or camera-selection PV) in `categorical_value`, never
+    in `value`, and `RunChannelLatest.value: float` deliberately excludes
+    those rows (see `postgres_run_channel_lookup.py`'s module docstring).
+    A `None` return from `read_run_channel_categorical_latest` is the
+    cannot-tell case (never produced), same convention as
+    `RunChannelLatest`.
+    """
+
+    channel_name: str
+    categorical_value: str
+    sampled_at: datetime
+    """Producer phenomenonTime. FORENSIC / log only; spoofable, never a
+    trust anchor."""
+    recorded_at: datetime
+    """CORA write time (`DEFAULT now()`). The trusted freshness anchor."""
+    is_simulated: bool
+
+
+@dataclass(frozen=True)
 class RunChannelSignal:
     """Windowed arrival summary for one channel of one Run (Rule R).
 
@@ -112,6 +136,14 @@ class RunChannelLookup(Protocol):
         channel has never produced a row (cannot-tell -> defer)."""
         ...
 
+    async def read_run_channel_categorical_latest(
+        self, *, run_id: UUID, channel_name: str
+    ) -> RunChannelCategoricalLatest | None:
+        """Latest CATEGORICAL value on `channel_name` for `run_id`, or None
+        if the channel has never produced a categorical row. See
+        `RunChannelCategoricalLatest`."""
+        ...
+
     async def read_run_channel_window(
         self, *, run_id: UUID, channel_name: str, since: datetime
     ) -> RunChannelSignal:
@@ -137,6 +169,20 @@ class _SeededRow:
     is_simulated: bool
 
 
+@dataclass(frozen=True)
+class _SeededCategoricalRow:
+    """One seeded categorical observation for the in-memory stub.
+
+    Kept in its own dict, not folded into `_SeededRow.value`, mirroring
+    `entries_run_observations`' own `value` / `categorical_value` split:
+    a channel produces one shape or the other per row, never both."""
+
+    categorical_value: str
+    sampled_at: datetime
+    recorded_at: datetime
+    is_simulated: bool
+
+
 class InMemoryRunChannelLookup:
     """Dict-backed, seedable `RunChannelLookup` for unit tests.
 
@@ -150,6 +196,7 @@ class InMemoryRunChannelLookup:
 
     def __init__(self) -> None:
         self._rows: dict[tuple[UUID, str], list[_SeededRow]] = {}
+        self._categorical_rows: dict[tuple[UUID, str], list[_SeededCategoricalRow]] = {}
         self._heartbeats: dict[UUID, list[datetime]] = {}
 
     def register_heartbeat(self, *, run_id: UUID, recorded_at: datetime) -> None:
@@ -176,6 +223,25 @@ class InMemoryRunChannelLookup:
             )
         )
 
+    def register_categorical(
+        self,
+        *,
+        run_id: UUID,
+        channel_name: str,
+        categorical_value: str,
+        recorded_at: datetime,
+        sampled_at: datetime | None = None,
+        is_simulated: bool = False,
+    ) -> None:
+        self._categorical_rows.setdefault((run_id, channel_name), []).append(
+            _SeededCategoricalRow(
+                categorical_value=categorical_value,
+                sampled_at=sampled_at if sampled_at is not None else recorded_at,
+                recorded_at=recorded_at,
+                is_simulated=is_simulated,
+            )
+        )
+
     async def read_run_channel_latest(
         self, *, run_id: UUID, channel_name: str
     ) -> RunChannelLatest | None:
@@ -187,6 +253,21 @@ class InMemoryRunChannelLookup:
             channel_name=channel_name,
             value=latest.value,
             units=latest.units,
+            sampled_at=latest.sampled_at,
+            recorded_at=latest.recorded_at,
+            is_simulated=latest.is_simulated,
+        )
+
+    async def read_run_channel_categorical_latest(
+        self, *, run_id: UUID, channel_name: str
+    ) -> RunChannelCategoricalLatest | None:
+        rows = self._categorical_rows.get((run_id, channel_name))
+        if not rows:
+            return None
+        latest = max(rows, key=lambda r: r.recorded_at)
+        return RunChannelCategoricalLatest(
+            channel_name=channel_name,
+            categorical_value=latest.categorical_value,
             sampled_at=latest.sampled_at,
             recorded_at=latest.recorded_at,
             is_simulated=latest.is_simulated,
@@ -220,6 +301,7 @@ class InMemoryRunChannelLookup:
 
 __all__ = [
     "InMemoryRunChannelLookup",
+    "RunChannelCategoricalLatest",
     "RunChannelLatest",
     "RunChannelLookup",
     "RunChannelSignal",

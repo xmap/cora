@@ -58,6 +58,52 @@ async def test_read_latest_surfaces_is_simulated_and_units() -> None:
 
 
 @pytest.mark.unit
+async def test_read_categorical_latest_returns_none_when_channel_never_produced() -> None:
+    """An unseeded categorical channel is the cannot-tell case, same as the numeric read."""
+    lookup = InMemoryRunChannelLookup()
+    result = await lookup.read_run_channel_categorical_latest(
+        run_id=_RUN, channel_name="camera_selected"
+    )
+    assert result is None
+
+
+@pytest.mark.unit
+async def test_read_categorical_latest_returns_most_recent_by_recorded_at() -> None:
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_categorical(
+        run_id=_RUN,
+        channel_name="camera_selected",
+        categorical_value="Camera Selected 1",
+        recorded_at=_at(10),
+    )
+    lookup.register_categorical(
+        run_id=_RUN,
+        channel_name="camera_selected",
+        categorical_value="Camera Selected 0",
+        recorded_at=_at(30),
+    )
+    latest = await lookup.read_run_channel_categorical_latest(
+        run_id=_RUN, channel_name="camera_selected"
+    )
+    assert latest is not None
+    assert latest.categorical_value == "Camera Selected 0"
+    assert latest.recorded_at == _at(30)
+
+
+@pytest.mark.unit
+async def test_read_categorical_latest_is_independent_of_numeric_rows_on_same_channel() -> None:
+    """A channel's numeric and categorical rows are seeded and read separately."""
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=_RUN, channel_name="mixed", value=1.0, recorded_at=_at(5))
+    numeric = await lookup.read_run_channel_latest(run_id=_RUN, channel_name="mixed")
+    categorical = await lookup.read_run_channel_categorical_latest(
+        run_id=_RUN, channel_name="mixed"
+    )
+    assert numeric is not None
+    assert categorical is None
+
+
+@pytest.mark.unit
 async def test_read_window_returns_zero_count_when_empty() -> None:
     """An empty window is a real signal (the stall candidate), not None."""
     lookup = InMemoryRunChannelLookup()

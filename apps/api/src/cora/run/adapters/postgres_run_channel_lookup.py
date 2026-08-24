@@ -6,7 +6,7 @@ rules as that consumer. No projection (a projection would cost a
 permanent fold and read staler than the source on the very freshness
 signal Rule R depends on).
 
-Both queries key on `recorded_at` (the CORA write-time trust anchor) and
+All four queries key on `recorded_at` (the CORA write-time trust anchor) and
 are channel-scoped, so they ride the
 `entries_run_observations_run_channel_recorded_idx`
 `(run_id, channel_name, recorded_at DESC)` btree added alongside this
@@ -24,6 +24,16 @@ now legitimately carry categorical rows (scan-configuration enum PVs,
 `ScanType` from surfacing a categorical row as if it were the numeric
 reading its own return type promises. This does not change behavior
 for any channel that is actually numeric.
+
+## `read_run_channel_categorical_latest`: the mirror image
+
+`_CATEGORICAL_LATEST_SQL` is `_LATEST_SQL` with the filter and selected
+column swapped (`categorical_value IS NOT NULL`), for a caller that
+wants the ENUM label a numeric-only read would silently exclude (e.g.
+`CaptureScanIngestor`'s camera-selection cross-check). Same index, same
+ordering; a channel that is genuinely numeric never has a
+`categorical_value` row to return here, so this is additive, not a
+second interpretation of an existing channel.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -35,6 +45,7 @@ from uuid import UUID
 import asyncpg
 
 from cora.run.ports.run_channel_lookup import (
+    RunChannelCategoricalLatest,
     RunChannelLatest,
     RunChannelSignal,
     RunFeedHealth,
@@ -44,6 +55,14 @@ _LATEST_SQL = """
 SELECT channel_name, value, units, sampled_at, recorded_at, is_simulated
 FROM entries_run_observations
 WHERE run_id = $1 AND channel_name = $2 AND value IS NOT NULL
+ORDER BY recorded_at DESC
+LIMIT 1
+"""
+
+_CATEGORICAL_LATEST_SQL = """
+SELECT channel_name, categorical_value, sampled_at, recorded_at, is_simulated
+FROM entries_run_observations
+WHERE run_id = $1 AND channel_name = $2 AND categorical_value IS NOT NULL
 ORDER BY recorded_at DESC
 LIMIT 1
 """
@@ -82,6 +101,21 @@ class PostgresRunChannelLookup:
             channel_name=row["channel_name"],
             value=row["value"],
             units=row["units"],
+            sampled_at=row["sampled_at"],
+            recorded_at=row["recorded_at"],
+            is_simulated=row["is_simulated"],
+        )
+
+    async def read_run_channel_categorical_latest(
+        self, *, run_id: UUID, channel_name: str
+    ) -> RunChannelCategoricalLatest | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_CATEGORICAL_LATEST_SQL, run_id, channel_name)
+        if row is None:
+            return None
+        return RunChannelCategoricalLatest(
+            channel_name=row["channel_name"],
+            categorical_value=row["categorical_value"],
             sampled_at=row["sampled_at"],
             recorded_at=row["recorded_at"],
             is_simulated=row["is_simulated"],

@@ -61,6 +61,40 @@ immediately instead, and the warning is edge-triggered (once per denial
 episode, with a matching recovery log), mirroring
 `cora.api._flag_watcher`'s identical posture for the same reason.
 
+## The producing-Asset cross-check reads a RECORDED fact, never a live poll
+
+`binding.producing_asset_id` is one fixed Asset per capture code; 2-BM has
+two cameras behind two prefixes (`2bmSP1:`, `2bmSP2:`), so a camera switch
+that this module does not notice would silently mint every subsequent
+Dataset under the WRONG Camera Asset. When a binding declares
+`camera_channel_name` + `expected_camera_label`, `_ingest_one` reads THAT
+candidate's own `run_id`-scoped camera-selection observation
+(`RunChannelLookup.read_run_channel_categorical_latest`) and SKIPs rather
+than ingests on a mismatch or an absent observation.
+
+Deliberately NOT a live `control_port.read()` of the camera-selection PV at
+tick time, unlike this module's every other correctness input: a candidate
+can be backlogged ("falls behind, catches up after" above), so "what camera
+is selected right now" answers the wrong question for an old candidate.
+The fact has to be pinned to the SPECIFIC run being ingested, which is
+exactly what a `capture_baseline_pvs` reading taken once at that run's own
+promotion already gives us, for free, via already-shipped machinery
+(`CaptureBaselineReader`). See `capture_scan_ingestor_binding.py`'s module
+docstring for the config shape and
+`capture_watch_preflight`'s "Camera-prefix cross-check" section for the
+sibling MANUAL check this automates one layer down (that one guards
+`full_file_name`'s PV prefix at preflight time; this one guards
+`producing_asset_id` at ingest time, per run).
+
+Fails CLOSED on a missing observation, not open: an older backlog run
+predating this config, or a dead camera-selection PV, must not read as
+"assume it matched" ([[feedback-optional-role-disables-safety-check]] is
+the exact lesson this session already paid for once, at
+`CAPTURE_WATCH_PVS.full_file_name` itself). A stuck candidate is retried
+forever and logged loudly every tick, same as `no_binding` /
+`invalid_scan_file` below; an operator who wants it ingested anyway still
+has the manual POST route.
+
 ## Never logs the observed path, and never mints an event carrying it
 
 `observed_path` is personal data (2-BM's directory layout embeds
@@ -111,6 +145,8 @@ from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
 from cora.data.features.ingest_scan.command import IngestScan
 from cora.infrastructure.logging import get_logger
+from cora.run.adapters.postgres_run_channel_lookup import PostgresRunChannelLookup
+from cora.run.ports.run_channel_lookup import InMemoryRunChannelLookup, RunChannelLookup
 from cora.shared.storage_root import normalize_storage_root
 
 if TYPE_CHECKING:
@@ -294,11 +330,25 @@ class CaptureScanIngestor:
         candidate_lookup: ScanIngestCandidateLookup,
         ingest_scan: IdempotentHandler,
         bindings: Mapping[str, CaptureScanIngestorBinding],
+        run_channel_lookup: RunChannelLookup | None = None,
     ) -> None:
         self._deps = deps
         self._candidate_lookup = candidate_lookup
         self._ingest_scan = ingest_scan
         self._bindings = bindings
+        # Optional, like `_run_witness.py`'s `capture_path_store`: every
+        # existing caller's bindings leave `expected_camera_label` unset,
+        # so the camera check in `_check_producing_camera` never consults
+        # this collaborator for them, and defaulting it in rather than
+        # threading it through every construction site (including test
+        # call sites with no stake in this feature) costs nothing. A
+        # caller that DOES configure the camera check should still pass a
+        # real one -- the in-memory default always reports "unconfirmed",
+        # which fails closed correctly but uselessly if relied on by
+        # accident.
+        self._run_channel_lookup = (
+            run_channel_lookup if run_channel_lookup is not None else InMemoryRunChannelLookup()
+        )
         self._authz_denied = False
 
     async def tick(self) -> None:
@@ -337,6 +387,11 @@ class CaptureScanIngestor:
                 root=candidate.root,
             )
             return _Outcome.SKIP
+
+        if binding.expected_camera_label is not None:
+            camera_outcome = await self._check_producing_camera(candidate, binding)
+            if camera_outcome is not None:
+                return camera_outcome
 
         locator = _mint_locator(candidate, deps=self._deps)
         if locator is None:
@@ -420,6 +475,45 @@ class CaptureScanIngestor:
         )
         return _Outcome.SUCCESS
 
+    async def _check_producing_camera(
+        self,
+        candidate: ScanIngestCandidate,
+        binding: CaptureScanIngestorBinding,
+    ) -> _Outcome | None:
+        """The producing-Asset cross-check (see this module's docstring).
+
+        Returns `None` when the candidate's recorded camera-selection
+        observation confirms `binding.producing_asset_id`'s assumption, so
+        the caller proceeds to ingest; returns `_Outcome.SKIP` (having
+        already logged why) on a mismatch or a missing observation. Never
+        raises: a lookup failure is a candidate this tick cannot confirm,
+        not a systemic problem for the whole tick.
+        """
+        assert binding.camera_channel_name is not None
+        assert binding.expected_camera_label is not None
+        observation = await self._run_channel_lookup.read_run_channel_categorical_latest(
+            run_id=candidate.run_id, channel_name=binding.camera_channel_name
+        )
+        if observation is None:
+            _log.warning(
+                "capture_scan_ingestor.camera_unconfirmed",
+                capture_code=candidate.capture_code,
+                run_id=str(candidate.run_id),
+                channel_name=binding.camera_channel_name,
+                expected_camera_label=binding.expected_camera_label,
+            )
+            return _Outcome.SKIP
+        if observation.categorical_value != binding.expected_camera_label:
+            _log.warning(
+                "capture_scan_ingestor.camera_mismatch",
+                capture_code=candidate.capture_code,
+                run_id=str(candidate.run_id),
+                expected_camera_label=binding.expected_camera_label,
+                actual_camera_label=observation.categorical_value,
+            )
+            return _Outcome.SKIP
+        return None
+
 
 async def _sweep_loop(ingestor: CaptureScanIngestor, *, interval_seconds: float) -> None:
     """Periodic sweep. A failed tick is logged (inside `tick()` itself,
@@ -466,11 +560,19 @@ async def capture_scan_ingestor_lifespan(
         if deps.pool is not None
         else NeverScanIngestCandidateLookup()
     )
+    # Mirrors `_run_supervisor._default_channel_lookup`'s identical
+    # Postgres-when-pooled/in-memory-otherwise choice; not shared as an
+    # import since each is a 3-line composition-root local, same as this
+    # function's own `candidate_lookup` selection just above.
+    run_channel_lookup: RunChannelLookup = (
+        PostgresRunChannelLookup(deps.pool) if deps.pool is not None else InMemoryRunChannelLookup()
+    )
     ingestor = CaptureScanIngestor(
         deps=deps,
         candidate_lookup=candidate_lookup,
         ingest_scan=ingest_scan,
         bindings=deps.settings.capture_scan_ingestor_bindings,
+        run_channel_lookup=run_channel_lookup,
     )
     default_interval = deps.settings.capture_scan_ingestor_tick_seconds
     interval = interval_seconds if interval_seconds is not None else default_interval

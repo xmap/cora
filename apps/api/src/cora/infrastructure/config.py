@@ -1399,6 +1399,8 @@ class Settings(BaseSettings):
     #   CAPTURE_SCAN_INGESTOR_BINDINGS='{
     #     "2bmb-tomoscan": {
     #       "producing_asset_id": "0c5e...-camera-asset-uuid",
+    #       "camera_channel_name": "camera_selected",
+    #       "expected_camera_label": "Camera Selected 0",
     #       "locations": {
     #         "/local1/2BM": {
     #           "supply_id": "b2a1...-storage-supply-uuid",
@@ -1413,6 +1415,21 @@ class Settings(BaseSettings):
     #       }
     #     }
     #   }'
+    #
+    # `camera_channel_name` + `expected_camera_label` (both optional,
+    # both-or-neither) let `CaptureScanIngestor` refuse a candidate whose
+    # OWN recorded camera-selection observation disagrees with (or is
+    # missing for) the camera `producing_asset_id` assumes, rather than
+    # silently attributing every scan under this code to one fixed Asset
+    # regardless of which camera actually produced it -- the runtime
+    # counterpart to `capture_watch_preflight`'s manual
+    # `camera_prefix_check` above. `camera_channel_name` must ALSO be
+    # declared under CAPTURE_BASELINE_PVS for that code, or there is
+    # nothing for this check to read. See
+    # `cora.infrastructure.capture_scan_ingestor_binding`'s module
+    # docstring and `cora.api._capture_scan_ingestor`'s "producing-Asset
+    # cross-check" section for why this reads a RECORDED per-run fact,
+    # never a live poll.
     capture_scan_ingestor_bindings: dict[str, CaptureScanIngestorBinding] = {}
 
     @field_validator("capture_scan_ingestor_bindings")
