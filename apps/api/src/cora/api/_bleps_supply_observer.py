@@ -169,6 +169,7 @@ from typing import TYPE_CHECKING
 
 from cora.infrastructure.logging import get_logger
 from cora.shared.binary_signal import binary_code
+from cora.shared.quality import believable
 from cora.supply.ports.supply_observer import (
     ReachTier,
     SupplyObservation,
@@ -341,7 +342,7 @@ def flag_state_from_reading(reading: Measurement) -> bool | None:
     facility is free to edit them for a nicer operator screen. The index
     is the half that does not move.
     """
-    if reading.quality == "Bad":
+    if not believable(reading.quality):
         return None
     code = binary_code(reading.value, ordinal=reading.ordinal)
     return None if code is None else code != 0
@@ -822,7 +823,7 @@ class BlepsSupplyObserver:
         try:
             async for reading in self._control_port.subscribe(pv):
                 state = flag_state_from_reading(reading)
-                if state is None and reading.quality != "Bad":
+                if state is None and believable(reading.quality):
                     # Tracks `flag_state_from_reading`'s floor rather than
                     # naming "Good" independently: an alarmed reading is
                     # believable here, so an alarmed one CORA still cannot

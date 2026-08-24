@@ -25,11 +25,18 @@ result record, a transfer manifest) into this CORA-owned vocabulary.
   quality enums INTO this domain enum; substrate sub-codes (EPICS
   `alarm_status`, Tango string detail, OPC UA's ~240 named sub-codes)
   land in `Measurement.quality_detail` as opaque forensic breadcrumbs.
+  It is DEFINED in `cora.shared.quality` and re-exported here, because
+  consumers outside this BC read it and `cora.shared` is the one place
+  they can all reach. That module also owns the two named floors
+  (`believable` / `actionable`) a consumer picks between, and the
+  account of why picking by hand went wrong three times.
 """
 
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
+
+from cora.shared.quality import Quality
 
 MeasurementKind = Literal["Scalar", "Array", "Image", "Categorical", "Tabular"]
 """Closed 5-value discriminator for `Measurement.value` shape.
@@ -49,34 +56,6 @@ MeasurementKind = Literal["Scalar", "Array", "Image", "Categorical", "Tabular"]
 Adapter ACLs translate substrate-specific type taxonomies INTO this
 enum. Extensible by tag addition when a future substrate justifies a
 new shape (e.g., OPC UA `LocalizedText` may justify a new tag).
-"""
-
-
-Quality = Literal["Good", "Uncertain", "Bad"]
-"""Closed 3-value quality enum matching OPC UA's spec-defined severity
-grouping and the NAMUR / ISA-95 vocabulary.
-
-Per the OPC UA sanity check in
-[[project_control_port_generalization_research]], `StatusCode`'s top
-2 bits are exactly this trichotomy:
-`Good = 0b00 | Uncertain = 0b01 | Bad = 0b10`. EPICS's 4-value
-severity collapses (`NO_ALARM -> Good`, `MINOR | MAJOR -> Uncertain`,
-`INVALID -> Bad`): EPICS distinguishes a value that is fine while the
-process it describes is in alarm (MINOR / MAJOR) from a value that
-cannot be trusted at all (INVALID), and only the latter is Bad.
-Tango's 5-value `AttrQuality` collapses (`VALID -> Good`,
-`WARNING | CHANGING -> Uncertain`, `ALARM | INVALID -> Bad`).
-
-Consumers choose their own floor against this enum. A gate that needs
-a value it can act on tests `== "Good"`; a gate that only needs a
-value it can believe tests `!= "Bad"`. Both are legitimate; neither is
-the default, so each use site states which it means.
-
-Substrate-specific forensic detail (EPICS `alarm_status`, Tango
-string detail, OPC UA's ~240 named sub-codes such as
-`BadCommunicationError` / `UncertainDataSubNormal`) lands in
-`Measurement.quality_detail` as an opaque string; the closed enum stays
-tight.
 """
 
 

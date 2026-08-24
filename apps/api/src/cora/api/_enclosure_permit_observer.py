@@ -55,6 +55,7 @@ from cora.enclosure.ports.enclosure_observer import (
 )
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 from cora.shared.binary_signal import binary_code
+from cora.shared.quality import believable
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
@@ -109,7 +110,7 @@ def permit_status_from_reading(reading: Measurement) -> str:
     reads `'ON'`: the previous numeric-only form raised on `int('ON')`
     and reported a correctly secured hutch as `Unknown`.
     """
-    if reading.quality == "Bad":
+    if not believable(reading.quality):
         return _UNKNOWN
     code = binary_code(reading.value, ordinal=reading.ordinal)
     if code == 1:

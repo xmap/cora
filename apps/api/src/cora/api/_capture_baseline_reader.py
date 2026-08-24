@@ -47,12 +47,14 @@ ever set per reading.
 
 ## Reasons a reading is skipped rather than appended
 
-1. **Bad quality** (`Measurement.quality == "Bad"`, the adapter's
-   collapse of EPICS INVALID / Tango ALARM|INVALID / OPC UA's Bad
-   grouping): an untrustworthy value must not enter the record. A
-   `Quality.Uncertain` reading (EPICS MINOR/MAJOR) is NOT skipped: the
-   alarm-vs-fault distinction already shipped elsewhere in this codebase
-   says a MAJOR alarm is still a believable value.
+1. **Not believable** (fails `cora.shared.quality.believable`, which is
+   `Bad` alone: the adapter's collapse of EPICS INVALID / Tango
+   ALARM|INVALID / OPC UA's Bad grouping): an untrustworthy value must
+   not enter the record. A `Quality.Uncertain` reading (EPICS
+   MINOR/MAJOR) is NOT skipped, and that is the loose floor of the two
+   named there, chosen because this reader RECORDS what a substrate
+   said rather than acting on it: a MAJOR alarm is still a believable
+   value.
 2. **No substrate time** (`Measurement.produced_at is None`): the
    port's dual-clock rule forbids substituting CORA's own clock for an
    absent substrate time, the same rule `CaptureProgressFeeder` already
@@ -104,6 +106,7 @@ from cora.run.aggregates.run import (
 )
 from cora.run.errors import UnauthorizedError
 from cora.run.features.append_observations import AppendObservations, ObservationInput
+from cora.shared.quality import believable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -253,7 +256,7 @@ class CaptureBaselineReader:
     def _to_entry(
         self, capture_code: str, channel_name: str, pv: str, reading: Measurement
     ) -> ObservationInput | None:
-        if reading.quality == "Bad":
+        if not believable(reading.quality):
             _log.info(
                 "capture_baseline.bad_quality",
                 capture_code=capture_code,

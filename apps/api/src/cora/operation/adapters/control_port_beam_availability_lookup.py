@@ -12,9 +12,50 @@ Polarity (per PSS-1):
   - ACIS `FesPermitM`: `1` = FES-open permitted.
 
 A PV that is not configured does not gate (treated as open / permitted).
-Any read that fails (disconnect / timeout) or returns non-Good quality
+Any read that fails (disconnect / timeout) or comes back unbelievable
 sets `quality_ok=False` AND that flag to its fail-closed value, so a dead
 gateway can never read as "beam open".
+
+## The quality floor is `believable`, and a strict one closed the gate
+## permanently
+
+This asks whether the shutter reading can be TRUSTED, not whether it is
+free of annotation, so the floor is `cora.shared.quality.believable`.
+The distinction is not academic here: the strict floor this used to
+carry made the gate impossible to pass at 2-BM, in any state of the
+beamline.
+
+Measured on arcturus 2026-08-24, on all three configured PVs:
+`ZSV=MAJOR`, `OSV=NO_ALARM`. State 0 alarms, state 1 is silent. Lay that
+over the INVERTED `BeamBlockingM` polarity above and the two halves
+point opposite ways:
+
+    shutter OPEN   = 0 = MAJOR   the state the gate needs to confirm
+    shutter SHUT   = 1 = silent  the state that fails the gate anyway
+
+Under a `!= "Good"` floor, `_read_open` could therefore never return
+True. To be believed a shutter had to be silent, which meant state 1,
+which is blocking. An open shutter was discarded as unreadable and a
+readable one was always closed, so `fes_open` and `sbs_open` were
+structurally incapable of being True and the gate refused every run.
+Worse than an outage, because it presents as `RunBeamAvailabilityUnknown`
+rather than as anything pointing at CORA.
+
+The damage was not only the blocked start path. `witness_safety_envelope`
+runs the same predicate and RECORDS rather than raises, so every
+witnessed run at 2-BM was being stamped `beam_available=false` whatever
+the shutters were actually doing: a false fact in the record, which is
+the thing CORA exists to keep.
+
+`SR-ACIS:2BM:FesPermitM` shares the field settings but not the polarity
+problem, since 1 (permitted) is the silent state. Its strict-floor cost
+was a mislabelled refusal: "beam availability unknown" for a permit CORA
+could read perfectly well as not granted.
+
+Believing an alarmed reading is safe here for the reason it is safe in
+the permit observers: ACIS and the PSS hold the shutters, CORA holds
+nothing. `Bad` (EPICS INVALID) still fails closed, because that is the
+one severity saying the number itself is untrustworthy.
 
 All three PVs are `bi` records at 2-BM, so a real read arrives as
 `kind="Categorical"` with `EpicsCaControlPort` having resolved the
@@ -40,6 +81,7 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
 )
 from cora.shared.binary_signal import binary_code
+from cora.shared.quality import believable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -91,7 +133,7 @@ class ControlPortBeamAvailabilityLookup:
             reading = await self._control_port.read(pv)
         except (ControlNotConnectedError, ControlTimeoutError):
             return None, False
-        if reading.quality != "Good":
+        if not believable(reading.quality):
             return None, False
         raw = reading.value
         # A fractional reading on a binary shutter / permit PV (e.g. a

@@ -1,9 +1,15 @@
 """Unit tests for `ControlPortBeamAvailabilityLookup` (BEAM-1).
 
 Covers the inverted `BeamBlockingM` polarity, the ACIS permit polarity,
-the fail-closed mapping (disconnect / non-Good quality -> not-open +
+the fail-closed mapping (disconnect / unbelievable quality -> not-open +
 `quality_ok=False`), and the unconfigured-PV no-gate default, all over
 `InMemoryControlPort`.
+
+The two `live_2bm` tests carry the shapes measured on arcturus rather
+than invented ones, because the defect they pin was invisible to every
+invented shape in this file: it needed the real combination of an
+INVERTED polarity with an alarm on state 0, which is what makes an OPEN
+shutter the alarming one.
 """
 
 from datetime import UTC, datetime
@@ -90,7 +96,15 @@ async def test_read_beam_availability_permit_denied_when_acis_zero() -> None:
 
 
 @pytest.mark.unit
-async def test_read_beam_availability_non_good_quality_fails_closed() -> None:
+async def test_read_beam_availability_alarming_open_shutter_is_believed() -> None:
+    """An alarmed shutter reading is trusted, which is what unbroke the gate.
+
+    Under the previous `!= "Good"` floor this case returned
+    `fes_open=False, quality_ok=False`, and at 2-BM that was not an edge
+    case: `BeamBlockingM` carries `ZSV=MAJOR`, so state 0 alarms, and
+    state 0 is the shutter OPEN. The gate could therefore never confirm
+    an open shutter, in any state of the beamline.
+    """
     port = _port_with(
         {
             FES_PV: _scalar(0, quality="Uncertain"),
@@ -102,8 +116,88 @@ async def test_read_beam_availability_non_good_quality_fails_closed() -> None:
 
     result = await lookup.read()
 
+    assert result.fes_open is True
+    assert result.quality_ok is True
+
+
+@pytest.mark.unit
+async def test_read_beam_availability_bad_quality_fails_closed() -> None:
+    """The loosening stopped at `Bad`, the one value calling the number junk.
+
+    Pinned separately from the `Uncertain` case above so the pair states
+    the floor rather than just its friendly half: a dead gateway (EPICS
+    INVALID) must still be unable to read as "beam open".
+    """
+    port = _port_with(
+        {
+            FES_PV: _scalar(0, quality="Bad"),
+            SBS_PV: _scalar(0),
+            PERMIT_PV: _scalar(1),
+        }
+    )
+    lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
+
+    result = await lookup.read()
+
     assert result.fes_open is False  # cannot confirm open
     assert result.quality_ok is False
+
+
+@pytest.mark.unit
+async def test_read_beam_availability_live_2bm_open_shape_confirms_beam() -> None:
+    """The exact shape 2-BM produces when beam IS available.
+
+    Measured on arcturus 2026-08-24 from the records' own fields: all
+    three PVs are `bi` with `ZNAM=OFF` / `ONAM=ON` and `ZSV=MAJOR` /
+    `OSV=NO_ALARM`. So with beam up, both `BeamBlockingM` records sit at
+    0 (`OFF`, not blocking) carrying MAJOR, which the CA adapter reports
+    as `Uncertain`, while the permit sits at 1 (`ON`) and is silent.
+
+    This is the case the gate exists to recognise and the one it could
+    not reach. Written with the real labels rather than integers because
+    a `bi` never arrives as a number.
+    """
+    port = _port_with(
+        {
+            FES_PV: _enum("OFF", quality="Uncertain"),
+            SBS_PV: _enum("OFF", quality="Uncertain"),
+            PERMIT_PV: _enum("ON"),
+        }
+    )
+    lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
+
+    result = await lookup.read()
+
+    assert (result.fes_open, result.sbs_open, result.fes_permit) == (True, True, True)
+    assert result.quality_ok is True
+
+
+@pytest.mark.unit
+async def test_read_beam_availability_live_2bm_shut_shape_names_the_blocking_flags() -> None:
+    """2-BM's state while the beamline is down, and the second thing fixed.
+
+    Shutters at 1 (`ON`, blocking, silent) and the permit at 0 (`OFF`,
+    not granted, MAJOR). The refusal was always correct here, but under
+    the strict floor the alarmed permit made `quality_ok` False, so it
+    surfaced as `RunBeamAvailabilityUnknown`: CORA reporting that it
+    could not tell, about a permit it could read perfectly well.
+
+    `quality_ok=True` with three False flags is the honest version, and
+    it is what lets the refusal name what is actually blocking.
+    """
+    port = _port_with(
+        {
+            FES_PV: _enum("ON"),
+            SBS_PV: _enum("ON"),
+            PERMIT_PV: _enum("OFF", quality="Uncertain"),
+        }
+    )
+    lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
+
+    result = await lookup.read()
+
+    assert (result.fes_open, result.sbs_open, result.fes_permit) == (False, False, False)
+    assert result.quality_ok is True
 
 
 @pytest.mark.unit
