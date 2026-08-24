@@ -38,6 +38,37 @@ app is built, so it presents as order-dependent flakiness.
 If per-call reconfiguration is ever genuinely needed, set
 `cache_logger_on_first_use=False` and accept the per-call binding cost; do not
 simply drop the guard.
+
+## The stdlib handler targets LIVE `sys.stdout`, not a snapshot of it
+
+`logging.StreamHandler(sys.stdout)` would capture whatever object `sys.stdout`
+IS at the moment `configure_logging()` runs, not a live reference to the name
+`sys.stdout`. That distinction is invisible in production, where `sys.stdout`
+never changes identity after process start, but it is a real bug under
+pytest's `capsys` fixture, which monkeypatches `sys.stdout` to a fresh object
+for every test. A handler built while an EARLIER test's `capsys` patch was
+active keeps writing to that test's now-torn-down capture buffer; the
+CURRENT test's own `capsys.readouterr()` then sees nothing, while the JSON
+line still lands wherever the earlier buffer's underlying stream actually
+is (typically the real terminal), which is indistinguishable from the log
+line never having been emitted at all unless someone goes looking for it
+elsewhere.
+
+This bit `test_run_debriefer_seed.py`'s `capsys`-based assertion: it passed
+in isolation and failed only in a full-suite run, because `configure_logging`
+is called from `build_kernel` (the production kernel factory) but NOT from
+`make_inmemory_kernel` (the lighter one most unit tests use), so a test built
+on `make_inmemory_kernel` inherits whichever handler an EARLIER, unrelated
+test's `build_kernel()` call last installed in the same worker process --
+built under THAT test's `capsys`, not this one's.
+
+`_LiveStdout` below is the standard fix for this class of bug: instead of
+handing the handler an object, hand it a proxy whose `write` / `flush` look
+up `sys.stdout` FRESH on every call, so the handler is correct regardless of
+when it was constructed relative to whichever test's `capsys` is currently
+active. This makes calling `configure_logging()` from every kernel
+constructor unnecessary, not just unlikely: the handler self-corrects
+either way.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
@@ -56,6 +87,25 @@ if TYPE_CHECKING:
 
 
 _structlog_configured = False
+
+
+class _LiveStdout:
+    """A write target that always resolves to the CURRENT `sys.stdout`.
+
+    `logging.StreamHandler` stores whatever object it is given at
+    construction time and never looks at `sys.stdout` again. Handing it
+    this proxy instead of `sys.stdout` directly defers that lookup to
+    every individual write, so the handler stays correct even when
+    `sys.stdout` is later swapped out from under it (pytest's `capsys`
+    fixture does exactly that, once per test). See the module
+    docstring's "live `sys.stdout`" section for the failure this fixes.
+    """
+
+    def write(self, message: str) -> int:
+        return sys.stdout.write(message)
+
+    def flush(self) -> None:
+        sys.stdout.flush()
 
 
 def configure_logging(level: str = "INFO") -> None:
@@ -95,7 +145,7 @@ def configure_logging(level: str = "INFO") -> None:
         )
         _structlog_configured = True
 
-    handler = logging.StreamHandler(sys.stdout)
+    handler = logging.StreamHandler(_LiveStdout())
     handler.setFormatter(
         structlog.stdlib.ProcessorFormatter(
             processor=structlog.processors.JSONRenderer(),
