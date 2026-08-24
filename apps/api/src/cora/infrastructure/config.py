@@ -862,6 +862,38 @@ class Settings(BaseSettings):
     # default" section.
     bleps_supply_warnings_enabled: bool = False
 
+    # Supply probe trail, the sibling of `enclosure_permit_probe_tick_seconds`
+    # and the same operational kill switch. Bounds how often
+    # `BlepsSupplyObserver` re-reads every PV behind each configured Supply
+    # independent of push traffic, so a quiet interlock (EPICS CA monitors
+    # are change-only, and a healthy BLEPS is silent for hours) does not
+    # leave a probe-trail gap that reads as a coverage outage when CORA was
+    # in fact still watching. `None` (default) disables polling entirely and
+    # the trail is then push-only.
+    #
+    # Cost scales with CHANNEL count, not Supply count: a tick reads every
+    # channel behind every Supply, which at 2-BM is 32 reads (15 channels
+    # plus the comms flag, which each Supply's tick reads for itself). It
+    # writes one row per Supply per tick regardless. The reads land on the
+    # BLEPS IOC, a facility resource, so confirm a cadence with beamline
+    # staff before setting this in a deployment. Irrelevant when
+    # `bleps_supply_channels` is empty.
+    bleps_supply_probe_tick_seconds: float | None = None
+
+    @field_validator("bleps_supply_probe_tick_seconds")
+    @classmethod
+    def _validate_bleps_supply_probe_tick_seconds(cls, value: float | None) -> float | None:
+        """A tick faster than 0.1s polls an interlock IOC harder than any
+        coverage question needs, and `None` (not zero) is how the poll is
+        turned off.
+        """
+        if value is not None and value < 0.1:
+            raise ValueError(
+                f"bleps_supply_probe_tick_seconds must be >= 0.1, got {value}; "
+                "set it to null to disable supply probe polling entirely"
+            )
+        return value
+
     @model_validator(mode="after")
     def _require_communications_fault_pv_with_bleps_channels(self) -> "Settings":
         """BLEPS channels without the comms flag would trust a dark feed.

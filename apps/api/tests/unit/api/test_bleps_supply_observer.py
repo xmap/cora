@@ -16,7 +16,8 @@ two PVs of a single channel the way real ones do.
 
 # pyright: reportPrivateUsage=false
 
-from collections.abc import AsyncGenerator, AsyncIterator
+import asyncio
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from datetime import UTC, datetime
 
 import pytest
@@ -203,16 +204,33 @@ def test_unreadable_flag_is_unknown_not_low() -> None:
 
 
 class _ScriptedControlPort:
-    """Fake `ControlPort` replaying a per-address reading script."""
+    """Fake `ControlPort` replaying a per-address reading script.
+
+    `hang` models a live subscription that has gone quiet: the address
+    yields its script then blocks forever instead of ending, which is
+    what a real CA monitor on an unchanging PV does and the only shape
+    under which the poll tests can observe a tick at all.
+
+    `read_failures` scripts the poll path. Unlike the enclosure fake's
+    per-address result QUEUE, an address here either always answers or
+    always fails, because a supply poller re-reads its whole channel set
+    on every tick and a queue would silently change behaviour between
+    ticks. The tests care which channels are reachable, not how many
+    times each was asked.
+    """
 
     def __init__(
         self,
         *,
         readings: dict[str, list[Measurement]],
         disconnect: frozenset[str] = frozenset(),
+        hang: frozenset[str] = frozenset(),
+        read_failures: frozenset[str] = frozenset(),
     ) -> None:
         self._readings = readings
         self._disconnect = disconnect
+        self._hang = hang
+        self._read_failures = read_failures
 
     def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         return self._stream(address)
@@ -220,8 +238,16 @@ class _ScriptedControlPort:
     async def _stream(self, address: str) -> AsyncGenerator[Measurement]:
         for reading in self._readings.get(address, []):
             yield reading
+        if address in self._hang:
+            await asyncio.Event().wait()  # never released; models a live subscription
+            return  # pragma: no cover - unreachable
         if address in self._disconnect:
             raise ControlNotConnectedError(address)
+
+    async def read(self, address: str) -> Measurement:
+        if address in self._read_failures:
+            raise ControlNotConnectedError(address)
+        return _reading(0)
 
 
 def _observer(
@@ -229,12 +255,14 @@ def _observer(
     channels: list[BlepsChannel],
     *,
     communications_fault_pv: str | None = None,
+    probe_tick_seconds: float | None = None,
 ) -> BlepsSupplyObserver:
     return BlepsSupplyObserver(
         control_port=port,  # type: ignore[arg-type]
         channels=channels,
         communications_fault_pv=communications_fault_pv,
         clock=FakeClock(_T_CLOCK),
+        probe_tick_seconds=probe_tick_seconds,
     )
 
 
@@ -894,3 +922,289 @@ async def test_recovering_from_a_trip_through_the_warning_band_reaches_degraded(
     )
     observed = await _collect(_observer(port, [_FLOW2_W]), {_WATER})
     assert "Degraded" in _statuses(observed)
+
+
+# --------------------------------------------------------------------------
+# Probe ticks
+#
+# A quiet interlock pushes nothing, so without a timer the trail cannot
+# tell "the supply has been fine for six hours" from "CORA stopped
+# looking six hours ago". These pin what a tick claims and, more
+# importantly, what it refuses to claim.
+#
+# Every test here needs a subscription that stays OPEN with no traffic
+# (`hang`), because a scripted stream that runs out ends `_drain` before
+# any tick can fire. That is the real shape anyway: a healthy BLEPS is a
+# live monitor saying nothing.
+# --------------------------------------------------------------------------
+
+_ALL_WATER_PVS = frozenset(
+    {_COMMS, _FLOW2.trip_pv, _FLOW2.fault_pv or "", _FLOW6.trip_pv, _FLOW6.fault_pv or ""}
+)
+_ALL_PVS = _ALL_WATER_PVS | {_VS1.trip_pv}
+
+
+async def _collect_probes_until(
+    gen: AsyncGenerator[SupplyObservation],
+    predicate: Callable[[list[SupplyObservation]], bool],
+    *,
+    timeout_seconds: float = 2.0,
+) -> list[SupplyObservation]:
+    """Drain `gen` until `predicate(collected)` holds, then close it.
+
+    The poll tests' generator never ends on its own (subscriptions hang,
+    the poller ticks forever), so `_collect` would block until the
+    suite's own timeout killed it.
+    """
+    collected: list[SupplyObservation] = []
+
+    async def _drain() -> None:
+        async for observation in gen:
+            collected.append(observation)
+            if predicate(collected):
+                break
+
+    try:
+        await asyncio.wait_for(_drain(), timeout=timeout_seconds)
+    finally:
+        await gen.aclose()
+    return collected
+
+
+def _observe(observer: BlepsSupplyObserver, codes: set[str]) -> AsyncGenerator[SupplyObservation]:
+    return observer.observe(SupplyObserverScope(supply_codes=frozenset(codes)))
+
+
+@pytest.mark.unit
+async def test_probe_tick_disabled_by_default_leaves_a_quiet_supply_silent() -> None:
+    """The pre-feature behaviour, and the kill switch's off position.
+
+    `probe_tick_seconds` defaults to None, so no poll task is created at
+    all and a live-but-quiet subscription yields nothing whatsoever.
+    This is also the state every deployment boots in.
+    """
+    port = _ScriptedControlPort(readings={}, hang=_ALL_WATER_PVS)
+    gen = _observe(_observer(port, [_FLOW2], communications_fault_pv=_COMMS), {_WATER})
+    try:
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(anext(gen), timeout=0.05)
+    finally:
+        await gen.aclose()
+
+
+@pytest.mark.unit
+async def test_probe_tick_relays_one_row_per_supply_when_every_channel_answers() -> None:
+    port = _ScriptedControlPort(readings={}, hang=_ALL_PVS)
+    observer = _observer(
+        port, [_FLOW2, _FLOW6, _VS1], communications_fault_pv=_COMMS, probe_tick_seconds=0.01
+    )
+
+    collected = await _collect_probes_until(
+        _observe(observer, {_WATER, _VACUUM}),
+        lambda obs: {o.supply_code for o in obs} >= {_WATER, _VACUUM},
+    )
+
+    by_code = {o.supply_code: o for o in collected}
+    assert set(by_code) == {_WATER, _VACUUM}
+    for supply_code, probe in by_code.items():
+        assert probe.observed_status is None, supply_code
+        assert probe.reach_tier is ReachTier.RELAYED, supply_code
+        assert probe.source_kind == "EpicsPv"
+    # Attributed to the Supply's first trip PV, the same representative
+    # channel a real verdict names.
+    assert by_code[_WATER].source_id == _FLOW2.trip_pv
+    assert by_code[_VACUUM].source_id == _VS1.trip_pv
+
+
+@pytest.mark.unit
+async def test_probe_tick_is_unreached_when_any_single_channel_cannot_be_read() -> None:
+    """One dark channel out of five costs the Supply its coverage claim.
+
+    This is the whole safety content of the tick, and the same asymmetry
+    `_verdict` applies to believability: a row saying RELAYED means CORA
+    saw the WHOLE Supply this tick. Grading on "most channels answered"
+    would write exactly the false coverage claim the trail exists to
+    rule out, and it would be invisible, because the row looks identical
+    to a healthy one.
+
+    The failing PV is named rather than the representative one: an
+    UNREACHED row is only actionable if it says which channel to go and
+    look at.
+    """
+    port = _ScriptedControlPort(
+        readings={}, hang=_ALL_WATER_PVS, read_failures=frozenset({_FLOW6.trip_pv})
+    )
+    observer = _observer(
+        port, [_FLOW2, _FLOW6], communications_fault_pv=_COMMS, probe_tick_seconds=0.01
+    )
+
+    collected = await _collect_probes_until(_observe(observer, {_WATER}), lambda obs: bool(obs))
+
+    probe = collected[0]
+    assert probe.supply_code == _WATER
+    assert probe.observed_status is None
+    assert probe.reach_tier is ReachTier.UNREACHED
+    assert probe.source_id == _FLOW6.trip_pv
+
+
+@pytest.mark.unit
+async def test_probe_tick_confines_an_unreachable_channel_to_its_own_supply() -> None:
+    """A dark cooling-water circuit must not cost the vacuum Supply its row.
+
+    One poller per Supply is what makes this true. A single poller over
+    the union of channels would grade every Supply by the worst channel
+    anywhere on the beamline, which is the same smearing the push path's
+    `affected_supply_codes` scoping already prevents.
+    """
+    port = _ScriptedControlPort(
+        readings={}, hang=_ALL_PVS, read_failures=frozenset({_FLOW2.fault_pv or ""})
+    )
+    observer = _observer(
+        port, [_FLOW2, _VS1], communications_fault_pv=_COMMS, probe_tick_seconds=0.01
+    )
+
+    collected = await _collect_probes_until(
+        _observe(observer, {_WATER, _VACUUM}),
+        lambda obs: {o.supply_code for o in obs} >= {_WATER, _VACUUM},
+    )
+
+    by_code = {o.supply_code: o for o in collected}
+    assert by_code[_WATER].reach_tier is ReachTier.UNREACHED
+    assert by_code[_WATER].source_id == _FLOW2.fault_pv
+    assert by_code[_VACUUM].reach_tier is ReachTier.RELAYED
+
+
+@pytest.mark.unit
+async def test_probe_tick_is_unreached_for_every_supply_when_the_comms_flag_is_dark() -> None:
+    """The comms flag is in every Supply's read set, not just the first one's.
+
+    It is a fact about the whole feed: a Supply whose comms flag cannot
+    be read cannot be assessed at all (`_communications_lost` withholds
+    every verdict), so a tick that missed it has not reached that Supply
+    either, however well its own circuits answered.
+    """
+    port = _ScriptedControlPort(readings={}, hang=_ALL_PVS, read_failures=frozenset({_COMMS}))
+    observer = _observer(
+        port, [_FLOW2, _VS1], communications_fault_pv=_COMMS, probe_tick_seconds=0.01
+    )
+
+    collected = await _collect_probes_until(
+        _observe(observer, {_WATER, _VACUUM}),
+        lambda obs: {o.supply_code for o in obs} >= {_WATER, _VACUUM},
+    )
+
+    by_code = {o.supply_code: o for o in collected}
+    assert [p.reach_tier for p in by_code.values()] == [ReachTier.UNREACHED] * 2
+    assert {p.source_id for p in by_code.values()} == {_COMMS}
+
+
+@pytest.mark.unit
+async def test_probe_tick_carries_no_status_claim_even_with_a_trip_standing() -> None:
+    """A timer can never move a Supply, and this is the test that says so.
+
+    The push path here reports `Unavailable` from a real trip, and every
+    subsequent tick reads that same tripped PV successfully. A tick that
+    folded its reads into the verdict would start re-emitting
+    `Unavailable` on a timer: harmless-looking, but it would mean the
+    poll path can drive a status transition without carrying any of the
+    believability fold, the comms gate, or the all-channels-clear
+    asymmetry that make the push path safe.
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _COMMS: [_reading(0)],
+            _FLOW2.fault_pv or "": [_reading(0)],
+            _FLOW2.trip_pv: [_reading(1)],
+        },
+        hang=_ALL_WATER_PVS,
+    )
+    observer = _observer(port, [_FLOW2], communications_fault_pv=_COMMS, probe_tick_seconds=0.01)
+
+    def _ticks(obs: list[SupplyObservation]) -> list[SupplyObservation]:
+        # RELAYED with no status claim is reachable only from `_poll`:
+        # `_observations` grades its probe-only entries UNREACHED
+        # without exception, and its RELAYED entries always carry a
+        # status. So this counts poll ticks and nothing else.
+        return [o for o in obs if o.observed_status is None and o.reach_tier is ReachTier.RELAYED]
+
+    collected = await _collect_probes_until(
+        _observe(observer, {_WATER}), lambda obs: len(_ticks(obs)) >= 3
+    )
+
+    assert len(_ticks(collected)) >= 3, "the poller must have ticked repeatedly"
+    # The trip is reported ONCE, by the push path, and never re-asserted
+    # by a timer. This is the assertion that catches a `_poll` folding
+    # its reads into `latest`: the observer emits levels rather than
+    # edges, so a verdict-bearing tick would republish `Unavailable`
+    # every 10ms for as long as the trip stands.
+    assert _statuses(collected).count("Unavailable") == 1
+
+
+@pytest.mark.unit
+async def test_probe_tick_queued_after_the_last_pump_ended_is_still_yielded() -> None:
+    """The teardown race `_drain`'s leftover drain exists for.
+
+    A poller can queue a probe AFTER the final `_PumpDone` was queued
+    but before the loop reads it, which puts the probe behind the
+    sentinel in FIFO order. The loop stops on the sentinel, so without
+    the leftover drain that probe is dropped on the floor at every
+    re-subscribe.
+
+    Driven by hand rather than with `_collect_probes_until`, which is
+    what makes it deterministic instead of a race: the single pump ends
+    immediately, so by the time the first push observation is yielded
+    the queue already holds its `_PumpDone`. The test's own sleep is
+    then the window in which the poller appends probes BEHIND that
+    sentinel, and the second `anext` can only produce one by way of the
+    leftover drain, because the main loop has already stopped.
+    """
+    port = _ScriptedControlPort(readings={_VS1.trip_pv: [_reading(0)]})
+    observer = _observer(port, [_VS1], probe_tick_seconds=0.001)
+    gen = _observe(observer, {_VACUUM})
+    try:
+        pushed = await anext(gen)
+        assert pushed.observed_status == "Recovering", "the push path yields first"
+
+        await asyncio.sleep(0.05)  # the poller ticks, queueing behind _PumpDone
+
+        leftover = await anext(gen)
+        assert leftover.observed_status is None
+        assert leftover.reach_tier is ReachTier.RELAYED
+    finally:
+        await gen.aclose()
+
+
+@pytest.mark.unit
+async def test_probe_tick_keeps_running_after_its_supply_push_path_dies() -> None:
+    """The reason the poller is a sibling of the pumps, not nested in one.
+
+    The vacuum Supply's only subscription disconnects immediately. Its
+    poller must keep ticking anyway: with the push path dead, those
+    probes are the only remaining evidence about whether CORA can still
+    see that Supply, and they are what would show its recovery. A poller
+    created inside `_pump` would die with the subscription and go
+    permanently silent on exactly the Supply worth watching.
+    """
+    port = _ScriptedControlPort(
+        readings={_COMMS: [_reading(0)]},
+        hang=_ALL_WATER_PVS,
+        disconnect=frozenset({_VS1.trip_pv}),
+    )
+    observer = _observer(
+        port, [_FLOW2, _VS1], communications_fault_pv=_COMMS, probe_tick_seconds=0.01
+    )
+
+    def _relayed_vacuum(obs: list[SupplyObservation]) -> int:
+        return sum(1 for o in obs if o.supply_code == _VACUUM and o.reach_tier is ReachTier.RELAYED)
+
+    collected = await _collect_probes_until(
+        _observe(observer, {_WATER, _VACUUM}), lambda obs: _relayed_vacuum(obs) >= 2
+    )
+
+    # The dead subscription also makes the push path emit its own
+    # UNREACHED entry for the vacuum Supply (its only channel just went
+    # unreadable), which is correct and not what this test is about.
+    # RELAYED is the discriminator: with the pump gone, nothing but a
+    # poll tick can produce one.
+    assert _relayed_vacuum(collected) >= 2, "the vacuum poller must outlive its dead subscription"
+    assert all(o.observed_status is None for o in collected if o.supply_code == _VACUUM)

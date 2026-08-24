@@ -87,6 +87,50 @@ probe-only entry (`observed_status=None`, `reach_tier=UNREACHED`).
 before attempting a transition when `observed_status` is `None`, so a
 withheld verdict never becomes a false Supply status.
 
+## Probe ticks: one poller per Supply, reading every channel
+
+When `probe_tick_seconds` is configured, each Supply in scope also gets
+a sibling polling task (`_poll`) alongside the per-PV push subscriptions
+(`_pump`), both feeding the same queue. EPICS CA monitors are
+change-only, so a beamline where nothing is happening produces no
+readings at all after the initial connect, and the trail would then show
+a gap that reads as a coverage outage when CORA was in fact still
+watching. That is the exact ambiguity this seam exists to resolve.
+
+The tick is scoped to a SUPPLY, not to a PV, because that is what a
+probe row is keyed by and what a reader of the trail is asking about.
+It reads every PV behind that Supply (each channel's fault, trip and
+warning, plus the system-wide comms flag, which gates this Supply's
+verdict as much as its own channels do) and writes ONE row: `RELAYED`
+only if every one of them answered, `UNREACHED` naming the first that
+did not. That all-or-nothing grading is the same asymmetry `_verdict`
+already applies, for the same reason: losing sight of any one channel
+costs the Supply its claim to being seen, because a trail that says
+"watched" while a circuit is dark is worth less than no trail at all.
+Per-PV rows were the alternative and would multiply two rows a tick into
+thirty-two without answering a question the aggregate row leaves open.
+
+The poller is a SIBLING of the pumps rather than nested inside one, for
+the reason the enclosure precedent gives: a pump returns as soon as its
+subscription ends, and `_drain` only re-subscribes once every pump has
+returned, so a poller living inside a pump would die with it and could
+never observe a recovery. As a sibling it keeps ticking through a dead
+push path, and its probes are then the only remaining signal about which
+specific PVs are unreachable.
+
+A tick NEVER carries a status claim and never touches `latest`, so it
+cannot move a Supply. That is a deliberate line rather than an omission.
+It keeps exactly one path able to change a Supply's status, the push
+path that carries the whole believability fold and all of its tests, and
+it keeps `ReachTier`'s promise honest: a successful poll proves the
+configured channels answered this tick, never that the verdict standing
+in `latest` is current. Using poll reads to REFRESH `latest` would be a
+different feature (repairing a silently dropped CA monitor update)
+carrying its own unanswered question, what a failed read should do to a
+value a subscription reported perfectly well a moment earlier, and
+settling that by accident inside a coverage-trail change is how a
+fail-open arrives unreviewed.
+
 ## Warnings, gated off by default
 
 The 30 warning channels map to `Degraded`, one severity rung below a
@@ -311,6 +355,10 @@ class _PumpDone:
 
 _PUMP_DONE = _PumpDone()
 
+# What travels the merge queue: a pump's per-PV believability reading, a
+# poller's ready-made probe observation, or a pump's completion sentinel.
+_QueueItem = tuple[str, bool | None] | SupplyObservation | _PumpDone
+
 
 class BlepsSupplyObserver:
     """`SupplyObserver` over a `ControlPort`, aggregating BLEPS channels.
@@ -334,11 +382,13 @@ class BlepsSupplyObserver:
         channels: Sequence[BlepsChannel],
         communications_fault_pv: str | None,
         clock: Clock,
+        probe_tick_seconds: float | None = None,
     ) -> None:
         self._control_port = control_port
         self._channels = tuple(channels)
         self._communications_fault_pv = communications_fault_pv
         self._clock = clock
+        self._probe_tick_seconds = probe_tick_seconds
         # Log-only, NOT verdict state: suppresses a repeated "feed is
         # dark" warning. Losing it would cost a log line and nothing else.
         self._reported_dark = False
@@ -361,14 +411,27 @@ class BlepsSupplyObserver:
         # its absence.
         latest: dict[str, bool | None] = {}
 
-        queue: asyncio.Queue[tuple[str, bool | None] | _PumpDone] = asyncio.Queue()
-        tasks = [asyncio.create_task(self._pump(pv, queue), name=f"bleps-pump:{pv}") for pv in pvs]
-        remaining = len(tasks)
+        queue: asyncio.Queue[_QueueItem] = asyncio.Queue()
+        pump_tasks = [
+            asyncio.create_task(self._pump(pv, queue), name=f"bleps-pump:{pv}") for pv in pvs
+        ]
+        poll_tasks = self._poll_tasks(channels, queue)
+        tasks = pump_tasks + poll_tasks
+        # Only pumps ever signal completion; a poller runs until the
+        # `finally` below cancels it, so it must not hold this open.
+        remaining = len(pump_tasks)
         try:
             while remaining > 0:
                 item = await queue.get()
                 if isinstance(item, _PumpDone):
                     remaining -= 1
+                    continue
+                if isinstance(item, SupplyObservation):
+                    # A poll tick, already shaped. It bypasses `latest`
+                    # and `_observations` entirely: a probe is a reach
+                    # fact, not a reading, and folding one in would let a
+                    # timer move a Supply.
+                    yield item
                     continue
                 pv, value = item
                 latest[pv] = value
@@ -389,18 +452,41 @@ class BlepsSupplyObserver:
                     channels, latest, affected_supply_codes=affected
                 ):
                     yield observation
+            # Every pump has finished, but a still-running poller can have
+            # enqueued a probe in the same instant the final `_PumpDone`
+            # was read (`put_nowait` needs no await, so it is not ordered
+            # against the `remaining` check above). Drain exactly what is
+            # ALREADY queued, synchronously, into a list before yielding
+            # any of it: yielding suspends this generator and hands
+            # control back to a poller, which could otherwise keep
+            # `qsize()` perpetually non-zero and stop `_drain` from ever
+            # returning to let the runtime re-subscribe.
+            #
+            # Only probes can be left over, never readings: `remaining`
+            # reaches zero only once every pump's `_PumpDone` has been
+            # READ, and each pump queues its readings ahead of its own
+            # sentinel, so FIFO order has already delivered them.
+            leftover = [queue.get_nowait() for _ in range(queue.qsize())]
+            for item in leftover:
+                if isinstance(item, SupplyObservation):
+                    yield item
         finally:
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
 
     def _subscribed_pvs(self, channels: Iterable[BlepsChannel]) -> list[str]:
-        """Subscription order: trust before process, system before channel.
+        """Every PV behind `channels`: trust before process, system before channel.
 
         The comms flag comes first, then each channel's instrumentation
         fault ahead of its trip and warning. Order does not change any
         verdict now that "clear" requires every channel, but it still
         decides how quickly the first real verdict can form.
+
+        Also the poller's read set, called there with one Supply's
+        channels rather than all of them. The comms flag belongs in
+        both: a Supply whose feed is dark cannot be assessed, so a tick
+        that could not read it has not reached that Supply either.
         """
         pvs: list[str] = []
         if self._communications_fault_pv:
@@ -459,14 +545,24 @@ class BlepsSupplyObserver:
                 by_supply.setdefault(channel.supply_code, []).append(channel)
         if self._communications_lost(latest):
             return [
-                self._probe_only(supply_code, pv=supply_channels[0].trip_pv)
+                self._probe_only(
+                    supply_code,
+                    pv=supply_channels[0].trip_pv,
+                    reach_tier=ReachTier.UNREACHED,
+                )
                 for supply_code, supply_channels in sorted(by_supply.items())
             ]
         observations: list[SupplyObservation] = []
         for supply_code, supply_channels in sorted(by_supply.items()):
             verdict = self._verdict(supply_channels, latest)
             if verdict is None:
-                observations.append(self._probe_only(supply_code, pv=supply_channels[0].trip_pv))
+                observations.append(
+                    self._probe_only(
+                        supply_code,
+                        pv=supply_channels[0].trip_pv,
+                        reach_tier=ReachTier.UNREACHED,
+                    )
+                )
                 continue
             trip_culprits, warning_culprits = verdict
             if trip_culprits:
@@ -588,29 +684,120 @@ class BlepsSupplyObserver:
             source_id=pv,
         )
 
-    def _probe_only(self, supply_code: str, *, pv: str) -> SupplyObservation:
-        """A reach fact with no status claim: the verdict was inconclusive.
+    def _probe_only(self, supply_code: str, *, pv: str, reach_tier: ReachTier) -> SupplyObservation:
+        """A reach fact with no status claim.
+
+        Two callers, two different facts, one tier vocabulary.
+        `_observations` builds these when a verdict is inconclusive and
+        always grades them `UNREACHED`; `_poll` builds them on a timer
+        and grades the tick itself. `ReachTier` measures reach, not its
+        cause, so the two meanings share `UNREACHED` legitimately: the
+        enclosure precedent overloads it the same way, for a failed poll
+        and for a disconnect.
 
         `reason` is empty because nothing reads it: the runtime returns
         before building a transition command when `observed_status` is
         `None`. `pv` names the channel this probe row is attributed to;
-        callers pass the supply's first trip PV, mirroring how a real
+        callers pass the Supply's first trip PV, mirroring how a real
         `Unavailable`/`Recovering` verdict already attributes to one
-        representative channel rather than the whole set.
+        representative channel rather than the whole set. `_poll`
+        departs from that on failure alone, naming the PV that actually
+        went unread, because an `UNREACHED` row is only actionable if it
+        says which channel to go and look at.
         """
         return SupplyObservation(
             supply_code=supply_code,
             observed_status=None,
-            reach_tier=ReachTier.UNREACHED,
+            reach_tier=reach_tier,
             observed_at=self._clock.now(),
             reason="",
             source_kind=_SOURCE_KIND,
             source_id=pv,
         )
 
-    async def _pump(
-        self, pv: str, queue: asyncio.Queue[tuple[str, bool | None] | _PumpDone]
+    def _poll_tasks(
+        self, channels: Sequence[BlepsChannel], queue: asyncio.Queue[_QueueItem]
+    ) -> list[asyncio.Task[None]]:
+        """One poller per in-scope Supply, or none when ticks are disabled.
+
+        Grouping by Supply rather than by PV is what makes the tick's
+        output one row per Supply per tick; see the module docstring.
+        """
+        if self._probe_tick_seconds is None:
+            return []
+        by_supply: dict[str, list[BlepsChannel]] = {}
+        for channel in channels:
+            by_supply.setdefault(channel.supply_code, []).append(channel)
+        return [
+            asyncio.create_task(
+                self._poll(supply_code, supply_channels, queue),
+                name=f"bleps-poll:{supply_code}",
+            )
+            for supply_code, supply_channels in sorted(by_supply.items())
+        ]
+
+    async def _poll(
+        self,
+        supply_code: str,
+        channels: Sequence[BlepsChannel],
+        queue: asyncio.Queue[_QueueItem],
     ) -> None:
+        """Re-affirm reach to one Supply's whole channel set every tick.
+
+        Never pushes `_PumpDone`: this task is a sibling of the pumps,
+        not a stage in any pump's lifecycle, and runs until `_drain`'s
+        `finally` cancels it on teardown. It ticks unconditionally,
+        regardless of how much push traffic the channels are producing,
+        which is simpler than gating on quiescence and avoids the "a
+        chatty Supply is never polled" surprise that gating would carry.
+
+        Reads are concurrent so the tick costs one round trip rather
+        than thirty-two, and `return_exceptions=True` makes every
+        per-PV failure a datum instead of an escape: a probe recording
+        that CORA could not see a channel is the entire point, so there
+        is nothing here to raise about. Hence no `except` clause, unlike
+        `_pump`. Teardown still works: a cancellation aimed at THIS task
+        propagates out of `gather` rather than being collected. A
+        cancellation raised inside one read is collected like any other
+        failure, which is the right reading of it, that channel went
+        unread this tick.
+
+        One row per tick, `RELAYED` only if every PV answered. A partial
+        read is graded `UNREACHED` and attributed to the first PV that
+        failed: reporting reach because some channels answered would put
+        exactly the false coverage claim in the trail that the trail
+        exists to rule out.
+        """
+        assert self._probe_tick_seconds is not None
+        pvs = self._subscribed_pvs(channels)
+        representative_pv = channels[0].trip_pv
+        while True:
+            await asyncio.sleep(self._probe_tick_seconds)
+            results = await asyncio.gather(
+                *(self._control_port.read(pv) for pv in pvs), return_exceptions=True
+            )
+            unread = [
+                pv
+                for pv, result in zip(pvs, results, strict=True)
+                if isinstance(result, BaseException)
+            ]
+            if unread:
+                _log.warning(
+                    "bleps_observer.probe_unreached",
+                    supply_code=supply_code,
+                    unread_pvs=unread,
+                    read_count=len(pvs),
+                    detail="probe tick could not read every channel behind this supply",
+                )
+            queue.put_nowait(
+                self._probe_only(
+                    supply_code,
+                    pv=unread[0] if unread else representative_pv,
+                    reach_tier=ReachTier.UNREACHED if unread else ReachTier.RELAYED,
+                )
+            )
+
+    async def _pump(self, pv: str, queue: asyncio.Queue[_QueueItem]) -> None:
         """Forward one PV's believability to the merge queue.
 
         A clean stream end keeps the last reading rather than voiding it,
