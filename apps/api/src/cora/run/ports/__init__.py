@@ -18,6 +18,7 @@ from cora.run.ports.capture_observer import (
 )
 from cora.run.ports.run_channel_lookup import (
     InMemoryRunChannelLookup,
+    RunChannelCategoricalLatest,
     RunChannelLatest,
     RunChannelLookup,
     RunChannelSignal,
@@ -34,6 +35,7 @@ __all__ = [
     "CaptureProgressObservation",
     "InMemoryRunChannelLookup",
     "QuietCaptureObserver",
+    "RunChannelCategoricalLatest",
     "RunChannelLatest",
     "RunChannelLookup",
     "RunChannelSignal",

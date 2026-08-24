@@ -22,6 +22,8 @@ CAPTURE_SCAN_INGESTOR_BINDINGS as JSON, keyed by capture code:
     CAPTURE_SCAN_INGESTOR_BINDINGS='{
       "2bmb-tomoscan": {
         "producing_asset_id": "0c5e...-camera-asset-uuid",
+        "camera_channel_name": "camera_selected",
+        "expected_camera_label": "Camera Selected 0",
         "locations": {
           "/local1/2BM": {
             "supply_id": "b2a1...-storage-supply-uuid",
@@ -39,6 +41,25 @@ CAPTURE_SCAN_INGESTOR_BINDINGS as JSON, keyed by capture code:
 
 A code absent from this map is never auto-ingested, mirroring every
 other per-code table's optionality.
+
+## `camera_channel_name` + `expected_camera_label`: the producing-Asset cross-check
+
+Both optional, both-or-neither (see `_validate_camera_expectation`). Named
+separately from `producing_asset_id` rather than replacing it with a
+per-camera map: `producing_asset_id` stays the one fixed Asset this code
+mints Datasets under, and these two fields let `CaptureScanIngestor` REFUSE
+a candidate rather than auto-route to a different Asset when the recorded
+evidence disagrees, per this deployment's own preference for a loud
+refusal over a guessed correction.
+
+`camera_channel_name` names a `capture_baseline_pvs` channel (recorded once
+per Run, at promotion, by the already-shipped `CaptureBaselineReader`) that
+must ALSO be configured under `CAPTURE_BASELINE_PVS` for this to do
+anything; `expected_camera_label` is the resolved label (`Observation.
+categorical_value`) that channel is expected to carry when this code's
+`producing_asset_id` is correct. See `cora.api._capture_scan_ingestor`'s
+module docstring for why this reads each candidate's OWN recorded
+observation rather than polling the camera-selection PV live.
 """
 
 from collections.abc import Mapping
@@ -46,7 +67,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from cora.shared.path_segment import is_safe_path_segment
 from cora.shared.storage_root import normalize_storage_root, require_nonempty_absolute_root
@@ -131,6 +152,59 @@ class CaptureScanIngestorBinding(BaseModel):
             "keyed by the root itself (normalized at validation time)."
         )
     )
+    camera_channel_name: str | None = Field(
+        default=None,
+        description=(
+            "The `capture_baseline_pvs` channel name this code's operator "
+            "declared for the beamline's camera-selection readback PV (e.g. "
+            "2-BM's `2bm:MCTOptics:CameraSelected`, conventionally under the "
+            "channel name `camera_selected`). Set together with "
+            "`expected_camera_label` to have `CaptureScanIngestor` refuse a "
+            "candidate whose recorded camera-selection observation disagrees "
+            "with (or is missing for) the camera `producing_asset_id` "
+            "assumes, rather than silently attributing every scan under "
+            "this code to one fixed Asset regardless of which camera "
+            "actually produced it. None (the default) leaves this "
+            "cross-check off, matching this binding's other optional fields."
+        ),
+    )
+    expected_camera_label: str | None = Field(
+        default=None,
+        description=(
+            "The resolved camera-selection label (the `Observation."
+            "categorical_value` `CaptureBaselineReader` records under "
+            "`camera_channel_name`) that `producing_asset_id` assumes. "
+            "Compared against each candidate's OWN recorded observation for "
+            "its `run_id`, never against a live PV read, since a candidate "
+            "may be backlogged: see `cora.api._capture_scan_ingestor`'s "
+            "module docstring for why the check must be per-run."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_camera_expectation(self) -> "CaptureScanIngestorBinding":
+        """`camera_channel_name` and `expected_camera_label` are both-or-neither.
+
+        One set without the other is a config mistake, not a valid partial
+        state: a channel name with no expected label has nothing to compare
+        against, and an expected label with no channel name has nowhere to
+        read the observation from. Neither half can silently no-op the
+        other's intent.
+        """
+        has_channel = self.camera_channel_name is not None
+        has_label = self.expected_camera_label is not None
+        if has_channel != has_label:
+            msg = (
+                "camera_channel_name and expected_camera_label must be set "
+                "together or not at all. Got "
+                f"camera_channel_name={self.camera_channel_name!r}, "
+                f"expected_camera_label={self.expected_camera_label!r}."
+            )
+            raise ValueError(msg)
+        if has_channel and (not self.camera_channel_name or not self.expected_camera_label):
+            msg = "camera_channel_name and expected_camera_label must both be non-empty when set."
+            raise ValueError(msg)
+        return self
 
     @field_validator("locations")
     @classmethod

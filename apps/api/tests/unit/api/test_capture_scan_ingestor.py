@@ -8,8 +8,10 @@ design head-of-line-blocking every run behind one stuck one), a
 successful ingest calls `IngestScan` with the right fields, every
 documented `IngestScan` failure mode is caught rather than propagated,
 `UnauthorizedError` stops the whole tick rather than burning attempts on
-candidates that would fail identically, and the observed path (personal
-data) never reaches a log line.
+candidates that would fail identically, the observed path (personal
+data) never reaches a log line, and the producing-Asset camera
+cross-check SKIPs on a mismatch or a missing observation rather than
+ingesting under an unconfirmed assumption.
 
 The candidate SQL itself (`PostgresScanIngestCandidateLookup`) is an
 integration-tier concern; see `test_capture_scan_ingestor_postgres.py`.
@@ -52,6 +54,7 @@ from cora.infrastructure.capture_scan_ingestor_binding import (
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.run.ports import InMemoryRunChannelLookup
 from tests.unit._helpers import DEFAULT_NOW
 
 if TYPE_CHECKING:
@@ -538,6 +541,124 @@ async def test_tick_with_a_gdata_candidate_uses_the_gdata_locations_fields() -> 
     command = ingest_scan.calls[0]
     assert command.supply_id == _SUPPLY_ID_2
     assert command.access_protocol == "NFS"
+
+
+_CAMERA_CHANNEL = "camera_selected"
+_EXPECTED_CAMERA_LABEL = "Camera Selected 0"
+
+
+def _bindings_with_camera_expectation() -> dict[str, CaptureScanIngestorBinding]:
+    return {
+        "2bmb-tomoscan": CaptureScanIngestorBinding(
+            producing_asset_id=_ASSET_ID,
+            camera_channel_name=_CAMERA_CHANNEL,
+            expected_camera_label=_EXPECTED_CAMERA_LABEL,
+            locations={
+                "/local1/2BM": CaptureScanIngestorLocation(
+                    supply_id=_SUPPLY_ID, access_protocol="POSIX"
+                )
+            },
+        )
+    }
+
+
+@pytest.mark.unit
+async def test_tick_with_a_confirmed_camera_ingests_normally() -> None:
+    """The recorded observation matches `expected_camera_label`: proceeds
+    exactly like a binding with no camera expectation configured."""
+    channel_lookup = InMemoryRunChannelLookup()
+    channel_lookup.register_categorical(
+        run_id=_RUN_ID,
+        channel_name=_CAMERA_CHANNEL,
+        categorical_value=_EXPECTED_CAMERA_LABEL,
+        recorded_at=DEFAULT_NOW,
+    )
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings_with_camera_expectation(),
+        run_channel_lookup=channel_lookup,
+    )
+
+    await ingestor.tick()
+
+    assert len(ingest_scan.calls) == 1
+    assert ingest_scan.calls[0].producing_run_id == _RUN_ID
+
+
+@pytest.mark.unit
+async def test_tick_with_a_mismatched_camera_skips_and_logs() -> None:
+    """The recorded observation names a DIFFERENT camera than
+    `producing_asset_id` assumes: this is the actual bug the check
+    exists to catch, so it must SKIP rather than ingest under the wrong
+    Asset."""
+    channel_lookup = InMemoryRunChannelLookup()
+    channel_lookup.register_categorical(
+        run_id=_RUN_ID,
+        channel_name=_CAMERA_CHANNEL,
+        categorical_value="Camera Selected 1",
+        recorded_at=DEFAULT_NOW,
+    )
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings_with_camera_expectation(),
+        run_channel_lookup=channel_lookup,
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await ingestor.tick()
+
+    assert ingest_scan.calls == []
+    events = [entry["event"] for entry in logs]
+    assert "capture_scan_ingestor.camera_mismatch" in events
+    assert "capture_scan_ingestor.camera_unconfirmed" not in events
+
+
+@pytest.mark.unit
+async def test_tick_with_no_recorded_camera_observation_skips_and_logs() -> None:
+    """No observation at all (older backlog run, feature not enabled at
+    capture time, dead PV) fails CLOSED rather than assuming a match --
+    see [[feedback-optional-role-disables-safety-check]]."""
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings_with_camera_expectation(),
+        run_channel_lookup=InMemoryRunChannelLookup(),
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await ingestor.tick()
+
+    assert ingest_scan.calls == []
+    events = [entry["event"] for entry in logs]
+    assert "capture_scan_ingestor.camera_unconfirmed" in events
+
+
+@pytest.mark.unit
+async def test_tick_with_no_camera_expectation_configured_ingests_unaffected() -> None:
+    """A binding with `expected_camera_label` unset (every binding in this
+    file's default `_bindings()` fixture) is byte-identical to today's
+    behavior: no camera check runs, regardless of what the (unused,
+    default in-memory) channel lookup would have said."""
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(), candidate_lookup=lookup, ingest_scan=ingest_scan, bindings=_bindings()
+    )
+
+    await ingestor.tick()
+
+    assert len(ingest_scan.calls) == 1
 
 
 @pytest.mark.unit

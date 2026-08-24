@@ -192,6 +192,76 @@ async def test_latest_returns_the_numeric_row_even_when_a_later_categorical_row_
 
 
 @pytest.mark.integration
+async def test_categorical_latest_returns_none_for_unknown_channel(db_pool: asyncpg.Pool) -> None:
+    lookup = PostgresRunChannelLookup(db_pool)
+    got = await lookup.read_run_channel_categorical_latest(
+        run_id=uuid4(), channel_name="camera_selected"
+    )
+    assert got is None
+
+
+@pytest.mark.integration
+async def test_categorical_latest_returns_most_recent_by_recorded_at(
+    db_pool: asyncpg.Pool,
+) -> None:
+    run_id = uuid4()
+    store = PostgresObservationStore(db_pool)
+    lookup = PostgresRunChannelLookup(db_pool)
+
+    first = _categorical_obs(run_id, "camera_selected", "Camera Selected 1")
+    await store.append([first])
+    await asyncio.sleep(0.01)  # guarantee a strictly later recorded_at
+    second = _categorical_obs(run_id, "camera_selected", "Camera Selected 0")
+    await store.append([second])
+
+    latest = await lookup.read_run_channel_categorical_latest(
+        run_id=run_id, channel_name="camera_selected"
+    )
+    assert latest is not None
+    assert latest.categorical_value == "Camera Selected 0"
+    assert latest.recorded_at == await _recorded_at(db_pool, second.event_id)
+
+
+@pytest.mark.integration
+async def test_categorical_latest_never_surfaces_a_numeric_row(db_pool: asyncpg.Pool) -> None:
+    """The mirror image of `test_latest_never_surfaces_a_categorical_row`:
+    a channel_name that only ever produced a numeric reading must read as
+    `None` here, never surface the numeric row as if it were a
+    categorical label. Guards `_LATEST_CATEGORICAL_SQL`'s `categorical_value
+    IS NOT NULL` filter."""
+    run_id = uuid4()
+    store = PostgresObservationStore(db_pool)
+    lookup = PostgresRunChannelLookup(db_pool)
+
+    await store.append([_obs(run_id, "snr", 4.0)])
+
+    got = await lookup.read_run_channel_categorical_latest(run_id=run_id, channel_name="snr")
+    assert got is None
+
+
+@pytest.mark.integration
+async def test_categorical_latest_returns_the_categorical_row_even_when_a_later_numeric_row_exists(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A categorical row stays the latest CATEGORICAL reading even when a
+    numeric row for the SAME channel_name is written afterward."""
+    run_id = uuid4()
+    store = PostgresObservationStore(db_pool)
+    lookup = PostgresRunChannelLookup(db_pool)
+
+    categorical = _categorical_obs(run_id, "shared_channel", "Camera Selected 0")
+    await store.append([categorical])
+    await asyncio.sleep(0.01)
+    await store.append([_obs(run_id, "shared_channel", 42.0)])
+
+    latest = await lookup.read_run_channel_categorical_latest(
+        run_id=run_id, channel_name="shared_channel"
+    )
+    assert latest is not None
+    assert latest.categorical_value == "Camera Selected 0"
+
+
+@pytest.mark.integration
 async def test_window_never_counts_a_categorical_row(db_pool: asyncpg.Pool) -> None:
     """A window read over a channel carrying only categorical rows
     reports a zero-count signal (cannot-tell -> defer), never counting
