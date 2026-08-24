@@ -118,6 +118,30 @@ def test_reconstruction_round_trips_measurement_fields() -> None:
 
 
 @pytest.mark.unit
+def test_reconstruction_defaults_a_missing_quality_to_bad_not_good() -> None:
+    """A measurement dict with no `quality` key rebuilds unbelievable, not clean.
+
+    Every row `_outcome_measurement_to_dict` writes today includes the
+    field, so this default is unreachable through the current write
+    path; it exists only for a leaner recorded shape. `Good` would be
+    the fail-open choice: it would let a reading of genuinely unknown
+    trustworthiness pass `botorch_decide_port._is_usable`'s `actionable`
+    floor and re-enter the brain's fit on resume. `Bad` fails every
+    quality floor in the codebase, so a row missing the field is
+    excluded exactly as if the substrate itself had reported `Bad`.
+    """
+    outcome = RecordedOutcome(
+        iteration_index=0,
+        point={"energy": 8.0},
+        measurements=[{"name": "flux", "value": 7.25, "kind": "Scalar"}],
+        succeeded=True,
+        actuation_kind="Physical",
+    )
+    obs = reconstruct_observations([outcome])
+    assert obs[0].measurements[0].quality == "Bad"
+
+
+@pytest.mark.unit
 def test_reconstruction_preserves_failed_pass_and_actuation_kind() -> None:
     outcomes = [
         _outcome(index=0, point={"energy": 9.0}, value=1.0),

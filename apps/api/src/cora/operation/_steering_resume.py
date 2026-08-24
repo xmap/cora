@@ -79,13 +79,25 @@ def _measurement_from_dict(raw: dict[str, Any]) -> Measurement:
     same thing the adapters now say when a substrate stamps nothing. This
     used to rebuild as the Unix epoch, which put a 1970 date on a
     measurement whose time was simply never recorded.
+
+    A recorded row with no `quality` rebuilds to `Bad`, not `Good`. Every
+    row written by the current `_outcome_measurement_to_dict` always
+    includes the field, so this default is unreachable today; it exists
+    only for a leaner row shape this function has never actually been
+    asked to read. `Bad` is still the right unreachable default, because
+    the alternative fails open: `Good` would let a row of genuinely
+    unknown trustworthiness pass `botorch_decide_port._is_usable`'s
+    `actionable` floor and re-enter the brain's fit on a resume, while
+    `Bad` fails every quality floor in the codebase and the reconstructed
+    observation is excluded exactly as if the reading had come back
+    `Bad` the first time.
     """
     produced_at_raw = raw.get("produced_at")
     produced_at = (
         datetime.fromisoformat(produced_at_raw) if isinstance(produced_at_raw, str) else None
     )
     kind: MeasurementKind = raw.get("kind", "Scalar")
-    quality: Quality = raw.get("quality", "Good")
+    quality: Quality = raw.get("quality", "Bad")
     return Measurement(
         value=raw.get("value"),
         kind=kind,
