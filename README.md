@@ -1493,7 +1493,7 @@
 | src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        1 |        4 |        0 |     97.4% |        95 |
 | src/cora/infrastructure/kernel.py                                                        |       36 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/list\_query.py                                                   |       94 |        0 |       30 |        0 |    100.0% |           |
-| src/cora/infrastructure/logging.py                                                       |       21 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/infrastructure/logging.py                                                       |       26 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/mcp\_principal.py                                                |       39 |        1 |       12 |        1 |     96.1% |       147 |
 | src/cora/infrastructure/observability/\_\_init\_\_.py                                    |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/observability/correlation.py                                     |        9 |        0 |        2 |        0 |    100.0% |           |
@@ -2692,7 +2692,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **60743** | **1381** | **9204** |  **414** | **97.2%** |           |
+| **TOTAL**                                                                                | **60748** | **1381** | **9204** |  **414** | **97.2%** |           |
 
 
 ## Setup coverage badge
