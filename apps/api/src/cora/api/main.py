@@ -1342,6 +1342,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 ],
                 communications_fault_pv=settings.bleps_communications_fault_pv or None,
                 clock=deps.clock,
+                probe_tick_seconds=settings.bleps_supply_probe_tick_seconds,
             )
 
             try:

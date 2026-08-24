@@ -1255,3 +1255,34 @@ def test_settings_scan_probe_allowed_roots_rejects_bare_root(
     monkeypatch.setenv("SCAN_PROBE_ALLOWED_ROOTS", '["/"]')
     with pytest.raises(pydantic.ValidationError, match="normalizes to the empty string"):
         Settings()
+
+
+@pytest.mark.unit
+def test_settings_bleps_supply_probe_tick_defaults_to_disabled() -> None:
+    """The kill switch's off position, which is also every deployment's
+    boot state: no polling of the interlock IOC until someone asks for it.
+    """
+    assert Settings().bleps_supply_probe_tick_seconds is None
+
+
+@pytest.mark.unit
+def test_settings_bleps_supply_probe_tick_rejects_a_sub_tenth_second_cadence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A tick under 0.1s reads every BLEPS channel ten-plus times a second
+    against a shared equipment-protection IOC, which no coverage question
+    needs. `None`, not zero, is how the poll is turned off.
+    """
+    import pydantic
+
+    monkeypatch.setenv("BLEPS_SUPPLY_PROBE_TICK_SECONDS", "0.05")
+    with pytest.raises(pydantic.ValidationError, match=r"must be >= 0\.1"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_bleps_supply_probe_tick_accepts_a_real_cadence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("BLEPS_SUPPLY_PROBE_TICK_SECONDS", "300")
+    assert Settings().bleps_supply_probe_tick_seconds == 300.0
