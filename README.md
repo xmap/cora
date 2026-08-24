@@ -1600,7 +1600,7 @@
 | src/cora/operation/\_recipe\_expansion/\_replay.py                                       |       29 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/operation/\_recipe\_expansion/\_resolved\_steps\_replay.py                      |        7 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/operation/\_steering\_resume.py                                                 |       14 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/acquisitions.py                                                       |      116 |        2 |       26 |        4 |     95.8% |240, 338, 453-\>458, 455-\>458 |
+| src/cora/operation/acquisitions.py                                                       |      147 |        1 |       42 |        3 |     97.9% |366, 593-\>598, 595-\>598 |
 | src/cora/operation/adapters/\_\_init\_\_.py                                              |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/adapters/\_llm\_decide\_prompt.py                                     |       32 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/adapters/\_optional\_tango.py                                         |        7 |        0 |        2 |        0 |    100.0% |           |
@@ -2692,7 +2692,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **60712** | **1382** | **9188** |  **415** | **97.2%** |           |
+| **TOTAL**                                                                                | **60743** | **1381** | **9204** |  **414** | **97.2%** |           |
 
 
 ## Setup coverage badge
