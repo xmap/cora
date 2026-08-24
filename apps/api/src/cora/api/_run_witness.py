@@ -65,7 +65,12 @@ Per capture_code, a small dedup state machine:
     committed (see `RunWitnessRecorder._read_baseline`). Also calls the
     configured `CaptureExperimentIdentityReader` (slice 14a) exactly once, same
     posture, to vault the proposal / ESAF / ESAF-DOI PVs against the new
-    Run (see `RunWitnessRecorder._read_experiment_identity`).
+    Run (see `RunWitnessRecorder._read_experiment_identity`). Before the
+    `RecordWitnessedRun` command is even built, consumes the retained
+    `orchestrator_ref` reading for this code (if any) through the
+    consume-once staleness guard, so the promoted Run's genesis can
+    carry an external orchestrator's own run identifier as a second
+    `external_refs` entry (see "Orchestrator-ref pairing" below).
   - `BEGUN` while a Run is already open for this code: the previous
     terminal was missed (dropped CA transition, or the substrate
     restarted mid-capture). `TruncateRun` the stale Run first
@@ -245,6 +250,94 @@ on the fifth kill switch, `capture_path_recording_enabled`. No log
 line in this section ever includes `observed_path` itself; only
 `capture_code` / `run_id` / lengths.
 
+## Orchestrator-ref pairing
+
+Joins a witnessed Run to an external orchestrator's own run identifier
+for the same capture (e.g. a Bluesky RunEngine start-document uid),
+carried as a second `external_refs` entry on `RunStarted` alongside
+`capture-code`. Closes the "which Bluesky run produced this CORA Run"
+findability gap the same way slice 13 closes the file-identity one;
+CORA still never talks to the orchestrator directly, it only reads
+whatever run identifier the orchestrator wrote to the substrate before
+triggering the act `CaptureObserver` watches.
+
+The ordering is the INVERSE of the capture-path guard above: a run uid
+is written BEFORE the capture it names begins, never after, so there
+is no "did the file open before or after BEGUN" question here -- the
+question is "did this retained uid lead the current BEGUN by a
+plausible amount, or is it a stale leftover from some earlier capture
+whose BEGUN this recorder never saw close it out."
+
+The guard, in `_consume_orchestrator_ref`: a retained reading is
+CONSUMED (popped, never merely read) the moment a `BEGUN` for its
+capture code is promoted, whether or not the reading passes the
+checks below -- the structural fix, not a heuristic. A reading that
+fails a check is simply gone; it cannot be reused by a LATER capture
+the way a bug in a peek-without-pop implementation would allow. Then,
+only if consumption returned something:
+
+  - `observed_at` must be present on both the retained reading and
+    the current BEGUN. Either missing means there is no substrate time
+    to compare, so the guard fails closed (mirrors `_resolve_capture_
+    path`'s identical posture when `_begun_at` has no entry).
+  - The lead (`begun_at - observed_at`) must be non-negative: a
+    negative lead means the uid reading's own substrate timestamp is
+    AFTER this BEGUN's, which should not happen if the orchestrator
+    writes its uid first, and signals either substrate clock skew
+    between two channels or the two pumps having delivered out of
+    their causal order (see the residual below).
+  - The lead must not exceed `capture_orchestrator_ref_max_lead_
+    seconds` (deployment-declared, not hardcoded): a uid retained far
+    longer than a real orchestrator-to-BEGUN gap is more likely a
+    stale leftover from a capture whose own BEGUN this recorder never
+    promoted (a reconnect, or a non-orchestrator-driven scan that
+    started while the substrate still held the previous run's uid)
+    than genuine evidence for the current one.
+  - The `(scheme, value)` pair must construct a valid `Identifier`:
+    `Identifier.__post_init__` bounds both fields' length and rejects
+    empty/whitespace-only text, the same validation `capture-code`
+    itself is subject to.
+
+Gated on the TENTH kill switch, `capture_orchestrator_ref_recording_enabled`,
+independently of `run_witness_recording_enabled`'s sibling switches for
+the personal-data-adjacent roles: unlike an observed capture path, a
+run uid is not personal data, but it IS a second identity a facility
+may want to withhold from the record independently of witnessing
+itself (e.g. while `tomo-bits`' own plan is still being validated
+against production). Retention (`observe_orchestrator_ref`) is gated
+only on `run_witness_recording_enabled`, matching
+`observe_capture_path`'s declare-vs-record split, so flipping the
+tenth switch later does not miss whatever was already retained.
+
+### Accepted residual: a stray scan inside the lead-time window can inherit a stale ref
+
+The lead-time bound above narrows the exposure but does not close it:
+if the orchestrator writes a uid, its own process is killed before it
+clears the PV (a `finally` never runs), and a DIFFERENT tool starts a
+real scan on the SAME capture code within the configured lead-time
+window, this recorder cannot tell the two apart -- it attaches the
+stale-but-recent uid to a Run the orchestrator never actually drove.
+Same severity class as the reconnect-during-BEGUN residual above (a
+data-quality degradation: one Run carries a ref that does not
+describe it, never a corrupted attribution to a DIFFERENT Run's
+event stream), and the same posture: no narrower signal is
+implemented here; revisit if this is ever observed in practice.
+
+### Accepted residual: the orchestrator-ref and status pumps have no enforced ordering
+
+Mirrors the accepted `status`/`abort` pump-ordering residual above
+exactly, for the same structural reason (`_capture_observer.py` runs
+one pump per role, all feeding one unordered merge queue): if a
+reconnect or an adversarial delivery pattern lets a capture's own
+`BEGUN` reading reach this recorder BEFORE its paired
+`orchestrator_ref` reading (despite the orchestrator having
+written the uid to the substrate first), `_promote` finds nothing
+retained and the Run promotes with no orchestrator ref at all -- never
+a wrong one. The uid reading, arriving moments later, is then retained
+for whatever capture comes NEXT, which is exactly the stale-leftover
+shape the lead-time bound above exists to catch on that next
+promotion.
+
 ## Retry + resilience
 
 Mirrors `run_enclosure_permit_monitor`: `observe()` ending (stream
@@ -291,11 +384,13 @@ from cora.run.features.truncate_run.command import TruncateRun
 from cora.run.ports.capture_observer import (
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CaptureOrchestratorRefObservation,
     CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
+from cora.shared.identifier import Identifier, InvalidIdentifierError
 from cora.shared.identity import MonitorSourceId
 from cora.shared.storage_root import matched_storage_root
 
@@ -422,6 +517,16 @@ class RunWitnessRecorder:
         capture_code, mirroring `_last_progress`'s retain-latest shape.
         Evicted in lockstep with `_begun_at` below in `_promote` /
         `_truncate_stale` / `_record_outcome`'s success path."""
+        self._last_orchestrator_ref: dict[str, CaptureOrchestratorRefObservation] = {}
+        """The latest `orchestrator_ref` reading retained per
+        capture_code, mirroring `_last_capture_path`'s retain-latest
+        shape. UNLIKE every other retained dict on this recorder,
+        consumption is a POP, not a lookup: `_consume_orchestrator_ref`
+        (called from `_promote`) always removes the entry for the code
+        being promoted, whether or not the reading passes its guard,
+        so a rejected reading can never be reused by a later capture.
+        See this module's "Orchestrator-ref pairing" docstring
+        section."""
         self._begun_at: dict[str, datetime] = {}
         """Slice 13: the BEGUN observation's OWN substrate time per
         capture_code, recorded in `_promote`. The dual-clock guard in
@@ -651,6 +756,89 @@ class RunWitnessRecorder:
             return None
         return observation.observed_path, observation.observed_at
 
+    def observe_orchestrator_ref(self, observation: CaptureOrchestratorRefObservation) -> None:
+        """Retain the latest `orchestrator_ref` reading per
+        capture_code, so the NEXT `BEGUN` for this code can attach it to
+        the witnessed genesis as a second `external_refs` entry (see
+        `_promote` / `_consume_orchestrator_ref`).
+
+        Gated on `run_witness_recording_enabled` only, same as
+        `observe_capture_path`: retention is cheap and reversible; the
+        actual attachment onto `RunStarted` is separately gated on the
+        TENTH kill switch, `capture_orchestrator_ref_recording_enabled`,
+        inside `_promote`, mirroring `capture_path_recording_enabled`'s
+        declare-vs-record split.
+
+        Evicted WITH `_begun_at`, unlike `_last_precondition_bypass`: a
+        run uid names one specific capture, so a reading retained
+        across a capture boundary IS stale evidence about the wrong
+        capture, the same reasoning `_last_capture_path` applies.
+        UNCONDITIONALLY consumed (popped, not merely read) by
+        `_consume_orchestrator_ref` at the next `BEGUN`, whether or not
+        it is ultimately attached, so a rejected reading cannot be
+        reused by a capture after that. See this module's
+        "Orchestrator-ref pairing" docstring section.
+        """
+        if not self._settings.run_witness_recording_enabled:
+            return
+        self._last_orchestrator_ref[observation.capture_code] = observation
+
+    def _consume_orchestrator_ref(self, code: str, begun_at: datetime | None) -> Identifier | None:
+        """Pop and validate the retained `orchestrator_ref` reading
+        for `code`, applying the lead-time guard (see "Orchestrator-ref
+        pairing" above). ALWAYS pops, whether the guard passes or not:
+        a rejected reading must not survive to be reused by a LATER
+        promotion -- the structural fix this module's docstring
+        describes, not a heuristic.
+
+        `begun_at` is the CURRENT BEGUN's own substrate time (already
+        recorded into `self._begun_at[code]` by the caller before this
+        runs), never CORA's clock, mirroring `_resolve_capture_path`'s
+        identical choice to compare two substrate timestamps rather
+        than involve a CORA-host-vs-IOC clock-skew question this guard
+        does not need to answer.
+
+        Returns `None` on any rejection (nothing retained, no
+        reference time to compare against, a negative or over-bound
+        lead, or a malformed `(scheme, value)` pair); every rejection
+        branch logs its own reason. `None` is a legitimate, expected
+        outcome on most captures (no orchestrator involved at all), so
+        the caller must not treat it as an error, only as "no ref to
+        attach."
+        """
+        observation = self._last_orchestrator_ref.pop(code, None)
+        if observation is None:
+            return None
+        if begun_at is None or observation.observed_at is None:
+            _log.warning(
+                "run_witness.orchestrator_ref_rejected_no_reference_time",
+                capture_code=code,
+            )
+            return None
+        lead_seconds = (begun_at - observation.observed_at).total_seconds()
+        if lead_seconds < 0:
+            _log.warning(
+                "run_witness.orchestrator_ref_rejected_reordered",
+                capture_code=code,
+                lead_seconds=lead_seconds,
+            )
+            return None
+        if lead_seconds > self._settings.capture_orchestrator_ref_max_lead_seconds:
+            _log.warning(
+                "run_witness.orchestrator_ref_rejected_stale",
+                capture_code=code,
+                lead_seconds=lead_seconds,
+            )
+            return None
+        try:
+            return Identifier(scheme=observation.scheme, value=observation.value)
+        except InvalidIdentifierError:
+            _log.warning(
+                "run_witness.orchestrator_ref_rejected_malformed",
+                capture_code=code,
+            )
+            return None
+
     async def _promote(self, observation: CaptureLifecycleObservation) -> None:
         # A prior capture's retained progress, if any, belongs to that
         # capture's own terminal, never to this one: clear before
@@ -684,6 +872,27 @@ class RunWitnessRecorder:
             )
             return
 
+        # Always consume (pop) whatever is retained, whether or not the
+        # TENTH kill switch is on: an orchestrator ref left unconsumed
+        # while the switch is off would otherwise carry over, stale,
+        # to whatever capture is open once the switch flips on. Only
+        # USE the result when the switch is on. See "Orchestrator-ref
+        # pairing" above. Passed directly rather than re-read via
+        # `self._begun_at.get(...)`: the block above just set that
+        # entry FROM this same `observation.observed_at` (or cleared it
+        # when `observation.observed_at is None`), so the two are
+        # always equal here -- reading back through the dict would only
+        # add a hidden ordering dependency on the block above running
+        # first, for no behavioral difference.
+        consumed_orchestrator_ref = self._consume_orchestrator_ref(
+            observation.capture_code, observation.observed_at
+        )
+        orchestrator_ref = (
+            consumed_orchestrator_ref
+            if self._settings.capture_orchestrator_ref_recording_enabled
+            else None
+        )
+
         command = RecordWitnessedRun(
             name=f"Witnessed capture {observation.capture_code}",
             plan_id=plan_id,
@@ -693,6 +902,7 @@ class RunWitnessRecorder:
             capture_precondition_bypass_snapshot=self._build_precondition_bypass_snapshot(
                 observation.capture_code
             ),
+            orchestrator_ref=orchestrator_ref,
         )
         try:
             run_id = await self._record_witnessed_run(
@@ -723,6 +933,12 @@ class RunWitnessRecorder:
             "run_witness.promoted",
             capture_code=observation.capture_code,
             run_id=str(run_id),
+            orchestrator_ref_scheme=(
+                orchestrator_ref.scheme if orchestrator_ref is not None else None
+            ),
+            orchestrator_ref_value=(
+                orchestrator_ref.value if orchestrator_ref is not None else None
+            ),
         )
         # Concurrent, not sequential: both readers do their own PV
         # sweep and neither depends on the other's result, so awaiting
@@ -821,6 +1037,15 @@ class RunWitnessRecorder:
         # reading and its BEGUN reference point.
         self._last_capture_path.pop(code, None)
         self._begun_at.pop(code, None)
+        # DELIBERATELY does NOT pop `_last_orchestrator_ref` here, unlike
+        # every other retained dict above: a run uid is written BEFORE
+        # the capture it names begins, so a reading retained at the
+        # moment a stale Run's un-observed terminal is discovered almost
+        # certainly describes the INCOMING new capture this method is
+        # about to hand off to `_promote`, not the stale one being
+        # closed. Clearing it here would throw away the very evidence
+        # `_promote`'s own `_consume_orchestrator_ref` call is about to
+        # correctly consume.
         if stale_run_id is None:
             return
 
@@ -1106,7 +1331,13 @@ async def run_witness_loop(
     the dual-clock guard; see `RunWitnessRecorder._resolve_capture_path`):
     no `feeder` counterpart either, since it never rides
     `AppendObservations` -- it goes to the `run_capture_path` PII
-    vault, not the observation logbook. A `CaptureLifecycleObservation` on a phase in
+    vault, not the observation logbook. A `CaptureOrchestratorRefObservation`
+    likewise goes only to `recorder.observe_orchestrator_ref()` (retains
+    the latest reading so the NEXT genesis can attach it through the
+    consume-once lead-time guard; see `RunWitnessRecorder
+    ._consume_orchestrator_ref`): no `feeder` counterpart either, since
+    it rides `RunStarted.external_refs`, never `AppendObservations`. A
+    `CaptureLifecycleObservation` on a phase in
     `_FLUSH_TRIGGER_PHASES` triggers `feeder.flush_capture()` BEFORE the
     recorder acts on it, so a capture's buffered progress trail is
     attributed to its Run before that Run can close or be replaced;
@@ -1135,6 +1366,10 @@ async def run_witness_loop(
                 if isinstance(observation, CapturePathObservation):
                     if recorder is not None:
                         recorder.observe_capture_path(observation)
+                    continue
+                if isinstance(observation, CaptureOrchestratorRefObservation):
+                    if recorder is not None:
+                        recorder.observe_orchestrator_ref(observation)
                     continue
                 if feeder is not None and observation.phase in _FLUSH_TRIGGER_PHASES:
                     try:

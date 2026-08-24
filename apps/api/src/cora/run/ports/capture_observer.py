@@ -17,17 +17,20 @@ this port. Promote to `infrastructure/ports/` only on a real second
 cross-BC consumer (rule-of-three), exactly the `RunChannelLookup`
 precedent.
 
-## Four reading kinds, one stream
+## Five reading kinds, one stream
 
 `observe()` yields `AnyCaptureObservation`, the union of
 `CaptureLifecycleObservation` (a phase claim: BEGUN / PROGRESSING /
 ENDED / ABORTED / UNRECOGNIZED, or no claim at all on a probe-only or
 disconnect reading), `CaptureProgressObservation` (a numeric
 progress counter, e.g. `ImagesSaved`), `CapturePreconditionBypassObservation`
-(the optional `testing` role's tri-state reading, slice 11), and
+(the optional `testing` role's tri-state reading, slice 11),
 `CapturePathObservation` (the optional `full_file_name` role's text
-reading, slice 13). A consumer narrows with `isinstance`.
-The four are peers, not a supertype and subtypes: a single reading is
+reading, slice 13), and `CaptureOrchestratorRefObservation` (the
+optional `orchestrator_ref` role's text reading: an external
+orchestrator's own identifier for this capture, e.g. a Bluesky
+RunEngine start-document uid). A consumer narrows with `isinstance`.
+The five are peers, not a supertype and subtypes: a single reading is
 never more than one of these at once, so one closed-over
 `CaptureObservation` name for "the default kind" would have made an
 isinstance check on the lifecycle kind read as a supertype check
@@ -96,6 +99,24 @@ R2/R4 (naming review, slice 10).
   claims about a file" below; it says only that the file plugin opened
   a file at this substrate time, nothing about what it contains or
   whether writing to it has finished.
+- `CaptureOrchestratorRefObservation`: one reading of the optional
+  `orchestrator_ref` role, an external orchestrator's own run
+  identifier for this capture code (e.g. a Bluesky RunEngine
+  start-document uid), drained independently of any one capture (the
+  orchestrator writes its uid before triggering the substrate act this
+  port watches, so this reading, like `CapturePathObservation`, can
+  arrive before, during, or after any particular capture's own BEGUN
+  observation reaches this port). `scheme` is the deployment-declared
+  `Identifier` scheme this reading mints under (e.g. `bluesky-run-uid`
+  at a Bluesky-driven deployment), never hardcoded here: the port and
+  the spine stay facility-neutral, mirroring `CapturePhase`'s own
+  refusal to know any one facility's literal vocabulary. `value` is
+  the raw substrate string, unvalidated at this layer beyond what the
+  adapter already rejects (empty, non-text, or over-length); a
+  consumer that means to mint an `Identifier` from it performs that
+  validation itself. NOT personal data: an orchestrator run uid names
+  no person, so this reading carries no redaction obligation the way
+  `CapturePathObservation.observed_path` does.
 - `CaptureObserverScope`: the set of capture codes the substrate
   adapter should subscribe to. Empty scope is valid and yields no
   observations.
@@ -305,11 +326,58 @@ class CapturePathObservation:
     source_id: str
 
 
+@dataclass(frozen=True)
+class CaptureOrchestratorRefObservation:
+    """One reading of the optional `orchestrator_ref` role: an
+    external orchestrator's own run identifier for this capture code
+    (e.g. a Bluesky RunEngine start-document uid), written to the
+    substrate BEFORE the orchestrator triggers the act this port
+    watches.
+
+    `scheme` is the deployment-declared `Identifier` scheme this
+    reading mints under (`Settings.capture_orchestrator_ref_schemes`),
+    never a spine-owned constant: unlike `capture-code`
+    (`CAPTURE_CODE_EXTERNAL_REF_SCHEME`, minted by every deployment
+    identically), which external run-engine a capture code is paired
+    with is a per-deployment fact.
+
+    `value` is the raw substrate string, taken as-is once it passes
+    the length/emptiness checks in `_capture_observer.py` (see
+    `_from_orchestrator_ref_reading`); this port does not validate it
+    as any particular identifier shape (a UUID, for instance), because
+    a future non-Bluesky orchestrator's own run identifier need not be
+    one.
+
+    `role` is not carried (mirrors `CapturePreconditionBypassObservation`
+    / `CapturePathObservation`): `orchestrator_ref` is singular per
+    capture code.
+
+    `reach_tier`, `observed_at`, `source_kind`, `source_id` carry the
+    same meaning as on `CaptureLifecycleObservation`. `observed_at` is
+    the substrate's OWN time for this reading, never CORA's clock: a
+    consumer pairing this reading with a Run's own BEGUN observation
+    needs both readings' substrate times to judge how much the
+    orchestrator's write led the capture's start by, the INVERSE
+    ordering `CapturePathObservation` compares (a run uid is written
+    BEFORE the capture it names begins; a filename readback is written
+    at or after).
+    """
+
+    capture_code: str
+    scheme: str
+    value: str
+    reach_tier: ReachTier
+    observed_at: datetime | None
+    source_kind: str
+    source_id: str
+
+
 AnyCaptureObservation = (
     CaptureLifecycleObservation
     | CaptureProgressObservation
     | CapturePreconditionBypassObservation
     | CapturePathObservation
+    | CaptureOrchestratorRefObservation
 )
 """The union `observe()` yields. Named explicitly rather than reusing
 any one member's name for the union, so a caller that has not yet been
@@ -376,6 +444,7 @@ __all__ = [
     "CaptureLifecycleObservation",
     "CaptureObserver",
     "CaptureObserverScope",
+    "CaptureOrchestratorRefObservation",
     "CapturePathObservation",
     "CapturePhase",
     "CapturePreconditionBypassObservation",

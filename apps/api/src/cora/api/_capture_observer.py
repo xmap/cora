@@ -29,7 +29,13 @@ tomoscan's own `FullFileName`, which is written too late relative to
 CORA's terminal -- see `_run_witness.py`'s "Capture path pairing"
 section for the full argument). `observed_path` is PERSONAL DATA; this
 module never logs it, only its length when rejecting a suspect
-reading.
+reading. The optional `orchestrator_ref` role pumps its own
+`CaptureOrchestratorRefObservation`: a text reading of an external
+orchestrator's own run identifier for this capture code (e.g. a
+Bluesky RunEngine start-document uid), so `RunWitnessRecorder` can
+attach it to the promoted Run as a second `external_refs` entry,
+alongside `capture-code` -- see `_run_witness.py`'s
+"Orchestrator-ref pairing" section.
 
 ## One deliberate inversion from the Enclosure precedent
 
@@ -109,12 +115,14 @@ from cora.run.ports.capture_observer import (
     AnyCaptureObservation,
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CaptureOrchestratorRefObservation,
     CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
 from cora.shared.binary_signal import binary_code
+from cora.shared.identifier import IDENTIFIER_VALUE_MAX_LENGTH
 from cora.shared.reach import ReachTier
 
 if TYPE_CHECKING:
@@ -131,13 +139,14 @@ ROLE_IMAGES_SAVED = "images_saved"
 ROLE_IMAGES_COLLECTED = "images_collected"
 ROLE_TESTING = "testing"
 ROLE_FULL_FILE_NAME = "full_file_name"
+ROLE_ORCHESTRATOR_REF = "orchestrator_ref"
 """CORA-owned role keys, matching `Settings.capture_watch_pvs`'s documented
 example. Module-public (not `_`-prefixed) because other composition-root
 modules read observations back out, or dispatch decoders, by these same
 keys and must not carry their own copy of the literal strings:
 `RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads
 `ROLE_IMAGES_SAVED` / `ROLE_IMAGES_COLLECTED`, and `capture_watch_preflight`
-dispatches its per-role decode check on all six. Import these, not
+dispatches its per-role decode check on all seven. Import these, not
 `_PROGRESS_ROLES` below, so a rename or a new role here cannot silently
 desync from either reader. `server_running` stays declared-and-unread:
 tool liveness is a different concern from capture progress (slice 10).
@@ -148,6 +157,14 @@ tool liveness is a different concern from capture progress (slice 10).
 existing style, where a role key mirrors the wire (`abort`, `testing`,
 `images_saved`) and the domain type it produces is named for the fact,
 not the PV.
+
+`ROLE_ORCHESTRATOR_REF` names the domain fact directly, not a PV: unlike
+`full_file_name` / `images_saved`, which are literal 2-BM PV suffixes,
+no single wire name for "an external orchestrator's run uid" exists
+across deployments, so the role key is CORA's own vocabulary from the
+start (mirrors `testing`, whose PV-facing name coincides with the
+domain word only by 2-BM's own coincidence, not by a rule this codebase
+follows).
 """
 _PROGRESS_ROLES = (ROLE_IMAGES_SAVED, ROLE_IMAGES_COLLECTED)
 
@@ -280,7 +297,11 @@ class ControlPortCaptureObserver:
     docstring. The `full_file_name` role (slice 13, also optional,
     independently declared per code) pumps `CapturePathObservation`
     readings, a text claim carrying personal data; see that dataclass's
-    own docstring.
+    own docstring. The `orchestrator_ref` role (also optional,
+    independently declared per code) pumps `CaptureOrchestratorRefObservation`
+    readings, a text claim naming no person; the `Identifier` scheme it
+    mints under comes from `orchestrator_ref_schemes`, a deployment-
+    declared `code -> scheme` table, never a hardcoded string.
     `server_running` stays declared and unread (tool liveness, not
     capture progress).
     """
@@ -291,6 +312,7 @@ class ControlPortCaptureObserver:
         control_port: ControlPort,
         capture_pvs: Mapping[str, Mapping[str, str]],
         status_phases: Mapping[str, str],
+        orchestrator_ref_schemes: Mapping[str, str] | None = None,
         tick_seconds: float | None = None,
     ) -> None:
         self._control_port = control_port
@@ -310,12 +332,18 @@ class ControlPortCaptureObserver:
             for code, roles in capture_pvs.items()
             if ROLE_FULL_FILE_NAME in roles
         }
+        self._orchestrator_ref_pvs = {
+            code: roles[ROLE_ORCHESTRATOR_REF]
+            for code, roles in capture_pvs.items()
+            if ROLE_ORCHESTRATOR_REF in roles
+        }
         self._progress_pvs = {
             code: filtered
             for code, roles in capture_pvs.items()
             if (filtered := {role: pv for role, pv in roles.items() if role in _PROGRESS_ROLES})
         }
         self._status_phases = dict(status_phases)
+        self._orchestrator_ref_schemes = dict(orchestrator_ref_schemes or {})
         self._tick_seconds = tick_seconds
 
     def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[AnyCaptureObservation]:
@@ -344,6 +372,11 @@ class ControlPortCaptureObserver:
             for code in sorted(scope.capture_codes)
             if code in self._full_file_name_pvs
         ]
+        orchestrator_ref_pvs = [
+            (code, self._orchestrator_ref_pvs[code])
+            for code in sorted(scope.capture_codes)
+            if code in self._orchestrator_ref_pvs
+        ]
         progress_pvs = [
             (code, role, pv)
             for code in sorted(scope.capture_codes)
@@ -358,6 +391,10 @@ class ControlPortCaptureObserver:
             + [
                 asyncio.create_task(self._pump_full_file_name(code, pv, queue))
                 for code, pv in full_file_name_pvs
+            ]
+            + [
+                asyncio.create_task(self._pump_orchestrator_ref(code, pv, queue))
+                for code, pv in orchestrator_ref_pvs
             ]
             + [
                 asyncio.create_task(self._pump_progress(code, role, pv, queue))
@@ -511,6 +548,35 @@ class ControlPortCaptureObserver:
         try:
             async for reading in self._control_port.subscribe(pv):
                 observation = self._from_full_file_name_reading(code, pv, reading)
+                if observation is not None:
+                    queue.put_nowait(observation)
+        except ControlNotConnectedError:
+            pass
+        finally:
+            queue.put_nowait(_PUMP_DONE)
+
+    async def _pump_orchestrator_ref(
+        self,
+        code: str,
+        pv: str,
+        queue: asyncio.Queue[AnyCaptureObservation | _PumpDone],
+    ) -> None:
+        """Sibling pump for the optional `orchestrator_ref` role.
+
+        Mirrors `_pump_full_file_name`'s shape exactly, for the same
+        reason: a disconnect must not erase the last retained reading,
+        since `RunWitnessRecorder`'s own consume-once guard needs the
+        last GOOD reading to survive a reconnect between the
+        orchestrator's write and this capture's own BEGUN. Unlike
+        `_pump_abort` / `_pump`, no `_from_orchestrator_ref_reading`
+        result is dropped for being "no claim" the way an abort's clear
+        reading is -- it can return `None` (empty string, over-length,
+        non-str value), which is a REJECTION, not a "nothing happened"
+        no-op, so it is still correct to enqueue nothing for it.
+        """
+        try:
+            async for reading in self._control_port.subscribe(pv):
+                observation = self._from_orchestrator_ref_reading(code, pv, reading)
                 if observation is not None:
                     queue.put_nowait(observation)
         except ControlNotConnectedError:
@@ -677,6 +743,62 @@ class ControlPortCaptureObserver:
             source_id=pv,
         )
 
+    def _from_orchestrator_ref_reading(
+        self, code: str, pv: str, reading: Measurement
+    ) -> CaptureOrchestratorRefObservation | None:
+        """An `orchestrator_ref`-role reading, rejected rather than
+        enqueued for four reasons, in order.
+
+        1. Not a string: a non-text reading on this role is a
+           deployment misconfiguration, not a value to guess at.
+        2. Empty string: the orchestrator cleared the PV between
+           captures (see `_run_witness.py`'s "Orchestrator-ref pairing"
+           section on why the writer is expected to clear it). A fine,
+           ordinary outcome, not an error -- just nothing to enqueue.
+        3. Length over `IDENTIFIER_VALUE_MAX_LENGTH` AFTER TRIMMING:
+           `Identifier.__post_init__` (`cora.shared.identifier`) strips
+           before bounding, so this check measures the trimmed value
+           too -- checking the raw length would reject a
+           whitespace-padded reading `Identifier` would have accepted,
+           and the reverse would let one through the adapter only to
+           fail deep inside `RecordWitnessedRun`'s decider instead.
+        4. No scheme declared for `code` in `orchestrator_ref_schemes`:
+           a reading with nowhere to mint an `Identifier` under is a
+           deployment misconfiguration (the PV is declared, the scheme
+           is not), reported loudly rather than guessed at.
+
+        `None` return means the caller enqueues nothing, matching
+        `_from_full_file_name_reading`'s fail-toward-silence posture.
+        """
+        value = reading.value
+        if not isinstance(value, str):
+            return None
+        if not value:
+            return None
+        if len(value.strip()) > IDENTIFIER_VALUE_MAX_LENGTH:
+            _log.warning(
+                "capture_observer.orchestrator_ref_over_length",
+                capture_code=code,
+                length=len(value.strip()),
+            )
+            return None
+        scheme = self._orchestrator_ref_schemes.get(code)
+        if scheme is None:
+            _log.warning(
+                "capture_observer.orchestrator_ref_scheme_not_configured",
+                capture_code=code,
+            )
+            return None
+        return CaptureOrchestratorRefObservation(
+            capture_code=code,
+            scheme=scheme,
+            value=value,
+            reach_tier=ReachTier.RELAYED,
+            observed_at=reading.produced_at,
+            source_kind=_SOURCE_KIND,
+            source_id=pv,
+        )
+
     def _probe_only(self, code: str, pv: str, reach_tier: ReachTier) -> CaptureLifecycleObservation:
         """A poll tick's result: reach evidence with no status claim."""
         return CaptureLifecycleObservation(
@@ -712,6 +834,7 @@ __all__ = [
     "ROLE_FULL_FILE_NAME",
     "ROLE_IMAGES_COLLECTED",
     "ROLE_IMAGES_SAVED",
+    "ROLE_ORCHESTRATOR_REF",
     "ROLE_STATUS",
     "ROLE_TESTING",
     "ControlPortCaptureObserver",

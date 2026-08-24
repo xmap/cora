@@ -35,6 +35,20 @@ rather than driving the act itself. Carries the caller-controlled inputs:
     state claim and a substrate timestamp, never operator-authored text.
     See `CapturePreconditionBypassSnapshot` for the tri-state contract
     and why this is NOT `Manifest.is_simulated`.
+  - `orchestrator_ref` -- an external orchestrator's own run identifier
+    for this capture (e.g. a Bluesky RunEngine start-document uid),
+    already validated as an `Identifier` by `RunWitnessRecorder
+    ._consume_orchestrator_ref` before this command is constructed, or
+    `None` if the capture code declares no `orchestrator_ref` role,
+    none has ever arrived, or the retained reading failed the
+    consume-once staleness guard. The decider appends it as a SECOND
+    `external_refs` entry alongside `capture-code`, never in place of
+    it. See `_run_witness.py`'s "Orchestrator-ref pairing" section for
+    why validation happens before this command exists, unlike
+    `capture_precondition_bypass_snapshot` above: an `Identifier`'s
+    scheme/value bounds must hold before the decider ever sees it, the
+    same reason `capture_code` itself is a plain `str` re-validated by
+    the SAME `Identifier` construction inside the decider.
 
 No `conduct_mode` field: this decider hardcodes `ConductMode.WITNESSED`,
 symmetric to `StartRun` carrying no `conduct_mode` field for the driven
@@ -60,6 +74,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from cora.run.aggregates.run.state import CapturePreconditionBypassSnapshot
+from cora.shared.identifier import Identifier
 from cora.shared.identity import MonitorSourceId
 
 
@@ -74,3 +89,4 @@ class RecordWitnessedRun:
     trigger: str
     subject_id: UUID | None = None
     capture_precondition_bypass_snapshot: CapturePreconditionBypassSnapshot | None = None
+    orchestrator_ref: Identifier | None = None

@@ -27,11 +27,13 @@ from cora.run.ports.capture_observer import (
     AnyCaptureObservation,
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CaptureOrchestratorRefObservation,
     CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
+from cora.shared.identifier import IDENTIFIER_VALUE_MAX_LENGTH
 from cora.shared.reach import ReachTier
 
 _T = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
@@ -116,12 +118,14 @@ def _observer(
     capture_pvs: dict[str, dict[str, str]],
     *,
     status_phases: dict[str, str] | None = None,
+    orchestrator_ref_schemes: dict[str, str] | None = None,
     tick_seconds: float | None = None,
 ) -> ControlPortCaptureObserver:
     return ControlPortCaptureObserver(
         control_port=port,  # type: ignore[arg-type]
         capture_pvs=capture_pvs,
         status_phases=status_phases if status_phases is not None else _PHASES,
+        orchestrator_ref_schemes=orchestrator_ref_schemes,
         tick_seconds=tick_seconds,
     )
 
@@ -1036,3 +1040,160 @@ async def test_observe_full_file_name_reading_with_no_substrate_time_is_none_not
 
     path = next(o for o in observations if isinstance(o, CapturePathObservation))
     assert path.observed_at is None
+
+
+# ---------- Orchestrator-ref role ----------
+
+
+@pytest.mark.unit
+async def test_observe_a_code_with_no_orchestrator_ref_role_is_unaffected() -> None:
+    """A code declaring no `orchestrator_ref` role behaves exactly
+    as before this role existed: no pump, no extra observation."""
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Beginning scan")]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureOrchestratorRefObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_an_orchestrator_ref_reading_is_a_ref_observation() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvUid": [_reading("d1a0925b-3e24-461b-896a-3737ba88f39b")],
+        }
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes={"tomoscan": "bluesky-run-uid"},
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    refs = [o for o in observations if isinstance(o, CaptureOrchestratorRefObservation)]
+    assert len(refs) == 1
+    assert refs[0].capture_code == "tomoscan"
+    assert refs[0].scheme == "bluesky-run-uid"
+    assert refs[0].value == "d1a0925b-3e24-461b-896a-3737ba88f39b"
+    assert refs[0].reach_tier is ReachTier.RELAYED
+    assert refs[0].source_id == "pvUid"
+    assert refs[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_an_empty_orchestrator_ref_reading_emits_nothing() -> None:
+    """The orchestrator's own cleared state between captures: a fine,
+    ordinary outcome, not an error, but not a fact to enqueue either."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvUid": [_reading("")]}
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes={"tomoscan": "bluesky-run-uid"},
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureOrchestratorRefObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_a_non_text_orchestrator_ref_reading_emits_nothing() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvUid": [_reading(0)]}
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes={"tomoscan": "bluesky-run-uid"},
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureOrchestratorRefObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_an_over_length_orchestrator_ref_reading_emits_nothing() -> None:
+    long_value = "a" * (IDENTIFIER_VALUE_MAX_LENGTH + 1)
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvUid": [_reading(long_value)]}
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes={"tomoscan": "bluesky-run-uid"},
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureOrchestratorRefObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_an_orchestrator_ref_reading_with_no_declared_scheme_emits_nothing() -> None:
+    """The PV is declared under `capture_watch_pvs` but the code has no
+    entry in `orchestrator_ref_schemes`: a deployment misconfiguration,
+    reported loudly rather than guessed at (a value with nowhere to
+    mint an `Identifier` under)."""
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvUid": [_reading("d1a0925b-3e24-461b-896a-3737ba88f39b")],
+        }
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes=None,
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureOrchestratorRefObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_orchestrator_ref_pump_has_no_unreached_counterpart() -> None:
+    """A disconnect or clean stream end simply stops the pump: it must
+    NOT synthesize a `CaptureOrchestratorRefObservation`. Mirrors the
+    `full_file_name` role's identical guarantee, for the identical
+    reason: erasing the last retained reading on every reconnect would
+    defeat the consume-once discipline `RunWitnessRecorder` applies."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvUid": []},
+        disconnect=frozenset({"pvUid"}),
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes={"tomoscan": "bluesky-run-uid"},
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureOrchestratorRefObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_orchestrator_ref_reading_with_no_substrate_time_is_none() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvUid": [_reading("d1a0925b-3e24-461b-896a-3737ba88f39b", produced_at=None)],
+        }
+    )
+    observer = _observer(
+        port,
+        {"tomoscan": {"status": "pvA", "orchestrator_ref": "pvUid"}},
+        orchestrator_ref_schemes={"tomoscan": "bluesky-run-uid"},
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    ref = next(o for o in observations if isinstance(o, CaptureOrchestratorRefObservation))
+    assert ref.observed_at is None

@@ -19,7 +19,7 @@ import asyncio
 import contextlib
 import dataclasses
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -59,6 +59,7 @@ from cora.run.ports.capture_observer import (
     AnyCaptureObservation,
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CaptureOrchestratorRefObservation,
     CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
@@ -140,6 +141,24 @@ def _path_obs(
         observed_at=observed_at,
         source_kind="EpicsPv",
         source_id="2bmSP2:HDF1:FullFileName_RBV",
+    )
+
+
+def _orchestrator_ref_obs(
+    *,
+    scheme: str = "bluesky-run-uid",
+    value: str = "d1a0925b-3e24-461b-896a-3737ba88f39b",
+    capture_code: str = _CODE,
+    observed_at: datetime | None = _NOW,
+) -> CaptureOrchestratorRefObservation:
+    return CaptureOrchestratorRefObservation(
+        capture_code=capture_code,
+        scheme=scheme,
+        value=value,
+        reach_tier=ReachTier.RELAYED,
+        observed_at=observed_at,
+        source_kind="EpicsPv",
+        source_id="2bmb:BlueskyRunUID",
     )
 
 
@@ -580,6 +599,8 @@ def _recorder(
     capture_experiment_identity_recording_enabled: bool = False,
     capture_probe_store: object | None = None,
     capture_probe_recording_enabled: bool = False,
+    capture_orchestrator_ref_recording_enabled: bool = False,
+    capture_orchestrator_ref_max_lead_seconds: float = 30.0,
     schema_posture: str = "matched",
 ) -> RunWitnessRecorder:
     settings = Settings(  # type: ignore[call-arg]
@@ -591,6 +612,8 @@ def _recorder(
             capture_experiment_identity_recording_enabled
         ),
         capture_probe_recording_enabled=capture_probe_recording_enabled,
+        capture_orchestrator_ref_recording_enabled=capture_orchestrator_ref_recording_enabled,
+        capture_orchestrator_ref_max_lead_seconds=capture_orchestrator_ref_max_lead_seconds,
     )
     outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
     truncate = truncate_run or _FakeTruncateRun()
@@ -1573,6 +1596,287 @@ async def test_run_witness_recorder_logs_a_distinct_event_on_outcome_unauthorize
 
     events = [entry["event"] for entry in logs]
     assert "run_witness.outcome_unauthorized" in events
+
+
+# ---------- observe_orchestrator_ref / consume-once lead-time guard ----------
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_is_a_noop_when_recording_disabled() -> None:
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        run_witness_recording_enabled=False,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs())
+
+    assert recorder._last_orchestrator_ref == {}
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_attaches_to_a_fresh_promotion() -> None:
+    """The normal case: the orchestrator writes its uid shortly before
+    triggering the capture. The lead-time guard passes and the genesis
+    carries it as a second external ref."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0))
+    await recorder.observe_capture(
+        _obs(
+            reported_status="Beginning scan",
+            phase=CapturePhase.BEGUN,
+            observed_at=_T0 + timedelta(seconds=5),
+        )
+    )
+
+    assert len(fake.calls) == 1
+    ref = fake.calls[0].orchestrator_ref
+    assert ref is not None
+    assert ref.scheme == "bluesky-run-uid"
+    assert ref.value == "d1a0925b-3e24-461b-896a-3737ba88f39b"
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_absent_is_a_noop() -> None:
+    """No orchestrator involved at all: a fine, ordinary outcome, never
+    an error, and no rejection log line (there is nothing to reject)."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+        )
+
+    assert fake.calls[0].orchestrator_ref is None
+    assert not any(
+        entry["event"].startswith("run_witness.orchestrator_ref_rejected") for entry in logs
+    )
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_not_attached_when_the_tenth_switch_is_off() -> None:
+    """Retention (`observe_orchestrator_ref`) is gated only on
+    `run_witness_recording_enabled`; the tenth switch,
+    `capture_orchestrator_ref_recording_enabled`, gates ATTACHMENT.
+    Declaring the role and retaining a fresh, valid reading is not
+    sufficient on its own."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=False,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0))
+    await recorder.observe_capture(
+        _obs(
+            reported_status="Beginning scan",
+            phase=CapturePhase.BEGUN,
+            observed_at=_T0 + timedelta(seconds=5),
+        )
+    )
+
+    assert fake.calls[0].orchestrator_ref is None
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_is_consumed_even_when_the_tenth_switch_is_off() -> None:
+    """The mutation this test exists to catch: a PEEK-without-pop
+    implementation would let a reading retained while the switch is off
+    survive to be reused by a LATER, UNRELATED promotion once the
+    switch flips on. Deliberately kept the second BEGUN's substrate
+    time well WITHIN the lead-time bound of the stale reading (20s,
+    under the 30s default), so the lead-time guard cannot itself catch
+    a peek bug here -- only the pop can. A version of this method that
+    reads with `.get()` instead of `.pop()` makes this the one test
+    that goes red without touching any other assertion in this file
+    (confirmed by mutation: see the commit history for this slice)."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=False,
+    )
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0))
+    await recorder.observe_capture(
+        _obs(
+            reported_status="Beginning scan",
+            phase=CapturePhase.BEGUN,
+            observed_at=_T0 + timedelta(seconds=5),
+        )
+    )
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+    # Flip the switch on for the SECOND capture; no fresh reading is
+    # retained for it. `Settings` is a mutable pydantic model (not a
+    # stdlib dataclass), so this is a plain attribute set, not
+    # `dataclasses.replace`.
+    recorder._settings.capture_orchestrator_ref_recording_enabled = True
+
+    await recorder.observe_capture(
+        _obs(
+            reported_status="Beginning scan",
+            phase=CapturePhase.BEGUN,
+            observed_at=_T0 + timedelta(seconds=20),
+        )
+    )
+
+    assert fake.calls[1].orchestrator_ref is None
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_rejected_when_stale_beyond_the_lead_bound() -> None:
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+        capture_orchestrator_ref_max_lead_seconds=10.0,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0))
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(
+                reported_status="Beginning scan",
+                phase=CapturePhase.BEGUN,
+                observed_at=_T0 + timedelta(seconds=60),
+            )
+        )
+
+    assert fake.calls[0].orchestrator_ref is None
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.orchestrator_ref_rejected_stale" in events
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_rejected_when_reordered_after_begun() -> None:
+    """A negative lead (the uid's own substrate time is AFTER this
+    BEGUN's) signals clock skew or pump reordering, never a fact to
+    trust."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0 + timedelta(seconds=5)))
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+        )
+
+    assert fake.calls[0].orchestrator_ref is None
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.orchestrator_ref_rejected_reordered" in events
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_rejected_when_begun_has_no_substrate_time() -> None:
+    """Fails closed, mirroring `_resolve_capture_path`'s identical
+    posture when `_begun_at` has no entry: no reference time means no
+    basis to judge the lead against."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0))
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=None)
+        )
+
+    assert fake.calls[0].orchestrator_ref is None
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.orchestrator_ref_rejected_no_reference_time" in events
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_rejected_when_the_retained_reading_has_no_substrate_time() -> None:
+    """The symmetric half of the guard: THIS BEGUN carries a real
+    substrate time, but the retained reading does not (a substrate that
+    reported the uid with no timestamp of its own). Fails closed for
+    the same reason as the other half: no reference time on either side
+    means there is no basis to judge a lead against."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=None))
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+        )
+
+    assert fake.calls[0].orchestrator_ref is None
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.orchestrator_ref_rejected_no_reference_time" in events
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_rejected_when_malformed() -> None:
+    """A whitespace-only value would slip past the adapter's own
+    empty-string check only if constructed directly (never in
+    production, where `_from_orchestrator_ref_reading` rejects an empty
+    string before this observation type is ever built); `Identifier`'s
+    own construction is the last line of defense."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(value="   ", observed_at=_T0))
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(
+                reported_status="Beginning scan",
+                phase=CapturePhase.BEGUN,
+                observed_at=_T0 + timedelta(seconds=5),
+            )
+        )
+
+    assert fake.calls[0].orchestrator_ref is None
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.orchestrator_ref_rejected_malformed" in events
+
+
+@pytest.mark.unit
+async def test_orchestrator_ref_survives_a_truncate_then_promote() -> None:
+    """DELIBERATE deviation from `_last_capture_path`'s eviction: a run
+    uid is written BEFORE the capture it names begins, so a reading
+    retained at the moment a stale Run's un-observed terminal is
+    discovered describes the INCOMING new capture, not the one being
+    closed. `_truncate_stale` must not clear it."""
+    stale_run_id = uuid4()
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_orchestrator_ref_recording_enabled=True,
+        open_captures={_CODE: stale_run_id},
+    )
+
+    recorder.observe_orchestrator_ref(_orchestrator_ref_obs(observed_at=_T0))
+    await recorder.observe_capture(
+        _obs(
+            reported_status="Beginning scan",
+            phase=CapturePhase.BEGUN,
+            observed_at=_T0 + timedelta(seconds=5),
+        )
+    )
+
+    assert len(fake.calls) == 1
+    ref = fake.calls[0].orchestrator_ref
+    assert ref is not None
+    assert ref.value == "d1a0925b-3e24-461b-896a-3737ba88f39b"
 
 
 # ---------- observe_progress / capture_progress_snapshot retention ----------
