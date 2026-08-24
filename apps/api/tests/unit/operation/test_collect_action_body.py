@@ -53,6 +53,7 @@ from cora.operation.conductor import (
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Measurement,
+    Quality,
 )
 
 if TYPE_CHECKING:
@@ -66,12 +67,33 @@ _FIXED_NOW = datetime(2026, 5, 31, 10, 0, 0, tzinfo=UTC)
 _DETECTOR = "2bma:cam1"
 
 
-def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Any = 0) -> None:
+def _acquire_rbv_reading(
+    label: str = "Done", ordinal: int | None = 0, *, quality: Quality = "Good"
+) -> Measurement:
+    """A DBR_ENUM-shaped `Acquire_RBV` reading: the label plus the index behind it.
+
+    A real areaDetector `Acquire_RBV` is a `bi` record, so it NEVER
+    arrives as `kind="Scalar"` carrying a bare `0`/`1`; it arrives as
+    `Categorical` carrying whatever `ZNAM`/`ONAM` the IOC declares
+    (`"Done"` is ADCore's default, not a guarantee), with the index it
+    resolved from on `ordinal`. Every test in this file used the Scalar
+    shape before this fix, which is why none of them could see the same
+    label-vs-ordinal defect already found three times elsewhere (the
+    hutch permit, the BLEPS interlock flags, the beam-availability
+    gate): the shape under test was one the substrate cannot produce.
+    """
+    return Measurement(
+        value=label, kind="Categorical", quality=quality, produced_at=_FIXED_NOW, ordinal=ordinal
+    )
+
+
+def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Measurement | None = None) -> None:
     """Seed the six AD-convention PVs `collect` touches.
 
-    `acquire_rbv` defaults to `0` so the poll loop exits on its first
-    read; tests that exercise the loop pass a custom value or replace
-    the port with a stateful fixture.
+    `acquire_rbv` defaults to a Done reading (`_acquire_rbv_reading()`)
+    so the poll loop exits on its first read; tests that exercise the
+    loop pass a custom `Measurement` or replace the port with a
+    stateful fixture.
     """
     port.simulate_connect(f"{_DETECTOR}:TriggerMode")
     port.simulate_connect(f"{_DETECTOR}:AcquireTime")
@@ -79,7 +101,7 @@ def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Any = 0) -> None:
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.set_reading(
         f"{_DETECTOR}:Acquire_RBV",
-        Measurement(value=acquire_rbv, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+        acquire_rbv if acquire_rbv is not None else _acquire_rbv_reading(),
     )
     port.set_reading(
         f"{_DETECTOR}:DetectorState_RBV",
@@ -93,6 +115,50 @@ def _ctx(port: InMemoryControlPort, params: Mapping[str, Any]) -> ActionContext:
         clock=FakeClock(_FIXED_NOW),
         params=params,
     )
+
+
+@dataclass
+class _ScriptedRbvPort:
+    """Tracks writes + returns a scripted `Acquire_RBV` reading sequence.
+
+    Each element of `rbv_sequence` is a full `Measurement`, not a bare
+    value, so a test scripts quality and label/ordinal independently per
+    read. Once exhausted the last element repeats, matching
+    `InMemoryControlPort`'s "hold the last set reading" behaviour.
+    """
+
+    rbv_sequence: list[Measurement] = field(default_factory=list[Measurement])
+    writes: list[tuple[str, Any]] = field(default_factory=list[tuple[str, Any]])
+    rbv_calls: int = 0
+
+    async def write(
+        self,
+        address: str,
+        value: Any,
+        *,
+        wait: bool = True,
+        timeout_s: float = 30.0,
+    ) -> None:
+        _ = (wait, timeout_s)
+        self.writes.append((address, value))
+
+    async def read(self, address: str) -> Measurement:
+        if address == f"{_DETECTOR}:Acquire_RBV":
+            idx = min(self.rbv_calls, len(self.rbv_sequence) - 1)
+            reading = self.rbv_sequence[idx]
+            self.rbv_calls += 1
+            return reading
+        if address == f"{_DETECTOR}:DetectorState_RBV":
+            return Measurement(
+                value="Idle",
+                kind="Categorical",
+                quality="Good",
+                produced_at=_FIXED_NOW,
+            )
+        raise AssertionError(f"unexpected read of {address!r}")
+
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
+        raise AssertionError("subscribe should not be called by collect at v1")
 
 
 # --- CollectParams validation ------------------------------------------
@@ -333,48 +399,16 @@ async def test_collect_polarity_and_source_are_evidence_only_not_written() -> No
 
 @pytest.mark.unit
 async def test_collect_poll_loop_iterates_while_acquire_rbv_busy() -> None:
-    """Acquire_RBV starts at 1, transitions to 0 on Nth read; loop iterates then exits."""
-
-    @dataclass
-    class _IteratingPort:
-        """Tracks writes + returns a scripted Acquire_RBV sequence on reads."""
-
-        writes: list[tuple[str, Any]] = field(default_factory=list[tuple[str, Any]])
-        rbv_sequence: list[int] = field(default_factory=list[int])
-        rbv_calls: int = 0
-
-        async def write(
-            self,
-            address: str,
-            value: Any,
-            *,
-            wait: bool = True,
-            timeout_s: float = 30.0,
-        ) -> None:
-            _ = (wait, timeout_s)
-            self.writes.append((address, value))
-
-        async def read(self, address: str) -> Measurement:
-            if address == f"{_DETECTOR}:Acquire_RBV":
-                idx = min(self.rbv_calls, len(self.rbv_sequence) - 1)
-                value = self.rbv_sequence[idx]
-                self.rbv_calls += 1
-                return Measurement(
-                    value=value, kind="Scalar", quality="Good", produced_at=_FIXED_NOW
-                )
-            if address == f"{_DETECTOR}:DetectorState_RBV":
-                return Measurement(
-                    value="Idle",
-                    kind="Categorical",
-                    quality="Good",
-                    produced_at=_FIXED_NOW,
-                )
-            raise AssertionError(f"unexpected read of {address!r}")
-
-        def subscribe(self, address: str) -> AsyncIterator[Measurement]:
-            raise AssertionError("subscribe should not be called by collect at v1")
-
-    port = _IteratingPort(rbv_sequence=[1, 1, 1, 0])
+    """Acquiring (ordinal 1) transitions to Done (ordinal 0) on the Nth
+    read; loop iterates then exits, decoding by ORDINAL, not the label."""
+    port = _ScriptedRbvPort(
+        rbv_sequence=[
+            _acquire_rbv_reading("Acquiring", 1),
+            _acquire_rbv_reading("Acquiring", 1),
+            _acquire_rbv_reading("Acquiring", 1),
+            _acquire_rbv_reading("Done", 0),
+        ]
+    )
     result = await collect(
         _ctx(
             port,  # type: ignore[arg-type]
@@ -383,6 +417,98 @@ async def test_collect_poll_loop_iterates_while_acquire_rbv_busy() -> None:
     )
     assert port.rbv_calls == 4
     assert result["detector_state_final"] == "Idle"
+
+
+@pytest.mark.unit
+async def test_collect_relabelled_acquire_rbv_still_terminates_via_ordinal() -> None:
+    """A facility (or AD build) that relabels Done/Acquiring to anything
+    else must not hang the poll loop: the ordinal decides, not the word.
+
+    This is the live shape of the bug this fix closes. Under the old
+    `value in (0, "Done")` check, EITHER label here fails the match
+    (`"BUSY"`/`"READY"` are neither `0` nor `"Done"`), so the loop would
+    never have exited.
+    """
+    port = _ScriptedRbvPort(
+        rbv_sequence=[_acquire_rbv_reading("BUSY", 1), _acquire_rbv_reading("READY", 0)]
+    )
+    await collect(
+        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+    )
+    assert port.rbv_calls == 2
+
+
+@pytest.mark.unit
+async def test_collect_bad_quality_acquire_rbv_never_terminates_the_loop() -> None:
+    """A `Bad`-quality Done reading must not be believed: the number means
+    nothing, so concluding the acquisition finished would be a fail-open
+    into the recorded evidence."""
+    port = _ScriptedRbvPort(
+        rbv_sequence=[
+            _acquire_rbv_reading("Done", 0, quality="Bad"),
+            _acquire_rbv_reading("Done", 0, quality="Bad"),
+            _acquire_rbv_reading("Done", 0),
+        ]
+    )
+    await collect(
+        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+    )
+    assert port.rbv_calls == 3
+
+
+@pytest.mark.unit
+async def test_collect_uncertain_quality_acquire_rbv_does_terminate() -> None:
+    """An alarmed-but-Done reading IS believed: `Uncertain` is not `Bad`.
+
+    Pins the floor choice itself (`believable`, not `actionable`). A
+    detector carrying a standing MINOR/MAJOR for a reason unrelated to
+    whether it finished (a temperature warning, a nearly-full
+    file-writer disk) must still be readable as Done; a future edit that
+    tightens this poll to `actionable` would hang every acquisition on
+    such a detector, and this is the test that would catch it.
+    """
+    port = _ScriptedRbvPort(rbv_sequence=[_acquire_rbv_reading("Done", 0, quality="Uncertain")])
+    await collect(
+        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+    )
+    assert port.rbv_calls == 1
+
+
+@pytest.mark.unit
+async def test_collect_unreadable_acquire_rbv_warns_once_per_episode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An undecodable reading keeps polling (never concludes Done) and
+    logs exactly once per continuous unreadable stretch, not once per
+    50ms tick: 3 unreadable reads produce 1 warning, and recovering
+    produces exactly 1 info, not a flood of either."""
+    warnings: list[str] = []
+    infos: list[str] = []
+
+    def _record_warning(event: str, **kwargs: Any) -> None:
+        _ = kwargs
+        warnings.append(event)
+
+    def _record_info(event: str, **kwargs: Any) -> None:
+        _ = kwargs
+        infos.append(event)
+
+    monkeypatch.setattr("cora.operation.acquisitions._log.warning", _record_warning)
+    monkeypatch.setattr("cora.operation.acquisitions._log.info", _record_info)
+    port = _ScriptedRbvPort(
+        rbv_sequence=[
+            _acquire_rbv_reading("SEARCHING", None),
+            _acquire_rbv_reading("SEARCHING", None),
+            _acquire_rbv_reading("SEARCHING", None),
+            _acquire_rbv_reading("Done", 0),
+        ]
+    )
+    await collect(
+        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+    )
+    assert port.rbv_calls == 4
+    assert warnings == ["acquisitions.acquire_rbv_unreadable"]
+    assert infos == ["acquisitions.acquire_rbv_restored"]
 
 
 @pytest.mark.unit

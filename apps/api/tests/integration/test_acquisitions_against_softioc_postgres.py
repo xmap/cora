@@ -14,11 +14,14 @@ The softIOC carries an areaDetector ADCore-shaped PV family
 (`cam1:TriggerMode` / `:AcquireTime` / `:NumImages` / `:Acquire` /
 `:Acquire_RBV` / `:DetectorState_RBV`) plus the existing writable
 `double_value` scalar used as the axis for `discrete` + `continuous`.
-`cam1:Acquire_RBV` starts at `0` (Done) so each body's poll loop exits
-on the first read; the integration tier proves wire framing + record
-routing, not the detector finite-state machine. Detector mid-flight
-timing (Acquire_RBV staying 1 until pulses complete) is covered at the
-unit tier via the IteratingPort fixture.
+`cam1:Acquire_RBV` is a `bi` (DBR_ENUM, `ZNAM="Done"` / `ONAM="Acquiring"`)
+seeded at `Done`, so each body's poll loop exits on the first read via
+the real label + ordinal decode path
+(`cora.operation.acquisitions._acquisition_finished`); the integration
+tier proves wire framing + record routing, not the detector
+finite-state machine. Detector mid-flight timing (Acquire_RBV staying
+at `Acquiring` until pulses complete) is covered at the unit tier via
+the IteratingPort fixture.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false

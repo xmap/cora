@@ -72,7 +72,14 @@ def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     port.simulate_connect(_AXIS)
     port.set_reading(
         f"{_DETECTOR}:Acquire_RBV",
-        Measurement(value=0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+        # A real Acquire_RBV is a `bi` record: Categorical label + the
+        # ordinal it resolved from, never a bare Scalar 0/1. See
+        # `cora.operation.acquisitions._acquisition_finished` and
+        # `test_collect_action_body.py`, which owns the exhaustive
+        # label/ordinal/quality coverage this file defers to.
+        Measurement(
+            value="Done", kind="Categorical", quality="Good", produced_at=_FIXED_NOW, ordinal=0
+        ),
     )
     port.set_reading(
         f"{_DETECTOR}:DetectorState_RBV",

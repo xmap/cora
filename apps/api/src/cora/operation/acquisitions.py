@@ -24,7 +24,7 @@ to sibling PVs:
   - `{detector}:AcquireTime` <- `dwell` (seconds)
   - `{detector}:NumImages`   <- `repetitions` (or `0` for free-run)
   - `{detector}:Acquire`     <- `1` to start
-  - `{detector}:Acquire_RBV` -> polled until `0` / `"Done"`
+  - `{detector}:Acquire_RBV` -> polled until Done
   - `{detector}:DetectorState_RBV` -> read once for final-state evidence
 
 Trigger-mode value mapping translates the substrate-neutral primitive
@@ -33,6 +33,39 @@ both collapse to AD's `"External"`; edge polarity vs level is carried
 on the trigger EMITTER (PandABox PCOMP, Aerotech PSO, etc.), not the
 detector. Non-AD detectors will land as their own action bodies; promote
 a shared shape when 3 detector families exist (rule-of-three).
+
+## `Acquire_RBV` is read by index, not by the word "Done"
+
+A real areaDetector `Acquire_RBV` is a `bi` record (DBR_ENUM), so it
+arrives as `kind="Categorical"` carrying a facility/build-authored
+label, with the index it resolved from on `Measurement.ordinal`.
+`"Done"` is ADCore's default `ZNAM`, nothing more: a relabelled record,
+or a build whose defaults differ, produces a value the poll cannot
+recognise, and the loop then waits forever on a detector that already
+finished. This is the fourth instance of a defect family fixed three
+times already this month (the hutch permit, the BLEPS interlock flags,
+the beam-availability gate): `_acquisition_finished` reads
+`Measurement.ordinal` via `cora.shared.binary_signal.binary_code`, the
+same decoder those three use, and treats the conventional label set as
+the fallback for a reading with no index.
+
+The floor is `cora.shared.quality.believable`, not `actionable`, and
+picking the strict one would recreate the same failure at one remove: a
+detector carrying a standing `Uncertain` alarm for a reason unrelated to
+whether it finished (a temperature warning, a nearly-full file-writer
+disk) would then never be readable as Done, so every acquisition on it
+would hang instead of finish. An alarm on `Acquire_RBV` says nothing
+about whether the acquisition is over; only `Bad` (the value itself is
+untrustworthy) may withhold a conclusion.
+
+An unreadable `Acquire_RBV` (unbelievable quality, or a value
+`binary_code` cannot resolve) does not conclude "still running": it logs
+once per continuous stretch of unreadability and keeps polling. Silently
+treating it as "not yet Done" would look identical to a slow detector
+until someone reads the log, which is the whole point: the wait staying
+unbounded is a stated v1 choice (see `_POLL_INTERVAL_S`), so the fix
+here is to stop that choice from making an ordinary label mismatch
+silent, not to bound the wait.
 
 ## v1 detector-side / emitter-side split
 
@@ -55,10 +88,17 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from cora.infrastructure.logging import get_logger
+from cora.shared.binary_signal import binary_code
+from cora.shared.quality import believable
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from cora.operation.conductor import ActionContext
+    from cora.operation.ports.control_port import Measurement
+
+_log = get_logger(__name__)
 
 
 _AD_TRIGGER_MODE_VALUES: Mapping[str, str] = {
@@ -79,6 +119,96 @@ _POLL_INTERVAL_S: float = 0.05
 the typical sub-second to multi-second acquisition durations. The body
 relies on caller-side cancellation (Procedure abort) for hard timeout;
 no internal bound is enforced at v1."""
+
+
+def _acquisition_finished(reading: Measurement) -> bool | None:
+    """Has `Acquire_RBV` reached its de-asserted (Done) state?
+
+    `None` when the reading cannot settle the question at all: either
+    the quality floor (`believable`, `Bad` only disqualifies) rejects it,
+    or `binary_code` cannot resolve `reading.value` / `reading.ordinal`
+    to 0 or 1. `None` is deliberately distinct from `False` -- "cannot
+    tell" must never be folded into "still running", because the two
+    poll loops that call this one treat only `True` as a reason to stop
+    and treat both `False` and `None` identically (keep polling), so
+    collapsing them here would cost the caller the ability to log the
+    difference.
+
+    `code == 0` is Done because `Acquire_RBV` is a `bi` record and 0 is
+    always a `bi`'s de-asserted / false state by construction; see the
+    module docstring's "`Acquire_RBV` is read by index" section for why
+    the label itself (`"Done"`, `ZNAM`'s ADCore default) is not trusted.
+    """
+    if not believable(reading.quality):
+        return None
+    code = binary_code(reading.value, ordinal=reading.ordinal)
+    return None if code is None else code == 0
+
+
+async def _await_acquire_done(ctx: ActionContext, detector: str) -> None:
+    """Poll `{detector}:Acquire_RBV` until Done.
+
+    Shared by `_run_collect_cycle` and `continuous`: both used to carry
+    their own copy of this loop, which is how the same undecoded-label
+    bug ended up needing to be found and fixed twice. `_acquisition_finished`
+    decides; this function owns only the polling cadence and a log line
+    for a continuous unreadable stretch, emitted once on entry and once
+    on exit rather than every 50ms.
+
+    An unreadable reading (`_acquisition_finished` returns `None`) is
+    treated exactly like "not yet Done": the loop keeps polling. The wait
+    staying unbounded either way is the documented v1 choice at
+    `_POLL_INTERVAL_S`; what changes here is that the caller can now SEE
+    the difference between a slow detector and a detector CORA cannot
+    read, instead of both looking like silence.
+    """
+    reported_unreadable = False
+    while True:
+        reading = await ctx.control_port.read(f"{detector}:Acquire_RBV")
+        finished = _acquisition_finished(reading)
+        if finished is None:
+            if not reported_unreadable:
+                reported_unreadable = True
+                _log.warning(
+                    "acquisitions.acquire_rbv_unreadable",
+                    detector=detector,
+                    value=repr(reading.value),
+                    kind=reading.kind,
+                    ordinal=reading.ordinal,
+                    quality=reading.quality,
+                    detail=(
+                        "Acquire_RBV not resolvable to Done/Acquiring "
+                        "(unbelievable quality, or an unconventional label "
+                        "with no ordinal); polling continues"
+                    ),
+                )
+        elif reported_unreadable:
+            reported_unreadable = False
+            _log.info("acquisitions.acquire_rbv_restored", detector=detector)
+        if finished:
+            break
+        await asyncio.sleep(_POLL_INTERVAL_S)
+
+
+def _stream_count_reached(reading: Measurement, target: int) -> bool | None:
+    """Has `NumCaptured_RBV` reached `target`? `None` when it cannot be told.
+
+    `NumCaptured_RBV` is a plain numeric readback (AD `longin`), not an
+    enum, so there is no label/ordinal question here: the only way this
+    reading can fail to answer is an unbelievable quality
+    (`cora.shared.quality.believable`, `Bad` only) or a value that is not
+    actually numeric. Either way `None`, not `False`: before this guard
+    existed, a `Bad`-quality reading whose stale value happened to compare
+    `>= target` would end the stream on a count CORA never actually
+    confirmed, and a non-numeric value would raise `TypeError` -- not one
+    of the Conductor's closed `_CONTROL_ERRORS`, so it would escape the
+    Conductor uncaught rather than being recorded as a step failure.
+    """
+    if not believable(reading.quality):
+        return None
+    if not isinstance(reading.value, (int, float)):
+        return None
+    return reading.value >= target
 
 
 class CollectParams(BaseModel):
@@ -144,11 +274,7 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
     )
     await ctx.control_port.write(f"{params.detector}:Acquire", 1)
 
-    while True:
-        reading = await ctx.control_port.read(f"{params.detector}:Acquire_RBV")
-        if reading.value in (0, "Done"):
-            break
-        await asyncio.sleep(_POLL_INTERVAL_S)
+    await _await_acquire_done(ctx, params.detector)
 
     stopped_at = ctx.clock.now()
     state_reading = await ctx.control_port.read(f"{params.detector}:DetectorState_RBV")
@@ -331,11 +457,7 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
     await ctx.control_port.write(f"{params.detector}:Acquire", 1)
     await ctx.control_port.write(params.axis, params.stop, wait=False)
 
-    while True:
-        reading = await ctx.control_port.read(f"{params.detector}:Acquire_RBV")
-        if reading.value in (0, "Done"):
-            break
-        await asyncio.sleep(_POLL_INTERVAL_S)
+    await _await_acquire_done(ctx, params.detector)
 
     stopped_at = ctx.clock.now()
     state_reading = await ctx.control_port.read(f"{params.detector}:DetectorState_RBV")
@@ -443,11 +565,29 @@ async def stream(ctx: ActionContext) -> Mapping[str, Any]:
     await ctx.control_port.write(f"{params.detector}:Capture", 1)
 
     terminal: str | None = None
+    reported_unreadable = False
     try:
         while True:
             if params.events is not None:
                 captured = await ctx.control_port.read(f"{params.detector}:NumCaptured_RBV")
-                if captured.value >= params.events:
+                reached = _stream_count_reached(captured, params.events)
+                if reached is None:
+                    if not reported_unreadable:
+                        reported_unreadable = True
+                        _log.warning(
+                            "acquisitions.num_captured_unreadable",
+                            detector=params.detector,
+                            value=repr(captured.value),
+                            quality=captured.quality,
+                            detail=(
+                                "NumCaptured_RBV not resolvable to a believable "
+                                "count; polling continues"
+                            ),
+                        )
+                elif reported_unreadable:
+                    reported_unreadable = False
+                    _log.info("acquisitions.num_captured_restored", detector=params.detector)
+                if reached:
                     terminal = "count"
                     break
             elif params.duration is not None:
