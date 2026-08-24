@@ -55,17 +55,27 @@ state without trying to call the unsafe `ca_context_destroy`.
 
 The `cam1:*` PV family mirrors areaDetector's ADCore PV convention so
 `cora.operation.acquisitions.{collect,discrete,continuous}` can talk
-real CA against this fixture. Acquire_RBV is seeded to `0` (always-Done
-state); the body's poll loop exits on the first read. Real-detector
-timing (Acquire_RBV staying 1 mid-flight) is exercised by the unit
-tests via the IteratingPort fixture; this integration tier proves the
-EPICS wire framing, not the detector finite-state machine.
+real CA against this fixture. Acquire_RBV is seeded to `Done` (ZNAM,
+index 0); the body's poll loop exits on the first read. Real-detector
+timing (Acquire_RBV staying at `Acquiring` mid-flight) is exercised by
+the unit tests via the IteratingPort fixture; this integration tier
+proves the EPICS wire framing, not the detector finite-state machine.
+
+`Acquire_RBV` is `bi`, not `longin`, and that is load-bearing rather
+than cosmetic: a real ADCore `Acquire_RBV` is DBR_ENUM, so it arrives
+over CA as `kind="Categorical"` carrying the record's `ZNAM` label
+(`"Done"` by default, but facility- and build-editable) with the index
+behind it on `Measurement.ordinal`. A `longin` fixture can only ever
+produce the `kind="Scalar"` shape the real detector never sends, which
+is why this specific record type was the one place in this file the
+label-vs-ordinal decode bug (see `cora.operation.acquisitions`'s
+`_acquisition_finished`) could not be exercised at all.
 
   - `cam1:TriggerMode`        (mbbo: Internal / External)
   - `cam1:AcquireTime`        (ao,  per-acquisition seconds)
   - `cam1:NumImages`          (longout, bounded count)
   - `cam1:Acquire`            (bo,  start command)
-  - `cam1:Acquire_RBV`        (longin, 0 = Done)
+  - `cam1:Acquire_RBV`        (bi,  ZNAM=Done / ONAM=Acquiring)
   - `cam1:DetectorState_RBV`  (mbbi: Idle / Acquiring / Error)
 
 PV names are pure test-shape (`double_value`, etc.); they do NOT
@@ -283,9 +293,10 @@ record(waveform, "$(P)image:data") {
 }
 
 # areaDetector ADCore PV family for collect / discrete / continuous
-# action body integration tests. Acquire_RBV starts at 0 (Done) so the
-# body's poll loop exits on the first read; the wire framing + record-
-# routing assertions are what the integration tier is here to prove.
+# action body integration tests. Acquire_RBV starts at Done (index 0)
+# so the body's poll loop exits on the first read; the wire framing +
+# record-routing assertions are what the integration tier is here to
+# prove.
 
 record(mbbo, "$(P)cam1:TriggerMode") {
   field(DESC, "AD trigger mode")
@@ -319,10 +330,12 @@ record(bo, "$(P)cam1:Acquire") {
   field(PINI, "YES")
 }
 
-record(longin, "$(P)cam1:Acquire_RBV") {
-  field(DESC, "Acquire status readback; 0 = done")
+record(bi, "$(P)cam1:Acquire_RBV") {
+  field(DESC, "Acquire status readback; Done/Acquiring")
   field(DTYP, "Soft Channel")
-  field(VAL, 0)
+  field(ZNAM, "Done")
+  field(ONAM, "Acquiring")
+  field(VAL, "0")
   field(PINI, "YES")
 }
 

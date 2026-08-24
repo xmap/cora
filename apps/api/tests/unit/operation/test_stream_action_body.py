@@ -111,6 +111,45 @@ class _RecordingPort:
 
 
 @dataclass
+class _ScriptedCapturedPort:
+    """Wraps `InMemoryControlPort`, scripting `NumCaptured_RBV` reads.
+
+    Every other address delegates unchanged (writes, `FullFileName_RBV`).
+    `InMemoryControlPort.set_reading` can only hold one static value per
+    address, which cannot express a reading that changes quality across
+    successive polls; this lets a test walk `NumCaptured_RBV` through a
+    scripted sequence instead. Once exhausted the last element repeats.
+    """
+
+    delegate: InMemoryControlPort
+    captured_sequence: list[Measurement] = field(default_factory=list[Measurement])
+    writes: list[tuple[str, Any, bool]] = field(default_factory=list[tuple[str, Any, bool]])
+    captured_calls: int = 0
+
+    async def write(
+        self,
+        address: str,
+        value: Any,
+        *,
+        wait: bool = True,
+        timeout_s: float = 30.0,
+    ) -> None:
+        self.writes.append((address, value, wait))
+        await self.delegate.write(address, value, wait=wait, timeout_s=timeout_s)
+
+    async def read(self, address: str) -> Measurement:
+        if address == f"{_DETECTOR}:NumCaptured_RBV" and self.captured_sequence:
+            idx = min(self.captured_calls, len(self.captured_sequence) - 1)
+            reading = self.captured_sequence[idx]
+            self.captured_calls += 1
+            return reading
+        return await self.delegate.read(address)
+
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
+        return self.delegate.subscribe(address)
+
+
+@dataclass
 class _StepClock:
     """Returns each seeded time in turn, clamping at the last (for duration tests)."""
 
@@ -192,6 +231,53 @@ async def test_stream_count_terminal_writes_capture_cycle_and_returns_evidence()
     assert result["events_requested"] == 100
     assert result["duration_requested"] is None
     assert result["dwell"] == 0.001
+
+
+@pytest.mark.unit
+async def test_stream_bad_quality_num_captured_never_terminates_the_loop() -> None:
+    """A `Bad`-quality `NumCaptured_RBV` must not be believed, even when
+    its stale value already compares `>= events`: the count was never
+    actually confirmed, so ending the stream on it would be a fail-open
+    into the recorded evidence."""
+    inner = InMemoryControlPort()
+    _seed_daq(inner, captured=0)
+    port = _ScriptedCapturedPort(
+        delegate=inner,
+        captured_sequence=[
+            Measurement(value=100, kind="Scalar", quality="Bad", produced_at=_FIXED_NOW),
+            Measurement(value=100, kind="Scalar", quality="Bad", produced_at=_FIXED_NOW),
+            Measurement(value=100, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+        ],
+    )
+    result = await stream(_ctx(port, {"detector": _DETECTOR, "events": 100, "dwell": 0.001}))
+    # 3 loop reads (Bad, Bad, Good-and-reached) + 1 post-loop read for the
+    # returned `frames_captured` evidence.
+    assert port.captured_calls == 4
+    assert result["terminal"] == "count"
+    assert result["frames_captured"] == 100
+
+
+@pytest.mark.unit
+async def test_stream_non_numeric_num_captured_never_terminates_the_loop() -> None:
+    """A non-numeric `NumCaptured_RBV` must not raise `TypeError` out of
+    the Conductor's closed `_CONTROL_ERRORS` set (`str >= int` raises);
+    it is treated as unreadable and the loop keeps polling instead."""
+    inner = InMemoryControlPort()
+    _seed_daq(inner, captured=0)
+    port = _ScriptedCapturedPort(
+        delegate=inner,
+        captured_sequence=[
+            Measurement(value="NaN", kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+            Measurement(value=100, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+        ],
+    )
+    result = await stream(_ctx(port, {"detector": _DETECTOR, "events": 100, "dwell": 0.001}))
+    # 2 loop reads (unreadable, then Good-and-reached) + 1 post-loop read
+    # for the returned `frames_captured` evidence, which repeats the last
+    # scripted element (Good, 100).
+    assert port.captured_calls == 3
+    assert result["terminal"] == "count"
+    assert result["frames_captured"] == 100
 
 
 @pytest.mark.unit

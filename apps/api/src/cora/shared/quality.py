@@ -50,16 +50,40 @@ one it is asking instead of encoding it in an operator.
 
 `test_quality_floors_are_named` (architecture) keeps it that way by
 refusing a raw comparison against a quality literal outside the
-adapters that PRODUCE quality.
+adapters that PRODUCE quality. It caught a fourth occurrence before it
+ever ran against real hardware: `cora.operation.acquisitions`'s
+detector-done poll (`_acquisition_finished`) had NO floor at all, so a
+`Bad` reading whose stale value happened to decode to "Done" would have
+recorded a capture as finished when the value meant nothing. Not
+reachable at 2-BM (`CONTROL_WRITES_ENABLED=false`), so this one was
+caught by review rather than by a facility, but it is the same question
+answered the same way: the poll asks whether the detector reported Done,
+not whether the read is clean enough to trust unconditionally, so the
+floor is `believable`.
+
+## The split is per QUESTION, not per component
+
+`believable` and `actionable` are not "the observers' floor" and "the
+Conductor's floor". The Conductor uses BOTH: a check step asks "can I
+act on this measured value" (`actionable`), while the acquisitions
+poll above asks "did the detector report Done" (`believable`), and
+answering the second one with the first would make a detector carrying
+an unrelated standing `Uncertain` alarm (a temperature warning, a
+nearly-full file-writer disk) never readable as finished. Read the
+QUESTION a call site is asking before reaching for either name; do not
+infer it from which BC or module the call site lives in.
 
 ## Why an alarmed reading is safe to believe
 
-Every consumer that asks the believe question is recording what a
-facility interlock reported. None of them actuates anything: the PSS
-holds the hutch, BLEPS protects the equipment, ACIS holds the shutters.
-A designed MAJOR is the interlock doing its job of putting a condition
-on an operator's screen, and treating that as "unreadable" throws away
-exactly the readings the interlock most wants seen.
+Every believe-floor consumer here is either recording what a facility
+interlock reported, or deciding when an ALREADY-ISSUED command (a
+detector already told to acquire) has finished. Neither actuates
+anything on the strength of the alarmed reading itself: the PSS holds
+the hutch, BLEPS protects the equipment, ACIS holds the shutters, and
+the detector was already commanded before its `Acquire_RBV` is ever
+read. A designed MAJOR is the interlock (or the detector) doing its job
+of putting a condition on an operator's screen, and treating that as
+"unreadable" throws away exactly the readings most worth seeing.
 
 `Bad` stays disqualifying on both floors, because it is the one value
 that says the number itself is untrustworthy rather than the world
@@ -98,23 +122,26 @@ tight.
 def believable(quality: Quality) -> bool:
     """Is this value worth reading at all? False only for `Bad`.
 
-    The floor for a consumer that RECORDS what a substrate reported, or
-    gates on the value's content rather than on its serenity: the
-    permit observers, the BLEPS supply observer, the capture baseline
-    reader, the beam-availability lookup.
+    The floor for a consumer asking "can I believe this reading", never
+    "is this consumer passive": the permit observers, the BLEPS supply
+    observer, the capture baseline reader, the beam-availability lookup,
+    and (inside the Conductor, alongside `actionable` below for its OTHER
+    decisions) the acquisitions detector-done poll.
 
     `Uncertain` passes, and that is the entire point rather than a
     concession. A facility annotates a signal precisely when the
-    condition it reports is worth an operator's attention, so on an
-    interlock the alarm IS the assertion. A floor that rejected
-    `Uncertain` here would be blind to exactly the readings that matter
-    and clear-sighted about the boring ones, which is worse than blind:
-    it looks like a healthy beamline.
+    condition it reports is worth attention, so on an interlock the
+    alarm IS the assertion, and on a detector readback an unrelated
+    standing alarm says nothing about whether the value itself is
+    trustworthy. A floor that rejected `Uncertain` here would be blind
+    to exactly the readings that matter and clear-sighted about the
+    boring ones, which is worse than blind: it looks like a healthy
+    beamline, or a detector that never finishes.
 
     The loosening runs BOTH ways and a caller should know it: an
-    alarmed reading can now open a gate as well as close one. That is
-    acceptable for these consumers because none of them actuates
-    anything; the interlock, not CORA, holds the hardware.
+    alarmed reading can now open a gate, or end a poll, as well as
+    close/continue one. See the module docstring's "safe to believe"
+    section for why that is acceptable for every consumer of this floor.
     """
     return quality != "Bad"
 
@@ -122,17 +149,21 @@ def believable(quality: Quality) -> bool:
 def actionable(quality: Quality) -> bool:
     """Is this value clean enough to drive an automated act? `Good` only.
 
-    The floor for a consumer that DOES something on the strength of the
-    number, where an annotation is itself a reason to stop and ask a
-    person: the Conductor's check steps and capture assertions, and the
-    optimizer's observation inputs.
+    The floor for a consumer asking "can I act on the strength of this
+    number", never "which BC am I in": the Conductor's check steps and
+    capture assertions, and the optimizer's observation inputs. The
+    SAME Conductor also calls `believable` for its acquisitions poll
+    (see that function), because that call is a different question, not
+    a different component; see the module docstring's "per QUESTION, not
+    per component" section before assuming one BC means one floor.
 
     Stricter than `believable` deliberately, and the difference is not
     caution for its own sake. A check step's job is to decide whether a
     procedure may continue; a `MINOR` on the value it is checking means
     the facility has flagged that reading, and continuing anyway is the
-    machine overruling the flag. Recording the same reading, by
-    contrast, is just writing down what was said.
+    machine overruling the flag. Recording the same reading, or reading
+    back whether an already-issued command finished, is not that: it is
+    not a NEW act taken on the strength of the number.
     """
     return quality == "Good"
 
