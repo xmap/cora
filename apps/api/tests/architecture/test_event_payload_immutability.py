@@ -17,12 +17,13 @@ document intent without enforcing runtime immutability. The companion
 defence for dict aliasing (B1 from the 2026-05-22 audit) is
 shallow-copy on fold in the evolver.
 
-Known scope gap: a ``list`` / ``set`` nested INSIDE a ``dict`` value
-isn't currently detected by the top-level annotation scan. The
-2026-05-22 audit migrated the lone known case
-(``asset_families_snapshot`` is now ``dict[UUID, tuple[UUID, ...]]``)
-by hand; if a new nested case lands, extend the AST walk to recurse
-into dict value parameters.
+The scan recurses through the whole annotation, so a ``list`` / ``set``
+nested inside a ``dict`` value (``dict[UUID, list[str]]``) is rejected
+on the same terms as a bare ``list[str]``. Folded state shares
+references at every depth, so a nested mutable collection invites the
+same alias bug as a top-level one. The lone historical case,
+``asset_families_snapshot``, was migrated by hand in the 2026-05-22
+audit and is now ``dict[UUID, tuple[UUID, ...]]``.
 
 ``MUTABLE_COLLECTION_EVENT_FIELDS`` is the explicit work-tracker for
 known list/set fields awaiting migration. A migration replaces the
@@ -75,14 +76,15 @@ def _unwrap_optional(ann: ast.expr) -> ast.expr:
 
 
 def _mutable_collection_name(ann: ast.expr) -> str | None:
-    """Return ``'list'`` / ``'set'`` if ``ann`` is one of those, else ``None``."""
-    inner = _unwrap_optional(ann)
-    if (
-        isinstance(inner, ast.Subscript)
-        and isinstance(inner.value, ast.Name)
-        and inner.value.id in {"list", "set"}
-    ):
-        return inner.value.id
+    """Return ``'list'`` / ``'set'`` if ``ann`` names one at any depth, else ``None``.
+
+    The walk descends into subscript parameters, so ``dict[UUID, list[str]]``
+    and ``tuple[set[int], ...]`` are caught as well as a bare ``list[str]``.
+    ``frozenset`` and ``tuple`` are distinct names and never match.
+    """
+    for node in ast.walk(_unwrap_optional(ann)):
+        if isinstance(node, ast.Name) and node.id in {"list", "set"}:
+            return node.id
     return None
 
 
@@ -109,7 +111,8 @@ def test_event_payload_collection_fields_are_immutable(events_file: Path) -> Non
             replacement = "tuple[X, ...]" if collection == "list" else "frozenset[X]"
             violations.append(
                 f"line {stmt.lineno}: {node.name}.{stmt.target.id} "
-                f"is {collection}[...]; use {replacement}"
+                f"is {ast.unparse(stmt.annotation)}; "
+                f"{collection} is mutable, use {replacement}"
             )
     assert not violations, (
         f"{qualified_module} has mutable collection fields in event "
