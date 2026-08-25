@@ -41,6 +41,7 @@ from cora.run.aggregates.run import (
 )
 from cora.run.features import record_witnessed_run
 from cora.run.features.record_witnessed_run import RecordWitnessedRun, RunWitnessedStartContext
+from cora.shared.identifier import Identifier
 from cora.subject.aggregates.subject import Subject, SubjectName, SubjectStatus
 
 _NOW = datetime(2026, 8, 14, 12, 0, 0, tzinfo=UTC)
@@ -176,6 +177,41 @@ def test_decide_emits_run_started_witnessed_for_a_valid_capture() -> None:
     # No `capture_precondition_bypass_snapshot` supplied on the command:
     # the emitted genesis carries None, never a fabricated snapshot.
     assert event.capture_precondition_bypass_snapshot is None
+    # No `orchestrator_ref` supplied on the command either: exactly one
+    # external_refs entry, never a second empty/fabricated one.
+    assert len(event.external_refs) == 1
+
+
+@pytest.mark.unit
+def test_decide_appends_orchestrator_ref_as_a_second_external_ref() -> None:
+    cap = uuid4()
+    asset_id = uuid4()
+    plan = _plan(asset_ids=frozenset({asset_id}))
+    asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
+    context = RunWitnessedStartContext(
+        plan=plan,
+        subject=None,
+        assets={asset_id: asset},
+        referencing_clearances=_active_clearance_stub(),
+    )
+    ref = Identifier(scheme="bluesky-run-uid", value="d1a0925b-3e24-461b-896a-3737ba88f39b")
+    decision = record_witnessed_run.decide(
+        state=None,
+        command=_command(plan_id=plan.id, orchestrator_ref=ref),
+        context=context,
+        needed_family_ids_snapshot=frozenset({cap}),
+        effective_parameters={},
+        method_parameters_schema=None,
+        now=_NOW,
+        new_id=uuid4(),
+    )
+    event = decision.run_events[0]
+    assert len(event.external_refs) == 2
+    assert dict(event.external_refs[0]) == {"scheme": "capture-code", "value": "2bmb-tomoscan"}
+    assert dict(event.external_refs[1]) == {
+        "scheme": "bluesky-run-uid",
+        "value": "d1a0925b-3e24-461b-896a-3737ba88f39b",
+    }
 
 
 @pytest.mark.unit

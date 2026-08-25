@@ -473,6 +473,12 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     It needs only the shadow observer running to have anything to write
     from.
 
+    Also refuses to boot with capture_orchestrator_ref_recording_enabled=True
+    unless run_witness_recording_enabled is itself True: the attachment
+    happens at promotion (a second `external_refs` entry on the
+    genesis), so with no promoted Run there is no genesis to attach it
+    to.
+
     Also refuses to boot with durable_distribution_sweep_enabled=True
     unless four conditions all hold: capture_path_recording_enabled is
     itself True (the sweep's candidate signal is the same resolved
@@ -532,6 +538,16 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
             "CAPTURE_PROBE_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_ENABLED=true. The capture-probe trail has no shadow "
             "observer to record reach from without it."
+        )
+        raise RuntimeError(msg)
+    if (
+        settings.capture_orchestrator_ref_recording_enabled
+        and not settings.run_witness_recording_enabled
+    ):
+        msg = (
+            "CAPTURE_ORCHESTRATOR_REF_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. The attachment happens at "
+            "promotion; with no promoted Run there is no genesis to attach it to."
         )
         raise RuntimeError(msg)
     if settings.durable_distribution_sweep_enabled:
@@ -1242,6 +1258,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 control_port=app.state.operation.control_port,
                 capture_pvs=settings.capture_watch_pvs,
                 status_phases=settings.capture_status_phases,
+                orchestrator_ref_schemes=settings.capture_orchestrator_ref_schemes,
                 tick_seconds=settings.capture_watch_probe_tick_seconds,
             )
             capture_watch_codes: frozenset[str] = (

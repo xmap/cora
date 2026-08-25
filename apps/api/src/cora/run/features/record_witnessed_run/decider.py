@@ -190,12 +190,27 @@ def decide(
         for caution in context.active_cautions
     )
 
-    external_refs = (
+    external_refs: tuple[dict[str, str], ...] = (
         {
             "scheme": Identifier(scheme=_CAPTURE_CODE_SCHEME, value=command.capture_code).scheme,
             "value": command.capture_code,
         },
     )
+    if command.orchestrator_ref is not None:
+        # A second, independent anti-corruption ref: an external
+        # orchestrator's own run identifier for this capture (e.g. a
+        # Bluesky RunEngine start-document uid), alongside `capture-code`,
+        # never in place of it. Already a validated `Identifier` by the
+        # time it reaches this command (see `RecordWitnessedRun`'s own
+        # docstring), so no re-validation happens here beyond re-reading
+        # its already-trimmed `scheme` / `value`.
+        external_refs = (
+            *external_refs,
+            {
+                "scheme": command.orchestrator_ref.scheme,
+                "value": command.orchestrator_ref.value,
+            },
+        )
 
     run_events = [
         RunStarted(

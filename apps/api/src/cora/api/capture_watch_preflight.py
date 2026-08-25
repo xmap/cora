@@ -24,10 +24,13 @@ string unless this preflight calls it out explicitly, so the verdict
 column shows `placeholder` (distinct from `empty` and `text(len=N)`) rather
 than letting an unpopulated PV masquerade as a good reading -- see
 "Trap 1" in `cora.api._capture_experiment_identity_reader`'s own
-docstring. Run this command once the host is reachable and before
+docstring. The `orchestrator_ref` role (see "Per-role decode
+verdict" below) is checked against `Settings.capture_orchestrator_ref_schemes`
+as part of the same `capture_watch_pvs` sweep, not a separate group.
+Run this command once the host is reachable and before
 `RUN_WITNESS_RECORDING_ENABLED` is set, and again after any
 `CAPTURE_WATCH_PVS` / `CAPTURE_STATUS_PHASES` / `CAPTURE_BASELINE_PVS` /
-`CAPTURE_EXPERIMENT_IDENTITY_PVS` edit.
+`CAPTURE_EXPERIMENT_IDENTITY_PVS` / `CAPTURE_ORCHESTRATOR_REF_SCHEMES` edit.
 
 ## Why this exists
 
@@ -95,6 +98,17 @@ from what the running system actually accepts:
     `suspected-truncated` (mirroring `_from_full_file_name_reading`'s
     own truncation threshold); BAD only for `suspected-truncated`. A
     non-str reading is BAD as `non-text`.
+  - `orchestrator_ref` (`ROLE_ORCHESTRATOR_REF`): the value is NOT
+    personal data, so it prints unredacted (defensive path-shape
+    redaction still applies, mirroring the baseline/experiment-identity
+    sweeps' own guard). Verdict reports `text(len=N)` when a scheme is
+    configured for this code in `capture_orchestrator_ref_schemes`,
+    `empty` for a blank reading (the orchestrator's own cleared state,
+    not a defect); BAD as `non-text` for a non-string reading, over
+    length, or `scheme-not-configured` when the PV is declared here but
+    absent from `CAPTURE_ORCHESTRATOR_REF_SCHEMES` -- mirroring
+    `_from_orchestrator_ref_reading`'s own rejection reasons exactly so
+    this can never drift from what production accepts.
   - any other declared role (e.g. `server_running`, which production
     itself declares and never decodes): reports `kind` / `value` only,
     verdict `n/a`. Not decoding it here does not make it undecodable
@@ -171,6 +185,7 @@ from cora.api._capture_observer import (
     ROLE_FULL_FILE_NAME,
     ROLE_IMAGES_COLLECTED,
     ROLE_IMAGES_SAVED,
+    ROLE_ORCHESTRATOR_REF,
     ROLE_STATUS,
     ROLE_TESTING,
     binary_code,
@@ -188,6 +203,7 @@ from cora.operation.ports.control_port import (
 )
 from cora.run.aggregates.run import READING_CATEGORICAL_VALUE_MAX_LENGTH
 from cora.shared.capture_phase import CapturePhase
+from cora.shared.identifier import IDENTIFIER_VALUE_MAX_LENGTH
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -266,6 +282,7 @@ async def preflight_read_capture_pvs(
     baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
     experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
     camera_select_prefixes: Mapping[str, str] | None = None,
+    orchestrator_ref_schemes: Mapping[str, str] | None = None,
 ) -> _Report:
     """Read every configured `capture_watch_pvs` role, then every
     `capture_baseline_pvs` channel (slice 12), then every
@@ -288,7 +305,9 @@ async def preflight_read_capture_pvs(
         roles = capture_pvs[code]
         role_reports: dict[str, _PvReport] = {}
         for role, pv in sorted(roles.items()):
-            pv_report = await _read_one(control_port, code, role, pv, status_phases)
+            pv_report = await _read_one(
+                control_port, code, role, pv, status_phases, orchestrator_ref_schemes or {}
+            )
             report.lines.append(pv_report)
             role_reports[role] = pv_report
         if ROLE_FULL_FILE_NAME in roles:
@@ -319,6 +338,7 @@ async def _read_one(
     role: str,
     pv: str,
     status_phases: Mapping[str, str],
+    orchestrator_ref_schemes: Mapping[str, str],
 ) -> _PvReport:
     try:
         reading = await control_port.read(pv)
@@ -342,7 +362,7 @@ async def _read_one(
         if reading.kind == "Array" and hasattr(reading.value, "__len__")
         else None
     )
-    verdict, ok = _decode_verdict(role, reading, status_phases)
+    verdict, ok = _decode_verdict(role, reading, status_phases, code, orchestrator_ref_schemes)
     return _PvReport(
         code=code,
         pv_key=role,
@@ -391,7 +411,11 @@ def _redacted_value(role: str, value: object) -> object:
 
 
 def _decode_verdict(
-    role: str, reading: Measurement, status_phases: Mapping[str, str]
+    role: str,
+    reading: Measurement,
+    status_phases: Mapping[str, str],
+    capture_code: str,
+    orchestrator_ref_schemes: Mapping[str, str],
 ) -> tuple[str, bool]:
     """The per-role decode check, dispatched on the exact role keys and
     decoders production uses (`cora.api._capture_observer`)."""
@@ -405,6 +429,8 @@ def _decode_verdict(
         return ("asserted" if code == 1 else "clear"), True
     if role == ROLE_FULL_FILE_NAME:
         return _full_file_name_verdict(reading.value)
+    if role == ROLE_ORCHESTRATOR_REF:
+        return _orchestrator_ref_verdict(reading.value, capture_code, orchestrator_ref_schemes)
     if role == ROLE_TESTING:
         code = binary_code(reading.value, ordinal=reading.ordinal)
         if code is None:
@@ -417,6 +443,34 @@ def _decode_verdict(
         reached, commanded_total = counts
         return f"reached={reached} commanded_total={commanded_total}", True
     return "n/a", True
+
+
+def _orchestrator_ref_verdict(
+    value: object, capture_code: str, orchestrator_ref_schemes: Mapping[str, str]
+) -> tuple[str, bool]:
+    """The `orchestrator_ref` role's decode check, mirroring
+    `_from_orchestrator_ref_reading`'s own rejection reasons
+    (`cora.api._capture_observer`) so this can never drift from what
+    production accepts. NOT personal data, so (unlike
+    `_full_file_name_verdict`) the length-N verdict is the only
+    redaction; the raw value itself is still never printed here either,
+    matching every other role's verdict-not-value convention.
+    """
+    if not isinstance(value, str):
+        return "non-text", False
+    if not value:
+        return "empty", True
+    # Measured AFTER trimming, matching `Identifier.__post_init__`'s own
+    # strip-then-bound order (and `_from_orchestrator_ref_reading`'s
+    # identical fix): a whitespace-padded reading over the raw threshold
+    # but under it once trimmed is a value the running system accepts,
+    # not a defect this preflight should flag.
+    trimmed_length = len(value.strip())
+    if trimmed_length > IDENTIFIER_VALUE_MAX_LENGTH:
+        return "over-length", False
+    if capture_code not in orchestrator_ref_schemes:
+        return "scheme-not-configured", False
+    return f"text(len={trimmed_length})", True
 
 
 def _full_file_name_verdict(value: object) -> tuple[str, bool]:
@@ -786,6 +840,7 @@ def main(argv: list[str] | None = None) -> int:
                 baseline_pvs=settings.capture_baseline_pvs,
                 experiment_identity_pvs=settings.capture_experiment_identity_pvs,
                 camera_select_prefixes=settings.capture_camera_select_prefixes,
+                orchestrator_ref_schemes=settings.capture_orchestrator_ref_schemes,
             )
             return _finish(report)
         finally:

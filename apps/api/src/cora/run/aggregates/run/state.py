@@ -1953,10 +1953,16 @@ def extract_capture_code(external_refs: frozenset[Identifier]) -> str | None:
 
     `None` for a Conducted Run (no such ref at all) and, defensively,
     for a Witnessed Run whose genesis somehow lacked one:
-    `record_witnessed_run`'s decider always stamps exactly one, so this
-    should not happen in practice, but a missing ref must never raise --
-    only degrade to "capture code unknown," e.g. at the boot-time
-    dedup rebuild (`rebuild_open_captures`) or a read-model query.
+    `record_witnessed_run`'s decider always stamps at least this one
+    (a second entry, under a deployment-declared scheme from
+    `Settings.capture_orchestrator_ref_schemes`, rides alongside it
+    when an external orchestrator's run identifier was attached; see
+    that decider's own code), so a missing capture-code ref should not
+    happen in practice, but must never raise -- only degrade to
+    "capture code unknown," e.g. at the boot-time dedup rebuild
+    (`rebuild_open_captures`) or a read-model query. Filtering by
+    scheme rather than assuming a single-entry set is what keeps this
+    lookup correct regardless of how many other refs a genesis carries.
 
     Single source of truth for this lookup against the FOLDED aggregate
     state's `frozenset[Identifier]` shape; `RunSummaryProjection`'s

@@ -947,7 +947,8 @@ class Settings(BaseSettings):
     #       "images_saved": "2bmb:TomoScan:ImagesSaved",
     #       "images_collected": "2bmb:TomoScan:ImagesCollected",
     #       "testing": "2bmb:TomoScan:Testing",
-    #       "full_file_name": "2bmSP2:HDF1:FullFileName_RBV"
+    #       "full_file_name": "2bmSP2:HDF1:FullFileName_RBV",
+    #       "orchestrator_ref": "2bmb:BlueskyRunUID"
     #     }
     #   }'
     #
@@ -988,7 +989,59 @@ class Settings(BaseSettings):
     # `run_capture_path` PII vault above unless caught first. See
     # `capture_camera_select_prefixes` below and
     # `capture_watch_preflight._camera_prefix_check`.
+    #
+    # `orchestrator_ref` (optional per code) joins a witnessed Run
+    # to an external orchestrator's own run identifier for the same
+    # capture (e.g. a Bluesky RunEngine start-document uid), written to
+    # the substrate by the orchestrator BEFORE it triggers the act this
+    # capture code watches. A DBR_STRING (`stringout`) fits a UUID with
+    # no headroom (39 usable chars); a DBR_CHAR waveform, matching
+    # `full_file_name`'s own shape, is safer for a facility whose run
+    # identifiers may be longer. Unlike every other role above, this one
+    # is NOT sufficient on its own: pair it with an entry in
+    # `capture_orchestrator_ref_schemes` below naming the `Identifier`
+    # scheme this capture code's reading should mint under, or every
+    # reading is rejected as misconfigured (see
+    # `cora.api._capture_observer`'s `_from_orchestrator_ref_reading`).
+    # NOT personal data (unlike `full_file_name`): a run uid names no
+    # person. See `_run_witness.py`'s "Orchestrator-ref pairing" section
+    # for the consume-once guard that makes this join safe against a
+    # stale substrate reading.
     capture_watch_pvs: dict[str, dict[str, str]] = {}
+
+    # Deployment-declared `code -> Identifier scheme` table pairing
+    # `capture_watch_pvs`'s optional `orchestrator_ref` role. Kept
+    # separate from `capture_watch_pvs` itself (mirrors
+    # `capture_camera_select_prefixes`'s own separation from it) because
+    # a scheme is not a PV: it is the anti-corruption-ref vocabulary
+    # (`cora.shared.identifier.Identifier.scheme`) a reading of that
+    # role mints under, e.g. `"bluesky-run-uid"` for a Bluesky-driven
+    # deployment. Deployment-declared, never hardcoded, because which
+    # external orchestrator (if any) drives a given capture code is a
+    # per-deployment fact the spine must stay neutral to -- the same
+    # reasoning `capture_status_phases` applies to a facility's own
+    # status literals. Empty (default) means every `orchestrator_ref`
+    # reading is rejected as misconfigured; a code with the role
+    # declared here but absent from this table is exactly that state.
+    #
+    #   CAPTURE_ORCHESTRATOR_REF_SCHEMES='{
+    #     "2bmb-tomoscan": "bluesky-run-uid"
+    #   }'
+    capture_orchestrator_ref_schemes: dict[str, str] = {}
+
+    # How long an `orchestrator_ref` reading may lead the BEGUN
+    # observation it is meant to pair with before `RunWitnessRecorder
+    # ._consume_orchestrator_ref` rejects it as stale (see `_run_witness
+    # .py`'s "Orchestrator-ref pairing" section). A run uid is written
+    # BEFORE the capture it names begins, so some lead is expected and
+    # correct; this bounds how much. Deployment-declared rather than
+    # hardcoded because the real gap between an orchestrator submitting
+    # a plan and the substrate act it triggers reporting BEGUN is a
+    # per-deployment, per-plan fact this codebase cannot assume. Default
+    # (30 seconds) is generous relative to the sub-second gap Bluesky's
+    # own plan submission produces in practice; tighten it once a real
+    # deployment's own measured gap is known.
+    capture_orchestrator_ref_max_lead_seconds: float = 30.0
 
     # Deployment-declared table the `camera_selected` role's decoded
     # reading is looked up in, to resolve the `full_file_name` PV prefix
@@ -1326,6 +1379,28 @@ class Settings(BaseSettings):
     # Sweep cadence, matching every other loop's `*_tick_seconds` naming.
     # Irrelevant when `durable_distribution_sweep_enabled` is False.
     durable_distribution_sweep_tick_seconds: float = 30.0
+
+    # TENTH kill switch: gates whether a retained `orchestrator_ref`
+    # reading is actually ATTACHED to a promoted Run's genesis as a
+    # second `external_refs` entry. Default off. Refuses to boot if True
+    # without `run_witness_recording_enabled` also True (see
+    # `_enforce_run_witness_recording_gate`): the attachment happens at
+    # promotion, so with no promoted Run there is no genesis to attach
+    # it to. Independently revocable from the other recording switches
+    # for the same reason `capture_path_recording_enabled` is: a
+    # deployment must be able to keep witnessing running while
+    # withholding this specific join, e.g. while the orchestrator side
+    # (a BITS/Bluesky plan writing the uid) is still being validated.
+    # Declaring the role in `capture_watch_pvs` (with a paired scheme in
+    # `capture_orchestrator_ref_schemes`) alone is necessary but not
+    # sufficient, mirroring every other switch here. Retention
+    # (`RunWitnessRecorder.observe_orchestrator_ref`) happens regardless
+    # of this switch, gated only on `run_witness_recording_enabled`,
+    # exactly like `capture_path_recording_enabled`'s own declare-vs-
+    # record split, so flipping this switch on later does not miss
+    # whatever was already retained. See `_run_witness.py`'s
+    # "Orchestrator-ref pairing" section.
+    capture_orchestrator_ref_recording_enabled: bool = False
 
     # SSH host holding the scan bytes (e.g. "tomdet"), or `None` for a
     # deployment where CORA's own host mounts the storage directly. When

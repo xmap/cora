@@ -38,6 +38,7 @@ _STATUS_PV = "2bmb:TomoScan:ScanStatus"
 _ABORT_PV = "2bmb:TomoScan:AbortScan"
 _SAVED_PV = "2bmb:TomoScan:ImagesSaved"
 _COLLECTED_PV = "2bmb:TomoScan:ImagesCollected"
+_ORCHESTRATOR_REF_PV = "2bmb:BlueskyRunUID"
 _PLAN_ID = UUID("01900000-0000-7000-8000-000000007107")
 _NOW = datetime(2026, 8, 14, 22, 30, 34, tzinfo=UTC)
 
@@ -193,11 +194,16 @@ class _FakeAppendObservations:
 
 
 def _recorder(
-    *, genesis: _FakeGenesis, outcome: _FakeOutcome, truncate: _FakeTruncate
+    *,
+    genesis: _FakeGenesis,
+    outcome: _FakeOutcome,
+    truncate: _FakeTruncate,
+    capture_orchestrator_ref_recording_enabled: bool = False,
 ) -> RunWitnessRecorder:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=True,
         capture_watch_plan_id=_PLAN_ID,
+        capture_orchestrator_ref_recording_enabled=capture_orchestrator_ref_recording_enabled,
     )
     return RunWitnessRecorder(
         deps=build_deps(ids=[uuid4() for _ in range(200)]),
@@ -226,12 +232,14 @@ async def _run_loop_over(
     *,
     feeder: CaptureProgressFeeder | None = None,
     capture_pvs: dict[str, str] | None = None,
+    orchestrator_ref_schemes: dict[str, str] | None = None,
     settle_seconds: float = 0.05,
 ) -> None:
     observer = ControlPortCaptureObserver(
         control_port=port,  # type: ignore[arg-type]
         capture_pvs={_CODE: capture_pvs or {"status": _STATUS_PV, "abort": _ABORT_PV}},
         status_phases=_PHASES,
+        orchestrator_ref_schemes=orchestrator_ref_schemes,
     )
     task = asyncio.create_task(
         run_witness_loop(
@@ -451,3 +459,87 @@ async def test_replay_a_healthy_scan_short_of_its_total_still_completes_with_evi
     # The short count is evidence, not a verdict: still Ended, never
     # reclassified as Aborted for falling short of its own total.
     assert command.observed_phase.value != "Aborted"
+
+
+@pytest.mark.unit
+async def test_replay_orchestrator_ref_attaches_when_written_before_begun() -> None:
+    """The live shape Francesco's BITS/Bluesky plan produces: the
+    RunEngine writes its uid to the substrate, THEN triggers the
+    capture this port watches. Both PVs are read with a real substrate
+    time (`_progress_reading`, not `_reading`), so `RunWitnessRecorder`
+    's consume-once lead-time guard has a reference to compare against
+    and accepts it, riding `RecordWitnessedRun` as a second external
+    ref end to end: real adapter, real recorder, real merged queue.
+
+    A leading no-op status reading ("Programming PSO", Progressing, one
+    extra `_ScriptedPort` tick) delays the real BEGUN by one round so
+    the single-reading orchestrator_ref pump's uid is already retained
+    by the time it lands -- this module's own documented "status and
+    orchestrator-ref pumps have no enforced ordering" residual
+    (`_run_witness.py`) means a bare two-item race is NOT deterministic
+    the other way around; this is the accept path, not a claim that
+    ordering is guaranteed in production.
+    """
+    port = _ScriptedPort(
+        {
+            _STATUS_PV: [
+                _progress_reading(v) for v in ("Programming PSO", "Beginning scan", "Scan complete")
+            ],
+            _ORCHESTRATOR_REF_PV: [_progress_reading("d1a0925b-3e24-461b-896a-3737ba88f39b")],
+        }
+    )
+    genesis = _FakeGenesis()
+    outcome = _FakeOutcome()
+    truncate = _FakeTruncate()
+    recorder = _recorder(
+        genesis=genesis,
+        outcome=outcome,
+        truncate=truncate,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    await _run_loop_over(
+        port,
+        recorder,
+        capture_pvs={"status": _STATUS_PV, "orchestrator_ref": _ORCHESTRATOR_REF_PV},
+        orchestrator_ref_schemes={_CODE: "bluesky-run-uid"},
+    )
+
+    assert len(genesis.calls) == 1
+    ref = genesis.calls[0].orchestrator_ref
+    assert ref is not None
+    assert ref.scheme == "bluesky-run-uid"
+    assert ref.value == "d1a0925b-3e24-461b-896a-3737ba88f39b"
+
+
+@pytest.mark.unit
+async def test_replay_orchestrator_ref_absent_when_scheme_not_configured() -> None:
+    """The PV is declared but `orchestrator_ref_schemes` carries no
+    entry for this code: the adapter rejects every reading as
+    misconfigured, so the genesis attaches no ref -- the fail-loud
+    posture, not a silent guess."""
+    port = _ScriptedPort(
+        {
+            _STATUS_PV: [_progress_reading(v) for v in ("Beginning scan", "Scan complete")],
+            _ORCHESTRATOR_REF_PV: [_progress_reading("d1a0925b-3e24-461b-896a-3737ba88f39b")],
+        }
+    )
+    genesis = _FakeGenesis()
+    outcome = _FakeOutcome()
+    truncate = _FakeTruncate()
+    recorder = _recorder(
+        genesis=genesis,
+        outcome=outcome,
+        truncate=truncate,
+        capture_orchestrator_ref_recording_enabled=True,
+    )
+
+    await _run_loop_over(
+        port,
+        recorder,
+        capture_pvs={"status": _STATUS_PV, "orchestrator_ref": _ORCHESTRATOR_REF_PV},
+        orchestrator_ref_schemes=None,
+    )
+
+    assert len(genesis.calls) == 1
+    assert genesis.calls[0].orchestrator_ref is None
