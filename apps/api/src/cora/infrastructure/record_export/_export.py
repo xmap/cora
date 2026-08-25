@@ -65,6 +65,21 @@ _WATERMARK_SQL = "SELECT pg_snapshot_xmin(pg_current_snapshot())::text"
 # projection/worker.py's _ADVANCE_SQL. transaction_id is xid8; asyncpg has
 # no output codec for it (same gap those two modules work around), so it
 # is cast to text and aliased back onto its own name.
+#
+# ORDER BY is qualified `events.transaction_id`, not the bare column name:
+# a bare reference resolves to the OUTPUT alias (per Postgres's documented
+# "ORDER BY prefers an output column name over an input column of the same
+# name" rule), which is the ::text expression above, so an unqualified
+# ORDER BY sorts LEXICOGRAPHICALLY rather than numerically. That silently
+# reorders any two rows whose transaction_id crosses a digit-count boundary
+# (e.g. "10001137" sorts before "9995093"), corrupting the one ordering
+# `fold` depends on for every consumer downstream of this query. Measured
+# on arcturus 2026-08-25 (cora.api.record_fidelity_check caught it): a Run
+# whose RunStarted and RunCompleted straddled the 7-to-8-digit xid boundary
+# exported with RunCompleted first, so it could not refold. Only a
+# table-qualified reference can name the input column once an output alias
+# shares its name; renaming the alias instead would change the bundle's
+# on-disk `transaction_id` key, a wider and unnecessary blast radius.
 _STREAM_SQL = """
 SELECT position, event_id, stream_type, stream_id, version, event_type,
        schema_version, payload, metadata, correlation_id, causation_id,
@@ -73,7 +88,7 @@ SELECT position, event_id, stream_type, stream_id, version, event_type,
        transaction_id::text AS transaction_id
 FROM events
 WHERE transaction_id < $1::xid8
-ORDER BY transaction_id, position
+ORDER BY events.transaction_id, position
 """
 
 

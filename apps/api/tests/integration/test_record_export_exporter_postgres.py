@@ -218,3 +218,85 @@ async def test_zero_rows_exported_is_an_error(db_pool: asyncpg.Pool) -> None:
         await pg_conn.execute("DELETE FROM events")
         with pytest.raises(EmptyExportError):
             await export_record(pg_conn)
+
+
+async def _current_transaction_id(conn: asyncpg.Connection) -> int:
+    """Consumes one transaction id by calling it, per `pg_current_xact_id`'s
+    own documented behavior ("assigns a new one if the current transaction
+    does not have one yet"). No table write needed to burn an id."""
+    value = await conn.fetchval("SELECT pg_current_xact_id()::text")
+    assert value is not None, "pg_current_xact_id() returned NULL outside a transaction"
+    return int(value)
+
+
+async def _advance_to_transaction_id(db_pool: asyncpg.Pool, target: int) -> None:
+    """Burns throwaway transactions on freshly-acquired connections until
+    the NEXT transaction on this database will be assigned `target`.
+    Each `db_pool.acquire()` round trip is its own implicit transaction,
+    so one `_current_transaction_id` call per iteration is one xid."""
+    while True:
+        async with db_pool.acquire() as conn:
+            pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+            current = await _current_transaction_id(pg_conn)
+        if current >= target - 1:
+            return
+
+
+@pytest.mark.integration
+async def test_stream_rows_order_by_transaction_id_numerically_across_a_digit_boundary(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Regression for a real defect caught 2026-08-25 by
+    `cora.api.record_fidelity_check` against arcturus's live database: a
+    Run whose two events straddled the 7-to-8-digit transaction_id
+    boundary exported with the LATER event first, because `_STREAM_SQL`'s
+    unqualified `ORDER BY transaction_id` resolves to the `::text` OUTPUT
+    alias (Postgres's documented "output column name wins" rule), sorting
+    lexicographically rather than numerically: `"10001137"` sorts before
+    `"9995093"`.
+
+    Reproduced here without waiting for ten million real transactions: a
+    fresh per-test database's own transaction counter is already small, so
+    burning it up to the very next power-of-ten boundary (e.g. 99 -> 100)
+    is the SAME class of defect, digit-count parity intact. `procedure_id`
+    is minted before the burn loop and stays fixed; only the two events'
+    OWN append transactions are timed to land on `boundary - 1` and
+    `boundary`.
+    """
+    procedure_id = uuid4()
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4(), uuid4()])
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        current = await _current_transaction_id(pg_conn)
+    boundary = 10 ** len(str(current + 1))
+    await _advance_to_transaction_id(db_pool, boundary - 1)
+
+    await _seed_running_procedure(deps.event_store, procedure_id)
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        seeded = await pg_conn.fetch(
+            "SELECT event_type, transaction_id::text AS tx FROM events "
+            "WHERE stream_id = $1 ORDER BY position",
+            procedure_id,
+        )
+        record = await export_record(pg_conn)
+
+    seeded_tx_ids = [int(row["tx"]) for row in seeded]
+    assert len(seeded_tx_ids) == 2
+    assert seeded_tx_ids[0] == boundary - 1
+    assert seeded_tx_ids[1] == boundary
+    assert len(str(seeded_tx_ids[0])) < len(str(seeded_tx_ids[1])), (
+        "the burn loop must land the two events on opposite sides of a "
+        "digit-count boundary, or this test exercises nothing"
+    )
+
+    this_stream = [row for row in record.streams if row["stream_id"] == str(procedure_id)]
+    assert [row["event_type"] for row in this_stream] == [
+        "ProcedureRegistered",
+        "ProcedureStarted",
+    ], (
+        "ProcedureStarted (the later, higher-transaction_id event) sorted "
+        "before ProcedureRegistered: the lexicographic ORDER BY defect is back"
+    )
