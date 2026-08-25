@@ -264,7 +264,7 @@
 | src/cora/api/\_durable\_distribution\_driver.py                                          |      105 |        2 |       28 |        1 |     97.7% |   532-536 |
 | src/cora/api/\_durable\_distribution\_sweep.py                                           |       52 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/api/\_edge\_conductor.py                                                        |       85 |        7 |        6 |        1 |     91.2% |161-164, 315, 317, 323 |
-| src/cora/api/\_enclosure\_permit\_observer.py                                            |       78 |        2 |       20 |        1 |     94.9% |   187-188 |
+| src/cora/api/\_enclosure\_permit\_observer.py                                            |       78 |        2 |       20 |        1 |     94.9% |   203-204 |
 | src/cora/api/\_experiment\_steerer.py                                                    |      106 |        2 |       32 |        3 |     96.4% |416-\>420, 465-\>475, 487-488 |
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       21 |        0 |        0 |        0 |    100.0% |           |
