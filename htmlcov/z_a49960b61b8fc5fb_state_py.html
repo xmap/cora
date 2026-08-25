@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-24 21:24 +0000
+            created at 2026-08-25 01:21 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -2037,21 +2037,27 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t1953" href="#t1953">1953</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t1954" href="#t1954">1954</a></span><span class="t"><span class="str">    `None` for a Conducted Run (no such ref at all) and, defensively,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t1955" href="#t1955">1955</a></span><span class="t"><span class="str">    for a Witnessed Run whose genesis somehow lacked one:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1956" href="#t1956">1956</a></span><span class="t"><span class="str">    `record_witnessed_run`&#x27;s decider always stamps exactly one, so this</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1957" href="#t1957">1957</a></span><span class="t"><span class="str">    should not happen in practice, but a missing ref must never raise --</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1958" href="#t1958">1958</a></span><span class="t"><span class="str">    only degrade to &quot;capture code unknown,&quot; e.g. at the boot-time</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1959" href="#t1959">1959</a></span><span class="t"><span class="str">    dedup rebuild (`rebuild_open_captures`) or a read-model query.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1960" href="#t1960">1960</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1961" href="#t1961">1961</a></span><span class="t"><span class="str">    Single source of truth for this lookup against the FOLDED aggregate</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1962" href="#t1962">1962</a></span><span class="t"><span class="str">    state&#x27;s `frozenset[Identifier]` shape; `RunSummaryProjection`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1963" href="#t1963">1963</a></span><span class="t"><span class="str">    sibling `_extract_capture_code` (`run/projections/summary.py`)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1964" href="#t1964">1964</a></span><span class="t"><span class="str">    performs the same lookup against a raw JSON event payload list, a</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1965" href="#t1965">1965</a></span><span class="t"><span class="str">    genuinely different input type, so it stays a separate function.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t1966" href="#t1966">1966</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1967" href="#t1967">1967</a></span><span class="t">    <span class="key">for</span> <span class="nam">ref</span> <span class="key">in</span> <span class="nam">external_refs</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="par run show_par"><span class="n"><a id="t1968" href="#t1968">1968</a></span><span class="t">        <span class="key">if</span> <span class="nam">ref</span><span class="op">.</span><span class="nam">scheme</span> <span class="op">==</span> <span class="nam">CAPTURE_CODE_EXTERNAL_REF_SCHEME</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">1968&#x202F;&#x219B;&#x202F;1967</span><span class="annotate long">line 1968 didn't jump to line 1967 because the condition on line 1968 was always true</span></span></p>
-    <p class="run"><span class="n"><a id="t1969" href="#t1969">1969</a></span><span class="t">            <span class="key">return</span> <span class="nam">ref</span><span class="op">.</span><span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1970" href="#t1970">1970</a></span><span class="t">    <span class="key">return</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1956" href="#t1956">1956</a></span><span class="t"><span class="str">    `record_witnessed_run`&#x27;s decider always stamps at least this one</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1957" href="#t1957">1957</a></span><span class="t"><span class="str">    (a second entry, under a deployment-declared scheme from</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1958" href="#t1958">1958</a></span><span class="t"><span class="str">    `Settings.capture_orchestrator_ref_schemes`, rides alongside it</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1959" href="#t1959">1959</a></span><span class="t"><span class="str">    when an external orchestrator&#x27;s run identifier was attached; see</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1960" href="#t1960">1960</a></span><span class="t"><span class="str">    that decider&#x27;s own code), so a missing capture-code ref should not</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1961" href="#t1961">1961</a></span><span class="t"><span class="str">    happen in practice, but must never raise -- only degrade to</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1962" href="#t1962">1962</a></span><span class="t"><span class="str">    &quot;capture code unknown,&quot; e.g. at the boot-time dedup rebuild</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1963" href="#t1963">1963</a></span><span class="t"><span class="str">    (`rebuild_open_captures`) or a read-model query. Filtering by</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1964" href="#t1964">1964</a></span><span class="t"><span class="str">    scheme rather than assuming a single-entry set is what keeps this</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1965" href="#t1965">1965</a></span><span class="t"><span class="str">    lookup correct regardless of how many other refs a genesis carries.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1966" href="#t1966">1966</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1967" href="#t1967">1967</a></span><span class="t"><span class="str">    Single source of truth for this lookup against the FOLDED aggregate</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1968" href="#t1968">1968</a></span><span class="t"><span class="str">    state&#x27;s `frozenset[Identifier]` shape; `RunSummaryProjection`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1969" href="#t1969">1969</a></span><span class="t"><span class="str">    sibling `_extract_capture_code` (`run/projections/summary.py`)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1970" href="#t1970">1970</a></span><span class="t"><span class="str">    performs the same lookup against a raw JSON event payload list, a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1971" href="#t1971">1971</a></span><span class="t"><span class="str">    genuinely different input type, so it stays a separate function.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1972" href="#t1972">1972</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1973" href="#t1973">1973</a></span><span class="t">    <span class="key">for</span> <span class="nam">ref</span> <span class="key">in</span> <span class="nam">external_refs</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="par run show_par"><span class="n"><a id="t1974" href="#t1974">1974</a></span><span class="t">        <span class="key">if</span> <span class="nam">ref</span><span class="op">.</span><span class="nam">scheme</span> <span class="op">==</span> <span class="nam">CAPTURE_CODE_EXTERNAL_REF_SCHEME</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">1974&#x202F;&#x219B;&#x202F;1973</span><span class="annotate long">line 1974 didn't jump to line 1973 because the condition on line 1974 was always true</span></span></p>
+    <p class="run"><span class="n"><a id="t1975" href="#t1975">1975</a></span><span class="t">            <span class="key">return</span> <span class="nam">ref</span><span class="op">.</span><span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1976" href="#t1976">1976</a></span><span class="t">    <span class="key">return</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -2061,7 +2067,7 @@
             <a class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-24 21:24 +0000
+            created at 2026-08-25 01:21 +0000
         </p>
     </div>
 </footer>
