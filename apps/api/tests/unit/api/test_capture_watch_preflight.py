@@ -70,6 +70,7 @@ async def _preflight(
     baseline_pvs: dict[str, dict[str, str]] | None = None,
     experiment_identity_pvs: dict[str, dict[str, str]] | None = None,
     camera_select_prefixes: dict[str, str] | None = None,
+    orchestrator_ref_schemes: dict[str, str] | None = None,
 ) -> _Report:
     """`_FakeControlPort` implements `.read()` only (this command never
     writes or subscribes), so it satisfies `ControlPort` in practice but
@@ -82,6 +83,7 @@ async def _preflight(
         baseline_pvs=baseline_pvs,
         experiment_identity_pvs=experiment_identity_pvs,
         camera_select_prefixes=camera_select_prefixes,
+        orchestrator_ref_schemes=orchestrator_ref_schemes,
     )
 
 
@@ -287,6 +289,92 @@ async def test_preflight_read_full_file_name_role_non_text_is_bad() -> None:
     assert not line.ok
     assert line.verdict == "non-text"
     assert line.value == "<redacted, non-text>"
+
+
+@pytest.mark.unit
+async def test_preflight_read_orchestrator_ref_role_healthy_reading_is_ok() -> None:
+    """NOT personal data: unlike `full_file_name`, the real value prints
+    unredacted."""
+    port = _FakeControlPort({"pv:uid": _reading("d1a0925b-3e24-461b-896a-3737ba88f39b")})
+
+    report = await _preflight(
+        port,
+        {"code": {"orchestrator_ref": "pv:uid"}},
+        orchestrator_ref_schemes={"code": "bluesky-run-uid"},
+    )
+
+    line = next(x for x in report.lines if x.pv_key == "orchestrator_ref")
+    assert line.ok
+    assert line.verdict == "text(len=36)"
+    assert line.value == "d1a0925b-3e24-461b-896a-3737ba88f39b"
+
+
+@pytest.mark.unit
+async def test_preflight_read_orchestrator_ref_role_empty_string_is_ok() -> None:
+    """The orchestrator's own cleared state between captures: a fine,
+    ordinary outcome, not a defect."""
+    port = _FakeControlPort({"pv:uid": _reading("")})
+
+    report = await _preflight(
+        port,
+        {"code": {"orchestrator_ref": "pv:uid"}},
+        orchestrator_ref_schemes={"code": "bluesky-run-uid"},
+    )
+
+    line = next(x for x in report.lines if x.pv_key == "orchestrator_ref")
+    assert line.ok
+    assert line.verdict == "empty"
+
+
+@pytest.mark.unit
+async def test_preflight_read_orchestrator_ref_role_non_text_is_bad() -> None:
+    port = _FakeControlPort({"pv:uid": _reading(0)})
+
+    report = await _preflight(
+        port,
+        {"code": {"orchestrator_ref": "pv:uid"}},
+        orchestrator_ref_schemes={"code": "bluesky-run-uid"},
+    )
+
+    line = next(x for x in report.lines if x.pv_key == "orchestrator_ref")
+    assert not line.ok
+    assert line.verdict == "non-text"
+
+
+@pytest.mark.unit
+async def test_preflight_read_orchestrator_ref_role_over_length_is_bad() -> None:
+    from cora.shared.identifier import IDENTIFIER_VALUE_MAX_LENGTH
+
+    long_value = "a" * (IDENTIFIER_VALUE_MAX_LENGTH + 1)
+    port = _FakeControlPort({"pv:uid": _reading(long_value)})
+
+    report = await _preflight(
+        port,
+        {"code": {"orchestrator_ref": "pv:uid"}},
+        orchestrator_ref_schemes={"code": "bluesky-run-uid"},
+    )
+
+    line = next(x for x in report.lines if x.pv_key == "orchestrator_ref")
+    assert not line.ok
+    assert line.verdict == "over-length"
+
+
+@pytest.mark.unit
+async def test_preflight_read_orchestrator_ref_role_scheme_not_configured_is_bad() -> None:
+    """The PV is declared but the code has no entry in
+    `orchestrator_ref_schemes`: a misconfiguration, reported loudly
+    rather than treated as a healthy reading."""
+    port = _FakeControlPort({"pv:uid": _reading("d1a0925b-3e24-461b-896a-3737ba88f39b")})
+
+    report = await _preflight(
+        port,
+        {"code": {"orchestrator_ref": "pv:uid"}},
+        orchestrator_ref_schemes=None,
+    )
+
+    line = next(x for x in report.lines if x.pv_key == "orchestrator_ref")
+    assert not line.ok
+    assert line.verdict == "scheme-not-configured"
 
 
 @pytest.mark.unit

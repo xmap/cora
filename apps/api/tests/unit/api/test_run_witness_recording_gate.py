@@ -48,6 +48,12 @@ union with `posix_checksum_roots` that `CaptureScanIngestorBinding`'s
 own validator checks, which would let a durable root reachable only by
 the local pair pass boot and then make every `SshLocateProbe` call
 refuse.
+
+The orchestrator-ref join adds a TENTH gate, same shape as the four
+`run_witness_recording_enabled` gates: `capture_orchestrator_ref_recording_enabled=True`
+requires `run_witness_recording_enabled=True` -- the attachment happens
+at promotion (a second `external_refs` entry on the genesis), so with
+no promoted Run there is no genesis to attach it to.
 """
 
 from uuid import UUID, uuid4
@@ -93,6 +99,7 @@ def _settings(
     capture_path_recording_enabled: bool = False,
     capture_experiment_identity_recording_enabled: bool = False,
     capture_probe_recording_enabled: bool = False,
+    capture_orchestrator_ref_recording_enabled: bool = False,
     capture_scan_ingestor_enabled: bool = False,
     durable_distribution_sweep_enabled: bool = False,
     capture_scan_ingestor_bindings: dict[str, CaptureScanIngestorBinding] | None = None,
@@ -112,6 +119,7 @@ def _settings(
             capture_experiment_identity_recording_enabled
         ),
         capture_probe_recording_enabled=capture_probe_recording_enabled,
+        capture_orchestrator_ref_recording_enabled=capture_orchestrator_ref_recording_enabled,
         capture_scan_ingestor_enabled=capture_scan_ingestor_enabled,
         durable_distribution_sweep_enabled=durable_distribution_sweep_enabled,
         capture_scan_ingestor_bindings=capture_scan_ingestor_bindings or {},
@@ -330,6 +338,44 @@ def test_experiment_identity_recording_enabled_with_run_witness_recording_passes
             capture_watch_plan_id=uuid4(),
             run_witness_recording_enabled=True,
             capture_experiment_identity_recording_enabled=True,
+        )
+    )
+
+
+def test_orchestrator_ref_recording_enabled_without_run_witness_recording_refuses_boot() -> None:
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=True,
+                capture_watch_plan_id=uuid4(),
+                run_witness_recording_enabled=False,
+                capture_orchestrator_ref_recording_enabled=True,
+            )
+        )
+
+
+def test_orchestrator_ref_recording_enabled_checked_before_the_first_gates_prerequisites() -> None:
+    """Same independence property as the progress / baseline / path /
+    experiment-identity gates: this gate's own message must appear even
+    when the FIRST gate's prerequisites are also missing."""
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=False,
+                capture_watch_plan_id=None,
+                run_witness_recording_enabled=False,
+                capture_orchestrator_ref_recording_enabled=True,
+            )
+        )
+
+
+def test_orchestrator_ref_recording_enabled_with_run_witness_recording_passes() -> None:
+    _enforce_run_witness_recording_gate(
+        _settings(
+            run_witness_enabled=True,
+            capture_watch_plan_id=uuid4(),
+            run_witness_recording_enabled=True,
+            capture_orchestrator_ref_recording_enabled=True,
         )
     )
 
