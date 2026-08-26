@@ -232,9 +232,12 @@ class RunStarted:
     # all-True verdict would carry no information beyond the event's
     # own existence, the same reason `start_run`'s decider never
     # persists its beam reading. Only `record_witnessed_run`'s decider
-    # ever constructs a non-None value. Forward-compat via
-    # `payload.get("safety_envelope_verdict")` returning None for legacy
-    # streams without the key.
+    # ever constructs a non-None value. Lives on the event payload
+    # only — NOT on Run state, same exclusion as
+    # `acknowledged_cautions` (a forensic genesis snapshot, not
+    # something any later transition or read model needs to see).
+    # Forward-compat via `payload.get("safety_envelope_verdict")`
+    # returning None for legacy streams without the key.
     safety_envelope_verdict: SafetyEnvelopeVerdict | None = None
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
@@ -305,6 +308,8 @@ class RunStarted:
     # Run, same "only the witnessed decider ever constructs a non-None
     # value" precedent as `safety_envelope_verdict`. See
     # `CapturePreconditionBypassSnapshot` for the tri-state contract.
+    # Lives on the event payload only — NOT on Run state, same
+    # exclusion as `acknowledged_cautions` and `safety_envelope_verdict`.
     # Forward-compat via
     # `payload.get("capture_precondition_bypass_snapshot")` returning
     # None for legacy streams without the key.

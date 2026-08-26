@@ -35,11 +35,11 @@ principle, gate-review 6f-3 L9 lock).
 
 **Critical invariant**: every transition arm MUST carry `id`,
 `name`, `plan_id`, `subject_id`, `raid`, `override_parameters`,
-`effective_parameters`, `trigger_source`, `observation_logbook_id`,
-`external_refs`, `campaign_id`, `last_adjusted_at`,
-`last_adjusted_by`, `adjustment_count`, `pinned_calibration_ids`,
-`input_dataset_ids`, AND `actuation_kind` through
-from prior state. Constructing `Run(id=..., name=..., plan_id=...,
+`effective_parameters`, `trigger_source`, `started_by_decision_id`,
+`observation_logbook_id`, `external_refs`, `campaign_id`,
+`last_adjusted_at`, `last_adjusted_by`, `adjustment_count`,
+`pinned_calibration_ids`, `input_dataset_ids`, AND `actuation_kind`
+through from prior state. Constructing `Run(id=..., name=..., plan_id=...,
 subject_id=..., status=...)` without explicitly passing the additive
 fields would silently WIPE them to defaults (empty dict / None / empty
 frozenset / 0). Pinned by the per-transition preserve-fields tests.
@@ -162,6 +162,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
             override_parameters=override_parameters,
             effective_parameters=effective_parameters,
             trigger_source=trigger_source,
+            decided_by_decision_id=decided_by_decision_id,
             external_refs=external_refs,
             campaign_id=campaign_id,
             pinned_calibration_ids=pinned_calibration_ids,
@@ -181,6 +182,11 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=dict(override_parameters),
                 effective_parameters=dict(effective_parameters),
                 trigger_source=trigger_source,
+                # Genesis decision link, if any: set once here, never
+                # touched again. Named started_by_, not decided_by_,
+                # to distinguish it from the per-transition sense every
+                # other decided_by_decision_id in this module carries.
+                started_by_decision_id=decided_by_decision_id,
                 observation_logbook_id=None,
                 external_refs=frozenset(
                     Identifier(scheme=ref["scheme"], value=ref["value"]) for ref in external_refs
@@ -217,6 +223,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -251,6 +259,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -285,6 +295,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -317,6 +329,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -349,6 +363,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -379,6 +395,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -420,6 +438,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=dict(effective_parameters),
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -456,6 +476,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,
@@ -491,6 +513,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=campaign_id,
@@ -526,6 +550,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=None,
@@ -575,6 +601,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
                 trigger_source=prior.trigger_source,
+                # Immutable after genesis, same as conduct_mode.
+                started_by_decision_id=prior.started_by_decision_id,
                 observation_logbook_id=prior.observation_logbook_id,
                 external_refs=prior.external_refs,
                 campaign_id=prior.campaign_id,

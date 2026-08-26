@@ -1662,6 +1662,24 @@ class Run:
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     trigger_source: str | None = None
+    # Decision->Run linkage: the Decision BC record that justified this
+    # Run's start (`RunStarted.decided_by_decision_id`), most commonly an
+    # EnergyChange or similar cross-Plan operator pivot. Optional: not
+    # every Run-start needs formal justification, and a witnessed genesis
+    # (CORA observing a run it did not start) never has one.
+    #
+    # Named `started_by_...`, not `decided_by_...`, deliberately: eight
+    # Run events (`RunHeld`, `RunResumed`, `HoldClaimReleased`,
+    # `RunAborted`, `RunStopped`, `RunAdjusted`, `RunTruncated`, plus
+    # `RunStarted` itself) each carry their OWN `decided_by_decision_id`
+    # naming the decision behind THAT transition, and `Calibration`
+    # mirrors the same per-record sense on each `CalibrationRevision`.
+    # This field is not that: it is set once at genesis and IMMUTABLE
+    # thereafter (every transition arm in the evolver threads
+    # `prior.started_by_decision_id` verbatim, same as `conduct_mode`),
+    # so a name matching the per-transition family would misread as
+    # "the decision behind whatever happened most recently."
+    started_by_decision_id: UUID | None = None
     # lazily populated when first observation is appended
     # (RunObservationLogbookOpened event sets this field). None on Runs
     # that never recorded observations; legacy streams without the field fold

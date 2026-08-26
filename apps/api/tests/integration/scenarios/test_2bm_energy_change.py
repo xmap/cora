@@ -77,14 +77,16 @@ operator's forward-looking acquisition authorship.
 
 ## What this scenario surfaces (gap-finding intent)
 
-  - **Decision-to-Run linkage is not first-class.** The
-    `EnergyChange` Decision precedes Run 2, and downstream
-    consumers may want a fast lookup ("which Decision pivoted
-    into this Run?"). Today the linkage lives in the operator's
-    free-text reasoning + correlation_id; whether a structured
-    field on Run (`decided_by_decision_id`, mirroring the
-    `adjust_run` slice's [[project_adjust_run_design]] pattern)
-    is needed for the start_run path is a watch item.
+  - **Decision-to-Run linkage.** Run 2's `StartRun` carries
+    `decided_by_decision_id=` the `EnergyChange` Decision registered
+    just before it, and it survives onto the folded `Run` as
+    `started_by_decision_id`, asserted below. That makes "which
+    Decision pivoted into this Run?" a structural lookup for anything
+    that loads the Run aggregate (the offline record extract included),
+    rather than an inference over free-text `trigger_source` +
+    `correlation_id`. It is not yet a lookup the REST/MCP `get_run`
+    surface or the Run summary projection exposes to an external
+    caller; only the in-process aggregate carries it today.
   - **Plan-defaults divergence audit.** Two Plans with identical
     Methods and Practices but distinct defaults have no
     higher-order grouping today; if a 2-BM scan-plan family
@@ -138,6 +140,7 @@ from cora.recipe.features.update_plan_default_parameters import (
 from cora.recipe.features.update_plan_default_parameters import (
     bind as bind_update_plan_defaults,
 )
+from cora.run.aggregates.run import load_run
 from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
@@ -527,6 +530,7 @@ async def test_energy_change_plays_out_end_to_end(
             subject_id=_SUBJECT_ID,
             override_parameters={},
             trigger_source=("operator-manual; pivot from 25 keV per EnergyChange Decision"),
+            decided_by_decision_id=_DECISION_PIVOT_ID,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -592,6 +596,17 @@ async def test_energy_change_plays_out_end_to_end(
         assert "RunStarted" in run_event_types
         assert "RunAddedToCampaign" in run_event_types
         assert "RunCompleted" in run_event_types
+
+    # ----- Assert: the pivot Decision is structurally bound to Run 2,
+    # not just named in its free-text trigger_source -----
+
+    low_energy_run = await load_run(deps.event_store, _RUN_LOW_ENERGY_ID)
+    assert low_energy_run is not None
+    assert low_energy_run.started_by_decision_id is None
+
+    high_energy_run = await load_run(deps.event_store, _RUN_HIGH_ENERGY_ID)
+    assert high_energy_run is not None
+    assert high_energy_run.started_by_decision_id == _DECISION_PIVOT_ID
 
     # ----- Assert: Campaign carries both member-add events -----
 
