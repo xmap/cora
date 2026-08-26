@@ -281,7 +281,7 @@
 | src/cora/api/pilot\_seed.py                                                              |      353 |       43 |       64 |       10 |     85.4% |297-302, 320-326, 336-337, 370-372, 415-416, 459-496, 561-562, 573-574, 651, 655, 667-668, 753-755, 925-955 |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
 | src/cora/api/record\_bundle\_export.py                                                   |       86 |        2 |        2 |        0 |     97.7% |   358-359 |
-| src/cora/api/record\_fidelity\_check.py                                                  |      152 |        5 |       16 |        0 |     97.0% |387-389, 488-489 |
+| src/cora/api/record\_fidelity\_check.py                                                  |      152 |        5 |       16 |        0 |     97.0% |388-390, 489-490 |
 | src/cora/budget/\_\_init\_\_.py                                                          |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/budget/\_allocation\_update\_handler.py                                         |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/budget/\_projections.py                                                         |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -2059,7 +2059,7 @@
 | src/cora/run/aggregates/run/parameters\_validation.py                                    |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/read.py                                                      |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/safety\_envelope.py                                          |       16 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/run/aggregates/run/state.py                                                     |      321 |        0 |        8 |        1 |     99.7% |1974-\>1973 |
+| src/cora/run/aggregates/run/state.py                                                     |      322 |        0 |        8 |        1 |     99.7% |1992-\>1991 |
 | src/cora/run/errors.py                                                                   |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/\_\_init\_\_.py                                                    |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/abort\_run/\_\_init\_\_.py                                         |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -2693,7 +2693,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **61040** | **1386** | **9276** |  **415** | **97.2%** |           |
+| **TOTAL**                                                                                | **61041** | **1386** | **9276** |  **415** | **97.2%** |           |
 
 
 ## Setup coverage badge
