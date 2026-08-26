@@ -373,6 +373,34 @@ def test_evolve_run_started_without_parameter_fields_yields_state_defaults() -> 
 
 
 @pytest.mark.unit
+def test_evolve_run_started_folds_started_by_decision_id() -> None:
+    """The genesis Decision->Run link survives the fold: the event
+    field existed and was fully wired through start_run, but the
+    evolver never destructured it, so it never reached Run state."""
+    decision_id = uuid4()
+    state = evolve(
+        None,
+        RunStarted(
+            run_id=uuid4(),
+            name="X",
+            plan_id=uuid4(),
+            subject_id=None,
+            occurred_at=_NOW,
+            decided_by_decision_id=decision_id,
+        ),
+    )
+    assert state.started_by_decision_id == decision_id
+
+
+@pytest.mark.unit
+def test_evolve_run_started_without_decided_by_decision_id_yields_state_none() -> None:
+    """Most Run-starts carry no formal justification; the default
+    stays None rather than requiring every caller to pass one."""
+    state = evolve(None, _run_started())
+    assert state.started_by_decision_id is None
+
+
+@pytest.mark.unit
 def test_evolve_held_then_resumed_preserves_parameter_fields() -> None:
     """Critical pin: every transition uses dataclass.replace which
     preserves all fields. override_parameters + effective_parameters
@@ -467,6 +495,65 @@ def _run_started_with_raid(
         occurred_at=_NOW,
         raid=raid,
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "transitions",
+    [
+        [RunHeld],
+        [RunHeld, RunResumed],
+        [RunCompleted],
+        [RunAborted],
+        [RunStopped],
+        [RunTruncated],
+        [RunHeld, RunAborted],
+        [RunHeld, RunStopped],
+        [RunHeld, RunTruncated],
+        [RunHeld, RunResumed, RunCompleted],
+    ],
+)
+def test_fold_preserves_started_by_decision_id_across_every_transition_path(
+    transitions: list[type],
+) -> None:
+    """Same structural property as raid, over a representative sample
+    of transition paths (Held/Resumed/terminal combinations); full
+    coverage of every arm is the job of the AST fitness test in
+    tests/architecture/test_run_evolver_carry_forward.py, not this
+    parametrize list."""
+    run_id = uuid4()
+    decision_id = uuid4()
+    events: list[object] = [
+        RunStarted(
+            run_id=run_id,
+            name="32-ID FlyScan",
+            plan_id=uuid4(),
+            subject_id=None,
+            occurred_at=_NOW,
+            decided_by_decision_id=decision_id,
+        )
+    ]
+    for cls in transitions:
+        if cls is RunAborted:
+            events.append(RunAborted(run_id=run_id, reason="X", occurred_at=_NOW, observed_at=None))
+        elif cls is RunStopped:
+            events.append(cls(run_id=run_id, reason="X", occurred_at=_NOW))
+        elif cls is RunTruncated:
+            events.append(
+                RunTruncated(
+                    run_id=run_id,
+                    reason="X",
+                    interrupted_at=None,
+                    occurred_at=_NOW,
+                )
+            )
+        elif cls is RunCompleted:
+            events.append(RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None))
+        else:
+            events.append(cls(run_id=run_id, occurred_at=_NOW))
+    state = fold(events)  # type: ignore[arg-type]
+    assert state is not None
+    assert state.started_by_decision_id == decision_id
 
 
 # ---------- RunObservationLogbookOpened ----------

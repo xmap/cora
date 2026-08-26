@@ -240,6 +240,7 @@ def _render_run_state(run: Run) -> dict[str, object]:
         "override_parameters": run.override_parameters,
         "effective_parameters": run.effective_parameters,
         "trigger_source": run.trigger_source,
+        "started_by_decision_id": render_value(run.started_by_decision_id),
         "observation_logbook_id": render_value(run.observation_logbook_id),
         "external_refs": sorted(
             ({"scheme": ref.scheme, "value": ref.value} for ref in run.external_refs),
