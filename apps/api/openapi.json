@@ -7260,6 +7260,187 @@
         "title": "EditionKind",
         "type": "string"
       },
+      "EnclosureListResponse": {
+        "description": "Page of enclosures plus opaque next-page cursor.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EnclosureSummaryDTO"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "EnclosureListResponse",
+        "type": "object"
+      },
+      "EnclosureSummaryDTO": {
+        "description": "One enclosure in a paginated list.",
+        "properties": {
+          "decommissioned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decommissioned At"
+          },
+          "decommissioned_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decommissioned By"
+          },
+          "enclosure_id": {
+            "format": "uuid",
+            "title": "Enclosure Id",
+            "type": "string"
+          },
+          "facility_code": {
+            "title": "Facility Code",
+            "type": "string"
+          },
+          "last_permit_status_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CORA's ingest time of the last permit-status CHANGE, from the event's occurred_at. Advances only on a change: a stale value means 'no transition since', never 'not observed since'.",
+            "title": "Last Permit Status Changed At"
+          },
+          "last_permit_status_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Permit Status Reason"
+          },
+          "last_source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Source Id"
+          },
+          "last_source_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Source Kind"
+          },
+          "last_source_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The substrate's own time for the reading behind the last change, or null when the substrate reported none (the ordinary case at APS 2-BM). Never a substitute for last_permit_status_changed_at.",
+            "title": "Last Source Observed At"
+          },
+          "last_trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "One of Operator / Monitor / Auto, or null before any observation.",
+            "title": "Last Trigger"
+          },
+          "lifecycle": {
+            "enum": [
+              "Active",
+              "Decommissioned"
+            ],
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "permit_status": {
+            "enum": [
+              "Unknown",
+              "Permitted",
+              "NotPermitted"
+            ],
+            "title": "Permit Status",
+            "type": "string"
+          },
+          "registered_at": {
+            "format": "date-time",
+            "title": "Registered At",
+            "type": "string"
+          },
+          "registered_by": {
+            "format": "uuid",
+            "title": "Registered By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enclosure_id",
+          "name",
+          "facility_code",
+          "lifecycle",
+          "permit_status",
+          "registered_at",
+          "registered_by"
+        ],
+        "title": "EnclosureSummaryDTO",
+        "type": "object"
+      },
       "EncodingRequest": {
         "description": "Structured encoding descriptor on the registration request body.",
         "properties": {
@@ -30628,6 +30809,157 @@
       }
     },
     "/enclosures": {
+      "get": {
+        "operationId": "list_enclosures_enclosures_get",
+        "parameters": [
+          {
+            "description": "Opaque cursor from a previous page's `next_cursor`.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from a previous page's `next_cursor`.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size; capped at 100.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Page size; capped at 100.",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional lifecycle filter (Active / Decommissioned). Omit for all.",
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "Active",
+                    "Decommissioned"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lifecycle filter (Active / Decommissioned). Omit for all.",
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "description": "Optional permit-status filter (Unknown / Permitted / NotPermitted).",
+            "in": "query",
+            "name": "permit_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "Unknown",
+                    "Permitted",
+                    "NotPermitted"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional permit-status filter (Unknown / Permitted / NotPermitted).",
+              "title": "Permit Status"
+            }
+          },
+          {
+            "description": "Optional facility filter; cross-deployment convergent slug.",
+            "in": "query",
+            "name": "facility_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "pattern": "^[a-z0-9-]{1,32}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional facility filter; cross-deployment convergent slug.",
+              "title": "Facility Code"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnclosureListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the query."
+          },
+          "422": {
+            "description": "Query parameters failed validation OR `cursor` was malformed (corrupt base64, missing separator, bad timestamp / UUID)."
+          }
+        },
+        "summary": "List enclosures: cursor pagination + lifecycle/permit_status/facility_code filters",
+        "tags": [
+          "enclosure"
+        ]
+      },
       "post": {
         "operationId": "post_enclosures_enclosures_post",
         "parameters": [
