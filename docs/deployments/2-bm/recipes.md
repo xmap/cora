@@ -21,7 +21,7 @@ The four recipes below are 2-BM's operational arc, each realizing one [Capabilit
 
 Both baselines are calibration captures that feed reconstruction, and both reuse the registered `collect` action body (acquire a frame stack, poll until done), so they are conductible today. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention: pixel-wise baseline reduction stays in external pipelines, while a heavier compute step like reconstruction is a recorded compute Method); the captured stack becomes a baseline [Dataset](experiment.md), which makes each capture a [Run](experiment.md) (a Dataset-of-record makes the act a Run; see the [Run vs Procedure boundary](../../reference/modeling.md#run-vs-procedure-boundary) rule). The recipe is the as-data form of the capture sequence the Run conducts.
 
-The `S02BM-PSS:SBS` address in both step tables names the station shutter at the device level. The descriptor now carries the full record, `S02BM-PSS:SBS:BeamBlockingM`, which reads inverted: 1 means blocked, so the `open` and `closed` values in these tables are the operator's words for `== 0` and `== 1`. The leaf name is still CORA-proposed and awaits APS PSS sign-off; see [Enclosures](enclosures.md) for the full signal set.
+The station shutter has three PVs in play, not one, corrected 2026-08-27 against TomoScan's own deployed autosave configuration (`2bmb:TomoScan:{Open,Close}ShutterPVName`), which is the beamline's own working reference for this switch: `S02BM-PSS:SBS:OpenEPICSC` and `S02BM-PSS:SBS:CloseEPICSC` are the momentary command PVs (write `1` to fire), and `S02BM-PSS:SBS:BeamBlockingM` is a status read-back only, inverted (1 means blocked/closed). An earlier draft of this recipe wrote the setpoint straight to `BeamBlockingM`; that PV is read-only-in-practice everywhere else in the codebase (permit monitoring, the safety envelope) and was never TomoScan's write target either. See [Enclosures](enclosures.md) for the full PSS signal set. Two items are still open before either recipe touches real hardware: APS PSS sign-off on treating `OpenEPICSC`/`CloseEPICSC` as ordinary momentary commands (confirm they self-reset and carry no other side effect), and a live confirmation that writing `1` is safe to repeat if the shutter is already in the requested state.
 
 ### `dark_field`
 
@@ -31,8 +31,8 @@ The `S02BM-PSS:SBS` address in both step tables names the station shutter at the
 
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
-| 1 | setpoint | `S02BM-PSS:SBS` (StationShutter) | `closed` (verify) |
-| 2 | check | `S02BM-PSS:SBS` | `== closed` |
+| 1 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== 1` (closed) |
 | 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
 
 **Status:** conductible today (reuses `collect`).
@@ -45,10 +45,11 @@ The `S02BM-PSS:SBS` address in both step tables names the station shutter at the
 
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
-| 1 | setpoint | `S02BM-PSS:SBS` (StationShutter) | `open` (verify) |
-| 2 | check | `S02BM-PSS:SBS` | `== open` |
+| 1 | setpoint | `S02BM-PSS:SBS:OpenEPICSC` (StationShutter, open command) | `1` (verify) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== 0` (open, inverted polarity) |
 | 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
-| 4 | setpoint | `S02BM-PSS:SBS` (StationShutter) | `closed` (verify, return to safe state) |
+| 4 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify, return to safe state) |
+| 5 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== 1` (closed) |
 
 **Precondition:** the sample is out of the beam path. This is an operator assertion, not a CORA setpoint (CORA does not drive the sample out automatically).
 

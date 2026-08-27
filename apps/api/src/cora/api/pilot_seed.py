@@ -146,6 +146,10 @@ from cora.recipe.aggregates.plan.state import PlanStatus
 from cora.recipe.aggregates.practice.events import event_type_name as practice_event_type_name
 from cora.recipe.aggregates.practice.events import to_payload as practice_to_payload
 from cora.recipe.aggregates.practice.read import load_practice
+from cora.recipe.aggregates.recipe import RecipeActionStep, RecipeCheckStep, RecipeSetpointStep
+from cora.recipe.aggregates.recipe.events import event_type_name as recipe_event_type_name
+from cora.recipe.aggregates.recipe.events import to_payload as recipe_to_payload
+from cora.recipe.aggregates.recipe.read import load_recipe
 from cora.recipe.features.define_capability.command import DefineCapability
 from cora.recipe.features.define_capability.decider import decide as decide_capability
 from cora.recipe.features.define_method.command import DefineMethod
@@ -155,6 +159,8 @@ from cora.recipe.features.define_plan.context import PlanBindingContext
 from cora.recipe.features.define_plan.decider import decide as decide_plan
 from cora.recipe.features.define_practice.command import DefinePractice
 from cora.recipe.features.define_practice.decider import decide as decide_practice
+from cora.recipe.features.define_recipe.command import DefineRecipe
+from cora.recipe.features.define_recipe.decider import decide as decide_recipe
 from cora.recipe.features.deprecate_plan.command import DeprecatePlan
 from cora.recipe.features.deprecate_plan.decider import decide as decide_deprecate_plan
 from cora.shared.deprecation import DeprecationReason
@@ -232,6 +238,11 @@ async def seed_pilot_beamline(
     shutter_name: str = "StationShutter",
     acquisition_camera_name: str = "AcquisitionCamera",
     rotary_stage_name: str = "RotaryStage",
+    shutter_close_address: str = "S02BM-PSS:SBS:CloseEPICSC",
+    shutter_status_address: str = "S02BM-PSS:SBS:BeamBlockingM",
+    detector_address: str = "2bmSP1:cam1",
+    dark_field_frames: int = 10,
+    dark_field_dwell_s: float = 0.05,
     database_url: str | None = None,
 ) -> int:
     """Run the ceremony. `database_url` overrides the Settings value so
@@ -979,6 +990,80 @@ async def seed_pilot_beamline(
             include_rotary=True,
         )
 
+        # ----- Recipe BC: the dark_field Recipe (the conductible step list) -----
+        #
+        # The Plans above bind Assets to a Practice; they carry no steps.
+        # The step list a conduct actually walks lives in a Recipe, which
+        # `register_procedure_from_recipe` expands into a Procedure. Until
+        # this ceremony seeded one, no Plan at 2-BM had a conductible body
+        # at all, so `docs/deployments/2-bm/recipes.md`'s "conductible
+        # today" described the machinery, not a registered recipe.
+        #
+        # ALL-LITERAL, deliberately. `repetitions` / `dwell` are baked in
+        # rather than `BindingRef`s because the handler validates every
+        # reachable BindingRef name against the bound Capability's
+        # `parameters_schema.properties`, and the acquisition Capability
+        # seeded above declares no schema. Operator-tunable bindings are a
+        # later widening that lands with that schema, not before.
+        #
+        # ONLY dark_field. Its flat_field sibling opens the shutter, and
+        # `CheckStep` is a single instantaneous read with no settle, retry
+        # or timeout: a check fired immediately after an open command reads
+        # the shutter mid-travel and halts the conduct on a false negative.
+        # The soft-IOC scenario test never surfaces this because a fake PV
+        # flips instantly. dark_field commands the shutter CLOSED, which at
+        # 2-BM is its resting state, so its check is timing-independent and
+        # is the honest first hardware conduct. flat_field waits on a
+        # settle mechanism plus a measured shutter response time.
+        dark_field_recipe_name = "2BM_dark_field_recipe"
+        dark_field_recipe_id = recipe_seed_id(
+            facility_code, beamline, "recipe", dark_field_recipe_name
+        )
+        await seed_genesis(
+            stream_type="Recipe",
+            state=await load_recipe(kernel.event_store, dark_field_recipe_id),
+            decide_thunk=lambda: decide_recipe(
+                state=None,
+                command=DefineRecipe(
+                    name=dark_field_recipe_name,
+                    capability_id=capability_id,
+                    steps=(
+                        # Command the station shutter closed. `verify` is
+                        # OBSERVATIONAL only (a post-write read recorded as
+                        # evidence, never a halt), which is what makes it
+                        # safe on a momentary command PV that self-resets:
+                        # reading back 0 records the reset, it does not fail
+                        # the step. The CheckStep below is the actual gate.
+                        RecipeSetpointStep(address=shutter_close_address, value=1, verify=True),
+                        # The gate. Status leaf reads INVERTED: 1 means
+                        # blocked, so 1 is the closed state a dark frame
+                        # requires. A shutter that did not close halts the
+                        # conduct here, before any frame is taken.
+                        RecipeCheckStep(
+                            address=shutter_status_address,
+                            criterion={"kind": "equals", "expected": 1},
+                        ),
+                        RecipeActionStep(
+                            name="collect",
+                            params={
+                                "detector": detector_address,
+                                "trigger_mode": "Internal",
+                                "repetitions": dark_field_frames,
+                                "dwell": dark_field_dwell_s,
+                            },
+                        ),
+                    ),
+                ),
+                now=clock.now(),
+                new_id=dark_field_recipe_id,
+            ),
+            event_type_name_fn=recipe_event_type_name,
+            to_payload_fn=recipe_to_payload,
+            stream_id=dark_field_recipe_id,
+            label=f"recipe {dark_field_recipe_name}",
+            reload=lambda: load_recipe(kernel.event_store, dark_field_recipe_id),
+        )
+
         _ = root
         if not dry_run:
             # Leave the projections current so a re-run's supply
@@ -1057,6 +1142,19 @@ def build_parser() -> argparse.ArgumentParser:
     # already names a different physical camera under an override.
     parser.add_argument("--acquisition-camera-name", default="AcquisitionCamera")
     parser.add_argument("--rotary-stage-name", default="RotaryStage")
+    # The dark_field Recipe's literal addresses. Defaults are the real
+    # 2-BM records, confirmed 2026-08-27 against TomoScan's own deployed
+    # autosave configuration (`2bmb:TomoScan:CloseShutterPVName`), which
+    # is the beamline's working reference for this switch. The close
+    # COMMAND and the status READBACK are two different records: an
+    # earlier draft of recipes.md wrote the setpoint straight to
+    # `BeamBlockingM`, which every other reader in this codebase treats
+    # as read-only status.
+    parser.add_argument("--shutter-close-address", default="S02BM-PSS:SBS:CloseEPICSC")
+    parser.add_argument("--shutter-status-address", default="S02BM-PSS:SBS:BeamBlockingM")
+    parser.add_argument("--detector-address", default="2bmSP1:cam1")
+    parser.add_argument("--dark-field-frames", type=int, default=10)
+    parser.add_argument("--dark-field-dwell-s", type=float, default=0.05)
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -1074,6 +1172,11 @@ def main(argv: list[str] | None = None) -> int:
             shutter_name=args.shutter_name,
             acquisition_camera_name=args.acquisition_camera_name,
             rotary_stage_name=args.rotary_stage_name,
+            shutter_close_address=args.shutter_close_address,
+            shutter_status_address=args.shutter_status_address,
+            detector_address=args.detector_address,
+            dark_field_frames=args.dark_field_frames,
+            dark_field_dwell_s=args.dark_field_dwell_s,
             dry_run=args.dry_run,
         )
     )
