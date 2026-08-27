@@ -99,6 +99,7 @@ from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
+    extract_capture_progress,
     extract_interrupted_at,
     extract_reason,
 )
@@ -492,6 +493,7 @@ class CautionDrafterSubscriber:
             interrupted_at=interrupted_at,
             candidate_targets=candidate_targets,
             existing_cautions=existing_cautions,
+            capture_progress=extract_capture_progress(event),
         )
         # The Agent's declared model, not the module default: that
         # declaration is what `define_agent` gated against the approved
