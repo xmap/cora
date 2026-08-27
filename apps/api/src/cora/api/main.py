@@ -1419,10 +1419,6 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         list_campaigns=app.state.campaign.list_campaigns,
                     ),
-                    status_push_lifespan(
-                        deps,
-                        list_runs=app.state.run.list_runs,
-                    ),
                     run_witness_lifespan(
                         observer=capture_watch_observer,
                         capture_codes=capture_watch_codes,
@@ -1445,6 +1441,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_experiment_identity_pvs=(settings.capture_experiment_identity_pvs),
                         experiment_identity_store=app.state.run.experiment_identity_store,
                         capture_probe_store=app.state.run.capture_probe_store,
+                    ) as witness_recorder,
+                    status_push_lifespan(
+                        deps,
+                        list_runs=app.state.run.list_runs,
+                        witness_recorder=witness_recorder,
                     ),
                     capture_scan_ingestor_lifespan(
                         deps,

@@ -48,10 +48,30 @@
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--row-border);
     font-size: 0.9rem;
+    vertical-align: top;
   }
   th { color: var(--muted); font-weight: 600; }
   #runs.dimmed { opacity: 0.5; }
   #empty { color: var(--muted); font-style: italic; padding: 0.5rem 0; }
+  .progress-role {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.15rem 0;
+    white-space: nowrap;
+  }
+  .progress-role .role-label { color: var(--muted); width: 8rem; flex-shrink: 0; }
+  .progress-bar-track {
+    background: var(--row-border);
+    border-radius: 3px;
+    width: 8rem;
+    height: 0.5rem;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .progress-bar-fill { background: var(--live); height: 100%; }
+  .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .no-progress { color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -59,7 +79,7 @@
   <div id="banner">connecting</div>
   <table id="runs">
     <thead>
-      <tr><th>Run</th><th>Status</th></tr>
+      <tr><th>Run</th><th>Status</th><th>Progress</th></tr>
     </thead>
     <tbody id="runs-body"></tbody>
   </table>
@@ -84,6 +104,47 @@
   var socketOpen = false;
   var reconnectDelayMs = RECONNECT_INITIAL_MS;
 
+  function renderProgressCell(progress) {
+    var cell = document.createElement("td");
+    var roles = progress ? Object.keys(progress) : [];
+    if (roles.length === 0) {
+      cell.className = "no-progress";
+      cell.textContent = "no progress reported";
+      return cell;
+    }
+    roles.sort().forEach(function (role) {
+      var reading = progress[role];
+      var line = document.createElement("div");
+      line.className = "progress-role";
+
+      var label = document.createElement("span");
+      label.className = "role-label";
+      label.textContent = role;
+      line.appendChild(label);
+
+      if (reading.commanded_total) {
+        var track = document.createElement("div");
+        track.className = "progress-bar-track";
+        var fill = document.createElement("div");
+        fill.className = "progress-bar-fill";
+        var pct = Math.max(0, Math.min(100, (reading.value / reading.commanded_total) * 100));
+        fill.style.width = pct + "%";
+        track.appendChild(fill);
+        line.appendChild(track);
+      }
+
+      var count = document.createElement("span");
+      count.className = "progress-count";
+      count.textContent = reading.commanded_total
+        ? reading.value + " / " + reading.commanded_total
+        : String(reading.value);
+      line.appendChild(count);
+
+      cell.appendChild(line);
+    });
+    return cell;
+  }
+
   function renderRuns(runs) {
     runsBodyEl.innerHTML = "";
     if (!runs || runs.length === 0) {
@@ -101,6 +162,7 @@
       statusCell.textContent = run.status;
       row.appendChild(nameCell);
       row.appendChild(statusCell);
+      row.appendChild(renderProgressCell(run.progress));
       runsBodyEl.appendChild(row);
     });
   }

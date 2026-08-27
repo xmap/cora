@@ -27,10 +27,23 @@ to `_run_witness.py`'s hand-rolled shape than to the flag-watcher family.
 ## Current scope
 
 Each tick reads open Runs (`Running` + `Held`) via the existing `list_runs`
-handler and pushes `{run_id, name, status}` per run. No progress data yet,
-and no other domains yet. The payload is a full snapshot every push, never
-a delta: a fresh viewer, a reconnecting viewer, and a restarted relay are
-all served by "here is the current one".
+handler and pushes `{run_id, name, status, progress}` per run. `progress` is
+whatever `RunWitnessRecorder.progress_readings()` holds for that run right
+now (commonly `images_collected` / `images_saved` at 2-BM, but this reads
+whatever roles the deployment declared, not a hardcoded pair), or `{}` when
+the recorder is unavailable (witnessing disabled) or has nothing yet for
+that run. No other domains yet. The payload is a full snapshot every push,
+never a delta: a fresh viewer, a reconnecting viewer, and a restarted relay
+are all served by "here is the current one".
+
+Deliberately reads ONLY the in-memory recorder, not the Postgres-durable
+`entries_run_observations` fallback `PostgresRunChannelLookup` would offer
+for a run whose capture is not open in this process: that path is capped at
+`capture_progress_flush_tick_seconds` (10s by default) and never carries
+`commanded_total` (dropped at the `ObservationInput` boundary), so it would
+not feel live and would silently lack the "of M" figure. Revisit if this
+ever runs against a Run witnessed by a different process than the one
+pushing.
 
 ## Principal identity: a deliberate simplification, revisit before widening
 
@@ -64,7 +77,9 @@ from cora.run.features.list_runs import ListRuns
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from uuid import UUID
 
+    from cora.api._run_witness import RunWitnessRecorder
     from cora.infrastructure.kernel import Kernel
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
 
@@ -82,7 +97,33 @@ _RECONNECT_INITIAL_SECONDS = 1.0
 _RECONNECT_MAX_SECONDS = 60.0
 
 
-async def _drain_open_runs(list_runs: ListRunsHandler, deps: Kernel) -> list[dict[str, Any]]:
+def _render_progress(run_id: UUID, witness_recorder: RunWitnessRecorder | None) -> dict[str, Any]:
+    """The run's progress readings, JSON-safe, or `{}` when unavailable.
+
+    `{}` covers three cases alike, deliberately not distinguished on the
+    wire: witnessing is disabled entirely (`witness_recorder is None`), the
+    capture behind this run is not open in this process, and the capture is
+    open but has not produced a reading yet. All three mean the viewer has
+    no progress number to show; none of them is an error.
+    """
+    if witness_recorder is None:
+        return {}
+    readings = witness_recorder.progress_readings().get(run_id)
+    if not readings:
+        return {}
+    return {
+        role: {
+            "value": observation.value,
+            "commanded_total": observation.commanded_total,
+            "observed_at": render_value(observation.observed_at),
+        }
+        for role, observation in readings.items()
+    }
+
+
+async def _drain_open_runs(
+    list_runs: ListRunsHandler, deps: Kernel, *, witness_recorder: RunWitnessRecorder | None
+) -> list[dict[str, Any]]:
     """Page through list_runs for each open status, rendering JSON-safe rows."""
     rows: list[dict[str, Any]] = []
     for status in _OPEN_RUN_STATUSES:
@@ -99,6 +140,7 @@ async def _drain_open_runs(list_runs: ListRunsHandler, deps: Kernel) -> list[dic
                     "run_id": render_value(item.run_id),
                     "name": item.name,
                     "status": item.status,
+                    "progress": _render_progress(item.run_id, witness_recorder),
                 }
                 for item in page.items
             )
@@ -130,7 +172,12 @@ def build_snapshot(
 
 
 async def _push_loop(
-    deps: Kernel, *, list_runs: ListRunsHandler, producer_id: str, url: str
+    deps: Kernel,
+    *,
+    list_runs: ListRunsHandler,
+    producer_id: str,
+    url: str,
+    witness_recorder: RunWitnessRecorder | None,
 ) -> None:
     """Reconnect-with-backoff outer loop; one open connection sends many
     ticks. `websockets`' own `InvalidStatus` (bad token) and `ConnectionClosed`
@@ -153,7 +200,9 @@ async def _push_loop(
                 last_hash = None  # force one full push right after (re)connect
                 ticks_since_push = _HEARTBEAT_TICKS  # push immediately on connect
                 while True:
-                    runs = await _drain_open_runs(list_runs, deps)
+                    runs = await _drain_open_runs(
+                        list_runs, deps, witness_recorder=witness_recorder
+                    )
                     content_hash = _content_hash(runs)
                     changed = content_hash != last_hash
                     heartbeat_due = ticks_since_push >= _HEARTBEAT_TICKS
@@ -183,7 +232,12 @@ async def _push_loop(
 
 
 @contextlib.asynccontextmanager
-async def status_push_lifespan(deps: Kernel, *, list_runs: ListRunsHandler) -> AsyncGenerator[None]:
+async def status_push_lifespan(
+    deps: Kernel,
+    *,
+    list_runs: ListRunsHandler,
+    witness_recorder: RunWitnessRecorder | None = None,
+) -> AsyncGenerator[None]:
     """Spawn the StatusPush loop for the duration of the context.
 
     No-op unless `settings.status_push_enabled` is True (default off) AND
@@ -195,6 +249,14 @@ async def status_push_lifespan(deps: Kernel, *, list_runs: ListRunsHandler) -> A
     parameter, so booting the app with this feature off (the default, and
     every test's `create_app()`) never consumes an id from a test's
     `FixedIdGenerator` queue.
+
+    `witness_recorder` is `run_witness_lifespan`'s own yielded value, so the
+    caller must enter that context manager first and bind it (`main.py`
+    does this by ordering `run_witness_lifespan(...) as witness_recorder`
+    before this call in the same `async with` group). `None` is a normal
+    state, not a misconfiguration: it means witnessing is off, or shadow-only
+    with no recorder built; either way progress is simply absent from every
+    pushed run, per `_render_progress`.
     """
     if not deps.settings.status_push_enabled:
         _log.info(f"{_LOG_PREFIX}.skipped", reason="disabled")
@@ -212,7 +274,13 @@ async def status_push_lifespan(deps: Kernel, *, list_runs: ListRunsHandler) -> A
         tick_seconds=deps.settings.status_push_tick_seconds,
     )
     task = asyncio.create_task(
-        _push_loop(deps, list_runs=list_runs, producer_id=producer_id, url=url),
+        _push_loop(
+            deps,
+            list_runs=list_runs,
+            producer_id=producer_id,
+            url=url,
+            witness_recorder=witness_recorder,
+        ),
         name="status-push",
     )
     try:

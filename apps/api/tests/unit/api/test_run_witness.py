@@ -2313,6 +2313,52 @@ async def test_open_captures_returns_a_copy_not_a_live_reference() -> None:
 
 
 @pytest.mark.unit
+async def test_progress_readings_keys_by_run_id_not_capture_code() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_saved", value=10.0))
+
+    readings = recorder.progress_readings()
+    assert set(readings) == {run_id}
+    assert readings[run_id]["images_saved"].value == 10.0
+
+
+@pytest.mark.unit
+async def test_progress_readings_is_empty_when_nothing_is_open() -> None:
+    recorder = _recorder(record_witnessed_run=_FakeRecordWitnessedRun())
+
+    assert recorder.progress_readings() == {}
+
+
+@pytest.mark.unit
+async def test_progress_readings_omits_an_open_capture_with_no_reading_yet() -> None:
+    """Absent, not an empty dict: `{}` vs "not a key" both mean nothing to
+    show, but the second case never had progress at all."""
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: uuid4()}
+    )
+
+    assert recorder.progress_readings() == {}
+
+
+@pytest.mark.unit
+async def test_progress_readings_returns_a_copy_not_a_live_reference() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+    recorder.observe_progress(_progress_obs(role="images_saved", value=1.0))
+
+    snapshot = recorder.progress_readings()
+    snapshot[run_id]["injected"] = _progress_obs(role="injected", value=99.0)
+
+    assert "injected" not in recorder.progress_readings()[run_id]
+
+
+@pytest.mark.unit
 async def test_run_witness_recorder_is_a_pass_through_when_recording_disabled() -> None:
     """The hard no-regression requirement: with recording off, the fake
     handler is never called and the log output matches bare
