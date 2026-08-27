@@ -4,34 +4,56 @@
 rather than recording what TomoScan drove. Written to be read start to finish
 before anything is changed, and followed with a second person watching.*
 
-Until this runbook is executed, CORA has never written a PV at 2-BM. The pilot
-has been observe-only since 2026-08-09 with `CONTROL_WRITES_ENABLED=false`,
-which is the deployment-wide safety switch and cannot be partially applied.
+The pilot ran observe-only from 2026-08-09 with `CONTROL_WRITES_ENABLED=false`,
+the deployment-wide safety switch, which cannot be partially applied.
+
+## EXECUTED 2026-08-27
+
+CORA drove 2-BM hardware for the first time. Procedure
+`01a04581-ea57-7cf3-892b-558fc69680fe`: `succeeded: true`,
+`completed_count: 2`, `actuation_kind: Physical`. It wrote `1` to
+`S02BM-PSS:SBS:CloseEPICSC` over Channel Access and gated on the status
+readback. The beamline was verified byte-identical to its recorded baseline
+afterwards, and the deployment was returned to `actuation: inert` the same
+session.
+
+The genesis it recorded is the artifact:
+
+```
+ProcedureStarted    beam_requirement: "NotRequired"  beam_state_at_start: "Blocked"
+ProcedureCompleted  actuation_kind: "Physical"
+```
+
+A reader can tell from that alone that the work ran with beam ABSENT under a
+DECLARED exemption, rather than because beam happened to be available.
+
+The rest of this page stays as the procedure to repeat, with what the run
+taught folded in.
 
 ## What this test does and does not do
 
-It conducts one Recipe, [`dark_field`](recipes.md#dark_field), end to end: CORA
-commands the station shutter closed, confirms it is closed, and captures a
-frame stack. Three steps, two Assets.
+It conducts the shutter half of [`dark_field`](recipes.md#dark_field): CORA
+commands the station shutter closed and confirms it is closed. Two steps.
 
-It deliberately does NOT conduct [`flat_field`](recipes.md#flat_field), which is
-its natural sibling. `flat_field` opens the shutter, and the reason that matters
-is in [The settle gap](#the-settle-gap) below.
+The capture step is deliberately NOT included. `collect` writes the
+substrate-neutral string `"Internal"` to `2bmSP1:cam1:TriggerMode`, a two-value
+enum accepting only `Off` / `On` (the Oryx is ADSpinnaker, not generic ADCore),
+so the conduct would halt there. Dropping it also removed this runbook's one
+irreversible side effect, since `collect` overwrites detector settings and
+restores none of them.
 
-## Why dark_field is the honest first conduct
+It also does NOT conduct [`flat_field`](recipes.md#flat_field). That one opens
+the shutter, and the reason that matters is [The settle gap](#the-settle-gap).
+
+## Why the shutter-close assertion is the honest first conduct
 
 Its check is timing-independent. The station shutter's resting state at 2-BM is
-closed, so a conduct that commands it closed asserts a state the beamline is
-already in. If the write silently failed, the check would still pass, which
-sounds like a weakness and is in fact the point: this run is proving the CHAIN
-(Recipe expands, Procedure registers, Conductor drives a real substrate, steps
-land in the record) rather than proving the shutter moves. Motion is the second
-test, not the first, and it needs the settle gap closed.
-
-What the run does prove is not nothing. The `collect` action body performs real
-detector writes (`TriggerMode`, `AcquireTime`, `NumImages`, `Acquire`) and polls
-`Acquire_RBV` to completion, so a real actuation with a real observable outcome
-does happen, against hardware, recorded end to end.
+closed, so commanding it closed asserts a state the beamline is already in. If
+the write had silently failed, the check would still have passed, which sounds
+like a weakness and is the point: this run proves the CHAIN (Recipe expands,
+Procedure registers, Conductor drives a real substrate, steps land in the
+record) rather than proving the shutter moves. Motion is the second test, and it
+needs the settle gap closed first.
 
 ## The settle gap
 
@@ -53,12 +75,28 @@ Two things have to land before an opening conduct is attempted:
    documented response time small enough that the question is moot. Adding an
    action body is new production surface and takes its own gate review.
 
+The 2026-08-27 run did NOT measure the response time, and could not have: it
+commanded the shutter to the state it was already in, so nothing moved. The
+number still has to come from the beamline.
+
+## The enum-label gap, found by the same run
+
+Separate from settle, and cheaper to fix. A check criterion on an enum PV must
+expect the LABEL, not the raw number. `EpicsCaControlPort` resolves a
+`DBR_ENUM` against labels cached from the record, so `BeamBlockingM` surfaces as
+`"ON"`, while the descriptor's "1 = blocked" convention describes the raw value
+the PLC holds. The first attempt wrote correctly and then failed its own check
+with `value 'ON' did not equal expected 1`.
+
+Live labels are `[0] OFF, [1] ON`. Any recipe checking any enum PV at this
+beamline needs the same treatment; [Recipes](recipes.md) is corrected.
+
 ## Route scoping: the trap to avoid
 
 `CONTROL_WRITES_ENABLED=true` is all-or-nothing. The live route table on
-arcturus declares eleven prefixes and **not one of them sets `read_only`**,
+arcturus declares ten prefixes and **not one of them sets `read_only`**,
 because today the global switch alone holds every write back. Flipping that
-switch without first pinning the routes would make all eleven writable at once,
+switch without first pinning the routes would make all ten writable at once,
 including `2bmBLEPS:` (equipment protection), the whole `S02BM-PSS:` namespace,
 `2bmHXP:` (hexapod) and every motor.
 
@@ -78,7 +116,7 @@ Edit `CONTROL_PORT_ROUTES` in `cora-env.sh` on the shared home. This is a
 surgical change to an existing block, not a rewrite: preserve every existing
 `text_addresses` entry exactly as it stands.
 
-Add `"read_only": true` to all eleven existing routes:
+Add `"read_only": true` to all ten existing routes:
 
 ```
 2bmBLEPS:    2bmHXP:     2bmSP2:    2bma:    2bmb:    2bm:
@@ -130,14 +168,14 @@ Do not proceed until all of these hold.
 
 | # | Precondition | Why it matters |
 | --- | --- | --- |
-| 1 | `OpenEPICSC` / `CloseEPICSC` are momentary commands that self-reset, and re-sending `1` when the shutter is already in that state is harmless | The recipe writes `1` to close an already-closed shutter. If that write has any other effect, the premise of the test is wrong |
+| 1 | ANSWERED by the run for `CloseEPICSC`: writing `1` to an already-closed shutter completed cleanly and left the beamline unchanged, and the recorded `post_reading` of `""` shows it self-reset. `OpenEPICSC` is still unexercised | The recipe writes `1` to close an already-closed shutter. If that write had any other effect, the premise of the test would be wrong |
 | 2 | No concurrent writer during the window (TomoScan GUI, operator script, another CA client) | Two writers on one shutter is the failure mode no amount of CORA-side care prevents |
-| 3 | The detector settings this test overwrites are expendable, or are recorded first | `collect` writes `TriggerMode`, `AcquireTime` and `NumImages` on `2bmSP1:cam1` and does NOT restore them. Whatever TomoScan had configured there is left at this test's values afterwards |
-| 4 | Hutch state is understood | Measured 2026-08-27: `StaA:SecureM` and `StaB:SecureM` both read OFF and `SR-ACIS:2BM:FesPermitM` reads OFF. No beam is permitted, which is a safe posture for this test, but an unsecured hutch may mean someone is working inside |
+| 3 | MOOT while the capture step is excluded, and live again the moment it returns | `collect` writes `TriggerMode`, `AcquireTime` and `NumImages` on `2bmSP1:cam1` and restores none of them. Record the three with `caget` first; a baseline was saved as `camera-baseline-<stamp>.txt` on the shared home |
+| 4 | Hutch state is understood | At the run: both hutches SECURED (`SecureM` ON), `FesPermitM` OFF, ring current 0.002 mA. No beam was permitted and nobody was inside. An UNSECURED hutch is the case to pause on, since it may mean someone is working in there |
 
 Precondition 3 is the one most easily missed, because it is a side effect of a
-step that otherwise looks read-only in intent. Record the three values with
-`caget` before the run if they matter to the next scan.
+step that otherwise reads as pure acquisition. It is dormant only for as long as
+the capture step stays out of the recipe.
 
 ## The sequence
 

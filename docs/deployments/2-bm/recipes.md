@@ -21,7 +21,13 @@ The four recipes below are 2-BM's operational arc, each realizing one [Capabilit
 
 Both baselines are calibration captures that feed reconstruction, and both reuse the registered `collect` action body (acquire a frame stack, poll until done), so they are conductible today. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention: pixel-wise baseline reduction stays in external pipelines, while a heavier compute step like reconstruction is a recorded compute Method); the captured stack becomes a baseline [Dataset](experiment.md), which makes each capture a [Run](experiment.md) (a Dataset-of-record makes the act a Run; see the [Run vs Procedure boundary](../../reference/modeling.md#run-vs-procedure-boundary) rule). The recipe is the as-data form of the capture sequence the Run conducts.
 
-The station shutter has three PVs in play, not one, corrected 2026-08-27 against TomoScan's own deployed autosave configuration (`2bmb:TomoScan:{Open,Close}ShutterPVName`), which is the beamline's own working reference for this switch: `S02BM-PSS:SBS:OpenEPICSC` and `S02BM-PSS:SBS:CloseEPICSC` are the momentary command PVs (write `1` to fire), and `S02BM-PSS:SBS:BeamBlockingM` is a status read-back only, inverted (1 means blocked/closed). An earlier draft of this recipe wrote the setpoint straight to `BeamBlockingM`; that PV is read-only-in-practice everywhere else in the codebase (permit monitoring, the safety envelope) and was never TomoScan's write target either. See [Enclosures](enclosures.md) for the full PSS signal set. Two items are still open before either recipe touches real hardware: APS PSS sign-off on treating `OpenEPICSC`/`CloseEPICSC` as ordinary momentary commands (confirm they self-reset and carry no other side effect), and a live confirmation that writing `1` is safe to repeat if the shutter is already in the requested state.
+The station shutter has three PVs in play, not one, corrected 2026-08-27 against TomoScan's own deployed autosave configuration (`2bmb:TomoScan:{Open,Close}ShutterPVName`), which is the beamline's own working reference for this switch: `S02BM-PSS:SBS:OpenEPICSC` and `S02BM-PSS:SBS:CloseEPICSC` are the momentary command PVs (write `1` to fire), and `S02BM-PSS:SBS:BeamBlockingM` is a status read-back only, inverted (1 means blocked/closed). An earlier draft of this recipe wrote the setpoint straight to `BeamBlockingM`; that PV is read-only-in-practice everywhere else in the codebase (permit monitoring, the safety envelope) and was never TomoScan's write target either. See [Enclosures](enclosures.md) for the full PSS signal set.
+
+**A check on an enum PV compares against the LABEL, not the number.** Measured live on 2026-08-27: `BeamBlockingM` is a two-state enum whose choices are `[0] OFF` and `[1] ON`, and `EpicsCaControlPort` resolves a `DBR_ENUM` against the labels cached from the record, so a read surfaces the string `"ON"`. The "1 means blocked" convention above describes the RAW value the PLC holds, which is not what a criterion sees. A first conduct wrote correctly and then failed its own check with `value 'ON' did not equal expected 1`; the tables below now expect the label. The same applies to every other enum PV a recipe checks.
+
+**`verify` is evidence, never a gate, and that is load-bearing here.** The same conduct recorded `post_reading: ""` on a setpoint that demonstrably succeeded: `CloseEPICSC` is momentary and had already self-reset before the post-write read landed. A verify that halted on mismatch would have failed a good write. Anything needing halt-on-mismatch uses a check step against the STATUS record, which is exactly why these recipes pair every command with one.
+
+Both momentary-command questions are now answered by the same run: writing `1` to `CloseEPICSC` while the shutter was already closed completed cleanly and left the beamline byte-identical, so the command self-resets and is safe to repeat. APS PSS sign-off on the leaf names is still outstanding.
 
 ### `dark_field`
 
@@ -32,10 +38,10 @@ The station shutter has three PVs in play, not one, corrected 2026-08-27 against
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify) |
-| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== 1` (closed) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
 | 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
 
-**Status:** conductible today (reuses `collect`).
+**Status:** steps 1 and 2 were conducted against real hardware on 2026-08-27 and completed (`actuation_kind: Physical`). Step 3 is NOT yet conductible: `collect` writes the substrate-neutral string `"Internal"` to `2bmSP1:cam1:TriggerMode`, and that record is a two-value enum accepting only `Off` / `On`. The Oryx is an ADSpinnaker camera, not generic ADCore, so the trigger vocabulary does not map. Conducting this recipe whole would halt at the capture step until that mapping is fixed.
 
 ### `flat_field`
 
@@ -46,10 +52,10 @@ The station shutter has three PVs in play, not one, corrected 2026-08-27 against
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:OpenEPICSC` (StationShutter, open command) | `1` (verify) |
-| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== 0` (open, inverted polarity) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "OFF"` (open, inverted polarity) |
 | 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
 | 4 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify, return to safe state) |
-| 5 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== 1` (closed) |
+| 5 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
 
 **Precondition:** the sample is out of the beam path. This is an operator assertion, not a CORA setpoint (CORA does not drive the sample out automatically).
 
