@@ -40,6 +40,7 @@ from cora.operation.features.register_procedure_from_recipe.command import (
 from cora.operation.features.register_procedure_from_recipe.handler import (
     IdempotentHandler,
 )
+from cora.shared.beam_requirement import BeamRequirement
 
 
 class RegisterProcedureFromRecipeRequest(BaseModel):
@@ -103,6 +104,22 @@ class RegisterProcedureFromRecipeRequest(BaseModel):
             "Optional 'patience' cap: max consecutive unconverged "
             "iterations before start_iteration refuses the next one (409). "
             "Resets on a converged iteration. None = no cap."
+        ),
+    )
+
+    beam_requirement: BeamRequirement = Field(
+        default=BeamRequirement.REQUIRED,
+        description=(
+            "Whether this execution needs beam available to start. "
+            "'Required' (the default) keeps the pre-flight beam gate: the "
+            "front-end and station shutters must be open and the upstream "
+            "FES permit clear. 'NotRequired' skips that refusal for work "
+            "that is meaningful without beam (a dark-field capture, whose "
+            "first step closes the shutter; a maintenance power-cycle; "
+            "off-beam commissioning). It skips ONLY the beam gate: "
+            "clearance, supply and enclosure gates still apply. The "
+            "declaration and the observed beam state are both recorded on "
+            "the start event."
         ),
     )
 
@@ -193,6 +210,7 @@ async def post_procedures_from_recipe(
             recipe_id=body.recipe_id,
             bindings=dict(body.bindings),
             max_consecutive_unconverged_iterations=body.max_consecutive_unconverged_iterations,
+            beam_requirement=body.beam_requirement,
         ),
         principal_id=principal_id,
         correlation_id=cid,

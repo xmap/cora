@@ -30,6 +30,7 @@ from cora.infrastructure.routing import (
 from cora.run.aggregates.run import RUN_NAME_MAX_LENGTH
 from cora.run.features.start_run.command import StartRun
 from cora.run.features.start_run.handler import IdempotentHandler
+from cora.shared.beam_requirement import BeamRequirement
 
 
 class StartRunRequest(BaseModel):
@@ -135,6 +136,22 @@ class StartRunRequest(BaseModel):
         ),
     )
 
+    beam_requirement: BeamRequirement = Field(
+        default=BeamRequirement.REQUIRED,
+        description=(
+            "Whether this execution needs beam available to start. "
+            "'Required' (the default) keeps the pre-flight beam gate: the "
+            "front-end and station shutters must be open and the upstream "
+            "FES permit clear. 'NotRequired' skips that refusal for work "
+            "that is meaningful without beam (a dark-field capture, whose "
+            "first step closes the shutter; a maintenance power-cycle; "
+            "off-beam commissioning). It skips ONLY the beam gate: "
+            "clearance, supply and enclosure gates still apply. The "
+            "declaration and the observed beam state are both recorded on "
+            "the start event."
+        ),
+    )
+
 
 class StartRunResponse(BaseModel):
     """Response body for `POST /runs`."""
@@ -220,6 +237,7 @@ async def post_runs(
             campaign_id=body.campaign_id,
             decided_by_decision_id=body.decided_by_decision_id,
             pinned_calibration_ids=frozenset(body.pinned_calibration_ids),
+            beam_requirement=body.beam_requirement,
         ),
         principal_id=principal_id,
         correlation_id=cid,

@@ -1861,6 +1861,15 @@
         "title": "AttestationKind",
         "type": "string"
       },
+      "BeamRequirement": {
+        "description": "Whether a Run or Procedure needs beam available to start.\n\nDeliberately two members. A third, \"must NOT have beam\", was\nconsidered for the dark-field case and rejected: a dark field is\nperfectly valid during a beamtime with beam up, because its own\nfirst step closes the shutter. Forbidding beam would break the\nordinary in-beamtime path to describe a precondition the recipe\nalready establishes for itself.",
+        "enum": [
+          "Required",
+          "NotRequired"
+        ],
+        "title": "BeamRequirement",
+        "type": "string"
+      },
       "BindAssetToFacilityRequest": {
         "description": "Body for `POST /assets/{asset_id}/bind-to-facility`.",
         "properties": {
@@ -13197,6 +13206,11 @@
       "RegisterProcedureFromRecipeRequest": {
         "description": "Body for `POST /procedures/from-recipe`.",
         "properties": {
+          "beam_requirement": {
+            "$ref": "#/components/schemas/BeamRequirement",
+            "default": "Required",
+            "description": "Whether this execution needs beam available to start. 'Required' (the default) keeps the pre-flight beam gate: the front-end and station shutters must be open and the upstream FES permit clear. 'NotRequired' skips that refusal for work that is meaningful without beam (a dark-field capture, whose first step closes the shutter; a maintenance power-cycle; off-beam commissioning). It skips ONLY the beam gate: clearance, supply and enclosure gates still apply. The declaration and the observed beam state are both recorded on the start event."
+          },
           "bindings": {
             "additionalProperties": true,
             "description": "Operator-supplied parameter values keyed by the parameter names declared in the bound Recipe's Capability's parameters_schema. Substituted into BindingRef sentinels at expansion time. Empty dict valid when the Recipe carries no BindingRefs.",
@@ -13285,6 +13299,11 @@
       "RegisterProcedureRequest": {
         "description": "Body for `POST /procedures`.",
         "properties": {
+          "beam_requirement": {
+            "$ref": "#/components/schemas/BeamRequirement",
+            "default": "Required",
+            "description": "Whether this execution needs beam available to start. 'Required' (the default) keeps the pre-flight beam gate: the front-end and station shutters must be open and the upstream FES permit clear. 'NotRequired' skips that refusal for work that is meaningful without beam (a dark-field capture, whose first step closes the shutter; a maintenance power-cycle; off-beam commissioning). It skips ONLY the beam gate: clearance, supply and enclosure gates still apply. The declaration and the observed beam state are both recorded on the start event."
+          },
           "capability_id": {
             "anyOf": [
               {
@@ -15192,6 +15211,11 @@
       "StartRunRequest": {
         "description": "Body for `POST /runs`.",
         "properties": {
+          "beam_requirement": {
+            "$ref": "#/components/schemas/BeamRequirement",
+            "default": "Required",
+            "description": "Whether this execution needs beam available to start. 'Required' (the default) keeps the pre-flight beam gate: the front-end and station shutters must be open and the upstream FES permit clear. 'NotRequired' skips that refusal for work that is meaningful without beam (a dark-field capture, whose first step closes the shutter; a maintenance power-cycle; off-beam commissioning). It skips ONLY the beam gate: clearance, supply and enclosure gates still apply. The declaration and the observed beam state are both recorded on the start event."
+          },
           "campaign_id": {
             "anyOf": [
               {
