@@ -71,7 +71,9 @@ from typing import Any, assert_never
 from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
+from cora.infrastructure.ports.beam_availability_lookup import BeamState
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookSchema
@@ -121,6 +123,14 @@ class ProcedureRegistered:
     max consecutive unconverged iterations before start_iteration refuses
     the next one. Additive payload field; legacy streams fold via
     `payload.get("max_consecutive_unconverged_iterations")` -> None."""
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    """Whether this Procedure needs beam available to start.
+
+    Declared at register time and read by `start_procedure`'s
+    beam-availability gate. `REQUIRED` is the default, so a legacy
+    stream folding via `payload.get("beam_requirement")` -> None ->
+    `REQUIRED` keeps the pre-existing gate behaviour exactly. See
+    `cora.shared.beam_requirement`."""
 
 
 @dataclass(frozen=True)
@@ -182,7 +192,6 @@ class RecipeExpansionRecorded:
 class ProcedureStarted:
     """A Procedure transitioned out of Defined into Running.
 
-    Slim payload by design: the start fact is what the event encodes.
     Status is implicit (`Running`); the evolver sets it. No reason
     field (mirrors RunStarted; the operator already supplied name +
     kind + targets at register time).
@@ -190,10 +199,27 @@ class ProcedureStarted:
     The `start_procedure` handler pre-loads each target Asset before
     reaching the decider; Decommissioned-state guarding lives in the
     decider via `ProcedureStartContext` (mirror of `RunStartContext`).
+
+    The two beam fields below are BOOKKEEPING, not gating: the gate
+    itself either refused before this event was emitted or did not
+    apply. They exist so a skipped gate cannot read as an absent one.
+    Without them "started while beam happened to be available" and
+    "started with no beam under a declared exemption" are the same
+    event, and the record cannot tell an auditor which happened. Same
+    reasoning as the enclosure coverage window: a gap has to be
+    recorded as a gap rather than inferred from silence.
     """
 
     procedure_id: UUID
     occurred_at: datetime
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    """What this Procedure declared it needed, echoed onto the start
+    fact so the decision is legible without folding the genesis event."""
+    beam_state_at_start: BeamState | None = None
+    """What the pre-flight actually observed. None when the deployment
+    configures no beam PVs, which is distinct from `UNKNOWN` (it looked
+    and could not tell) and from `BLOCKED` (it looked and beam was
+    absent)."""
 
 
 @dataclass(frozen=True)
@@ -623,6 +649,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             capability_id=capability_id,
             recipe_id=recipe_id,
             max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
+            beam_requirement=beam_requirement,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -643,12 +670,28 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 # Optional patience cap (None = no cap). Legacy streams fold
                 # via `.get("max_consecutive_unconverged_iterations")` -> None.
                 "max_consecutive_unconverged_iterations": max_consecutive_unconverged_iterations,
+                # Declared beam need. Pre-slice streams fold via
+                # `.get("beam_requirement")` -> None -> REQUIRED, so the
+                # gate's pre-existing behaviour is what an old stream
+                # replays to.
+                "beam_requirement": beam_requirement.value,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case ProcedureStarted(procedure_id=procedure_id, occurred_at=occurred_at):
+        case ProcedureStarted(
+            procedure_id=procedure_id,
+            occurred_at=occurred_at,
+            beam_requirement=beam_requirement,
+            beam_state_at_start=beam_state_at_start,
+        ):
             return {
                 "procedure_id": str(procedure_id),
                 "occurred_at": occurred_at.isoformat(),
+                # Bookkeeping, not gating: what was declared and what was
+                # observed, so a skipped gate is legible as a skipped gate.
+                "beam_requirement": beam_requirement.value,
+                "beam_state_at_start": (
+                    beam_state_at_start.value if beam_state_at_start is not None else None
+                ),
             }
         case ProcedureCompleted(
             procedure_id=procedure_id,
@@ -850,6 +893,41 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             assert_never(event)
 
 
+def _beam_requirement_from(payload: dict[str, Any]) -> BeamRequirement:
+    """Fold the declared beam requirement, defaulting a missing key to
+    `REQUIRED`.
+
+    The default direction is the safety-relevant part. A stream written
+    before this field existed omits the key, and folding that absence to
+    `REQUIRED` replays it against the strict gate. Defaulting the other
+    way would silently grant every historical Procedure an exemption it
+    never declared.
+
+    An unrecognized value raises rather than falling back, so a
+    corrupted or forward-versioned payload surfaces as a malformed event
+    instead of quietly reading as the permissive member.
+    """
+    raw = payload.get("beam_requirement")
+    if raw is None:
+        return BeamRequirement.REQUIRED
+    return BeamRequirement(raw)
+
+
+def _beam_state_from(payload: dict[str, Any]) -> BeamState | None:
+    """Fold the observed beam state, tolerating its absence.
+
+    None is a real member of the domain here (the deployment configures
+    no beam PVs) and is also what a pre-slice stream yields, so absence
+    folds to None rather than raising. Unlike `beam_requirement` this
+    field gates nothing, so a missing value costs evidence rather than
+    safety. An unrecognized value still raises.
+    """
+    raw = payload.get("beam_state_at_start")
+    if raw is None:
+        return None
+    return BeamState(raw)
+
+
 def from_stored(stored: StoredEvent) -> ProcedureEvent:
     """Rebuild a Procedure event from a StoredEvent loaded from the event store.
 
@@ -891,6 +969,10 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     max_consecutive_unconverged_iterations=payload.get(
                         "max_consecutive_unconverged_iterations"
                     ),
+                    # Pre-slice streams omit the key. `.get` -> None ->
+                    # REQUIRED, so an old Procedure replays to the strict
+                    # gate rather than silently inheriting an exemption.
+                    beam_requirement=_beam_requirement_from(payload),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 
@@ -901,6 +983,8 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                 lambda: ProcedureStarted(
                     procedure_id=UUID(payload["procedure_id"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    beam_requirement=_beam_requirement_from(payload),
+                    beam_state_at_start=_beam_state_from(payload),
                 ),
             )
         case "ProcedureCompleted":

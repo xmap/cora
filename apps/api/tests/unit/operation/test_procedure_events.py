@@ -95,6 +95,10 @@ def test_to_payload_serializes_procedure_registered_to_primitives() -> None:
         # Patience cap (default None). Legacy streams omit the key and
         # fold via `.get("max_consecutive_unconverged_iterations")`.
         "max_consecutive_unconverged_iterations": None,
+        # Declared beam need (default Required). Pre-slice streams omit
+        # the key and fold to Required, so an old Procedure replays
+        # against the strict gate rather than inheriting an exemption.
+        "beam_requirement": "Required",
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -267,6 +271,10 @@ def test_to_payload_serializes_procedure_started() -> None:
     assert to_payload(event) == {
         "procedure_id": str(procedure_id),
         "occurred_at": _NOW.isoformat(),
+        # Beam bookkeeping defaults: an event constructed without them
+        # reports the strict requirement and no observation.
+        "beam_requirement": "Required",
+        "beam_state_at_start": None,
     }
 
 

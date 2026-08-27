@@ -98,6 +98,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Final, Literal
 from uuid import UUID
 
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.shared.scope_markers import Annotated, SubsumedBy
@@ -1458,6 +1459,19 @@ class Procedure:
     target_asset_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     status: ProcedureStatus = ProcedureStatus.DEFINED
     parent_run_id: UUID | None = None
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    """Whether this Procedure needs beam available to start.
+
+    Declared at register time, read by `start_procedure`'s
+    beam-availability gate. `REQUIRED` is the default and the
+    pre-existing behaviour: the gate refuses when a shutter is closed or
+    the FES permit is denied. `NOT_REQUIRED` exempts executions for
+    which beam is irrelevant (a dark-field capture, whose own first step
+    closes the shutter; a maintenance power-cycle) and, operationally
+    most important, the off-beam commissioning window that is the only
+    period such work can happen in. See
+    `cora.shared.beam_requirement` for why this is a readiness axis and
+    not a safety control."""
     activity_logbook_id: UUID | None = None
     """Lazy-opened on first `append_activities`.
 

@@ -34,6 +34,7 @@ read as "beam open".
 """
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 
 
@@ -59,6 +60,60 @@ class BeamAvailabilityLookupResult:
     sbs_open: bool
     fes_permit: bool
     quality_ok: bool
+
+
+class BeamState(StrEnum):
+    """What the pre-flight observed, as a closed vocabulary.
+
+    A closed enum rather than a summary string on purpose. The record
+    exporter's disposition generator keeps an enum and DROPS free text
+    (the safe default for anything that might carry operator prose), so
+    a `str` here would have been stripped from the published record,
+    silently removing the one field that lets an outside reader tell a
+    beam-available start from a declared-exemption start. Typing it
+    closed keeps it disclosable.
+
+    Per-flag detail (which of fes_open / sbs_open / fes_permit was
+    false) is deliberately NOT carried here. It is diagnostic rather
+    than auditable: the refusal error names the failing flags when the
+    gate refuses, and the substrate's own history holds the rest. What
+    the record has to answer is the coarser question of whether beam was
+    there.
+    """
+
+    OPEN = "Open"
+    """All three flags true: beam was available."""
+
+    BLOCKED = "Blocked"
+    """The read was good and at least one flag was false."""
+
+    UNKNOWN = "Unknown"
+    """The read had non-Good quality, so CORA could not tell."""
+
+
+def summarize_beam_state(result: "BeamAvailabilityLookupResult | None") -> "BeamState | None":
+    """Render a reading as the stable summary string the Run and
+    Procedure start events record.
+
+    Exists so a start event says what beam looked like at the instant it
+    began, INDEPENDENTLY of whether the gate refused on it. Once a
+    `BeamRequirement.NOT_REQUIRED` execution can skip the gate, "started
+    with beam" and "started without beam under a declared exemption"
+    would otherwise be the same event, and no auditor could separate
+    them after the fact.
+
+    `None` means the deployment configures no beam PVs, so CORA has
+    nothing to say. That is deliberately distinct from `UNKNOWN` (it
+    tried to look and could not) and from `BLOCKED` (it looked and beam
+    was absent).
+    """
+    if result is None:
+        return None
+    if not result.quality_ok:
+        return BeamState.UNKNOWN
+    if result.fes_open and result.sbs_open and result.fes_permit:
+        return BeamState.OPEN
+    return BeamState.BLOCKED
 
 
 class BeamAvailabilityLookup(Protocol):
@@ -96,4 +151,6 @@ __all__ = [
     "AllBeamOpenLookup",
     "BeamAvailabilityLookup",
     "BeamAvailabilityLookupResult",
+    "BeamState",
+    "summarize_beam_state",
 ]

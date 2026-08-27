@@ -57,6 +57,7 @@ from cora.run.aggregates.run.state import (
     RunSupplyCoverageMismatchError,
     SafetyEnvelopeVerdict,
 )
+from cora.shared.beam_requirement import BeamRequirement
 
 
 def clearance_gate_check(
@@ -209,14 +210,24 @@ def check_safety_envelope(
     needed_supplies_satisfaction: Mapping[str, tuple[SupplyLookupResult, ...]],
     referencing_enclosures: tuple[EnclosureLookupResult, ...],
     beam_availability: BeamAvailabilityLookupResult | None,
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED,
 ) -> None:
     """Raise the first failing start-safety gate; return None if all pass.
 
     `run_id` is carried on each raised error (the new id at start_run,
     the existing run id at resume or at a witnessed genesis). Composed from
-    the four gate functions above; behaviour, order, and every raised
-    error's payload are unchanged from before this module gained a second
-    entry point.
+    the four gate functions above.
+
+    `beam_requirement` gates ONLY the beam arm, and only its refusal. It
+    defaults to `REQUIRED`, so a caller that does not pass it gets the
+    pre-existing behaviour exactly. `NOT_REQUIRED` skips the beam
+    refusal for executions where beam availability is irrelevant (a
+    dark-field capture, a maintenance task, off-beam commissioning).
+
+    It deliberately does NOT touch the clearance, supply or enclosure
+    gates. Those hold regardless of beam: an unsearched hutch or a
+    missing clearance is no less disqualifying because the work happens
+    to need no beam.
     """
     clearance_gate_check(run_id=run_id, referencing_clearances=referencing_clearances)
     supply_gate_check(
@@ -229,9 +240,10 @@ def check_safety_envelope(
     )
     if enclosure_refusal is not None:
         raise enclosure_refusal
-    beam_refusal = beam_gate_refusal(run_id=run_id, beam_availability=beam_availability)
-    if beam_refusal is not None:
-        raise beam_refusal
+    if beam_requirement is BeamRequirement.REQUIRED:
+        beam_refusal = beam_gate_refusal(run_id=run_id, beam_availability=beam_availability)
+        if beam_refusal is not None:
+            raise beam_refusal
 
 
 def witness_safety_envelope(

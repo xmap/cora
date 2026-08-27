@@ -40,6 +40,7 @@ The decider treats the loaded entities as opaque domain data.
 from datetime import datetime
 
 from cora.equipment.aggregates.asset import AssetLifecycle
+from cora.infrastructure.ports.beam_availability_lookup import summarize_beam_state
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureBeamAvailabilityUnknownError,
@@ -56,6 +57,7 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.features.start_procedure.context import ProcedureStartContext
+from cora.shared.beam_requirement import BeamRequirement
 
 _STARTABLE_STATUSES: tuple[ProcedureStatus, ...] = (ProcedureStatus.DEFINED,)
 
@@ -152,7 +154,15 @@ def decide(
     # Fail-closed on non-Good quality; refuse when any shutter is closed
     # or the FES permit is denied. Distinct axis from the Enclosure
     # SecureM permit above (beam-open cycles per-scan).
-    if context.beam_availability is not None:
+    #
+    # The state is read and summarized WHETHER OR NOT it gates, so the
+    # start event records what beam looked like either way. A gate that
+    # is skipped silently is indistinguishable from a gate that passed,
+    # and those are different facts about how the execution began.
+    beam_state = summarize_beam_state(context.beam_availability)
+    if context.beam_availability is not None and state.beam_requirement is (
+        BeamRequirement.REQUIRED
+    ):
         beam = context.beam_availability
         if not beam.quality_ok:
             raise ProcedureBeamAvailabilityUnknownError(state.id)
@@ -168,4 +178,11 @@ def decide(
         if blocking:
             raise ProcedureRequiresOpenBeamShuttersError(state.id, blocking)
 
-    return [ProcedureStarted(procedure_id=state.id, occurred_at=now)]
+    return [
+        ProcedureStarted(
+            procedure_id=state.id,
+            occurred_at=now,
+            beam_requirement=state.beam_requirement,
+            beam_state_at_start=beam_state,
+        )
+    ]
