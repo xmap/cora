@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CORA status</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0e1117;
+    --fg: #e6e6e6;
+    --muted: #8a8f98;
+    --live: #2ea043;
+    --stale: #d29922;
+    --dead: #da3633;
+    --row-border: #262b33;
+  }
+  body {
+    margin: 0;
+    padding: 2rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 1rem 0;
+  }
+  #banner {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  #banner.live { background: var(--live); color: #08260f; }
+  #banner.stale { background: var(--stale); color: #2b1c00; }
+  #banner.dead { background: var(--dead); color: #2b0a09; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 60rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--row-border);
+    font-size: 0.9rem;
+  }
+  th { color: var(--muted); font-weight: 600; }
+  #runs.dimmed { opacity: 0.5; }
+  #empty { color: var(--muted); font-style: italic; padding: 0.5rem 0; }
+</style>
+</head>
+<body>
+  <h1>CORA / 2-BM: live run status</h1>
+  <div id="banner">connecting</div>
+  <table id="runs">
+    <thead>
+      <tr><th>Run</th><th>Status</th></tr>
+    </thead>
+    <tbody id="runs-body"></tbody>
+  </table>
+  <div id="empty" style="display: none;">no open runs</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LIVE_SECONDS = 5;
+  var STALE_SECONDS = 30;
+  var RECONNECT_INITIAL_MS = 1000;
+  var RECONNECT_MAX_MS = 30000;
+
+  var bannerEl = document.getElementById("banner");
+  var runsBodyEl = document.getElementById("runs-body");
+  var runsTableEl = document.getElementById("runs");
+  var emptyEl = document.getElementById("empty");
+
+  var generatedAt = null;
+  var producerConnected = false;
+  var socketOpen = false;
+  var reconnectDelayMs = RECONNECT_INITIAL_MS;
+
+  function renderRuns(runs) {
+    runsBodyEl.innerHTML = "";
+    if (!runs || runs.length === 0) {
+      runsTableEl.style.display = "none";
+      emptyEl.style.display = "block";
+      return;
+    }
+    runsTableEl.style.display = "table";
+    emptyEl.style.display = "none";
+    runs.forEach(function (run) {
+      var row = document.createElement("tr");
+      var nameCell = document.createElement("td");
+      nameCell.textContent = run.name;
+      var statusCell = document.createElement("td");
+      statusCell.textContent = run.status;
+      row.appendChild(nameCell);
+      row.appendChild(statusCell);
+      runsBodyEl.appendChild(row);
+    });
+  }
+
+  function renderBanner() {
+    if (!socketOpen || !producerConnected) {
+      bannerEl.className = "dead";
+      bannerEl.textContent = "DISCONNECTED";
+      runsTableEl.classList.add("dimmed");
+      return;
+    }
+    if (generatedAt === null) {
+      bannerEl.className = "stale";
+      bannerEl.textContent = "waiting for data";
+      return;
+    }
+    var ageSeconds = (Date.now() - generatedAt) / 1000;
+    if (ageSeconds < LIVE_SECONDS) {
+      bannerEl.className = "live";
+      bannerEl.textContent = "LIVE";
+      runsTableEl.classList.remove("dimmed");
+    } else if (ageSeconds < STALE_SECONDS) {
+      bannerEl.className = "stale";
+      bannerEl.textContent = Math.round(ageSeconds) + "s old";
+      runsTableEl.classList.remove("dimmed");
+    } else {
+      bannerEl.className = "dead";
+      bannerEl.textContent = Math.round(ageSeconds) + "s old, likely stalled";
+      runsTableEl.classList.add("dimmed");
+    }
+  }
+
+  function handleMessage(event) {
+    var msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch (err) {
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(msg, "producer_connected")) {
+      producerConnected = msg.producer_connected;
+      if (!producerConnected) {
+        generatedAt = null;
+      }
+      renderBanner();
+      return;
+    }
+    producerConnected = true;
+    generatedAt = Date.parse(msg.generated_at);
+    renderRuns(msg.runs);
+    renderBanner();
+  }
+
+  function connect() {
+    var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    var url = proto + "//" + window.location.host + "/watch";
+    var socket = new WebSocket(url);
+
+    socket.onopen = function () {
+      socketOpen = true;
+      reconnectDelayMs = RECONNECT_INITIAL_MS;
+      renderBanner();
+    };
+    socket.onmessage = handleMessage;
+    socket.onclose = function () {
+      socketOpen = false;
+      producerConnected = false;
+      renderBanner();
+      setTimeout(connect, reconnectDelayMs);
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, RECONNECT_MAX_MS);
+    };
+    socket.onerror = function () {
+      socket.close();
+    };
+  }
+
+  setInterval(renderBanner, 1000);
+  renderBanner();
+  connect();
+})();
+</script>
+</body>
+</html>

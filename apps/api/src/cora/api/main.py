@@ -105,6 +105,7 @@ from cora.api._readiness import (
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api._run_witness import rebuild_open_captures, run_witness_lifespan
+from cora.api._status_push import status_push_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.budget import (
@@ -1417,6 +1418,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     campaign_watcher_lifespan(
                         deps,
                         list_campaigns=app.state.campaign.list_campaigns,
+                    ),
+                    status_push_lifespan(
+                        deps,
+                        list_runs=app.state.run.list_runs,
                     ),
                     run_witness_lifespan(
                         observer=capture_watch_observer,
