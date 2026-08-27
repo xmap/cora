@@ -103,6 +103,7 @@ from enum import StrEnum
 from typing import Any, Final, Literal
 from uuid import UUID
 
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.identifier import (
     IDENTIFIER_SCHEME_MAX_LENGTH,
@@ -1776,6 +1777,14 @@ class Run:
     # arms clear it — a finished Run holds nothing. Defaults to empty so legacy
     # pre-claim streams fold cleanly.
     hold_claims: tuple[tuple[UUID, str], ...] = ()
+    # Whether this Run needed beam available to start. Declared on
+    # StartRun, read by the start gate, and FOLDED (unlike the beam
+    # reading itself) because a later consumer needs it: the
+    # RunSupervisor's beam-Hold rule would otherwise hold an off-beam
+    # Run the gate deliberately let start, undoing the exemption a tick
+    # later. Defaults to REQUIRED so legacy streams fold to the strict
+    # pre-existing behaviour. See `cora.shared.beam_requirement`.
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
 
 
 class InvalidRunParametersError(ValueError):

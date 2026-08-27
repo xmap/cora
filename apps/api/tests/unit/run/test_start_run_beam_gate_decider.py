@@ -14,6 +14,7 @@ The Unknown check is ordered before the open check, so a bad-quality
 read raises Unknown even when the (untrustworthy) flags read closed.
 """
 
+import dataclasses
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -25,15 +26,20 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     AssetTier,
 )
-from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
+from cora.infrastructure.ports.beam_availability_lookup import (
+    BeamAvailabilityLookupResult,
+    BeamState,
+)
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunBeamAvailabilityUnknownError,
+    RunRequiresActiveClearanceError,
     RunRequiresOpenBeamShuttersError,
 )
 from cora.run.features import start_run
 from cora.run.features.start_run import RunStartContext, StartRun
+from cora.shared.beam_requirement import BeamRequirement
 from cora.subject.aggregates.subject import Subject, SubjectName, SubjectStatus
 
 _NOW = datetime(2026, 6, 17, 12, 0, 0, tzinfo=UTC)
@@ -107,6 +113,7 @@ def _start(
     context: RunStartContext,
     new_id: UUID,
     needed_family_ids: frozenset[UUID],
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED,
 ):
     return start_run.decide(
         state=None,
@@ -114,6 +121,7 @@ def _start(
             name="Run",
             plan_id=context.plan.id,
             subject_id=context.subject.id if context.subject else None,
+            beam_requirement=beam_requirement,
         ),
         context=context,
         needed_family_ids_snapshot=needed_family_ids,
@@ -190,3 +198,62 @@ def test_decide_blocking_names_every_closed_flag() -> None:
     with pytest.raises(RunRequiresOpenBeamShuttersError) as exc_info:
         _start(context, uuid4(), needs)
     assert exc_info.value.blocking == frozenset({"fes_open", "sbs_open", "fes_permit"})
+
+
+# ----- BeamRequirement.NOT_REQUIRED on the Run path -----
+#
+# Mirror of the Procedure-side exemption. A dark-field baseline leaves a
+# Dataset-of-record, which makes it a Run rather than a standalone
+# Procedure, so the Run path needs the same escape or the full
+# dark-field-with-data case stays blocked off-beam.
+
+
+@pytest.mark.unit
+def test_not_required_run_starts_with_every_beam_flag_closed() -> None:
+    """The 2-BM commissioning state (ring empty, shutters closed, no
+    permit) must be able to start a Run that never needed beam."""
+    context, needs = _context(
+        beam_availability=_beam(fes_open=False, sbs_open=False, fes_permit=False)
+    )
+    decision = _start(context, uuid4(), needs, beam_requirement=BeamRequirement.NOT_REQUIRED)
+    assert len(decision.run_events) == 1
+
+
+@pytest.mark.unit
+def test_required_run_still_refuses_when_beam_is_blocked() -> None:
+    """The default is unchanged. Pinned beside the exemption so a future
+    edit cannot widen the skip to every Run without going red."""
+    context, needs = _context(beam_availability=_beam(sbs_open=False))
+    with pytest.raises(RunRequiresOpenBeamShuttersError):
+        _start(context, uuid4(), needs)
+
+
+@pytest.mark.unit
+def test_run_started_records_declared_requirement_and_observed_state() -> None:
+    """A skipped gate must not be a silent gate: the event has to carry
+    enough for a later reader to tell a beam-available start from a
+    declared-exemption start."""
+    context, needs = _context(
+        beam_availability=_beam(fes_open=False, sbs_open=False, fes_permit=False)
+    )
+    decision = _start(context, uuid4(), needs, beam_requirement=BeamRequirement.NOT_REQUIRED)
+    started = decision.run_events[0]
+    assert started.beam_requirement is BeamRequirement.NOT_REQUIRED
+    assert started.beam_state_at_start is BeamState.BLOCKED
+
+
+@pytest.mark.unit
+def test_not_required_run_still_faces_the_clearance_gate() -> None:
+    """The exemption is scoped to the BEAM arm alone.
+
+    Clearance is a human authorization, not a live beam reading, and is
+    no less required for work that needs no beam. This is the assertion
+    that stops a refactor turning one narrow exemption into a general
+    pre-flight bypass.
+    """
+    context, needs = _context(
+        beam_availability=_beam(fes_open=False, sbs_open=False, fes_permit=False)
+    )
+    context = dataclasses.replace(context, referencing_clearances=())
+    with pytest.raises(RunRequiresActiveClearanceError):
+        _start(context, uuid4(), needs, beam_requirement=BeamRequirement.NOT_REQUIRED)

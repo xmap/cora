@@ -1648,6 +1648,8 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "text_excerpt": "drop:text",
             "workaround_excerpt": "drop:text",
         },
+        "beam_requirement": "keep:enum:BeamRequirement",
+        "beam_state_at_start": "keep:enum:BeamState",
         "campaign_id": "token:uuid",
         "capture_precondition_bypass_snapshot": {
             "beam_preconditions_bypassed": "keep:number",

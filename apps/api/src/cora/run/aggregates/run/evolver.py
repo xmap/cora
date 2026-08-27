@@ -167,6 +167,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
             campaign_id=campaign_id,
             pinned_calibration_ids=pinned_calibration_ids,
             input_dataset_ids=input_dataset_ids,
+            beam_requirement=beam_requirement,
         ):
             _ = state  # RunStarted is the genesis event; prior state ignored.
             # Shallow-copy the payload dicts into state so mutating either
@@ -207,6 +208,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=None,
                 # Nothing holds a Run at genesis.
                 hold_claims=(),
+                beam_requirement=beam_requirement,
             )
         case RunHeld(claim_id=held_claim_id, cause=held_cause):
             prior = require_state(state, "RunHeld")
@@ -243,6 +245,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # LEGACY_CLAIM_ID claim so pre-claim streams keep one-bit
                 # semantics.
                 hold_claims=_with_claim(prior.hold_claims, held_claim_id, held_cause),
+                beam_requirement=prior.beam_requirement,
             )
         case RunResumed(released_claim_id=released_claim_id):
             prior = require_state(state, "RunResumed")
@@ -279,6 +282,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # OTHER claims remain; the evolver stays a pure fold and does
                 # not adjudicate.
                 hold_claims=_without_claim(prior.hold_claims, released_claim_id),
+                beam_requirement=prior.beam_requirement,
             )
         case RunCompleted(actuation_kind=actuation_kind):
             prior = require_state(state, "RunCompleted")
@@ -313,6 +317,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=actuation_kind,
                 # Terminal: nothing can still be holding a finished Run.
                 hold_claims=(),
+                beam_requirement=prior.beam_requirement,
             )
         case RunAborted(actuation_kind=actuation_kind):
             prior = require_state(state, "RunAborted")
@@ -347,6 +352,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=actuation_kind,
                 # Terminal: nothing can still be holding a finished Run.
                 hold_claims=(),
+                beam_requirement=prior.beam_requirement,
             )
         case RunStopped():
             prior = require_state(state, "RunStopped")
@@ -379,6 +385,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=prior.actuation_kind,
                 # Claims survive every non-hold transition.
                 hold_claims=prior.hold_claims,
+                beam_requirement=prior.beam_requirement,
             )
         case RunTruncated():
             prior = require_state(state, "RunTruncated")
@@ -411,6 +418,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=prior.actuation_kind,
                 # Claims survive every non-hold transition.
                 hold_claims=prior.hold_claims,
+                beam_requirement=prior.beam_requirement,
             )
         case RunAdjusted(
             effective_parameters=effective_parameters,
@@ -457,6 +465,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=prior.actuation_kind,
                 # Claims survive every non-hold transition.
                 hold_claims=prior.hold_claims,
+                beam_requirement=prior.beam_requirement,
             )
         case RunObservationLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -492,6 +501,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=prior.actuation_kind,
                 # Claims survive every non-hold transition.
                 hold_claims=prior.hold_claims,
+                beam_requirement=prior.beam_requirement,
             )
         case RunAddedToCampaign(campaign_id=campaign_id):
             # post-hoc membership assignment from
@@ -529,6 +539,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=prior.actuation_kind,
                 # Claims survive every non-hold transition.
                 hold_claims=prior.hold_claims,
+                beam_requirement=prior.beam_requirement,
             )
         case RunRemovedFromCampaign():
             # post-hoc membership removal from
@@ -566,6 +577,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 actuation_kind=prior.actuation_kind,
                 # Claims survive every non-hold transition.
                 hold_claims=prior.hold_claims,
+                beam_requirement=prior.beam_requirement,
             )
         case DecisionDebriefRequested():
             # Audit-only lease marker appended by an Agent BC subscriber
@@ -616,6 +628,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
                 hold_claims=_without_claim(prior.hold_claims, released_only_claim_id),
+                beam_requirement=prior.beam_requirement,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
