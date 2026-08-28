@@ -68,16 +68,34 @@ reads the shutter mid-travel and halts on a false negative. The scenario test
 `test_2bm_flat_field.py` never surfaces this, because its soft-IOC PV flips the
 instant it is written; that is a fixture that cannot show this defect class.
 
-Two things have to land before an opening conduct is attempted:
+One thing has to land before an opening conduct is attempted: a way for a check
+to wait. Nothing else.
 
-1. A measured shutter response time, from the beamline rather than from a guess.
-2. Either a settle mechanism (a registered wait or a polling check) or a
-   documented response time small enough that the question is moot. Adding an
-   action body is new production surface and takes its own gate review.
+An earlier draft of this page also demanded a measured shutter response time
+first. That was wrong, and the records themselves say why. Measured 2026-08-28:
 
-The 2026-08-27 run did NOT measure the response time, and could not have: it
-commanded the shutter to the state it was already in, so nothing moved. The
-number still has to come from the beamline.
+```
+S02BM-PSS:SBS:BeamBlockingM.SCAN   1 second     status is polled at 1 Hz
+S02BM-PSS:SBS:CloseEPICSC.HIGH     1            command is a 1 s pulse
+S02BM-PSS:SBS:CloseEPICSC.RTYP     bo           NOT a busy record
+```
+
+The shutter's own travel time is masked by the 1 Hz scan and cannot be
+recovered from this PV, so it is not merely unmeasured but largely
+unobservable. It also does not matter: a check that waits passes as soon as the
+value arrives, whatever the latency turns out to be. The number was only ever
+needed to size a fixed wait, and a fixed wait is the wrong mechanism.
+
+What the same reads DO settle is that put-completion cannot help here.
+`CloseEPICSC` and `OpenEPICSC` are plain `bo` records with no busy record
+anywhere in the path, so a callback-style write returns when the record
+finishes processing and says nothing about the shutter. That is why TomoScan
+sleeps 2 s ON TOP of `put(wait=True)`, and that 2 s now reads as a command
+pulse plus a scan period plus margin rather than a guess.
+
+The fix is design-locked: a deadline-bearing check over the
+`ControlPort.subscribe` seam that already exists on every substrate, never a
+`sleep` action body.
 
 ## The enum-label gap, found by the same run
 
@@ -168,7 +186,7 @@ Do not proceed until all of these hold.
 
 | # | Precondition | Why it matters |
 | --- | --- | --- |
-| 1 | ANSWERED by the run for `CloseEPICSC`: writing `1` to an already-closed shutter completed cleanly and left the beamline unchanged, and the recorded `post_reading` of `""` shows it self-reset. `OpenEPICSC` is still unexercised | The recipe writes `1` to close an already-closed shutter. If that write had any other effect, the premise of the test would be wrong |
+| 1 | ANSWERED. `Close/OpenEPICSC.HIGH` is `1`, so both are one-second self-resetting pulses by construction, and the run confirmed it in practice: writing `1` to an already-closed shutter completed cleanly, left the beamline unchanged, and read back `""` after reset | The recipe writes `1` to close an already-closed shutter. If that write had any other effect, the premise of the test would be wrong |
 | 2 | No concurrent writer during the window (TomoScan GUI, operator script, another CA client) | Two writers on one shutter is the failure mode no amount of CORA-side care prevents |
 | 3 | MOOT while the capture step is excluded, and live again the moment it returns | `collect` writes `TriggerMode`, `AcquireTime` and `NumImages` on `2bmSP1:cam1` and restores none of them. Record the three with `caget` first; a baseline was saved as `camera-baseline-<stamp>.txt` on the shared home |
 | 4 | Hutch state is understood | At the run: both hutches SECURED (`SecureM` ON), `FesPermitM` OFF, ring current 0.002 mA. No beam was permitted and nobody was inside. An UNSECURED hutch is the case to pause on, since it may mean someone is working in there |
