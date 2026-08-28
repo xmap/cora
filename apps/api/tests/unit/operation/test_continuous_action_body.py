@@ -15,13 +15,16 @@ contract that `test_collect_action_body.py` covers.
 
   Body behaviour (continuous called directly with ActionContext):
   - Happy path: writes config, moves to start, arms, moves to stop,
-    polls done, reads final state + axis position
+    polls done, reads final state + axis position, and returns a
+    `detector_settings` prior/applied entry for each configuration PV
   - Write order is preserved (config -> start@wait -> Acquire -> stop@nowait)
   - axis-to-start uses wait=True; axis-to-stop uses wait=False
   - rate is evidence-only (NOT written to any PV)
   - Evidence carries axis_final_actual = readback of axis after sweep
   - Unconnected axis propagates ControlNotConnectedError
   - repetitions=None raises UnboundedAcquisitionError before any PV write
+  - ExternalEdge / ExternalLevel raise UnwiredExternalTriggerError before
+    any PV write, on both trigger dialects
 
   End-to-end via Conductor:
   - InMemoryActionRegistry({"continuous": continuous}) + ActionStep
@@ -48,7 +51,7 @@ from cora.operation.conductor import (
     Conductor,
     InMemoryActionRegistry,
 )
-from cora.operation.errors import UnboundedAcquisitionError
+from cora.operation.errors import UnboundedAcquisitionError, UnwiredExternalTriggerError
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Measurement,
@@ -67,10 +70,31 @@ _AXIS = "2bma:rot:val"
 
 
 def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
-    port.simulate_connect(f"{_DETECTOR}:TriggerMode")
-    port.simulate_connect(f"{_DETECTOR}:AcquireTime")
-    port.simulate_connect(f"{_DETECTOR}:ImageMode")
-    port.simulate_connect(f"{_DETECTOR}:NumImages")
+    """Seed the four configuration PVs (with prior values), `Acquire`, and the axis.
+
+    `set_reading`, not `simulate_connect`, for the four configuration
+    PVs: `continuous` now reads each one's prior value immediately
+    before writing it, so a merely-connected-but-unseeded PV would raise
+    `ControlNotConnectedError` on that read. See
+    `test_collect_action_body._seed_configure_pvs` for the same fix
+    applied to `collect`.
+    """
+    port.set_reading(
+        f"{_DETECTOR}:TriggerMode",
+        Measurement(value="External", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:AcquireTime",
+        Measurement(value=0.0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:ImageMode",
+        Measurement(value="Continuous", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:NumImages",
+        Measurement(value=0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.simulate_connect(_AXIS)
     port.set_reading(
@@ -229,9 +253,7 @@ async def test_continuous_writes_in_fly_scan_order_and_returns_evidence() -> Non
             port,  # type: ignore[arg-type]
             {
                 "detector": _DETECTOR,
-                "trigger_mode": "ExternalEdge",
-                "polarity": "Rising",
-                "source": "2bma:PCOMP1.OUT",
+                "trigger_mode": "Internal",
                 "axis": _AXIS,
                 "start": 0.0,
                 "stop": 180.0,
@@ -249,8 +271,12 @@ async def test_continuous_writes_in_fly_scan_order_and_returns_evidence() -> Non
     #   5. axis -> start (BLOCKING, wait=True)
     #   6. Acquire = 1 (arm)
     #   7. axis -> stop (NON-blocking, wait=False)
+    #
+    # Internal, not ExternalEdge: this test pins write ORDER, which the
+    # external-trigger guard (see the `raises_before_any_detector_write`
+    # tests below) now refuses to reach for any non-Internal trigger_mode.
     assert addresses == [
-        (f"{_DETECTOR}:TriggerMode", "External", True),
+        (f"{_DETECTOR}:TriggerMode", "Internal", True),
         (f"{_DETECTOR}:AcquireTime", 0.025, True),
         (f"{_DETECTOR}:ImageMode", "Multiple", True),
         (f"{_DETECTOR}:NumImages", 1500, True),
@@ -263,37 +289,102 @@ async def test_continuous_writes_in_fly_scan_order_and_returns_evidence() -> Non
     assert result["axis_stop_requested"] == 180.0
     assert result["axis_final_actual"] == 180.0  # in-memory port shows last write
     assert result["repetitions_requested"] == 1500
-    assert result["trigger_mode"] == "ExternalEdge"
-    assert result["polarity"] == "Rising"
-    assert result["source"] == "2bma:PCOMP1.OUT"
+    assert result["trigger_mode"] == "Internal"
+    assert result["polarity"] is None
+    assert result["source"] is None
     assert result["image_mode"] == "Multiple"
     assert result["detector_state_final"] == "Idle"
+    assert result["detector_settings"] == {
+        "TriggerMode": {"prior": "External", "applied": "Internal"},
+        "AcquireTime": {"prior": 0.0, "applied": 0.025},
+        "ImageMode": {"prior": "Continuous", "applied": "Multiple"},
+        "NumImages": {"prior": 0, "applied": 1500},
+    }
+    assert result["requested_not_applied"] == {"polarity": None, "source": None}
 
 
 @pytest.mark.unit
-async def test_continuous_external_edge_ad_spinnaker_dialect_writes_on() -> None:
-    """ADSpinnaker dialect: ExternalEdge -> 'On' (external triggering enabled)."""
+async def test_continuous_external_edge_raises_before_any_detector_write() -> None:
+    """ExternalEdge raises UnwiredExternalTriggerError and never issues Acquire (ADCore dialect).
+
+    Mirrors `test_continuous_repetitions_none_raises_before_any_detector_write`:
+    CORA does not configure the trigger emitter, so arming the detector
+    for external triggering and then waiting for pulses nothing arranged
+    would hang forever against real hardware.
+    """
     port = InMemoryControlPort()
     _seed_detector_and_axis(port)
-    result = await continuous(
-        _ctx(
-            port,
-            {
-                "detector": _DETECTOR,
-                "trigger_mode": "ExternalEdge",
-                "polarity": "Rising",
-                "source": "2bma:PCOMP1.OUT",
-                "axis": _AXIS,
-                "start": 0.0,
-                "stop": 180.0,
-                "repetitions": 1500,
-                "dwell": 0.025,
-            },
-            trigger_dialect="ADSpinnaker",
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalEdge"):
+        await continuous(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalEdge",
+                    "polarity": "Rising",
+                    "source": "2bma:PCOMP1.OUT",
+                    "axis": _AXIS,
+                    "start": 0.0,
+                    "stop": 180.0,
+                    "repetitions": 1500,
+                    "dwell": 0.025,
+                },
+            )
         )
-    )
-    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
-    assert result["trigger_dialect"] == "ADSpinnaker"
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
+
+
+@pytest.mark.unit
+async def test_continuous_external_level_raises_before_any_detector_write() -> None:
+    """ExternalLevel raises UnwiredExternalTriggerError, never issues Acquire (ADCore dialect)."""
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalLevel"):
+        await continuous(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalLevel",
+                    "source": "2bma:gate:OUT",
+                    "axis": _AXIS,
+                    "start": 0.0,
+                    "stop": 180.0,
+                    "repetitions": 1500,
+                    "dwell": 0.025,
+                },
+            )
+        )
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
+
+
+@pytest.mark.unit
+async def test_continuous_external_edge_raises_regardless_of_dialect() -> None:
+    """ExternalEdge is refused regardless of dialect: the guard fires before dialect resolution."""
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalEdge"):
+        await continuous(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalEdge",
+                    "polarity": "Rising",
+                    "source": "2bma:PCOMP1.OUT",
+                    "axis": _AXIS,
+                    "start": 0.0,
+                    "stop": 180.0,
+                    "repetitions": 1500,
+                    "dwell": 0.025,
+                },
+                trigger_dialect="ADSpinnaker",
+            )
+        )
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
 
 
 @pytest.mark.unit
@@ -515,9 +606,7 @@ async def test_conductor_executes_continuous_action_and_records_step_entry() -> 
                 name="continuous",
                 params={
                     "detector": _DETECTOR,
-                    "trigger_mode": "ExternalEdge",
-                    "polarity": "Rising",
-                    "source": "2bma:PCOMP1.OUT",
+                    "trigger_mode": "Internal",
                     "axis": _AXIS,
                     "start": 0.0,
                     "stop": 180.0,

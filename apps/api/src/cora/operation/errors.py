@@ -57,7 +57,32 @@ class UnknownTriggerDialectError(ValueError):
         )
 
 
-class UnboundedAcquisitionError(Exception):
+class ActionRefusedError(Exception):
+    """An action body declined the step BEFORE touching the substrate.
+
+    The Conductor catches this alongside `_CONTROL_ERRORS` at the
+    action-dispatch site and gives it the same treatment: a recorded
+    `result="failed"` step entry plus a `ConductorFailure`, so the
+    Procedure reaches a terminal state. Without a shared base the
+    Conductor would need to import each body's private refusal, coupling
+    the orchestrator to the acquisition bodies; a body signals "I will
+    not do this" by subclassing, and the Conductor never learns why.
+
+    Raising one carries a promise that NOTHING was written yet. That is
+    what makes it safe to treat as an ordinary recorded failure: a
+    refusal thrown midway would leave the substrate half-configured
+    while the record said only that the step failed, which is the
+    situation the refusals exist to prevent. Subclasses must be raised
+    before the body's first write, and their tests must assert that no
+    write occurred.
+
+    Distinct from a `Control*Error`, which means the substrate refused
+    or could not be reached: this means CORA refused, on its own reading
+    of the request, without asking the substrate anything.
+    """
+
+
+class UnboundedAcquisitionError(ActionRefusedError):
     """A detector acquisition body was asked for `repetitions=None` while it waits for completion.
 
     Application-layer, not domain-layer: whether a given action body's
@@ -78,6 +103,33 @@ class UnboundedAcquisitionError(Exception):
             "completion; a bounded repetitions value is required"
         )
         self.detector = detector
+
+
+class UnwiredExternalTriggerError(ActionRefusedError):
+    """A detector acquisition body was asked for an External trigger_mode CORA cannot arm.
+
+    Application-layer, not domain-layer: whether the trigger EMITTER
+    (the device named by `source`) is wired into this deployment is a
+    configuration fact, not an aggregate invariant. `collect` and
+    `continuous` write only the detector-side PVs (see the module
+    docstring's "v1 detector-side / emitter-side split" in
+    `cora.operation.acquisitions`); CORA does not configure the
+    emitter, so setting the detector's TriggerMode to External and
+    then waiting for pulses nothing arranged would hang the caller
+    forever, the same hang shape `UnboundedAcquisitionError` guards
+    against. Raised before any PV write so a caller who asks for
+    external triggering never leaves the detector partially armed
+    through this action body.
+    """
+
+    def __init__(self, detector: str, trigger_mode: str) -> None:
+        super().__init__(
+            f"external trigger_mode {trigger_mode!r} on {detector!r} is not wired end to "
+            "end: CORA does not configure the trigger emitter, and waiting for pulses "
+            "nobody arranged would hang"
+        )
+        self.detector = detector
+        self.trigger_mode = trigger_mode
 
 
 class SteeringWireMismatchError(Exception):

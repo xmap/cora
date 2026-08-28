@@ -95,6 +95,41 @@ into the step list. This split keeps the primitive substrate-neutral on
 the emitter side, where addressing conventions vary by hardware (PCOMP
 PV layout differs from PSO PV layout differs from software clock).
 Revisit at first PandABox-or-Aerotech integration.
+
+Because that split leaves the emitter unconfigured by this body, `source`
+and `polarity` sit in the evidence under `requested_not_applied`, not
+alongside the values `collect` / `continuous` actually wrote: a reader
+scanning the top-level evidence keys must not conclude CORA armed the
+trigger path just because these fields are present. `requested_not_applied`
+answers "what did the caller ask for on the emitter side" while
+`detector_settings` (below) answers "what did CORA actually change".
+
+## External triggering is refused, not attempted
+
+`ExternalEdge` / `ExternalLevel` raise `UnwiredExternalTriggerError`
+before any PV write, in both `_run_collect_cycle` and `continuous`. This
+is the same hang shape `UnboundedAcquisitionError` guards against: the
+emitter split above means CORA never configures the device named by
+`source`, so setting the detector's `TriggerMode` to `External` and then
+polling `Acquire_RBV` would wait forever for pulses nothing arranged.
+`CollectParams` keeps validating all three `trigger_mode` values (a
+recipe may still declare intent), but only `Internal` reaches a PV
+write at v1. Revisit once an emitter-configuring step type exists and a
+deployment actually wires one end to end.
+
+## Prior values are read before every configuration write
+
+`_run_collect_cycle` and `continuous` read each configuration PV
+(`TriggerMode`, `AcquireTime`, `ImageMode`, `NumImages`) immediately
+before writing it, and record both values together under
+`detector_settings[<PV suffix>] = {"prior": ..., "applied": ...}`. This
+is what lets the record say what CORA changed rather than only what it
+set: a PV CORA left untouched in practice (the applied value happens to
+match what was already there) is indistinguishable from an unread one
+unless the prior value is captured too. A `Control*Error` on one of
+these reads propagates unchanged, exactly like the write it precedes;
+it is not treated differently just because it is a read for evidence
+rather than a read the body's control flow depends on.
 """
 
 from __future__ import annotations
@@ -105,7 +140,11 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 from cora.infrastructure.logging import get_logger
-from cora.operation.errors import UnboundedAcquisitionError, UnknownTriggerDialectError
+from cora.operation.errors import (
+    UnboundedAcquisitionError,
+    UnknownTriggerDialectError,
+    UnwiredExternalTriggerError,
+)
 from cora.shared.binary_signal import binary_code
 from cora.shared.quality import believable
 
@@ -188,9 +227,38 @@ wait for Done unconditionally.
 """
 
 
+def _refuse_unwired_external_trigger(detector: str, trigger_mode: str) -> None:
+    """Raise `UnwiredExternalTriggerError` for any `trigger_mode` other than `Internal`.
+
+    Called first, before any PV write, in both `_run_collect_cycle` and
+    `continuous`. See the module docstring's "External triggering is
+    refused, not attempted" section for why: the emitter split leaves
+    `source` unconfigured by this body, so arming the detector for
+    External triggering would poll `Acquire_RBV` forever against pulses
+    nothing arranged.
+    """
+    if trigger_mode != "Internal":
+        raise UnwiredExternalTriggerError(detector, trigger_mode)
+
+
+async def _write_recording_prior(ctx: ActionContext, address: str, value: Any) -> Mapping[str, Any]:
+    """Read `address`'s current value, write `value`, and return `{"prior", "applied"}`.
+
+    The read-then-write ordering is deliberate: `prior` must be what the
+    PV held immediately before this body changed it, not some earlier or
+    later observation. A `Control*Error` from either the read or the
+    write propagates unchanged; this helper does not catch anything, so
+    a failed prior-read fails the action exactly like a failed write
+    always has.
+    """
+    prior = await ctx.control_port.read(address)
+    await ctx.control_port.write(address, value)
+    return {"prior": prior.value, "applied": value}
+
+
 async def _arm_bounded_repetitions(
     ctx: ActionContext, detector: str, repetitions: int | None
-) -> None:
+) -> Mapping[str, Mapping[str, Any]]:
     """Write `ImageMode=Multiple` + `NumImages=repetitions`, refusing an unbounded request.
 
     Shared by `_run_collect_cycle` and `continuous`, both of which wait
@@ -202,11 +270,17 @@ async def _arm_bounded_repetitions(
     left acquiring. Raising here, before either write, keeps a caller
     who wants free-running acquisition from partially arming a camera
     this action body can then never bring back down.
+
+    Returns the `detector_settings` fragment for `ImageMode` and
+    `NumImages` (prior value read immediately before each write,
+    alongside the applied value); the caller merges it into its own
+    fragment for `TriggerMode` / `AcquireTime`.
     """
     if repetitions is None:
         raise UnboundedAcquisitionError(detector)
-    await ctx.control_port.write(f"{detector}:ImageMode", _IMAGE_MODE_MULTIPLE)
-    await ctx.control_port.write(f"{detector}:NumImages", repetitions)
+    image_mode = await _write_recording_prior(ctx, f"{detector}:ImageMode", _IMAGE_MODE_MULTIPLE)
+    num_images = await _write_recording_prior(ctx, f"{detector}:NumImages", repetitions)
+    return {"ImageMode": image_mode, "NumImages": num_images}
 
 
 _POLL_INTERVAL_S: float = 0.05
@@ -363,15 +437,29 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
     `ActionContext` per cycle.
     Returns the same evidence Mapping the `collect` action body returns,
     so per-point composition stays uniform.
+
+    Raises `UnwiredExternalTriggerError` for any `trigger_mode` other
+    than `Internal`, before any PV write: see the module docstring's
+    "External triggering is refused, not attempted". `detector_settings`
+    carries the prior and applied value for each of the four
+    configuration PVs; `requested_not_applied` carries `polarity` /
+    `source` under a key that says they were never written by this body.
     """
+    _refuse_unwired_external_trigger(params.detector, params.trigger_mode)
     started_at = ctx.clock.now()
 
-    await ctx.control_port.write(
+    detector_settings: dict[str, Mapping[str, Any]] = {}
+    detector_settings["TriggerMode"] = await _write_recording_prior(
+        ctx,
         f"{params.detector}:TriggerMode",
         _resolve_trigger_mode_value(ctx.trigger_dialect, params.trigger_mode),
     )
-    await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
-    await _arm_bounded_repetitions(ctx, params.detector, params.repetitions)
+    detector_settings["AcquireTime"] = await _write_recording_prior(
+        ctx, f"{params.detector}:AcquireTime", params.dwell
+    )
+    detector_settings.update(
+        await _arm_bounded_repetitions(ctx, params.detector, params.repetitions)
+    )
     await ctx.control_port.write(f"{params.detector}:Acquire", 1)
 
     await _await_acquire_done(ctx, params.detector)
@@ -389,6 +477,11 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
         "polarity": params.polarity,
         "source": params.source,
         "detector_state_final": state_reading.value,
+        "detector_settings": detector_settings,
+        "requested_not_applied": {
+            "polarity": params.polarity,
+            "source": params.source,
+        },
     }
 
 
@@ -406,14 +499,20 @@ async def collect(ctx: ActionContext) -> Mapping[str, Any]:
     on its own, so an unbounded request combined with that wait would
     hang forever against real hardware. See `_arm_bounded_repetitions`.
 
+    `params.trigger_mode != "Internal"` raises `UnwiredExternalTriggerError`
+    before any PV write, for the same reason: see the module docstring's
+    "External triggering is refused, not attempted".
+
     `Control*Error` raised by the underlying `ControlPort` propagates
     unchanged; the Conductor catches it at the action-dispatch site and
     records the step failure per its standard contract.
 
-    See module docstring for the AD-convention v1 contract and the
+    See module docstring for the AD-convention v1 contract, the
     detector-side / emitter-side split that leaves `polarity` and
-    `source` as evidence-only fields (the trigger EMITTER is configured
-    by caller-authored setpoint steps before this action step).
+    `source` as evidence-only fields under `requested_not_applied` (the
+    trigger EMITTER is configured by caller-authored setpoint steps
+    before this action step, when it is configured at all), and the
+    `detector_settings` prior/applied recording.
     """
     return await _run_collect_cycle(ctx, CollectParams.model_validate(ctx.params))
 
@@ -543,6 +642,13 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
     before any PV write, same as `collect`: see
     `_arm_bounded_repetitions`.
 
+    `params.trigger_mode != "Internal"` raises `UnwiredExternalTriggerError`
+    before any PV write, same as `collect`: see the module docstring's
+    "External triggering is refused, not attempted". `detector_settings`
+    carries the prior and applied value for each of the four
+    configuration PVs; `requested_not_applied` carries `polarity` /
+    `source` under a key that says they were never written by this body.
+
     `Control*Error` from any read or write propagates unchanged; the
     Conductor records the failure per its standard contract. The
     detector is NOT explicitly stopped on the happy path; the
@@ -553,14 +659,21 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
     first deployment that exercises the overrun edge.
     """
     params = ContinuousParams.model_validate(ctx.params)
+    _refuse_unwired_external_trigger(params.detector, params.trigger_mode)
     started_at = ctx.clock.now()
 
-    await ctx.control_port.write(
+    detector_settings: dict[str, Mapping[str, Any]] = {}
+    detector_settings["TriggerMode"] = await _write_recording_prior(
+        ctx,
         f"{params.detector}:TriggerMode",
         _resolve_trigger_mode_value(ctx.trigger_dialect, params.trigger_mode),
     )
-    await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
-    await _arm_bounded_repetitions(ctx, params.detector, params.repetitions)
+    detector_settings["AcquireTime"] = await _write_recording_prior(
+        ctx, f"{params.detector}:AcquireTime", params.dwell
+    )
+    detector_settings.update(
+        await _arm_bounded_repetitions(ctx, params.detector, params.repetitions)
+    )
 
     await ctx.control_port.write(params.axis, params.start, wait=True)
     await ctx.control_port.write(f"{params.detector}:Acquire", 1)
@@ -587,6 +700,11 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
         "polarity": params.polarity,
         "source": params.source,
         "detector_state_final": state_reading.value,
+        "detector_settings": detector_settings,
+        "requested_not_applied": {
+            "polarity": params.polarity,
+            "source": params.source,
+        },
     }
 
 

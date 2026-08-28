@@ -64,11 +64,30 @@ _AXIS = "2bma:rot:val"
 
 
 def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
-    """Seed the AD PVs `collect` touches plus the axis address `discrete` writes."""
-    port.simulate_connect(f"{_DETECTOR}:TriggerMode")
-    port.simulate_connect(f"{_DETECTOR}:AcquireTime")
-    port.simulate_connect(f"{_DETECTOR}:ImageMode")
-    port.simulate_connect(f"{_DETECTOR}:NumImages")
+    """Seed the AD PVs `collect` touches plus the axis address `discrete` writes.
+
+    `set_reading`, not `simulate_connect`, for the four configuration PVs:
+    each composed `collect` cycle now reads a PV's prior value immediately
+    before writing it, so a merely-connected-but-unseeded PV would raise
+    `ControlNotConnectedError` on that read. See
+    `test_collect_action_body._seed_configure_pvs` for the same fix.
+    """
+    port.set_reading(
+        f"{_DETECTOR}:TriggerMode",
+        Measurement(value="External", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:AcquireTime",
+        Measurement(value=0.0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:ImageMode",
+        Measurement(value="Continuous", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:NumImages",
+        Measurement(value=0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.simulate_connect(_AXIS)
     port.set_reading(

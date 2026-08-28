@@ -132,7 +132,12 @@ from cora.operation.aggregates.procedure import (
     ProcedureNotFoundError,
     merge_actuation_kinds,
 )
-from cora.operation.errors import CheckFailedError, UnauthorizedError, UnknownActionError
+from cora.operation.errors import (
+    ActionRefusedError,
+    CheckFailedError,
+    UnauthorizedError,
+    UnknownActionError,
+)
 from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.abort_procedure.handler import Handler as AbortProcedureHandler
 from cora.operation.features.append_activities.command import (
@@ -3227,7 +3232,14 @@ class Conductor:
                     trigger_dialect=self._trigger_dialect,
                 )
             )
-        except _CONTROL_ERRORS as exc:
+        # `ActionRefusedError` rides the SAME arm as a substrate error, and
+        # deliberately so. A body that refuses has written nothing (that is
+        # the base class's stated promise), so the only honest outcome is a
+        # recorded step failure and a terminal Procedure. Letting it
+        # propagate instead, which is what an uncaught exception does here,
+        # leaves the Procedure at `ProcedureStarted` with no outcome row for
+        # the step: a record that says a run is still going when it stopped.
+        except (*_CONTROL_ERRORS, ActionRefusedError) as exc:
             await self._record(
                 envelope=envelope,
                 index=index,
