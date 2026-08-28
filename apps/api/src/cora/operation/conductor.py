@@ -112,6 +112,7 @@ handler's `Handler` Protocol, not a concrete binding, so tests inject
 a fake without standing up the full handler machinery.
 """
 
+import asyncio
 import contextlib
 import math
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
@@ -596,6 +597,26 @@ class CheckStep:
 
     address: str
     criterion: CheckCriterion
+    timeout_s: float | None = None
+    """How long the criterion may take to hold, in seconds. None (the
+    default) is a single instantaneous read: the pre-existing behaviour,
+    and what every check written before this field did.
+
+    Set it when the check follows a command that moves hardware. A
+    shutter is not instantaneous, so a check fired straight after an open
+    command reads the pre-move state and halts on a false negative.
+
+    Size it against the SUBSTRATE's latency, not the device's. At 2-BM
+    the status PV scans at 1 Hz and the command is a 1 s pulse, so about
+    2 s elapses before the device is even considered; a deadline under a
+    few seconds would fail a healthy shutter. Being generous is close to
+    free, because the check returns on ARRIVAL rather than on expiry, so
+    a long deadline only delays how quickly a genuinely stuck device is
+    reported.
+
+    A value <= 0 is a caller error rather than a synonym for None; the
+    wire boundary rejects it with 422 and absence is how "no wait" is
+    expressed."""
 
 
 @dataclass(frozen=True)
@@ -3224,6 +3245,67 @@ class Conductor:
         )
         return None
 
+    async def _reading_for_check(
+        self,
+        step: CheckStep,
+        *,
+        port: ControlPort,
+    ) -> tuple[Measurement, float]:
+        """Return the reading this check will judge, plus seconds waited.
+
+        Reads once, ALWAYS. When the criterion already holds, or the step
+        declares no deadline, that first reading is the answer and the
+        wait is 0.0, which is the pre-existing behaviour unchanged.
+
+        Reading first is a CORRECTNESS condition, not an optimization. A
+        subscription delivers on CHANGE, and the ordinary case is a value
+        that is ALREADY correct, which never changes into itself. A
+        subscribe-only implementation would therefore wait out the whole
+        deadline on exactly the checks that pass instantly today, and
+        report a false negative on healthy hardware. Adapters here happen
+        to send an initial monitor update, but `ControlPort.subscribe`
+        does not promise one, so relying on it would be a per-adapter bet.
+
+        Past that, consumes the subscription until the criterion holds or
+        the deadline expires, and returns the LAST reading seen either
+        way. On expiry the caller's existing quality and mismatch
+        branches judge that last reading and raise the same
+        `CheckFailedError` they always did, so a timeout reports the real
+        observed value instead of inventing a second failure vocabulary.
+
+        The deadline is enforced with `asyncio.timeout` against the event
+        loop, because bounding a wait means bounding REAL elapsed time.
+        The injected clock supplies only the recorded duration, so the
+        journal figure stays deterministic under a test clock.
+
+        A `Control*Error` from the read, or raised through the iterator on
+        mid-stream disconnect, propagates to the caller's existing
+        `_CONTROL_ERRORS` handler unchanged.
+        """
+        started = self._clock.now()
+        reading = await port.read(step.address)
+        if step.timeout_s is None or _check_satisfied(step, reading):
+            return reading, 0.0
+
+        stream = port.subscribe(step.address)
+        try:
+            async with asyncio.timeout(step.timeout_s):
+                async for update in stream:
+                    reading = update
+                    if _check_satisfied(step, reading):
+                        break
+        except TimeoutError:
+            pass  # deadline reached; `reading` holds the last value seen
+        finally:
+            # Per the port contract cancellation is via the iterator, and
+            # a leaked subscription is a leaked substrate channel. The
+            # Protocol types this as AsyncIterator while every adapter
+            # returns an AsyncGenerator, hence the getattr.
+            aclose = getattr(stream, "aclose", None)
+            if aclose is not None:
+                await aclose()
+        return reading, (self._clock.now() - started).total_seconds()
+
     async def _run_check(
         self,
         step: CheckStep,
@@ -3237,7 +3319,7 @@ class Conductor:
             "criterion": _criterion_to_dict(step.criterion),
         }
         try:
-            reading = await port.read(step.address)
+            reading, waited_s = await self._reading_for_check(step, port=port)
         except _CONTROL_ERRORS as exc:
             await self._record(
                 envelope=envelope,
@@ -3255,7 +3337,14 @@ class Conductor:
                 error_class=type(exc).__name__,
                 message=str(exc),
             )
-        body_with_reading = {**payload_body, "reading": _measurement_to_dict(reading)}
+        # `waited_s` is 0.0 on the instantaneous path, so a check that
+        # passed immediately stays visibly distinct in the record from one
+        # that genuinely waited for hardware.
+        body_with_reading = {
+            **payload_body,
+            "reading": _measurement_to_dict(reading),
+            "waited_s": waited_s,
+        }
         if not actionable(reading.quality):
             exc = CheckFailedError(step.address, f"quality={reading.quality}")
             await self._record(
@@ -4212,6 +4301,18 @@ def _criterion_matches(criterion: CheckCriterion, value: Any) -> bool:
         return abs(float(value) - criterion.expected) <= criterion.tolerance
     except (TypeError, ValueError):
         return False
+
+
+def _check_satisfied(step: "CheckStep", reading: "Measurement") -> bool:
+    """Both conditions a check requires: an actionable quality AND a
+    matching criterion.
+
+    Shared by the wait loop and the judgement that follows it so the two
+    cannot drift on what "satisfied" means. If they drifted, a wait could
+    exit on a reading the judgement then rejects, which would read as a
+    settle bug rather than the vocabulary mismatch it would be.
+    """
+    return actionable(reading.quality) and _criterion_matches(step.criterion, reading.value)
 
 
 def _mismatch_reason(criterion: CheckCriterion, value: Any) -> str:

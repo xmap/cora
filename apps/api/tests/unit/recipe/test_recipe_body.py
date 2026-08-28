@@ -474,3 +474,67 @@ def test_resolve_value_raises_when_binding_name_missing() -> None:
     with pytest.raises(UnboundRecipeBindingError) as exc:
         resolve_value(BindingRef("dwell"), {})
     assert exc.value.name == "dwell"
+
+
+# --- check timeout_s: the deadline a waiting check carries ---------------
+
+
+@pytest.mark.unit
+def test_check_step_timeout_defaults_to_none_meaning_instantaneous() -> None:
+    """Absence is how "no wait" is spelled, and it is the default."""
+    step = RecipeCheckStep(address="sim:shutter", criterion={"kind": "equals", "expected": "ON"})
+    assert step.timeout_s is None
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_check_timeout() -> None:
+    """The deadline is authored data and must survive the event payload.
+
+    It rides the determinism hash with every other authored value, so a
+    recipe whose deadline changed is a different recipe.
+    """
+    steps = (
+        RecipeCheckStep(
+            address="sim:shutter",
+            criterion={"kind": "equals", "expected": "ON"},
+            timeout_s=10.0,
+        ),
+    )
+    rebuilt = steps_from_dict(steps_to_dict(steps))
+    assert rebuilt == steps
+
+
+@pytest.mark.unit
+def test_from_dict_folds_a_missing_check_timeout_to_none() -> None:
+    """Every recipe authored before this field omits the key entirely."""
+    rebuilt = steps_from_dict(
+        {"steps": [{"kind": "check", "address": "sim:s", "criterion": {"kind": "equals"}}]}
+    )
+    step = rebuilt[0]
+    assert isinstance(step, RecipeCheckStep)
+    assert step.timeout_s is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("bad", [0, -1, -0.5, "10", True])
+def test_from_dict_rejects_a_non_positive_or_non_numeric_check_timeout(bad: object) -> None:
+    """Rejected, never coerced.
+
+    Treating 0 or -1 as a synonym for None would turn a typo into a check
+    that silently never waits, which is the exact false negative this
+    field exists to remove. `True` is in the set because bool is an int
+    subclass in Python and would otherwise slip through as 1.0 seconds.
+    """
+    with pytest.raises(InvalidRecipeStepShapeError):
+        steps_from_dict(
+            {
+                "steps": [
+                    {
+                        "kind": "check",
+                        "address": "sim:s",
+                        "criterion": {"kind": "equals"},
+                        "timeout_s": bad,
+                    }
+                ]
+            }
+        )
