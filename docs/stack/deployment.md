@@ -826,7 +826,7 @@ host that does have reach (lyra, the jump host). See the module docstring in
 imports nothing from `cora`.
 
 **Transport, verified 2026-08-28 against the real hosts:** arcturus resolves
-`lyra.xray.aps.anl.gov`, but outbound 443 is refused and only 22 is open. So
+lyra, but outbound 443 is refused and only 22 is open. So
 the path is an SSH reverse tunnel opened FROM arcturus
 (`cora-status-tunnel.service`, `-R 8099:127.0.0.1:8099`), not a direct
 `wss://` connection. `status_push_url` on arcturus then points at
@@ -836,7 +836,7 @@ URL and whether a tunnel unit runs alongside it change.
 **Access posture, decided deliberately:** the relay binds `127.0.0.1` on
 lyra, not lyra's real network address. A viewer reaches it exactly like
 `/docs` today, an SSH tunnel
-(`ssh -L 8099:127.0.0.1:8099 2bmb@lyra.xray.aps.anl.gov`), not a direct URL.
+(`ssh -L 8099:127.0.0.1:8099 2bmb@lyra`), not a direct URL.
 This ships the feature with zero change to who can see anything. Widening the
 bind address later is a one-line `ExecStart` change in
 `cora-status-relay.service`, but do it together with adding viewer-side

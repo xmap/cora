@@ -37,7 +37,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -R 8099:127.0.0.1:8099 2bmb@lyra.xray.aps.anl.gov
+ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -R 8099:127.0.0.1:8099 2bmb@lyra
 Restart=always
 RestartSec=15
 StandardOutput=append:/home/beams0/2BMB/dgursoy/cora-status-tunnel.log
