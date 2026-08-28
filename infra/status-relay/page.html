@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CORA status</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0e1117;
+    --fg: #e6e6e6;
+    --muted: #8a8f98;
+    --live: #2ea043;
+    --stale: #d29922;
+    --dead: #da3633;
+    --row-border: #262b33;
+  }
+  body {
+    margin: 0;
+    padding: 2rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 1rem 0;
+  }
+  h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 1.75rem 0 0.5rem 0;
+  }
+  #banner {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  #banner.live { background: var(--live); color: #08260f; }
+  #banner.stale { background: var(--stale); color: #2b1c00; }
+  #banner.dead { background: var(--dead); color: #2b0a09; }
+  #content.dimmed { opacity: 0.5; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 60rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--row-border);
+    font-size: 0.9rem;
+    vertical-align: top;
+  }
+  th { color: var(--muted); font-weight: 600; }
+  .empty { color: var(--muted); font-style: italic; padding: 0.25rem 0 0.75rem 0; }
+  .progress-role {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.15rem 0;
+    white-space: nowrap;
+  }
+  .progress-role .role-label { color: var(--muted); width: 8rem; flex-shrink: 0; }
+  .progress-bar-track {
+    background: var(--row-border);
+    border-radius: 3px;
+    width: 8rem;
+    height: 0.5rem;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .progress-bar-fill { background: var(--live); height: 100%; }
+  .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .no-progress { color: var(--muted); font-style: italic; }
+  .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
+</style>
+</head>
+<body>
+  <h1>CORA / 2-BM: live status</h1>
+  <div id="banner">connecting</div>
+
+  <div id="content">
+    <h2>Runs</h2>
+    <table id="runs-table">
+      <thead><tr><th>Run</th><th>Status</th><th>Progress</th></tr></thead>
+      <tbody id="runs-body"></tbody>
+    </table>
+    <div id="runs-empty" class="empty" style="display: none;">no open runs</div>
+
+    <h2>Subjects</h2>
+    <table id="subjects-table">
+      <thead><tr><th>Subject</th><th>Status</th></tr></thead>
+      <tbody id="subjects-body"></tbody>
+    </table>
+    <div id="subjects-empty" class="empty" style="display: none;">no open subjects</div>
+
+    <h2>Campaigns</h2>
+    <table id="campaigns-table">
+      <thead><tr><th>Campaign</th><th>Intent</th><th>Status</th><th>Runs</th></tr></thead>
+      <tbody id="campaigns-body"></tbody>
+    </table>
+    <div id="campaigns-empty" class="empty" style="display: none;">no open campaigns</div>
+
+    <h2>Datasets from runs on screen</h2>
+    <table id="datasets-table">
+      <thead><tr><th>Dataset</th><th>Status</th><th>Run</th></tr></thead>
+      <tbody id="datasets-body"></tbody>
+    </table>
+    <div id="datasets-empty" class="empty" style="display: none;">no datasets from an open run yet</div>
+
+    <h2>Active clearances</h2>
+    <table id="clearances-table">
+      <thead><tr><th>Template</th><th>Risk</th><th>Valid until</th></tr></thead>
+      <tbody id="clearances-body"></tbody>
+    </table>
+    <div id="clearances-empty" class="empty" style="display: none;">no active clearances</div>
+
+    <h2>Enclosures</h2>
+    <table id="enclosures-table">
+      <thead><tr><th>Enclosure</th><th>Permit status</th></tr></thead>
+      <tbody id="enclosures-body"></tbody>
+    </table>
+    <div id="enclosures-empty" class="empty" style="display: none;">no active enclosures</div>
+
+    <h2>Recent decisions</h2>
+    <table id="decisions-table">
+      <thead><tr><th>Choice</th><th>Confidence</th><th>Decided by</th><th>When</th></tr></thead>
+      <tbody id="decisions-body"></tbody>
+    </table>
+    <div id="decisions-empty" class="empty" style="display: none;">
+      no decisions since this page's producer started
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LIVE_SECONDS = 5;
+  var STALE_SECONDS = 30;
+  var RECONNECT_INITIAL_MS = 1000;
+  var RECONNECT_MAX_MS = 30000;
+
+  var bannerEl = document.getElementById("banner");
+  var contentEl = document.getElementById("content");
+
+  var generatedAt = null;
+  var producerConnected = false;
+  var socketOpen = false;
+  var reconnectDelayMs = RECONNECT_INITIAL_MS;
+
+  function shortId(id) {
+    return id ? String(id).slice(0, 8) : "";
+  }
+
+  function textCell(text) {
+    var cell = document.createElement("td");
+    cell.textContent = text === null || text === undefined ? "" : String(text);
+    return cell;
+  }
+
+  function renderProgressCell(progress) {
+    var cell = document.createElement("td");
+    var roles = progress ? Object.keys(progress) : [];
+    if (roles.length === 0) {
+      cell.className = "no-progress";
+      cell.textContent = "no progress reported";
+      return cell;
+    }
+    roles.sort().forEach(function (role) {
+      var reading = progress[role];
+      var line = document.createElement("div");
+      line.className = "progress-role";
+
+      var label = document.createElement("span");
+      label.className = "role-label";
+      label.textContent = role;
+      line.appendChild(label);
+
+      if (reading.commanded_total) {
+        var track = document.createElement("div");
+        track.className = "progress-bar-track";
+        var fill = document.createElement("div");
+        fill.className = "progress-bar-fill";
+        var pct = Math.max(0, Math.min(100, (reading.value / reading.commanded_total) * 100));
+        fill.style.width = pct + "%";
+        track.appendChild(fill);
+        line.appendChild(track);
+      }
+
+      var count = document.createElement("span");
+      count.className = "progress-count";
+      count.textContent = reading.commanded_total
+        ? reading.value + " / " + reading.commanded_total
+        : String(reading.value);
+      line.appendChild(count);
+
+      cell.appendChild(line);
+    });
+    return cell;
+  }
+
+  // Generic section renderer for every domain except Runs, which alone
+  // needs the progress-bar cell above.
+  function renderSection(name, items, rowBuilder) {
+    var tableEl = document.getElementById(name + "-table");
+    var bodyEl = document.getElementById(name + "-body");
+    var emptyEl = document.getElementById(name + "-empty");
+    bodyEl.innerHTML = "";
+    if (!items || items.length === 0) {
+      tableEl.style.display = "none";
+      emptyEl.style.display = "block";
+      return;
+    }
+    tableEl.style.display = "table";
+    emptyEl.style.display = "none";
+    items.forEach(function (item) {
+      bodyEl.appendChild(rowBuilder(item));
+    });
+  }
+
+  function renderRuns(runs) {
+    renderSection("runs", runs, function (run) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(run.name));
+      row.appendChild(textCell(run.status));
+      row.appendChild(renderProgressCell(run.progress));
+      return row;
+    });
+  }
+
+  function renderSubjects(subjects) {
+    renderSection("subjects", subjects, function (s) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(s.name));
+      row.appendChild(textCell(s.status));
+      return row;
+    });
+  }
+
+  function renderCampaigns(campaigns) {
+    renderSection("campaigns", campaigns, function (c) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(c.name));
+      row.appendChild(textCell(c.intent));
+      row.appendChild(textCell(c.status));
+      row.appendChild(textCell(c.run_count));
+      return row;
+    });
+  }
+
+  function renderDatasets(datasets) {
+    renderSection("datasets", datasets, function (d) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(d.name));
+      row.appendChild(textCell(d.status));
+      var runCell = textCell(shortId(d.producing_run_id));
+      runCell.className = "mono";
+      row.appendChild(runCell);
+      return row;
+    });
+  }
+
+  function renderClearances(clearances) {
+    renderSection("clearances", clearances, function (c) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(c.template_code));
+      row.appendChild(textCell(c.risk_band));
+      row.appendChild(textCell(c.valid_until ? c.valid_until : "no expiry set"));
+      return row;
+    });
+  }
+
+  function renderEnclosures(enclosures) {
+    renderSection("enclosures", enclosures, function (e) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(e.name));
+      row.appendChild(textCell(e.permit_status));
+      return row;
+    });
+  }
+
+  function renderDecisions(decisions) {
+    renderSection("decisions", decisions, function (d) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(d.choice));
+      row.appendChild(textCell(d.confidence_band ? d.confidence_band : "n/a"));
+      var byCell = textCell(shortId(d.decided_by));
+      byCell.className = "mono";
+      row.appendChild(byCell);
+      row.appendChild(textCell(d.created_at ? new Date(d.created_at).toLocaleTimeString() : ""));
+      return row;
+    });
+  }
+
+  function renderBanner() {
+    if (!socketOpen || !producerConnected) {
+      bannerEl.className = "dead";
+      bannerEl.textContent = "DISCONNECTED";
+      contentEl.classList.add("dimmed");
+      return;
+    }
+    if (generatedAt === null) {
+      bannerEl.className = "stale";
+      bannerEl.textContent = "waiting for data";
+      return;
+    }
+    var ageSeconds = (Date.now() - generatedAt) / 1000;
+    if (ageSeconds < LIVE_SECONDS) {
+      bannerEl.className = "live";
+      bannerEl.textContent = "LIVE";
+      contentEl.classList.remove("dimmed");
+    } else if (ageSeconds < STALE_SECONDS) {
+      bannerEl.className = "stale";
+      bannerEl.textContent = Math.round(ageSeconds) + "s old";
+      contentEl.classList.remove("dimmed");
+    } else {
+      bannerEl.className = "dead";
+      bannerEl.textContent = Math.round(ageSeconds) + "s old, likely stalled";
+      contentEl.classList.add("dimmed");
+    }
+  }
+
+  function handleMessage(event) {
+    var msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch (err) {
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(msg, "producer_connected")) {
+      producerConnected = msg.producer_connected;
+      if (!producerConnected) {
+        generatedAt = null;
+      }
+      renderBanner();
+      return;
+    }
+    producerConnected = true;
+    generatedAt = Date.parse(msg.generated_at);
+    renderRuns(msg.runs);
+    renderSubjects(msg.subjects);
+    renderCampaigns(msg.campaigns);
+    renderDatasets(msg.datasets);
+    renderClearances(msg.clearances);
+    renderEnclosures(msg.enclosures);
+    renderDecisions(msg.decisions);
+    renderBanner();
+  }
+
+  function connect() {
+    var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    var url = proto + "//" + window.location.host + "/watch";
+    var socket = new WebSocket(url);
+
+    socket.onopen = function () {
+      socketOpen = true;
+      reconnectDelayMs = RECONNECT_INITIAL_MS;
+      renderBanner();
+    };
+    socket.onmessage = handleMessage;
+    socket.onclose = function () {
+      socketOpen = false;
+      producerConnected = false;
+      renderBanner();
+      setTimeout(connect, reconnectDelayMs);
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, RECONNECT_MAX_MS);
+    };
+    socket.onerror = function () {
+      socket.close();
+    };
+  }
+
+  setInterval(renderBanner, 1000);
+  renderBanner();
+  connect();
+})();
+</script>
+</body>
+</html>

@@ -557,6 +557,33 @@ class RunWitnessRecorder:
         """
         return dict(self._open_captures)
 
+    def progress_readings(self) -> dict[UUID, dict[str, CaptureProgressObservation]]:
+        """A snapshot of the latest progress reading per role, keyed by
+        run_id, for every currently-open capture.
+
+        Read-only view combining `open_captures` (capture_code -> run_id)
+        with `_last_progress` (capture_code -> role -> reading) so a
+        caller outside this recorder (a live status view is the intended
+        consumer) never needs to know capture_code exists. A capture with
+        no progress reading yet is simply absent from the result, not an
+        empty dict. Returns copies of both the outer mapping and each
+        inner one: the caller cannot mutate this recorder's own state
+        through it, same posture as `open_captures`.
+
+        This is the ONLY place these readings are available at substrate
+        rate: `entries_run_observations` (the Postgres-durable path) is
+        capped at `capture_progress_flush_tick_seconds` and never carries
+        `commanded_total` at all (dropped at the `ObservationInput`
+        boundary), so a consumer wanting the "N of M" figure has no
+        substitute for reading this recorder directly.
+        """
+        result: dict[UUID, dict[str, CaptureProgressObservation]] = {}
+        for capture_code, run_id in self._open_captures.items():
+            readings = self._last_progress.get(capture_code)
+            if readings:
+                result[run_id] = dict(readings)
+        return result
+
     async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
         observe_capture(observation)
         await self._write_capture_probe(observation)
@@ -1420,8 +1447,16 @@ async def run_witness_lifespan(
     capture_experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
     experiment_identity_store: ExperimentIdentityStore | None = None,
     capture_probe_store: CaptureProbeStore | None = None,
-) -> AsyncGenerator[None]:
+) -> AsyncGenerator[RunWitnessRecorder | None]:
     """Run the watcher as a background task for the app's lifetime.
+
+    Yields the constructed `RunWitnessRecorder` (or `None`, in the
+    no-`capture_codes` no-op case, or when `record_witnessed_run` is
+    not supplied so the recorder stays shadow-only) so a sibling
+    composition-root task started later in the same `async with` group
+    (for example `status_push_lifespan`) can read its live in-memory
+    progress via `progress_readings()` -- the only place that data
+    exists, since it is never written to Postgres at substrate rate.
 
     No-op when `capture_codes` is empty: yields immediately without
     starting a task, mirroring `enclosure_permit_monitor_lifespan`'s
@@ -1493,7 +1528,7 @@ async def run_witness_lifespan(
     docstring.
     """
     if not capture_codes:
-        yield
+        yield None
         return
     if record_witnessed_run is not None:
         missing = [
@@ -1664,7 +1699,7 @@ async def run_witness_lifespan(
             )
         )
     try:
-        yield
+        yield recorder
     finally:
         # Cancel + await both tasks BEFORE the final flush below: this
         # guarantees the periodic flush loop is no longer running (so

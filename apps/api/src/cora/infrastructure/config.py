@@ -519,6 +519,28 @@ class Settings(BaseSettings):
     # regardless. No-op under a permissive Authorize (dev/test).
     watcher_authz_strict: bool = False
 
+    # `status_push_enabled` gates a periodic composition-root task that pushes a
+    # small read-only snapshot (today: open Runs only) outbound over a WebSocket
+    # to an external relay, for a live status page served from a host outside
+    # this deployment's network (see docs/deployments/2-bm's serving design).
+    # Default off: a deployment opts in explicitly, since this is the one
+    # capability in this file that sends deployment data OUTBOUND to a
+    # non-CORA process. `status_push_tick_seconds` is the push cadence (>= 0.1s);
+    # unlike the flag-watchers above (5-minute sweeps are fine for staleness),
+    # this drives a live view, so the default is seconds, not minutes.
+    # `status_push_url` is the relay's WebSocket ingest endpoint (for example
+    # `ws://127.0.0.1:8099/ingest` for a local relay, or a loopback address for
+    # an SSH reverse-tunnel to an external host); `None` means unconfigured, and
+    # the task logs once and stands down rather than raising, mirroring the
+    # LLM_ENABLED-without-a-key posture elsewhere in this file.
+    # `status_push_token` is sent as the handshake `Authorization` header so the
+    # relay refuses connections from anyone else; `SecretStr` keeps it out of
+    # `repr()` the same way `anthropic_api_key` is held.
+    status_push_enabled: bool = False
+    status_push_tick_seconds: float = 2.0
+    status_push_url: str | None = None
+    status_push_token: SecretStr | None = None
+
     # `liveness_posture` governs whether the authorization gate reads
     # `Actor.active` for the calling principal, the switch an operator flips
     # with deactivate_actor / reactivate_actor. Three states, because
@@ -1973,6 +1995,18 @@ class Settings(BaseSettings):
             msg = (
                 f"campaign_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every Held campaign"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("status_push_tick_seconds")
+    @classmethod
+    def _validate_status_push_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight push loop."""
+        if value < 0.1:
+            msg = (
+                f"status_push_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the pusher"
             )
             raise ValueError(msg)
         return value

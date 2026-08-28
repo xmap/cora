@@ -105,6 +105,7 @@ from cora.api._readiness import (
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api._run_witness import rebuild_open_captures, run_witness_lifespan
+from cora.api._status_push import status_push_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.budget import (
@@ -1440,6 +1441,17 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_experiment_identity_pvs=(settings.capture_experiment_identity_pvs),
                         experiment_identity_store=app.state.run.experiment_identity_store,
                         capture_probe_store=app.state.run.capture_probe_store,
+                    ) as witness_recorder,
+                    status_push_lifespan(
+                        deps,
+                        list_runs=app.state.run.list_runs,
+                        list_subjects=app.state.subject.list_subjects,
+                        list_campaigns=app.state.campaign.list_campaigns,
+                        list_datasets=app.state.data.list_datasets,
+                        list_clearances=app.state.safety.list_clearances,
+                        list_enclosures=app.state.enclosure.list_enclosures,
+                        list_decisions=app.state.decision.list_decisions,
+                        witness_recorder=witness_recorder,
                     ),
                     capture_scan_ingestor_lifespan(
                         deps,

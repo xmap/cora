@@ -1,0 +1,54 @@
+# Runs the status relay (infra/status-relay/relay.py) on the jump host
+# that has internet reach (2-BM: lyra), receiving the live feed pushed
+# outbound from the API host that has none (arcturus). See the module
+# docstring in relay.py for why this exists as a separate host-layer
+# process rather than an application module.
+#
+# Binds 127.0.0.1 ONLY, by design: a viewer reaches it the same way
+# /docs is reached today, an SSH tunnel, not a direct network address.
+# Widening the bind address later is a one-line ExecStart change, but
+# do it together with adding viewer-side authentication (there is none
+# today; the token below only gates the PRODUCER side), never alone.
+#
+# Reuses the same shared-NFS-home checkout and venv arcturus already
+# runs from (`websockets` is already a dependency of apps/api, pulled
+# in transitively via uvicorn[standard] even before this feature's
+# explicit pin); nothing new is installed on lyra to run this.
+#
+# `2bmb`'s systemd --user linger was OFF on lyra (unlike arcturus, where
+# it was already enabled) before this unit was installed; `loginctl
+# enable-linger 2bmb` is required first or this service dies the moment
+# nobody is logged in.
+#
+# Install (systemd --user, no sudo, mirrors cora-api.service's own
+# install on arcturus):
+#
+#   mkdir -p ~/cora-status-relay-secrets   # or wherever you keep it
+#   printf 'STATUS_RELAY_TOKEN=%s\n' '<paste the generated token>' \
+#       > ~/cora-status-relay.env
+#   chmod 600 ~/cora-status-relay.env
+#   cp infra/status-relay/systemd/cora-status-relay.service \
+#       ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now cora-status-relay.service
+#   systemctl --user status cora-status-relay.service
+#
+# The EnvironmentFile path below assumes the env file lives directly in
+# $HOME; adjust both this unit and the printf above together if not.
+
+[Unit]
+Description=CORA status relay (receives the live 2-BM feed, serves the status page)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/home/beams0/2BMB/dgursoy/cora-status-relay.env
+ExecStart=/home/beams0/2BMB/dgursoy/cora-xmap/apps/api/.venv/bin/python3 /home/beams0/2BMB/dgursoy/cora-xmap/infra/status-relay/relay.py --host 127.0.0.1 --port 8099
+Restart=always
+RestartSec=15
+StandardOutput=append:/home/beams0/2BMB/dgursoy/cora-status-relay.log
+StandardError=append:/home/beams0/2BMB/dgursoy/cora-status-relay.log
+
+[Install]
+WantedBy=default.target

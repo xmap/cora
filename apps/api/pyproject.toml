@@ -16,6 +16,9 @@ dependencies = [
     "uvicorn[standard]>=0.52.1",
     "structlog>=26.1.0",
     "uuid-utils>=0.17.0",
+    # Already present transitively via uvicorn[standard]; pinned directly
+    # because cora.api._status_push imports it, not uvicorn's own use.
+    "websockets>=16.0,<17",
     "prometheus-client>=0.26.0,<1",
     # 8.x is the first release that handles FastAPI 0.138's lazy
     # include_router routing (the `_IncludedRouter` BaseRoute carries no

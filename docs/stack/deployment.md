@@ -815,6 +815,62 @@ GET /policies/{policy_id}/permissions?evaluated_principal_id=<me>&evaluated_cond
 
 This returns the sorted list of commands the named principal can run via the named conduit. The result is **not authoritative for authorization decisions**: it's a UX / debugging aid; only the PEP at each handler actually authorizes.
 
+## Live status feed
+
+2-BM's API host (arcturus) has no inbound reachability from outside its own
+controls network, so a status page viewable from elsewhere cannot be served
+FROM it; instead it PUSHES a live snapshot OUT to a small relay running on a
+host that does have reach (lyra, the jump host). See the module docstring in
+`apps/api/src/cora/api/_status_push.py` for what gets pushed and why, and
+`infra/status-relay/relay.py` for the relay itself, a standalone process that
+imports nothing from `cora`.
+
+**Transport, verified 2026-08-28 against the real hosts:** arcturus resolves
+lyra, but outbound 443 is refused and only 22 is open. So
+the path is an SSH reverse tunnel opened FROM arcturus
+(`cora-status-tunnel.service`, `-R 8099:127.0.0.1:8099`), not a direct
+`wss://` connection. `status_push_url` on arcturus then points at
+`ws://127.0.0.1:8099/ingest`, identical application code either way; only the
+URL and whether a tunnel unit runs alongside it change.
+
+**Access posture, decided deliberately:** the relay binds `127.0.0.1` on
+lyra, not lyra's real network address. A viewer reaches it exactly like
+`/docs` today, an SSH tunnel
+(`ssh -L 8099:127.0.0.1:8099 2bmb@lyra`), not a direct URL.
+This ships the feature with zero change to who can see anything. Widening the
+bind address later is a one-line `ExecStart` change in
+`cora-status-relay.service`, but do it together with adding viewer-side
+authentication (there is none today; the token below only gates the
+PRODUCER's connection, not a browser's), never alone: see the access-posture
+note in that unit file.
+
+**Units** (`infra/status-relay/systemd/`, install instructions in each
+file's header comment, mirroring `infra/backup/systemd/`'s own pattern):
+
+| Unit | Host | Does |
+| --- | --- | --- |
+| `cora-status-relay.service` | lyra | Runs `relay.py`, holds the latest snapshot in memory (nothing persists), serves the page and the browser WebSocket |
+| `cora-status-tunnel.service` | arcturus | Keeps the SSH reverse tunnel open, `Restart=always` |
+
+Both are `systemd --user`, no sudo, matching `cora-api.service`'s own
+install. `2bmb`'s linger was OFF on lyra (unlike arcturus) before this
+shipped; `loginctl enable-linger 2bmb` is required there first, or the relay
+dies the moment nobody is logged in.
+
+**Env vars on arcturus** (added to `cora-env.sh`, not tracked in this repo):
+
+| Var | Default | When you set it |
+| --- | --- | --- |
+| `STATUS_PUSH_ENABLED` | `false` | The switch. Off by default like every other outbound-egress toggle in this file |
+| `STATUS_PUSH_URL` | unset → task logs once and stands down | The relay's ingest endpoint as seen from arcturus, `ws://127.0.0.1:8099/ingest` once the tunnel unit is running |
+| `STATUS_PUSH_TOKEN` | unset → no `Authorization` header sent | Must match the relay's `STATUS_RELAY_TOKEN` on lyra exactly |
+
+**Verify:** `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8099/`
+from arcturus should print `200` once both units are up, entirely without
+leaving arcturus. `journalctl --user -u cora-status-relay -f` on lyra and
+`journalctl --user -u cora-status-tunnel -f` on arcturus are the two logs to
+watch during first boot.
+
 ## Deferred
 
 | Concern | Status | Trigger |
@@ -828,5 +884,6 @@ This returns the sorted list of commands the named principal can run via the nam
 | Runtime orchestrator (k8s / Cloud Run / ECS / bare VMs) | Deferred | First non-local deployment |
 | Event-sourced `ActorIdpBindings` (JIT Actor provisioning) | Deferred | First case where adding an operator is too high-friction via config-time bindings |
 | `trust.check_others` permission separation | Watch item | When ABAC lands or first cross-tenant deploy |
+| Live status feed: wider viewer access | Deferred | The relay binds loopback-only on purpose (see "Live status feed" above); widening it needs viewer-side authentication built first, which does not exist today |
 
 Bootstrap policy, Surface decomposition, HTTP edge auth, permission queries, and MCP edge-auth parity are all in place.
