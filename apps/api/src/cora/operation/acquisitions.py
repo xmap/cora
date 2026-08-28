@@ -22,17 +22,33 @@ to sibling PVs:
 
   - `{detector}:TriggerMode` <- mapped from `trigger_mode`
   - `{detector}:AcquireTime` <- `dwell` (seconds)
-  - `{detector}:NumImages`   <- `repetitions` (or `0` for free-run)
+  - `{detector}:ImageMode`   <- `"Multiple"`, unconditionally
+  - `{detector}:NumImages`   <- `repetitions`
   - `{detector}:Acquire`     <- `1` to start
   - `{detector}:Acquire_RBV` -> polled until Done
   - `{detector}:DetectorState_RBV` -> read once for final-state evidence
 
+`ImageMode` is written explicitly rather than inherited from whatever
+state the camera was last left in: areaDetector's `NumImages` only
+takes effect under `Multiple` (or is irrelevant under `Single`), and
+under `Continuous` the detector free-runs and `Acquire_RBV` never
+returns to Done, so a body that waits for completion must never let
+`Continuous` stand. `repetitions=None` ("free run") is refused before
+any PV write (`UnboundedAcquisitionError`) rather than translated to
+an `ImageMode` this body would then wait on forever; see
+`_arm_bounded_repetitions`.
+
 Trigger-mode value mapping translates the substrate-neutral primitive
-vocabulary into AD-coded strings: `ExternalEdge` and `ExternalLevel`
-both collapse to AD's `"External"`; edge polarity vs level is carried
-on the trigger EMITTER (PandABox PCOMP, Aerotech PSO, etc.), not the
-detector. Non-AD detectors will land as their own action bodies; promote
-a shared shape when 3 detector families exist (rule-of-three).
+vocabulary into detector-driver-coded strings via `_TRIGGER_MODE_VALUES`,
+keyed by `ctx.trigger_dialect` (a DEPLOYMENT fact, `Settings.detector_trigger_dialect`,
+not a recipe fact): `ExternalEdge` and `ExternalLevel` always collapse to
+one External value; edge polarity vs level is carried on the trigger
+EMITTER (PandABox PCOMP, Aerotech PSO, etc.), not the detector. The
+`ADCore` dialect writes `"Internal"`/`"External"`; the `ADSpinnaker`
+dialect (APS 2-BM's FLIR camera) writes the INVERTED `"Off"`/`"On"` --
+see `_TRIGGER_MODE_VALUES`'s docstring for why. Non-AD detectors will
+land as their own action bodies; promote a shared shape when 3 detector
+families exist (rule-of-three).
 
 ## `Acquire_RBV` is read by index, not by the word "Done"
 
@@ -89,6 +105,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 from cora.infrastructure.logging import get_logger
+from cora.operation.errors import UnboundedAcquisitionError, UnknownTriggerDialectError
 from cora.shared.binary_signal import binary_code
 from cora.shared.quality import believable
 
@@ -101,15 +118,95 @@ if TYPE_CHECKING:
 _log = get_logger(__name__)
 
 
-_AD_TRIGGER_MODE_VALUES: Mapping[str, str] = {
-    "Internal": "Internal",
-    "ExternalEdge": "External",
-    "ExternalLevel": "External",
+_TRIGGER_MODE_VALUES: Mapping[str, Mapping[str, str]] = {
+    "ADCore": {
+        "Internal": "Internal",
+        "ExternalEdge": "External",
+        "ExternalLevel": "External",
+    },
+    "ADSpinnaker": {
+        "Internal": "Off",
+        "ExternalEdge": "On",
+        "ExternalLevel": "On",
+    },
 }
-"""Substrate-neutral trigger_mode value -> areaDetector ADCore string.
+"""Substrate-neutral trigger_mode value -> detector-driver TriggerMode string, per dialect.
 
-AD collapses edge vs level into one `"External"` value; the
-distinction is carried at the trigger emitter, not the detector."""
+The dialect is a DEPLOYMENT fact (which camera driver is installed), not
+a recipe fact ("free-running" is true everywhere; "this camera is a
+FLIR" is true only of this building), so it rides `ActionContext.trigger_dialect`
+(sourced from `Settings.detector_trigger_dialect`), never a `CollectParams` field.
+
+`ADCore` is the plain areaDetector convention: `Internal` stays
+`"Internal"`, both External modes collapse to `"External"` (edge vs
+level is carried at the trigger emitter, not the detector).
+
+`ADSpinnaker` (the FLIR driver at APS 2-BM) is INVERTED relative to
+what a reader would guess: `Internal` maps to `"Off"` and both External
+modes map to `"On"`. This is not a naming quirk to normalise away.
+ADSpinnaker's `TriggerMode` PV does not ask "is the trigger internal or
+external"; it asks "is EXTERNAL triggering enabled". CORA's `Internal`
+(free-running, camera's own clock) is the state where external
+triggering is disabled, hence `Off`. A future reader who assumes
+`Internal -> On` "because On sounds like the trigger is active" has it
+exactly backwards. Confirmed live against `2bmSP1:cam1:TriggerMode`
+(a two-choice DBF_ENUM, `[0] Off` / `[1] On`, no `"Internal"` string in
+the set at all) and against the deployed `tomoscan_2bm.py`, which
+writes `CamTriggerMode='Off'` for its own internal-trigger path.
+"""
+
+
+def _resolve_trigger_mode_value(dialect: str, trigger_mode: str) -> str:
+    """Look up the detector-driver string for `trigger_mode` under `dialect`.
+
+    Raises `UnknownTriggerDialectError` naming the offending dialect and
+    the known ones, rather than letting an unrecognised
+    `ctx.trigger_dialect` surface as a bare `KeyError` deep inside a
+    write call. A wrong dialect must fail loudly: silently falling back
+    to `ADCore` would write a string the real camera's enum does not
+    accept, or worse, one it accepts with the inverted meaning.
+    """
+    table = _TRIGGER_MODE_VALUES.get(dialect)
+    if table is None:
+        raise UnknownTriggerDialectError(dialect, sorted(_TRIGGER_MODE_VALUES))
+    return table[trigger_mode]
+
+
+_IMAGE_MODE_MULTIPLE = "Multiple"
+"""The only `ImageMode` value CORA's v1 acquisition bodies write.
+
+Unlike `TriggerMode`, `ImageMode` is NOT routed through
+`_TRIGGER_MODE_VALUES` / `ctx.trigger_dialect`: its three choices
+(`Single` / `Multiple` / `Continuous`) are the plain ADCore enum and
+are identical on ADSpinnaker (confirmed live against
+`2bmSP1:cam1:ImageMode`), so it needs no per-dialect value table. Do
+not add one. `Single` is unused at v1 because every write site here
+counts frames via `NumImages`, which only takes effect under
+`Multiple`; `Continuous` is never written because it never asserts
+`Acquire_RBV` Done on its own, and both `collect` and `continuous`
+wait for Done unconditionally.
+"""
+
+
+async def _arm_bounded_repetitions(
+    ctx: ActionContext, detector: str, repetitions: int | None
+) -> None:
+    """Write `ImageMode=Multiple` + `NumImages=repetitions`, refusing an unbounded request.
+
+    Shared by `_run_collect_cycle` and `continuous`, both of which wait
+    on `_await_acquire_done` with no internal timeout. `repetitions=None`
+    used to mean "free run" and wrote `NumImages=0` while leaving
+    `ImageMode` at whatever the camera was last set to; at APS 2-BM that
+    is `Continuous`, under which `Acquire_RBV` never returns to Done, so
+    the poll loop hangs forever against real hardware and the camera is
+    left acquiring. Raising here, before either write, keeps a caller
+    who wants free-running acquisition from partially arming a camera
+    this action body can then never bring back down.
+    """
+    if repetitions is None:
+        raise UnboundedAcquisitionError(detector)
+    await ctx.control_port.write(f"{detector}:ImageMode", _IMAGE_MODE_MULTIPLE)
+    await ctx.control_port.write(f"{detector}:NumImages", repetitions)
 
 
 _POLL_INTERVAL_S: float = 0.05
@@ -225,7 +322,13 @@ class CollectParams(BaseModel):
     `dwell` carries the canonical `unit: {system, code}` annotation per
     [[project_units_design]] (no `_seconds` suffix). `repetitions` has a
     `ge=1` floor; `0` collides with the AD `NumImages=0` continuous
-    sentinel, so `None` is the only way to request free-run.
+    sentinel, so `None` is the schema's only way to express an unbounded
+    request. The action bodies refuse that request at runtime rather
+    than acting on it: `None` validates here, but `collect` and
+    `continuous` both raise `UnboundedAcquisitionError` before writing
+    any PV when they see it, because both wait unconditionally for the
+    acquisition to finish and a free-running acquisition never does.
+    See `_arm_bounded_repetitions`.
     """
 
     detector: str
@@ -265,13 +368,10 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
 
     await ctx.control_port.write(
         f"{params.detector}:TriggerMode",
-        _AD_TRIGGER_MODE_VALUES[params.trigger_mode],
+        _resolve_trigger_mode_value(ctx.trigger_dialect, params.trigger_mode),
     )
     await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
-    await ctx.control_port.write(
-        f"{params.detector}:NumImages",
-        params.repetitions if params.repetitions is not None else 0,
-    )
+    await _arm_bounded_repetitions(ctx, params.detector, params.repetitions)
     await ctx.control_port.write(f"{params.detector}:Acquire", 1)
 
     await _await_acquire_done(ctx, params.detector)
@@ -284,6 +384,8 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
         "stopped_at": stopped_at.isoformat(),
         "repetitions_requested": params.repetitions,
         "trigger_mode": params.trigger_mode,
+        "trigger_dialect": ctx.trigger_dialect,
+        "image_mode": _IMAGE_MODE_MULTIPLE,
         "polarity": params.polarity,
         "source": params.source,
         "detector_state_final": state_reading.value,
@@ -293,10 +395,16 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
 async def collect(ctx: ActionContext) -> Mapping[str, Any]:
     """Single-detector capture against areaDetector ADCore PV convention.
 
-    Writes TriggerMode / AcquireTime / NumImages, starts Acquire, polls
-    Acquire_RBV until `0` / `"Done"`, reads DetectorState_RBV for the
-    final-state evidence, returns a Mapping the Conductor records as the
-    step entry's `result_data`.
+    Writes TriggerMode / AcquireTime / ImageMode / NumImages, starts
+    Acquire, polls Acquire_RBV until `0` / `"Done"`, reads
+    DetectorState_RBV for the final-state evidence, returns a Mapping
+    the Conductor records as the step entry's `result_data`.
+
+    `params.repetitions is None` raises `UnboundedAcquisitionError`
+    before any PV write: this body waits for Acquire_RBV to reach Done
+    unconditionally, and a free-running acquisition never reaches Done
+    on its own, so an unbounded request combined with that wait would
+    hang forever against real hardware. See `_arm_bounded_repetitions`.
 
     `Control*Error` raised by the underlying `ControlPort` propagates
     unchanged; the Conductor catches it at the action-dispatch site and
@@ -431,6 +539,10 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
     plus the observed `axis_final_actual` for end-of-sweep verification,
     timestamps, trigger config, and the detector's final state.
 
+    `params.repetitions is None` raises `UnboundedAcquisitionError`
+    before any PV write, same as `collect`: see
+    `_arm_bounded_repetitions`.
+
     `Control*Error` from any read or write propagates unchanged; the
     Conductor records the failure per its standard contract. The
     detector is NOT explicitly stopped on the happy path; the
@@ -445,13 +557,10 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
 
     await ctx.control_port.write(
         f"{params.detector}:TriggerMode",
-        _AD_TRIGGER_MODE_VALUES[params.trigger_mode],
+        _resolve_trigger_mode_value(ctx.trigger_dialect, params.trigger_mode),
     )
     await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
-    await ctx.control_port.write(
-        f"{params.detector}:NumImages",
-        params.repetitions if params.repetitions is not None else 0,
-    )
+    await _arm_bounded_repetitions(ctx, params.detector, params.repetitions)
 
     await ctx.control_port.write(params.axis, params.start, wait=True)
     await ctx.control_port.write(f"{params.detector}:Acquire", 1)
@@ -473,6 +582,8 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
         "rate_requested": params.rate,
         "repetitions_requested": params.repetitions,
         "trigger_mode": params.trigger_mode,
+        "trigger_dialect": ctx.trigger_dialect,
+        "image_mode": _IMAGE_MODE_MULTIPLE,
         "polarity": params.polarity,
         "source": params.source,
         "detector_state_final": state_reading.value,

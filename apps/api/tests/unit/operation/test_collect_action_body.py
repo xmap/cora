@@ -14,14 +14,22 @@ Coverage spans the two boundaries the body sits on:
   - dwell carries the canonical {system, code} unit annotation in JSON Schema
 
   Body behaviour (collect called directly with ActionContext):
-  - Internal + repetitions=5 happy path: writes the four configure PVs,
-    polls Acquire_RBV (seeded Done immediately), reads DetectorState_RBV,
+  - Internal + repetitions=5 happy path: writes the five configure PVs
+    (including ImageMode=Multiple before NumImages and Acquire), polls
+    Acquire_RBV (seeded Done immediately), reads DetectorState_RBV,
     returns the evidence Mapping with timestamps + final state
   - ExternalEdge trigger maps to AD "External" string on TriggerMode
-  - repetitions=None translates to NumImages=0 for AD continuous mode
+  - repetitions=None raises UnboundedAcquisitionError before any PV
+    write, including Acquire (a bounded repetitions is required so the
+    Acquire_RBV done-poll can ever terminate)
   - Poll loop iterates while Acquire_RBV stays 1 and exits on 0
   - Unseeded Acquire_RBV propagates ControlNotConnectedError
   - Unseeded detector base PVs propagate ControlNotConnectedError from write
+
+  Trigger dialect (ctx.trigger_dialect, per-deployment vocabulary):
+  - ADCore (default) Internal/ExternalEdge/ExternalLevel -> Internal/External/External
+  - ADSpinnaker (APS 2-BM FLIR driver) -> Off/On/On, the INVERTED mapping
+  - Unknown dialect raises UnknownTriggerDialectError, not KeyError
 
   End-to-end via Conductor:
   - InMemoryActionRegistry({"collect": collect}) + ActionStep("collect", ...)
@@ -50,6 +58,7 @@ from cora.operation.conductor import (
     Conductor,
     InMemoryActionRegistry,
 )
+from cora.operation.errors import UnboundedAcquisitionError, UnknownTriggerDialectError
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Measurement,
@@ -97,6 +106,7 @@ def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Measurement | None
     """
     port.simulate_connect(f"{_DETECTOR}:TriggerMode")
     port.simulate_connect(f"{_DETECTOR}:AcquireTime")
+    port.simulate_connect(f"{_DETECTOR}:ImageMode")
     port.simulate_connect(f"{_DETECTOR}:NumImages")
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.set_reading(
@@ -109,11 +119,14 @@ def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Measurement | None
     )
 
 
-def _ctx(port: InMemoryControlPort, params: Mapping[str, Any]) -> ActionContext:
+def _ctx(
+    port: InMemoryControlPort, params: Mapping[str, Any], *, trigger_dialect: str = "ADCore"
+) -> ActionContext:
     return ActionContext(
         control_port=port,
         clock=FakeClock(_FIXED_NOW),
         params=params,
+        trigger_dialect=trigger_dialect,
     )
 
 
@@ -176,7 +189,11 @@ def test_collect_params_internal_with_repetitions_accepted() -> None:
 
 
 @pytest.mark.unit
-def test_collect_params_internal_without_repetitions_means_continuous() -> None:
+def test_collect_params_internal_repetitions_omitted_validates_as_none() -> None:
+    """Validation only: `repetitions` defaults to `None` (schema-level unbounded
+    request). This no longer results in a free-running acquisition; the
+    `collect` / `continuous` bodies refuse `None` at runtime instead
+    (see `test_collect_repetitions_none_raises_before_any_detector_write`)."""
     params = CollectParams.model_validate(
         {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.1}
     )
@@ -308,6 +325,7 @@ async def test_collect_internal_trigger_writes_configure_pvs_and_returns_evidenc
     )
     assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "Internal"
     assert (await port.read(f"{_DETECTOR}:AcquireTime")).value == 0.1
+    assert (await port.read(f"{_DETECTOR}:ImageMode")).value == "Multiple"
     assert (await port.read(f"{_DETECTOR}:NumImages")).value == 5
     assert (await port.read(f"{_DETECTOR}:Acquire")).value == 1
     assert result == {
@@ -315,6 +333,8 @@ async def test_collect_internal_trigger_writes_configure_pvs_and_returns_evidenc
         "stopped_at": _FIXED_NOW.isoformat(),
         "repetitions_requested": 5,
         "trigger_mode": "Internal",
+        "trigger_dialect": "ADCore",
+        "image_mode": "Multiple",
         "polarity": None,
         "source": None,
         "detector_state_final": "Idle",
@@ -323,7 +343,7 @@ async def test_collect_internal_trigger_writes_configure_pvs_and_returns_evidenc
 
 @pytest.mark.unit
 async def test_collect_external_edge_maps_trigger_mode_to_ad_external_string() -> None:
-    """ExternalEdge -> areaDetector's 'External' string on TriggerMode."""
+    """ExternalEdge -> areaDetector's 'External' string on TriggerMode (ADCore dialect)."""
     port = InMemoryControlPort()
     _seed_detector(port)
     await collect(
@@ -344,6 +364,7 @@ async def test_collect_external_edge_maps_trigger_mode_to_ad_external_string() -
 
 @pytest.mark.unit
 async def test_collect_external_level_maps_trigger_mode_to_ad_external_string() -> None:
+    """ExternalLevel -> areaDetector's 'External' string on TriggerMode (ADCore dialect)."""
     port = InMemoryControlPort()
     _seed_detector(port)
     await collect(
@@ -362,15 +383,136 @@ async def test_collect_external_level_maps_trigger_mode_to_ad_external_string() 
 
 
 @pytest.mark.unit
-async def test_collect_repetitions_none_writes_zero_to_num_images() -> None:
-    """None repetitions -> NumImages=0, the AD sentinel for continuous mode."""
+async def test_collect_internal_trigger_ad_spinnaker_dialect_writes_off() -> None:
+    """ADSpinnaker dialect: Internal (free-running) -> 'Off' (external triggering disabled).
+
+    This is the inverted mapping: the FLIR/Spinnaker driver's TriggerMode
+    asks whether EXTERNAL triggering is enabled, so CORA's free-running
+    Internal is the Off state.
+    """
     port = InMemoryControlPort()
     _seed_detector(port)
     result = await collect(
-        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.05})
+        _ctx(
+            port,
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.1},
+            trigger_dialect="ADSpinnaker",
+        )
     )
-    assert (await port.read(f"{_DETECTOR}:NumImages")).value == 0
-    assert result["repetitions_requested"] is None
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "Off"
+    assert result["trigger_dialect"] == "ADSpinnaker"
+
+
+@pytest.mark.unit
+async def test_collect_external_edge_ad_spinnaker_dialect_writes_on() -> None:
+    """ADSpinnaker dialect: ExternalEdge -> 'On' (external triggering enabled)."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    await collect(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "ExternalEdge",
+                "polarity": "Rising",
+                "source": "2bma:PCOMP1.OUT",
+                "repetitions": 10,
+                "dwell": 0.025,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+
+
+@pytest.mark.unit
+async def test_collect_external_level_ad_spinnaker_dialect_writes_on() -> None:
+    """ADSpinnaker dialect: ExternalLevel -> 'On' (external triggering enabled)."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    await collect(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "ExternalLevel",
+                "source": "2bma:gate:OUT",
+                "repetitions": 1,
+                "dwell": 0.5,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+
+
+@pytest.mark.unit
+async def test_collect_unknown_trigger_dialect_raises_named_error() -> None:
+    """An unrecognised trigger_dialect must fail loudly, not KeyError."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    with pytest.raises(UnknownTriggerDialectError, match="unknown detector_trigger_dialect"):
+        await collect(
+            _ctx(
+                port,
+                {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.1},
+                trigger_dialect="NotARealDialect",
+            )
+        )
+
+
+@pytest.mark.unit
+async def test_collect_repetitions_none_raises_before_any_detector_write() -> None:
+    """None repetitions raises UnboundedAcquisitionError and never issues Acquire.
+
+    An unbounded acquisition (areaDetector `Continuous` ImageMode) never
+    asserts `Acquire_RBV` Done on its own, so combining it with this
+    body's unconditional done-poll would hang the caller forever and
+    leave the camera acquiring. `Acquire` is the arm command; a real
+    detector left partially configured but never armed is safe, so the
+    only write that must never happen is `Acquire`.
+    """
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    with pytest.raises(UnboundedAcquisitionError):
+        await collect(
+            _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.05})
+        )
+    # `_seed_detector` only `simulate_connect`s Acquire (no value set), so an
+    # unwritten read still raises ControlNotConnectedError: proof the body
+    # never issued the arm command.
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
+
+
+@pytest.mark.unit
+async def test_collect_writes_image_mode_multiple_before_num_images_and_acquire() -> None:
+    """ImageMode=Multiple lands after AcquireTime but before NumImages and Acquire.
+
+    The happy-path test above proves the final PV states; this test
+    proves the ORDER, using `_ScriptedRbvPort`'s write log. A mutation
+    that writes ImageMode after Acquire (or drops it) would still leave
+    the final in-memory reads looking correct but would flip or lose
+    this order.
+    """
+    port = _ScriptedRbvPort(rbv_sequence=[_acquire_rbv_reading("Done", 0)])
+    await collect(
+        _ctx(
+            port,  # type: ignore[arg-type]
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 7, "dwell": 0.1},
+        )
+    )
+    addresses = [addr for addr, _ in port.writes]
+    assert addresses == [
+        f"{_DETECTOR}:TriggerMode",
+        f"{_DETECTOR}:AcquireTime",
+        f"{_DETECTOR}:ImageMode",
+        f"{_DETECTOR}:NumImages",
+        f"{_DETECTOR}:Acquire",
+    ]
+    values = dict(port.writes)
+    assert values[f"{_DETECTOR}:ImageMode"] == "Multiple"
+    assert values[f"{_DETECTOR}:NumImages"] == 7
 
 
 @pytest.mark.unit
@@ -412,7 +554,7 @@ async def test_collect_poll_loop_iterates_while_acquire_rbv_busy() -> None:
     result = await collect(
         _ctx(
             port,  # type: ignore[arg-type]
-            {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01},
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.01},
         )
     )
     assert port.rbv_calls == 4
@@ -433,7 +575,10 @@ async def test_collect_relabelled_acquire_rbv_still_terminates_via_ordinal() -> 
         rbv_sequence=[_acquire_rbv_reading("BUSY", 1), _acquire_rbv_reading("READY", 0)]
     )
     await collect(
-        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+        _ctx(
+            port,  # type: ignore[arg-type]
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.01},
+        )
     )
     assert port.rbv_calls == 2
 
@@ -451,7 +596,10 @@ async def test_collect_bad_quality_acquire_rbv_never_terminates_the_loop() -> No
         ]
     )
     await collect(
-        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+        _ctx(
+            port,  # type: ignore[arg-type]
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.01},
+        )
     )
     assert port.rbv_calls == 3
 
@@ -469,7 +617,10 @@ async def test_collect_uncertain_quality_acquire_rbv_does_terminate() -> None:
     """
     port = _ScriptedRbvPort(rbv_sequence=[_acquire_rbv_reading("Done", 0, quality="Uncertain")])
     await collect(
-        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+        _ctx(
+            port,  # type: ignore[arg-type]
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.01},
+        )
     )
     assert port.rbv_calls == 1
 
@@ -504,7 +655,10 @@ async def test_collect_unreadable_acquire_rbv_warns_once_per_episode(
         ]
     )
     await collect(
-        _ctx(port, {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.01})  # type: ignore[arg-type]
+        _ctx(
+            port,  # type: ignore[arg-type]
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.01},
+        )
     )
     assert port.rbv_calls == 4
     assert warnings == ["acquisitions.acquire_rbv_unreadable"]
@@ -517,6 +671,7 @@ async def test_collect_unconnected_acquire_rbv_propagates_not_connected_error() 
     port = InMemoryControlPort()
     port.simulate_connect(f"{_DETECTOR}:TriggerMode")
     port.simulate_connect(f"{_DETECTOR}:AcquireTime")
+    port.simulate_connect(f"{_DETECTOR}:ImageMode")
     port.simulate_connect(f"{_DETECTOR}:NumImages")
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     # Deliberately do NOT seed Acquire_RBV / DetectorState_RBV
@@ -524,7 +679,12 @@ async def test_collect_unconnected_acquire_rbv_propagates_not_connected_error() 
         await collect(
             _ctx(
                 port,
-                {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.05},
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "Internal",
+                    "repetitions": 5,
+                    "dwell": 0.05,
+                },
             )
         )
 

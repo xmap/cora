@@ -318,6 +318,7 @@ def wire_operation(
         end_iteration=end_iteration_handler,
         append_diagnostics=append_diagnostics_handler,
         append_outcomes=append_outcomes_handler,
+        trigger_dialect=deps.settings.detector_trigger_dialect,
     )
     # Resume-and-replay orchestration: a thin slice handler over
     # Conductor.conduct_from (which composes resume + execute_from +

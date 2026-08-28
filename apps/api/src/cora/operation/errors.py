@@ -38,6 +38,48 @@ class UnknownActionError(Exception):
         self.name = name
 
 
+class UnknownTriggerDialectError(ValueError):
+    """`ActionContext.trigger_dialect` names a dialect `acquisitions` does not know.
+
+    Application-layer, not domain-layer: which detector-driver vocabulary
+    a deployment's camera speaks is a wiring/configuration fact
+    (`Settings.detector_trigger_dialect`), not an aggregate invariant.
+    Raised instead of letting a typo'd or unconfigured dialect surface as
+    a bare `KeyError`, which would name neither the bad value nor what
+    was expected. A wrong dialect must fail loudly: silently falling
+    back to a default would write a string the real camera's enum does
+    not accept, or worse, one it accepts with the inverted meaning.
+    """
+
+    def __init__(self, dialect: str, known_dialects: list[str]) -> None:
+        super().__init__(
+            f"unknown detector_trigger_dialect {dialect!r}; known dialects: {known_dialects}"
+        )
+
+
+class UnboundedAcquisitionError(Exception):
+    """A detector acquisition body was asked for `repetitions=None` while it waits for completion.
+
+    Application-layer, not domain-layer: whether a given action body's
+    done-poll can tolerate a free-running acquisition is a body-shape
+    fact, not an aggregate invariant. `collect` and `continuous` both
+    wait on `Acquire_RBV` reaching Done with no internal timeout
+    (`cora.operation.acquisitions._await_acquire_done`), and an
+    unbounded acquisition (areaDetector `ImageMode=Continuous`) never
+    asserts Done on its own, so combining the two would hang the
+    caller forever and leave the camera acquiring. Raised before any
+    PV write so a caller who wants free-running acquisition never
+    leaves the camera partially configured through this action body.
+    """
+
+    def __init__(self, detector: str) -> None:
+        super().__init__(
+            f"unbounded acquisition on {detector!r} cannot be combined with waiting for "
+            "completion; a bounded repetitions value is required"
+        )
+        self.detector = detector
+
+
 class SteeringWireMismatchError(Exception):
     """A steered conduct request's space/objective does not line up with the recipe.
 

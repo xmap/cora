@@ -67,6 +67,7 @@ def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     """Seed the AD PVs `collect` touches plus the axis address `discrete` writes."""
     port.simulate_connect(f"{_DETECTOR}:TriggerMode")
     port.simulate_connect(f"{_DETECTOR}:AcquireTime")
+    port.simulate_connect(f"{_DETECTOR}:ImageMode")
     port.simulate_connect(f"{_DETECTOR}:NumImages")
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.simulate_connect(_AXIS)
@@ -87,11 +88,14 @@ def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     )
 
 
-def _ctx(port: InMemoryControlPort, params: Mapping[str, Any]) -> ActionContext:
+def _ctx(
+    port: InMemoryControlPort, params: Mapping[str, Any], *, trigger_dialect: str = "ADCore"
+) -> ActionContext:
     return ActionContext(
         control_port=port,
         clock=FakeClock(_FIXED_NOW),
         params=params,
+        trigger_dialect=trigger_dialect,
     )
 
 
@@ -196,6 +200,7 @@ async def test_discrete_walks_three_points_in_order_and_runs_collect_per_point()
                 "trigger_mode": "Internal",
                 "axis": _AXIS,
                 "points": (0.0, 45.0, 90.0),
+                "repetitions": 1,
                 "dwell": 0.05,
             },
         )
@@ -212,6 +217,30 @@ async def test_discrete_walks_three_points_in_order_and_runs_collect_per_point()
 
 
 @pytest.mark.unit
+async def test_discrete_internal_trigger_ad_spinnaker_dialect_writes_off_per_point() -> None:
+    """The dialect rides ctx, so every composed collect cycle resolves it the same way."""
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    result = await discrete(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "Internal",
+                "axis": _AXIS,
+                "points": (0.0, 45.0),
+                "repetitions": 1,
+                "dwell": 0.05,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "Off"
+    for entry in result["per_point_results"]:
+        assert entry["collect"]["trigger_dialect"] == "ADSpinnaker"
+
+
+@pytest.mark.unit
 async def test_discrete_single_point_produces_one_cycle() -> None:
     port = InMemoryControlPort()
     _seed_detector_and_axis(port)
@@ -223,6 +252,7 @@ async def test_discrete_single_point_produces_one_cycle() -> None:
                 "trigger_mode": "Internal",
                 "axis": _AXIS,
                 "points": (12.5,),
+                "repetitions": 1,
                 "dwell": 0.05,
             },
         )
@@ -273,27 +303,32 @@ async def test_discrete_records_per_point_axis_writes_in_order() -> None:
                 "trigger_mode": "Internal",
                 "axis": _AXIS,
                 "points": (1.0, 2.0),
+                "repetitions": 1,
                 "dwell": 0.05,
             },
         )
     )
     addresses = [addr for addr, _ in port.writes]
-    # Per cycle: axis, then TriggerMode, AcquireTime, NumImages, Acquire.
-    # Two cycles -> 10 writes total.
+    # Per cycle: axis, then TriggerMode, AcquireTime, ImageMode, NumImages, Acquire.
+    # Two cycles -> 12 writes total.
     assert addresses == [
         _AXIS,
         f"{_DETECTOR}:TriggerMode",
         f"{_DETECTOR}:AcquireTime",
+        f"{_DETECTOR}:ImageMode",
         f"{_DETECTOR}:NumImages",
         f"{_DETECTOR}:Acquire",
         _AXIS,
         f"{_DETECTOR}:TriggerMode",
         f"{_DETECTOR}:AcquireTime",
+        f"{_DETECTOR}:ImageMode",
         f"{_DETECTOR}:NumImages",
         f"{_DETECTOR}:Acquire",
     ]
     axis_values = [value for addr, value in port.writes if addr == _AXIS]
     assert axis_values == [1.0, 2.0]
+    image_mode_values = [value for addr, value in port.writes if addr == f"{_DETECTOR}:ImageMode"]
+    assert image_mode_values == ["Multiple", "Multiple"]
 
 
 @pytest.mark.unit
@@ -311,6 +346,7 @@ async def test_discrete_unconnected_axis_propagates_not_connected_error() -> Non
                     "trigger_mode": "Internal",
                     "axis": _AXIS,
                     "points": (0.0, 1.0),
+                    "repetitions": 1,
                     "dwell": 0.05,
                 },
             )
@@ -393,6 +429,7 @@ async def test_conductor_executes_discrete_action_and_records_step_entry() -> No
                     "trigger_mode": "Internal",
                     "axis": _AXIS,
                     "points": (0.0, 30.0, 60.0),
+                    "repetitions": 1,
                     "dwell": 0.05,
                 },
             ),

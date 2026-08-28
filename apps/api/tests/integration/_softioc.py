@@ -73,10 +73,43 @@ label-vs-ordinal decode bug (see `cora.operation.acquisitions`'s
 
   - `cam1:TriggerMode`        (mbbo: Internal / External)
   - `cam1:AcquireTime`        (ao,  per-acquisition seconds)
+  - `cam1:ImageMode`          (mbbo: Single / Multiple / Continuous; starts
+                               at Continuous, mirroring the real APS 2-BM
+                               left-on-Continuous condition `collect` must
+                               move off of)
   - `cam1:NumImages`          (longout, bounded count)
   - `cam1:Acquire`            (bo,  start command)
   - `cam1:Acquire_RBV`        (bi,  ZNAM=Done / ONAM=Acquiring)
   - `cam1:DetectorState_RBV`  (mbbi: Idle / Acquiring / Error)
+
+## `cam2:*` -- ADSpinnaker-shaped TriggerMode camera
+
+A second, otherwise-identical AD camera family whose `TriggerMode` enum
+is shaped like the real APS 2-BM FLIR/Spinnaker driver
+(`2bmSP1:cam1:TriggerMode`, confirmed live): a DBF_ENUM with EXACTLY
+two choices, `ZRST=Off` / `ONST=On`. The string `"Internal"` is not a
+member of that set, so a dialect bug that writes the ADCore string
+against this camera fails LOUDLY (`ControlValueCoercionError` /
+`caput` rejection), not silently. This is the "both sides of the check
+derive from the same source" gap the ADCore-only `cam1:*` family left
+open: every prior integration assertion against `cam1:TriggerMode`
+proved CORA can write a string that camera's OWN fixture happens to
+accept, never that the string matches what a REAL camera accepts. A
+second record family with a genuinely different enum is the least
+invasive way to close that gap without perturbing any `cam1:*`
+assertion already in place (a parametrised IOC would have required
+templating every record in this file for one PV's difference).
+
+  - `cam2:TriggerMode`        (mbbo: Off / On, ADSpinnaker-shaped)
+  - `cam2:AcquireTime`        (ao,  per-acquisition seconds)
+  - `cam2:ImageMode`          (mbbo: Single / Multiple / Continuous, same
+                               shape as `cam1:ImageMode`; confirmed
+                               dialect-invariant against the real
+                               `2bmSP1:cam1:ImageMode`)
+  - `cam2:NumImages`          (longout, bounded count)
+  - `cam2:Acquire`            (bo,  start command)
+  - `cam2:Acquire_RBV`        (bi,  ZNAM=Done / ONAM=Acquiring)
+  - `cam2:DetectorState_RBV`  (mbbi: Idle / Acquiring / Error)
 
 PV names are pure test-shape (`double_value`, etc.); they do NOT
 mirror production EPICS conventions at APS 2-BM (`2bma:m1.RBV` etc.).
@@ -314,6 +347,19 @@ record(ao, "$(P)cam1:AcquireTime") {
   field(PINI, "YES")
 }
 
+# VAL starts at 2 (Continuous), mirroring the real APS 2-BM condition a
+# previous user left the camera in; the integration test proves `collect`
+# moves it to Multiple rather than inheriting whatever it finds.
+record(mbbo, "$(P)cam1:ImageMode") {
+  field(DESC, "AD image mode")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "Single")
+  field(ONST, "Multiple")
+  field(TWST, "Continuous")
+  field(VAL, "2")
+  field(PINI, "YES")
+}
+
 record(longout, "$(P)cam1:NumImages") {
   field(DESC, "Bounded image count")
   field(DTYP, "Soft Channel")
@@ -340,6 +386,72 @@ record(bi, "$(P)cam1:Acquire_RBV") {
 }
 
 record(mbbi, "$(P)cam1:DetectorState_RBV") {
+  field(DESC, "Detector state readback")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "Idle")
+  field(ONST, "Acquiring")
+  field(TWST, "Error")
+  field(VAL, "0")
+  field(PINI, "YES")
+}
+
+# cam2:* mirrors cam1:* except TriggerMode's enum, which is shaped like
+# the real ADSpinnaker (FLIR) driver at APS 2-BM: Off/On only, no
+# "Internal"/"External" strings in the set at all. See this file's
+# module docstring, "cam2:* -- ADSpinnaker-shaped TriggerMode camera".
+
+record(mbbo, "$(P)cam2:TriggerMode") {
+  field(DESC, "ADSpinnaker trigger mode")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "Off")
+  field(ONST, "On")
+  field(VAL, "0")
+  field(PINI, "YES")
+}
+
+record(ao, "$(P)cam2:AcquireTime") {
+  field(DESC, "Per-acquisition exposure (seconds)")
+  field(DTYP, "Soft Channel")
+  field(VAL, 0.0)
+  field(PINI, "YES")
+}
+
+record(mbbo, "$(P)cam2:ImageMode") {
+  field(DESC, "AD image mode")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "Single")
+  field(ONST, "Multiple")
+  field(TWST, "Continuous")
+  field(VAL, "2")
+  field(PINI, "YES")
+}
+
+record(longout, "$(P)cam2:NumImages") {
+  field(DESC, "Bounded image count")
+  field(DTYP, "Soft Channel")
+  field(VAL, 0)
+  field(PINI, "YES")
+}
+
+record(bo, "$(P)cam2:Acquire") {
+  field(DESC, "Start (1) / stop (0) acquisition")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "Done")
+  field(ONAM, "Acquire")
+  field(VAL, "0")
+  field(PINI, "YES")
+}
+
+record(bi, "$(P)cam2:Acquire_RBV") {
+  field(DESC, "Acquire status readback; Done/Acquiring")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "Done")
+  field(ONAM, "Acquiring")
+  field(VAL, "0")
+  field(PINI, "YES")
+}
+
+record(mbbi, "$(P)cam2:DetectorState_RBV") {
   field(DESC, "Detector state readback")
   field(DTYP, "Soft Channel")
   field(ZRST, "Idle")
