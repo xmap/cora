@@ -273,11 +273,11 @@
 | src/cora/api/\_run\_initiator.py                                                         |      151 |       14 |       30 |        5 |     88.4% |157-158, 187-188, 233, 253, 300, 305-306, 327-\>316, 391-392, 399-406 |
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
 | src/cora/api/\_run\_supervisor.py                                                        |      490 |       27 |      194 |       21 |     92.7% |310, 332, 339, 494, 699-700, 860-861, 918, 944, 947, 953, 955, 981-982, 1165-\>1175, 1351, 1354, 1357, 1360, 1362-1363, 1366, 1369, 1372, 1570, 1579-\>1544, 1665, 1688 |
-| src/cora/api/\_run\_witness.py                                                           |      386 |       22 |      128 |        6 |     94.2% |645, 896-900, 941, 1003, 1034, 1077, 1094, 1096, 1121, 1143, 1229, 1324, 1394-1396, 1398-\>1400, 1405, 1416-1419, 1424 |
-| src/cora/api/\_status\_push.py                                                           |      174 |        5 |       24 |        2 |     96.5% |177, 405-406, 553-554 |
+| src/cora/api/\_run\_witness.py                                                           |      404 |       22 |      132 |        6 |     94.4% |679, 934-938, 979, 1041, 1072, 1116, 1133, 1135, 1160, 1182, 1269, 1364, 1434-1436, 1438-\>1440, 1445, 1456-1459, 1464 |
+| src/cora/api/\_status\_push.py                                                           |      231 |        5 |       42 |        3 |     97.1% |205, 459-460, 536-\>542, 788-789 |
 | src/cora/api/capture\_watch\_preflight.py                                                |      217 |        3 |       82 |        1 |     98.7% |534, 642-643 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/main.py                                                                     |      431 |        7 |       66 |        4 |     97.8% |394-\>393, 819-820, 1288-1300, 1489-\>1494, 1496-\>1499 |
+| src/cora/api/main.py                                                                     |      431 |        7 |       66 |        4 |     97.8% |394-\>393, 819-820, 1288-1300, 1490-\>1495, 1497-\>1500 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/pilot\_seed.py                                                              |      367 |       43 |       64 |       10 |     85.8% |308-313, 331-337, 347-348, 381-383, 426-427, 470-507, 572-573, 584-585, 662, 666, 678-679, 764-766, 936-966 |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
@@ -2048,9 +2048,11 @@
 | src/cora/run/\_bootstrap.py                                                              |        2 |        2 |        0 |        0 |      0.0% |     11-13 |
 | src/cora/run/\_projections.py                                                            |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/\_run\_update\_handler.py                                                   |        7 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/run/adapters/\_\_init\_\_.py                                                    |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/adapters/\_\_init\_\_.py                                                    |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/adapters/in\_memory\_run\_observation\_trail.py                             |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/adapters/postgres\_run\_actor\_involvement\_lookup.py                       |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/adapters/postgres\_run\_channel\_lookup.py                                  |       33 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/run/adapters/postgres\_run\_observation\_trail.py                               |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/adapters/sim\_observation\_feeder.py                                        |       37 |        0 |        2 |        1 |     97.4% |  97-\>116 |
 | src/cora/run/aggregates/\_\_init\_\_.py                                                  |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/aggregates/run/\_\_init\_\_.py                                              |       13 |        0 |        0 |        0 |    100.0% |           |
@@ -2097,6 +2099,11 @@
 | src/cora/run/features/get\_run/query.py                                                  |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/get\_run/route.py                                                  |       33 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/run/features/get\_run/tool.py                                                   |       35 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/run/features/get\_run\_history/\_\_init\_\_.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/features/get\_run\_history/handler.py                                       |       42 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/run/features/get\_run\_history/query.py                                         |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/features/get\_run\_history/route.py                                         |       21 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/run/features/get\_run\_history/tool.py                                          |       23 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/run/features/hold\_run/\_\_init\_\_.py                                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/hold\_run/command.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/hold\_run/decider.py                                               |       14 |        0 |        8 |        0 |    100.0% |           |
@@ -2146,15 +2153,16 @@
 | src/cora/run/features/truncate\_run/handler.py                                           |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/truncate\_run/route.py                                             |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/features/truncate\_run/tool.py                                              |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/run/ports/\_\_init\_\_.py                                                       |        3 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/ports/\_\_init\_\_.py                                                       |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/ports/capture\_observer.py                                                  |       31 |        1 |        2 |        1 |     93.9% |       439 |
 | src/cora/run/ports/run\_channel\_lookup.py                                               |       60 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/run/ports/run\_observation\_trail.py                                            |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/projections/\_\_init\_\_.py                                                 |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/run/projections/actor\_involvement.py                                           |       20 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/run/projections/summary.py                                                      |       66 |        0 |       18 |        1 |     98.8% | 113-\>112 |
-| src/cora/run/routes.py                                                                   |       49 |        0 |        8 |        0 |    100.0% |           |
-| src/cora/run/tools.py                                                                    |       30 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/run/wire.py                                                                     |       21 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/routes.py                                                                   |       50 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/run/tools.py                                                                    |       32 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/run/wire.py                                                                     |       28 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/safety/\_\_init\_\_.py                                                          |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/safety/\_bootstrap.py                                                           |        2 |        2 |        0 |        0 |      0.0% |     14-16 |
 | src/cora/safety/\_clearance\_dtos.py                                                     |       45 |        1 |       14 |        1 |     96.6% |       193 |
@@ -2700,7 +2708,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **61488** | **1388** | **9336** |  **417** | **97.2%** |           |
+| **TOTAL**                                                                                | **61701** | **1388** | **9368** |  **418** | **97.2%** |           |
 
 
 ## Setup coverage badge
