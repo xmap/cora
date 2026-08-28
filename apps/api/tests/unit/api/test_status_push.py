@@ -23,6 +23,9 @@ from websockets.asyncio.server import ServerConnection, serve
 from cora.api._status_push import (
     _DecisionTail,
     _render_progress,
+    _render_progress_trail,
+    _RunHistoryTail,
+    build_run_history_message,
     build_snapshot,
     status_push_lifespan,
 )
@@ -48,6 +51,8 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, UUIDv7Generator
 from cora.infrastructure.projection import decode_cursor, encode_cursor
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.run.features.get_run_history import GetRunHistory
+from cora.run.features.get_run_history.handler import RunHistoryEvent, RunHistoryView
 from cora.run.features.list_runs import ListRuns, RunListPage, RunSummaryItem
 from cora.run.features.list_runs.query import RunStatusFilter
 from cora.run.ports.capture_observer import CaptureProgressObservation, ReachTier
@@ -79,6 +84,7 @@ def test_build_snapshot_shape() -> None:
         producer_id="p1",
     )
     assert snapshot == {
+        "kind": "snapshot",
         "schema_version": 1,
         "producer_id": "p1",
         "sequence": 3,
@@ -119,11 +125,19 @@ def test_status_push_settings_accept_valid() -> None:
 class _FakeWitnessRecorder:
     """Duck-types `RunWitnessRecorder`'s read-only surface for these tests."""
 
-    def __init__(self, readings: dict[UUID, dict[str, CaptureProgressObservation]]) -> None:
+    def __init__(
+        self,
+        readings: dict[UUID, dict[str, CaptureProgressObservation]],
+        trails: dict[UUID, dict[str, list[CaptureProgressObservation]]] | None = None,
+    ) -> None:
         self._readings = readings
+        self._trails = trails or {}
 
     def progress_readings(self) -> dict[UUID, dict[str, CaptureProgressObservation]]:
         return self._readings
+
+    def progress_trails(self) -> dict[UUID, dict[str, list[CaptureProgressObservation]]]:
+        return self._trails
 
 
 def _obs(
@@ -182,6 +196,54 @@ def test_render_progress_renders_a_missing_observed_at_as_none() -> None:
 
     assert rendered["images_saved"]["observed_at"] is None
     assert rendered["images_saved"]["commanded_total"] is None
+
+
+# ---------- pure: _render_progress_trail ----------
+
+
+@pytest.mark.unit
+def test_render_progress_trail_is_empty_when_recorder_is_none() -> None:
+    assert _render_progress_trail(uuid4(), None) == {}
+
+
+@pytest.mark.unit
+def test_render_progress_trail_is_empty_when_run_has_no_trail() -> None:
+    recorder = _FakeWitnessRecorder({}, {})
+    assert _render_progress_trail(uuid4(), recorder) == {}  # type: ignore[arg-type]
+
+
+@pytest.mark.unit
+def test_render_progress_trail_renders_each_role_json_safe_oldest_first() -> None:
+    run_id = uuid4()
+    first = _obs(value=1.0, commanded_total=100.0, observed_at=_NOW)
+    second = _obs(value=2.0, commanded_total=100.0, observed_at=_NOW + timedelta(seconds=1))
+    recorder = _FakeWitnessRecorder({}, {run_id: {"images_saved": [first, second]}})
+
+    rendered = _render_progress_trail(run_id, recorder)  # type: ignore[arg-type]
+
+    assert rendered == {
+        "images_saved": [
+            {"value": 1.0, "commanded_total": 100.0, "observed_at": _NOW.isoformat()},
+            {
+                "value": 2.0,
+                "commanded_total": 100.0,
+                "observed_at": (_NOW + timedelta(seconds=1)).isoformat(),
+            },
+        ]
+    }
+
+
+@pytest.mark.unit
+def test_render_progress_trail_tail_slices_independent_of_recorder_retention() -> None:
+    run_id = uuid4()
+    long_trail = [_obs(value=float(i), commanded_total=None, observed_at=_NOW) for i in range(40)]
+    recorder = _FakeWitnessRecorder({}, {run_id: {"images_saved": long_trail}})
+
+    rendered = _render_progress_trail(run_id, recorder)  # type: ignore[arg-type]
+
+    assert len(rendered["images_saved"]) == 30
+    assert rendered["images_saved"][0]["value"] == 10.0
+    assert rendered["images_saved"][-1]["value"] == 39.0
 
 
 # ---------- fakes: one empty-by-default handler per domain ----------
@@ -310,9 +372,27 @@ def _make_list_decisions(items: list[DecisionSummaryItem]):
     return list_decisions
 
 
+def _make_get_run_history(views: dict[UUID, RunHistoryView] | None = None):
+    views = views or {}
+
+    async def get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        return views.get(query.run_id)
+
+    return get_run_history
+
+
 def _default_handlers(**overrides: Any) -> dict[str, Any]:
     """Empty-by-default fakes for every domain `status_push_lifespan` needs,
-    so a test overriding one domain doesn't have to spell out the other six."""
+    so a test overriding one domain doesn't have to spell out the other six.
+    `get_run_history` defaults to always returning `None`, so the default
+    fixture never emits a run-history message -- tests exercising REWIND
+    mode pass an explicit `views` mapping via `_make_get_run_history`."""
     defaults: dict[str, Any] = {
         "list_runs": _make_list_runs([]),
         "list_subjects": _make_list_subjects([]),
@@ -321,6 +401,7 @@ def _default_handlers(**overrides: Any) -> dict[str, Any]:
         "list_clearances": _make_list_clearances([]),
         "list_enclosures": _make_list_enclosures([]),
         "list_decisions": _make_list_decisions([]),
+        "get_run_history": _make_get_run_history(),
     }
     defaults.update(overrides)
     return defaults
@@ -419,6 +500,157 @@ async def test_decision_tail_caps_at_the_ring_size() -> None:
     assert len(result) == 20
 
 
+# ---------- pure: build_run_history_message ----------
+
+
+def _history_view(run_id: UUID, *, event_count: int = 1) -> RunHistoryView:
+    return RunHistoryView(
+        run_id=run_id,
+        name="32-ID FlyScan",
+        status="Running",
+        events=[
+            RunHistoryEvent(
+                event_id=uuid4(),
+                event_type="RunStarted",
+                version=i + 1,
+                occurred_at=_NOW + timedelta(seconds=i),
+                recorded_at=_NOW + timedelta(seconds=i),
+                payload={},
+            )
+            for i in range(event_count)
+        ],
+        observations=[],
+        observations_truncated=False,
+    )
+
+
+@pytest.mark.unit
+def test_build_run_history_message_shape() -> None:
+    run_id = uuid4()
+    view = _history_view(run_id)
+
+    message = build_run_history_message(
+        view=view,
+        terminal=True,
+        generated_at="2026-06-22T12:00:00+00:00",
+        producer_id="p1",
+    )
+
+    assert message == {
+        "kind": "run_history",
+        "schema_version": 1,
+        "producer_id": "p1",
+        "generated_at": "2026-06-22T12:00:00+00:00",
+        "run_id": str(run_id),
+        "name": "32-ID FlyScan",
+        "status": "Running",
+        "terminal": True,
+        "events": [
+            {
+                "event_type": "RunStarted",
+                "occurred_at": _NOW.isoformat(),
+                "recorded_at": _NOW.isoformat(),
+                "payload": {},
+            }
+        ],
+        "observations": [],
+        "observations_truncated": False,
+    }
+
+
+# ---------- _RunHistoryTail ----------
+
+
+@pytest.mark.unit
+async def test_run_history_tail_emits_on_first_sight_of_an_open_run() -> None:
+    run_id = uuid4()
+    get_run_history = _make_get_run_history({run_id: _history_view(run_id)})
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    messages = await tail.poll(
+        get_run_history,
+        kernel,
+        open_run_ids=[run_id],
+        generated_at="t0",
+        producer_id="p1",
+    )
+
+    assert len(messages) == 1
+    assert messages[0]["run_id"] == str(run_id)
+    assert messages[0]["terminal"] is False
+
+
+@pytest.mark.unit
+async def test_run_history_tail_emits_nothing_between_refreshes() -> None:
+    run_id = uuid4()
+    get_run_history = _make_get_run_history({run_id: _history_view(run_id)})
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+    second = await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t1", producer_id="p1"
+    )
+
+    assert second == []
+
+
+@pytest.mark.unit
+async def test_run_history_tail_emits_terminal_true_when_a_run_leaves_the_open_set() -> None:
+    run_id = uuid4()
+    get_run_history = _make_get_run_history({run_id: _history_view(run_id)})
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+    closed = await tail.poll(
+        get_run_history, kernel, open_run_ids=[], generated_at="t1", producer_id="p1"
+    )
+
+    assert len(closed) == 1
+    assert closed[0]["run_id"] == str(run_id)
+    assert closed[0]["terminal"] is True
+
+
+@pytest.mark.unit
+async def test_run_history_tail_ring_evicts_past_the_cap() -> None:
+    run_ids = [uuid4() for _ in range(25)]
+    views = {run_id: _history_view(run_id) for run_id in run_ids}
+    get_run_history = _make_get_run_history(views)
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    for run_id in run_ids:
+        await tail.poll(
+            get_run_history, kernel, open_run_ids=[run_id], generated_at="t", producer_id="p1"
+        )
+
+    assert len(tail._ring) == 20
+
+
+@pytest.mark.unit
+async def test_run_history_tail_on_reconnect_repushes_a_still_open_run_promptly() -> None:
+    run_id = uuid4()
+    get_run_history = _make_get_run_history({run_id: _history_view(run_id)})
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+    tail.on_reconnect()
+    after_reconnect = await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t1", producer_id="p1"
+    )
+
+    assert len(after_reconnect) == 1
+
+
 # ---------- real socket: push against a local WebSocket server ----------
 
 
@@ -472,10 +704,54 @@ async def test_lifespan_pushes_a_snapshot_to_a_real_relay() -> None:
         snapshot = json.loads(raw)
         assert snapshot["schema_version"] == 1
         assert snapshot["runs"] == [
-            {"run_id": str(run_id), "name": "smoke-run", "status": "Running", "progress": {}}
+            {
+                "run_id": str(run_id),
+                "name": "smoke-run",
+                "status": "Running",
+                "progress": {},
+                "progress_trail": {},
+            }
         ]
         assert snapshot["subjects"] == []
         assert snapshot["decisions"] == []
+
+
+@pytest.mark.unit
+async def test_lifespan_pushes_both_a_snapshot_and_a_run_history_message() -> None:
+    """REWIND mode's end-to-end path: an open run's full history arrives
+    on the same socket as the live snapshot, as its own message kind."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=url,
+            status_push_tick_seconds=0.1,
+        )
+        run_id = uuid4()
+
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(
+                list_runs=_make_list_runs([_run_item(run_id)]),
+                get_run_history=_make_get_run_history({run_id: _history_view(run_id)}),
+            ),
+        ):
+            first = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            second = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+
+        kinds = {first["kind"], second["kind"]}
+        assert kinds == {"run_history", "snapshot"}
+        history = first if first["kind"] == "run_history" else second
+        assert history["run_id"] == str(run_id)
+        assert history["terminal"] is False
+        assert history["events"][0]["event_type"] == "RunStarted"
 
 
 @pytest.mark.unit

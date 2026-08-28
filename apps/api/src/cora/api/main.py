@@ -1451,6 +1451,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_clearances=app.state.safety.list_clearances,
                         list_enclosures=app.state.enclosure.list_enclosures,
                         list_decisions=app.state.decision.list_decisions,
+                        get_run_history=app.state.run.get_run_history,
                         witness_recorder=witness_recorder,
                     ),
                     capture_scan_ingestor_lifespan(
