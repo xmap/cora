@@ -36,7 +36,7 @@
 # The EnvironmentFile path below assumes the env file lives directly in
 # $HOME; adjust both this unit and the printf above together if not.
 #
-# `ConditionHost=lyra` matters: $HOME is NFS-shared with arcturus (both
+# `ConditionHost=` matters: $HOME is NFS-shared with arcturus (both
 # hosts read this same unit file), and this unit's own install steps
 # have no host check baked into the shell commands. Without this guard,
 # enabling it once from the wrong shell starts a second relay directly
@@ -45,17 +45,25 @@
 # (cora-status-tunnel.service) ever being exercised -- exactly what
 # happened 2026-08-28, caught only once STATUS_PUSH_ENABLED was flipped
 # on for real and the relay on lyra never saw a producer connect.
+#
+# The value must be lyra's FULL hostname, not the bare jump-host name:
+# systemd matches ConditionHost against plain `hostname` (the node's own
+# idea of itself), and lyra's `hostname` returns the FQDN
+# (lyra.xray.aps.anl.gov) while arcturus's returns the short form
+# (arcturus) -- the two hosts are configured differently, verified by
+# running `hostname` on each, not assumed. A bare `lyra` here looks
+# right by eye and fails silently at start time.
 
 [Unit]
 Description=CORA status relay (receives the live 2-BM feed, serves the status page)
-ConditionHost=lyra
+ConditionHost=lyra.xray.aps.anl.gov
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 EnvironmentFile=/home/beams0/2BMB/dgursoy/cora-status-relay.env
-ExecStart=/home/beams0/2BMB/dgursoy/cora-xmap/apps/api/.venv/bin/python3 /home/beams0/2BMB/dgursoy/cora-xmap/infra/status-relay/relay.py --host 127.0.0.1 --port 8099
+ExecStart=/home/beams0/2BMB/dgursoy/cora-main-deploy/apps/api/.venv/bin/python3 /home/beams0/2BMB/dgursoy/cora-main-deploy/infra/status-relay/relay.py --host 127.0.0.1 --port 8099
 Restart=always
 RestartSec=15
 StandardOutput=append:/home/beams0/2BMB/dgursoy/cora-status-relay.log
