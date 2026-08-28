@@ -1,24 +1,36 @@
-/* REWIND-mode replay scrubber for the status relay's page.
+/* Subject-neutral timeline scrubber for the status relay's page.
 
    Copy-and-adapt of docs/javascripts/scrubber-demo.js (the paper's replay
    scrubber for a fixed, already-recorded run), not a shared module: about
    40% of that script is coupled to the paper's own fixed data file
    (beam_loss_at / beam_back_at, iteration convergence, the recipe-
-   expansion fidelity badge) and does not apply to an arbitrary real Run's
-   pushed history. The two are meant to diverge over time -- the paper's
-   version stays frozen as published, this one grows real-run edge cases
-   (zero observations, one event, a run still open with no end).
+   expansion fidelity badge) and does not apply here. The two are meant to
+   diverge over time -- the paper's version stays frozen as published,
+   this one grows real edge cases (zero points, one event, a window still
+   open with no end).
 
    What's carried over near-verbatim because it's fiddly and data-shape
    agnostic: svg(), parseT, fmtClock, xFor, buildScale, and especially
    wireDrag (pointer-drag with setPointerCapture, the keyboard map, the
    slider proxy) -- there is no reason to get that logic right twice.
 
-   Entry point: CoraScrubber.mount(rootEl, history). No fetch, no mkdocs
-   boot hook, no fixed #cora-scrubber id: the relay page owns the element
-   and hands over already-fetched data. Idempotent: a second mount on the
-   same element tears down its listeners and rebuilds, so switching runs
-   in the picker never leaks a drag/keyboard handler onto a stale DOM. */
+   This module knows nothing about Runs, proposals, or any other CORA
+   domain. It renders a "timeline document": a subject-neutral shape with
+   a time domain and a list of lanes, each either "markers" (discrete
+   events, one of which may carry a `state` that a fold walks forward) or
+   "series" (a value over time, numeric or textual). Whatever produced the
+   document -- a run's history today, an activity tail or another lens
+   later -- is the caller's concern, not this module's. See page.html's
+   `runHistoryToTimelineDocument` for the one adapter that exists today,
+   bridging the still-unchanged run_history wire shape into this document
+   shape; a later step is expected to have the producer emit the document
+   directly and retire that adapter.
+
+   Entry point: CoraScrubber.mount(rootEl, doc, opts). No fetch, no mkdocs
+   boot hook, no fixed #cora-scrubber id: the caller owns the element and
+   hands over an already-fetched document. Idempotent: a second mount on
+   the same element tears down its listeners and rebuilds, so switching
+   subjects never leaks a drag/keyboard handler onto stale DOM. */
 (function () {
   "use strict";
 
@@ -27,11 +39,9 @@
   const VW = 920;
   const PAD_L = 84;
   const PAD_R = 24;
-  const LANE_LIFECYCLE = 34;
-  const LANE_STATUS = 74;
-  const LANE_CHANNEL_START = 114;
-  const LANE_CHANNEL_HEIGHT = 40;
-  const MAX_CHANNEL_LANES = 6;
+  const LANE_START = 34;
+  const LANE_HEIGHT = 40;
+  const MAX_SERIES_LANES = 6;
   const AXIS_MARGIN = 44;
 
   function parseT(iso) {
@@ -63,82 +73,91 @@
     return { dmin, dmax, k };
   }
 
-  // Fold the lifecycle events forward to time t: which status band is
-  // "current" at the cursor, and the last event at or before it.
+  // Fold every lane forward to time t: for the primary markers lane (if
+  // any), the last point at or before t whose `state` is set -- a point
+  // with no `state` is a real event but does not change what's "current"
+  // (a run's campaign-membership events, for example, sit on the same
+  // lifecycle lane as its start/hold/end but say nothing about whether it
+  // is running). Every other lane gets its own last-point-at-or-before-t
+  // reading, keyed by lane_id.
   function foldTo(model, t) {
-    let lastEvent = null;
-    for (const e of model.lifecycle) {
-      if (e.secs <= t + 1e-6) lastEvent = e;
-      else break;
+    let primary = null;
+    if (model.primaryLane) {
+      let point = null;
+      let state = null;
+      for (const p of model.primaryLane.points) {
+        if (p.secs > t + 1e-6) break;
+        point = p;
+        if (p.state) state = p.state;
+      }
+      primary = { point, state };
     }
-    let status = "not started";
-    if (lastEvent) {
-      if (lastEvent.event_type === "RunHeld") status = "Held";
-      else if (
-        lastEvent.event_type === "RunCompleted" ||
-        lastEvent.event_type === "RunAborted" ||
-        lastEvent.event_type === "RunStopped" ||
-        lastEvent.event_type === "RunTruncated"
-      )
-        status = "terminal";
-      else status = "Running";
-    }
-    const channelReadings = {};
-    for (const lane of model.channelLanes) {
+    const readings = {};
+    for (const lane of model.lanes) {
+      if (lane === model.primaryLane) continue;
       let reading = null;
       for (const p of lane.points) {
-        if (p.secs <= t + 1e-6) reading = p;
-        else break;
+        if (p.secs > t + 1e-6) break;
+        reading = p;
       }
-      channelReadings[lane.channel_name] = reading;
+      readings[lane.lane_id] = reading;
     }
-    return { lastEvent, status, channelReadings };
+    return { primary, readings };
   }
 
-  // Build the model: lifecycle events + up to MAX_CHANNEL_LANES channel
-  // lanes, each a time-ordered list of points, from a get_run_history-
-  // shaped `history` object. Numeric and categorical rows on the same
-  // channel both land on that channel's lane.
-  function buildModel(history) {
-    const t0 = history.events.length ? parseT(history.events[0].occurred_at) : 0;
-    const lifecycle = history.events.map((e) => ({
-      event_type: e.event_type,
-      secs: parseT(e.occurred_at) - t0,
-    }));
+  // Build the model from a timeline document: `doc.domain.from`/`.to` set
+  // the time origin and (absent a later point pushing it out) the right
+  // edge; `doc.lanes` becomes an ordered lane list, series lanes capped at
+  // MAX_SERIES_LANES by point count, most-populated first. `doc.subject_lane_id`
+  // (default: the first markers lane) names the lane `foldTo` treats as
+  // the primary state-carrying one.
+  function buildModel(doc) {
+    const domain = doc.domain || {};
+    const t0 = domain.from ? parseT(domain.from) : 0;
+    const domainEndSecs = domain.to ? parseT(domain.to) - t0 : null;
 
-    const byChannel = new Map();
-    for (const o of history.observations) {
-      if (!byChannel.has(o.channel_name)) byChannel.set(o.channel_name, []);
-      byChannel.get(o.channel_name).push(o);
-    }
-    const channelNames = Array.from(byChannel.keys())
-      .sort((a, b) => byChannel.get(b).length - byChannel.get(a).length)
-      .slice(0, MAX_CHANNEL_LANES);
-    const channelLanes = channelNames.map((name) => ({
-      channel_name: name,
-      points: byChannel
-        .get(name)
-        .map((o) => ({
-          secs: parseT(o.sampled_at) - t0,
-          value: o.value,
-          categorical_value: o.categorical_value,
+    const rawLanes = (doc.lanes || []).map((lane) => ({
+      lane_id: lane.lane_id,
+      label: lane.label,
+      render: lane.render,
+      points: (lane.points || [])
+        .map((p) => ({
+          secs: parseT(p.t) - t0,
+          label: p.label,
+          state: p.state || null,
+          value: p.value,
+          text: p.text != null ? p.text : null,
         }))
         .sort((a, b) => a.secs - b.secs),
     }));
-    const omittedChannels = byChannel.size - channelLanes.length;
 
-    let xmax = 0;
-    for (const e of lifecycle) xmax = Math.max(xmax, e.secs);
-    for (const lane of channelLanes) {
+    const markerLanes = rawLanes.filter((l) => l.render === "markers");
+    const seriesLanesAll = rawLanes.filter((l) => l.render === "series");
+    const seriesLanes = seriesLanesAll
+      .slice()
+      .sort((a, b) => b.points.length - a.points.length)
+      .slice(0, MAX_SERIES_LANES);
+    const omittedSeries = seriesLanesAll.length - seriesLanes.length;
+
+    const orderedSeriesIds = new Set(seriesLanes.map((l) => l.lane_id));
+    const lanes = rawLanes.filter(
+      (l) => l.render === "markers" || orderedSeriesIds.has(l.lane_id)
+    );
+
+    const subjectLaneId = doc.subject_lane_id || (markerLanes[0] && markerLanes[0].lane_id);
+    const primaryLane = lanes.find((l) => l.lane_id === subjectLaneId) || null;
+
+    let xmax = domainEndSecs !== null ? domainEndSecs : 0;
+    for (const lane of lanes) {
       for (const p of lane.points) xmax = Math.max(xmax, p.secs);
     }
 
-    return { t0, xmax, lifecycle, channelLanes, omittedChannels };
+    return { t0, xmax, lanes, primaryLane, omittedSeries };
   }
 
   function renderTimeline(model, scale) {
-    const laneCount = Math.max(1, model.channelLanes.length);
-    const axisY = LANE_CHANNEL_START + laneCount * LANE_CHANNEL_HEIGHT + 10;
+    const laneCount = Math.max(1, model.lanes.length);
+    const axisY = LANE_START + laneCount * LANE_HEIGHT + 10;
     const vh = axisY + AXIS_MARGIN;
     const X = (secs) => xFor(scale, secs);
 
@@ -146,60 +165,62 @@
       viewBox: `0 0 ${VW} ${vh}`,
       class: "cora-scrubber__svg",
       role: "img",
-      "aria-label": "Replay timeline of a CORA Run. Drag the cursor to fold it to any instant.",
+      "aria-label": "Timeline. Drag the cursor to fold it to any instant.",
     });
 
-    const laneRows = [["Lifecycle", LANE_LIFECYCLE], ["Status", LANE_STATUS]];
-    model.channelLanes.forEach((lane, i) => {
-      laneRows.push([lane.channel_name, LANE_CHANNEL_START + i * LANE_CHANNEL_HEIGHT]);
-    });
-    for (const [label, y] of laneRows) {
+    const laneY = new Map();
+    model.lanes.forEach((lane, i) => {
+      const y = LANE_START + i * LANE_HEIGHT;
+      laneY.set(lane.lane_id, y);
       g.appendChild(svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-baseline" }));
       const t = svg("text", { x: PAD_L - 12, y: y + 4, class: "cs-lane-label", "text-anchor": "end" });
-      t.textContent = label;
+      t.textContent = lane.label;
       g.appendChild(t);
-    }
+    });
 
     const timed = [];
-    model.lifecycle.forEach((e) => {
-      const x = X(e.secs);
-      const m = svg("rect", {
-        x: x - 4,
-        y: LANE_LIFECYCLE - 4,
-        width: 8,
-        height: 8,
-        class: "cs-mark cs-mark--setpoint",
-      });
-      g.appendChild(m);
-      timed.push({ el: m, t: e.secs });
-      const lab = svg("text", { x, y: LANE_LIFECYCLE - 10, class: "cs-life-label", "text-anchor": "middle" });
-      lab.textContent = e.event_type;
-      g.appendChild(lab);
-      timed.push({ el: lab, t: e.secs });
-    });
 
-    model.channelLanes.forEach((lane, i) => {
-      const y = LANE_CHANNEL_START + i * LANE_CHANNEL_HEIGHT;
-      const numeric = lane.points.filter((p) => p.value !== null && p.value !== undefined);
-      if (numeric.length > 1) {
-        const values = numeric.map((p) => p.value);
-        const vmin = Math.min(...values);
-        const vmax = Math.max(...values);
-        const span = vmax - vmin || 1;
-        const yFor = (v) => y + 14 - ((v - vmin) / span) * 24;
-        const points = numeric.map((p) => `${X(p.secs)},${yFor(p.value)}`).join(" ");
-        g.appendChild(svg("polyline", { points, class: "cs-run-line" }));
+    for (const lane of model.lanes) {
+      const y = laneY.get(lane.lane_id);
+      if (lane.render === "markers") {
+        lane.points.forEach((p) => {
+          const x = X(p.secs);
+          const m = svg("rect", {
+            x: x - 4,
+            y: y - 4,
+            width: 8,
+            height: 8,
+            class: "cs-mark cs-mark--setpoint",
+          });
+          g.appendChild(m);
+          timed.push({ el: m, t: p.secs });
+          const lab = svg("text", { x, y: y - 10, class: "cs-life-label", "text-anchor": "middle" });
+          lab.textContent = p.label;
+          g.appendChild(lab);
+          timed.push({ el: lab, t: p.secs });
+        });
+      } else {
+        const numeric = lane.points.filter((p) => p.value !== null && p.value !== undefined);
+        if (numeric.length > 1) {
+          const values = numeric.map((p) => p.value);
+          const vmin = Math.min(...values);
+          const vmax = Math.max(...values);
+          const span = vmax - vmin || 1;
+          const yFor = (v) => y + 14 - ((v - vmin) / span) * 24;
+          const points = numeric.map((p) => `${X(p.secs)},${yFor(p.value)}`).join(" ");
+          g.appendChild(svg("polyline", { points, class: "cs-run-line" }));
+        }
+        lane.points.forEach((p) => {
+          const x = X(p.secs);
+          const mark =
+            p.text != null
+              ? svg("circle", { cx: x, cy: y, r: 3.5, class: "cs-mark cs-mark--check" })
+              : svg("circle", { cx: x, cy: y, r: 2.5, class: "cs-mark cs-mark--acquire" });
+          g.appendChild(mark);
+          timed.push({ el: mark, t: p.secs });
+        });
       }
-      lane.points.forEach((p) => {
-        const x = X(p.secs);
-        const mark =
-          p.categorical_value != null
-            ? svg("circle", { cx: x, cy: y, r: 3.5, class: "cs-mark cs-mark--check" })
-            : svg("circle", { cx: x, cy: y, r: 2.5, class: "cs-mark cs-mark--acquire" });
-        g.appendChild(mark);
-        timed.push({ el: mark, t: p.secs });
-      });
-    });
+    }
 
     g.appendChild(svg("line", { x1: PAD_L, y1: axisY, x2: VW - PAD_R, y2: axisY, class: "cs-axis" }));
     const tickStep = model.xmax > 0 ? Math.max(1, Math.round(model.xmax / 12 / 5) * 5) : 1;
@@ -213,7 +234,7 @@
 
     const cursorLine = svg("line", {
       x1: X(0),
-      y1: LANE_LIFECYCLE - 14,
+      y1: LANE_START - 14,
       x2: X(0),
       y2: axisY,
       class: "cs-cursor",
@@ -239,20 +260,23 @@
   function renderReadout(root, model, folded, t0, cursor) {
     const r = root.querySelector(".cs-readout-body");
     r.innerHTML = "";
-    const rows = [
-      ["clock", fmtClock(t0, cursor), null],
-      ["status", folded.status, folded.status === "Held" ? "warn" : "good"],
-      [
+    const rows = [["clock", fmtClock(t0, cursor), null]];
+    if (folded.primary) {
+      const state = folded.primary.state || "not started";
+      rows.push(["status", state, state === "paused" ? "warn" : "good"]);
+      rows.push([
         "last event",
-        folded.lastEvent ? `${folded.lastEvent.event_type} @ ${fmtClock(t0, folded.lastEvent.secs)}` : "none yet",
+        folded.primary.point ? `${folded.primary.point.label} @ ${fmtClock(t0, folded.primary.point.secs)}` : "none yet",
         null,
-      ],
-    ];
-    for (const [channelName, reading] of Object.entries(folded.channelReadings)) {
+      ]);
+    }
+    for (const lane of model.lanes) {
+      if (lane === model.primaryLane) continue;
+      const reading = folded.readings[lane.lane_id];
       const text = reading
-        ? `${reading.categorical_value != null ? reading.categorical_value : reading.value} @ ${fmtClock(t0, reading.secs)}`
+        ? `${reading.text != null ? reading.text : reading.value} @ ${fmtClock(t0, reading.secs)}`
         : "no reading yet";
-      rows.push([channelName, text, null]);
+      rows.push([lane.label, text, null]);
     }
     for (const [k, v, tone] of rows) {
       const row = document.createElement("div");
@@ -404,17 +428,18 @@
     return { setCursor, stopPlay, startPlay };
   }
 
-  function scaffold(root, model, subtitle) {
+  function scaffold(root, model, opts) {
     const note =
-      model.omittedChannels > 0
-        ? `<div class="cs-omitted-note">+${model.omittedChannels} more channel(s) not shown</div>`
+      model.omittedSeries > 0
+        ? `<div class="cs-omitted-note">+${model.omittedSeries} more lane(s) not shown</div>`
         : "";
+    root.classList.add("cora-scrubber");
     root.innerHTML = `
       <div class="cora-scrubber__chrome">
         <div class="cs-titlebar">
           <span class="cs-dot" aria-hidden="true"></span>
-          <span class="cs-title">Rewind</span>
-          <span class="cs-subtitle">${subtitle}</span>
+          <span class="cs-title"></span>
+          <span class="cs-subtitle"></span>
           <div class="cs-controls">
             <button type="button" class="cs-btn cs-play" aria-pressed="false">Play</button>
             <button type="button" class="cs-btn cs-jump-last">Jump to last event</button>
@@ -422,7 +447,7 @@
         </div>
         <div class="cs-stage"></div>
         <div class="cs-slider" tabindex="0" role="slider"
-             aria-label="Fold cursor: time within the run"
+             aria-label="${opts.sliderLabel}"
              aria-valuemin="0" aria-valuenow="0" aria-valuemax="${Math.round(model.xmax)}">
           <div class="cs-slider-track">
             <div class="cs-slider-fill"></div>
@@ -437,15 +462,31 @@
           </div>
         </div>
       </div>`;
+    // Title and subtitle are set via textContent, never interpolated into
+    // the innerHTML template above: `opts.title`/`opts.subtitle` can carry
+    // caller-controlled strings sourced from network JSON (a run's own
+    // name, for example), so this is the one place on the page an
+    // injection would otherwise land.
+    root.querySelector(".cs-title").textContent = opts.chromeTitle;
+    root.querySelector(".cs-subtitle").textContent = opts.subtitle;
   }
 
-  function mount(root, history) {
+  function mount(root, doc, opts) {
     if (root._coraScrubberCleanup) root._coraScrubberCleanup();
+    opts = opts || {};
 
-    const model = buildModel(history);
+    const model = buildModel(doc);
     const scale = buildScale(model.xmax);
-    const subtitle = `${history.name} · ${history.status}${history.observations_truncated ? " · observations truncated" : ""}`;
-    scaffold(root, model, subtitle);
+    const subtitle =
+      (doc.title || "") +
+      (doc.title && doc.subtitle ? " · " : "") +
+      (doc.subtitle || "") +
+      (doc.truncated && doc.truncated.observations ? " · observations truncated" : "");
+    scaffold(root, model, {
+      chromeTitle: opts.chromeTitle || "Timeline",
+      subtitle,
+      sliderLabel: opts.sliderLabel || "Fold cursor: time within the window",
+    });
     const scene = renderTimeline(model, scale);
     root.querySelector(".cs-stage").appendChild(scene.g);
 

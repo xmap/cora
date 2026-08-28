@@ -491,6 +491,74 @@
     rewindEmptyEl.style.display = runs.length === 0 ? "block" : "none";
   }
 
+  // Maps a RunHistoryEvent's event_type to the state it puts the Run into,
+  // for the scrubber's generic fold: a state-less event (e.g. campaign
+  // membership) rides the lifecycle lane as a marker but does not move
+  // the "current status" the readout shows. Bridge only: once the
+  // producer emits timeline documents directly (see the status-relay
+  // design notes), this mapping and the function below move server-side
+  // and this adapter is deleted.
+  var RUN_EVENT_STATE = {
+    RunStarted: "active",
+    RunResumed: "active",
+    RunHeld: "paused",
+    RunCompleted: "ended",
+    RunAborted: "ended",
+    RunStopped: "ended",
+    RunTruncated: "ended",
+  };
+
+  function runHistoryToTimelineDocument(history) {
+    var events = history.events || [];
+    var observations = history.observations || [];
+
+    var domainFrom = events.length ? events[0].occurred_at : null;
+    var domainTo = events.length ? events[events.length - 1].occurred_at : null;
+    observations.forEach(function (o) {
+      if (domainFrom === null || o.sampled_at < domainFrom) domainFrom = o.sampled_at;
+      if (domainTo === null || o.sampled_at > domainTo) domainTo = o.sampled_at;
+    });
+
+    var lifecycleLane = {
+      lane_id: "lifecycle",
+      label: "Lifecycle",
+      render: "markers",
+      points: events.map(function (e) {
+        return { t: e.occurred_at, label: e.event_type, state: RUN_EVENT_STATE[e.event_type] || null };
+      }),
+    };
+
+    var byChannel = {};
+    var channelOrder = [];
+    observations.forEach(function (o) {
+      if (!byChannel[o.channel_name]) {
+        byChannel[o.channel_name] = [];
+        channelOrder.push(o.channel_name);
+      }
+      byChannel[o.channel_name].push(o);
+    });
+
+    var channelLanes = channelOrder.map(function (name) {
+      return {
+        lane_id: "channel:" + name,
+        label: name,
+        render: "series",
+        points: byChannel[name].map(function (o) {
+          return { t: o.sampled_at, value: o.value, text: o.categorical_value };
+        }),
+      };
+    });
+
+    return {
+      subject_lane_id: "lifecycle",
+      title: history.name,
+      subtitle: history.status,
+      domain: { from: domainFrom, to: domainTo },
+      lanes: [lifecycleLane].concat(channelLanes),
+      truncated: { observations: !!history.observations_truncated },
+    };
+  }
+
   function showRewind(runId) {
     fetch("/run-history/" + encodeURIComponent(runId))
       .then(function (resp) {
@@ -503,7 +571,10 @@
       })
       .then(function (history) {
         rewindStageEl.textContent = "";
-        window.CoraScrubber.mount(rewindStageEl, history);
+        window.CoraScrubber.mount(rewindStageEl, runHistoryToTimelineDocument(history), {
+          chromeTitle: "Rewind",
+          sliderLabel: "Fold cursor: time within the run",
+        });
         rewindBackEl.style.display = "inline-block";
       })
       .catch(function (err) {
@@ -512,6 +583,9 @@
   }
 
   function backToLive() {
+    if (rewindStageEl._coraScrubberCleanup) {
+      rewindStageEl._coraScrubberCleanup();
+    }
     rewindPickerEl.value = "";
     rewindStageEl.textContent = "";
     rewindBackEl.style.display = "none";

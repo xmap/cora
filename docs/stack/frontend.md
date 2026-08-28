@@ -10,10 +10,18 @@ static HTML file with a `<script>` tag, no framework, no build step. It gets
 its data from a live WebSocket the relay pushes to, renders a handful of
 tables, and that's it. A second file, `infra/status-relay/scrubber.js`
 (copy-and-adapted from the paper demo's `docs/javascripts/scrubber-demo.js`,
-deliberately not shared with it), adds a rewind view over one Run's pushed
-history, fetched with a plain `fetch()` against the relay's own two REST
-reads rather than the live socket. Still no framework, no build step, no
-bundler: two plain scripts.
+deliberately not shared with it), renders a rewind view fetched with a
+plain `fetch()` against the relay's own REST reads rather than the live
+socket. Still no framework, no build step, no bundler: two plain scripts.
+
+`scrubber.js` itself knows nothing about Runs or any other CORA domain: it
+renders a subject-neutral "timeline document" (a time domain plus a list of
+marker/series lanes), so a later lens over a different kind of subject is a
+server-side change, not a frontend one. Today the only document producer is
+`page.html`'s own `runHistoryToTimelineDocument`, a small adapter bridging
+the still-Run-shaped `run_history` wire payload into that document shape;
+it is expected to move server-side and disappear once the producer emits
+documents directly.
 
 Next.js was picked below for a real multi-page application with routing,
 shared component state, and a build pipeline; this page has none of those.
