@@ -145,6 +145,9 @@ _Generated from the code at build time._
 `GetRun`
 : `RunNotFound`
 
+`GetRunHistory`
+: `RunNotFound`
+
 `ListRuns`
 : (boundary 422 only)
 

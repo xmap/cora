@@ -14475,6 +14475,179 @@
         "title": "RotateSealOnlineKeyBody",
         "type": "object"
       },
+      "RunHistoryEventItem": {
+        "description": "One event off the run's own stream, primitives only.",
+        "properties": {
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "version",
+          "occurred_at",
+          "recorded_at",
+          "payload"
+        ],
+        "title": "RunHistoryEventItem",
+        "type": "object"
+      },
+      "RunHistoryObservationItem": {
+        "description": "One observation-trail row, primitives only.",
+        "properties": {
+          "categorical_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categorical Value"
+          },
+          "channel_name": {
+            "title": "Channel Name",
+            "type": "string"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "sampled_at": {
+            "format": "date-time",
+            "title": "Sampled At",
+            "type": "string"
+          },
+          "sampling_procedure": {
+            "title": "Sampling Procedure",
+            "type": "string"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "event_id",
+          "channel_name",
+          "value",
+          "categorical_value",
+          "units",
+          "sampling_procedure",
+          "sampled_at",
+          "occurred_at",
+          "recorded_at",
+          "is_simulated"
+        ],
+        "title": "RunHistoryObservationItem",
+        "type": "object"
+      },
+      "RunHistoryResponse": {
+        "description": "Read-side DTO at the API boundary for one run's full history.",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/RunHistoryEventItem"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/RunHistoryObservationItem"
+            },
+            "title": "Observations",
+            "type": "array"
+          },
+          "observations_truncated": {
+            "title": "Observations Truncated",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "name",
+          "status",
+          "events",
+          "observations",
+          "observations_truncated"
+        ],
+        "title": "RunHistoryResponse",
+        "type": "object"
+      },
       "RunListResponse": {
         "description": "Page of runs plus opaque next-page cursor.",
         "properties": {
@@ -43313,6 +43486,73 @@
           }
         },
         "summary": "Conduct a compute Run: submit the job, await it, then complete or abort the Run.",
+        "tags": [
+          "run"
+        ]
+      }
+    },
+    "/runs/{run_id}/history": {
+      "get": {
+        "operationId": "get_run_history_route_runs__run_id__history_get",
+        "parameters": [
+          {
+            "description": "Target run's id.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Target run's id.",
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run exists with the given id."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "Get a run's full exact-timestamped history",
         "tags": [
           "run"
         ]

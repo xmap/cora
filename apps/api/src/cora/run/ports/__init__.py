@@ -24,6 +24,7 @@ from cora.run.ports.run_channel_lookup import (
     RunChannelSignal,
     RunFeedHealth,
 )
+from cora.run.ports.run_observation_trail import RunObservationRow, RunObservationTrail
 
 __all__ = [
     "AnyCaptureObservation",
@@ -40,4 +41,6 @@ __all__ = [
     "RunChannelLookup",
     "RunChannelSignal",
     "RunFeedHealth",
+    "RunObservationRow",
+    "RunObservationTrail",
 ]

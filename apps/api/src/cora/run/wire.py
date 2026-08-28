@@ -90,6 +90,7 @@ BC.
 """
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.infrastructure.idempotency import (
@@ -99,6 +100,7 @@ from cora.infrastructure.idempotency import (
 )
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
+from cora.run.adapters import InMemoryRunObservationTrail, PostgresRunObservationTrail
 from cora.run.aggregates.run import (
     CapturePathStore,
     CaptureProbeStore,
@@ -122,6 +124,7 @@ from cora.run.features import (
     append_observations,
     complete_run,
     get_run,
+    get_run_history,
     hold_run,
     list_runs,
     record_witnessed_run,
@@ -131,6 +134,9 @@ from cora.run.features import (
     stop_run,
     truncate_run,
 )
+
+if TYPE_CHECKING:
+    from cora.run.ports.run_observation_trail import RunObservationTrail
 
 _BC = "run"
 
@@ -151,6 +157,7 @@ class RunHandlers:
     adjust_run: adjust_run.IdempotentHandler
     append_observations: append_observations.Handler
     get_run: get_run.Handler
+    get_run_history: get_run_history.Handler
     list_runs: list_runs.Handler
     feed_heartbeat_store: FeedHeartbeatStore
     """The feed-heartbeat trail's write store. Surfaced on the bundle,
@@ -184,9 +191,15 @@ class RunHandlers:
 
 def wire_run(deps: Kernel) -> RunHandlers:
     """Build the Run BC handlers from shared dependencies."""
-    observation_store: ObservationStore = (
-        PostgresObservationStore(deps.pool) if deps.pool is not None else InMemoryObservationStore()
-    )
+    observation_store: ObservationStore
+    run_observation_trail: RunObservationTrail
+    if deps.pool is not None:
+        observation_store = PostgresObservationStore(deps.pool)
+        run_observation_trail = PostgresRunObservationTrail(deps.pool)
+    else:
+        in_memory_observations = InMemoryObservationStore()
+        observation_store = in_memory_observations
+        run_observation_trail = InMemoryRunObservationTrail(in_memory_observations)
     feed_heartbeat_store: FeedHeartbeatStore = (
         PostgresFeedHeartbeatStore(deps.pool)
         if deps.pool is not None
@@ -292,6 +305,12 @@ def wire_run(deps: Kernel) -> RunHandlers:
                 experiment_identity_store=experiment_identity_store,
             ),
             command_name="GetRun",
+            bc=_BC,
+            kind="query",
+        ),
+        get_run_history=with_tracing(
+            get_run_history.bind(deps, observation_trail=run_observation_trail),
+            command_name="GetRunHistory",
             bc=_BC,
             kind="query",
         ),

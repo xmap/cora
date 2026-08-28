@@ -1,0 +1,115 @@
+"""Contract tests for the `get_run_history` MCP tool."""
+
+from uuid import uuid4
+
+import pytest
+from fastapi.testclient import TestClient
+
+from cora.api.main import create_app
+from tests.contract._helpers import create_capability_via_api
+from tests.contract._mcp_helpers import open_session, parse_sse_data
+from tests.contract._subject_helpers import register_active_asset
+
+
+def _setup_full_run(client: TestClient) -> str:
+    cap_id = client.post("/families", json={"name": "FlyMotion", "affordances": []}).json()[
+        "family_id"
+    ]
+    capability_id = create_capability_via_api(client)
+    method_id = client.post(
+        "/methods",
+        json={
+            "execution_pattern": "Batch",
+            "name": "M",
+            "capability_id": capability_id,
+            "needed_family_ids": [cap_id],
+        },
+    ).json()["method_id"]
+    practice_id = client.post(
+        "/practices",
+        json={"name": "P", "method_id": method_id, "site_id": str(uuid4())},
+    ).json()["practice_id"]
+    asset_id = client.post(
+        "/assets",
+        json={"name": "A", "tier": "Unit", "parent_id": None, "facility_code": "cora"},
+    ).json()["asset_id"]
+    client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
+    plan_id = client.post(
+        "/plans",
+        json={"name": "Plan", "practice_id": practice_id, "asset_ids": [asset_id]},
+    ).json()["plan_id"]
+    subject_id = client.post("/subjects", json={"name": "Sample"}).json()["subject_id"]
+    mount_asset_id = register_active_asset(client)
+    client.post(
+        f"/subjects/{subject_id}/mount", json={"asset_id": mount_asset_id, "reason": "test"}
+    )
+    return client.post(
+        "/runs",
+        json={"name": "32-ID FlyScan", "plan_id": plan_id, "subject_id": subject_id},
+    ).json()["run_id"]
+
+
+@pytest.mark.contract
+def test_mcp_lists_get_run_history_tool() -> None:
+    with TestClient(create_app()) as client:
+        headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 99, "method": "tools/list"},
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    tool_names = [t["name"] for t in body["result"]["tools"]]
+    assert "get_run_history" in tool_names
+
+
+@pytest.mark.contract
+def test_mcp_get_run_history_tool_returns_structured_history_for_known_id() -> None:
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "get_run_history",
+                    "arguments": {"run_id": run_id},
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    result = body["result"]
+    assert result["isError"] is False
+    structured = result["structuredContent"]
+    assert structured["run_id"] == run_id
+    assert structured["name"] == "32-ID FlyScan"
+    assert structured["status"] == "Running"
+    assert len(structured["events"]) == 1
+    assert structured["events"][0]["event_type"] == "RunStarted"
+    assert structured["observations"] == []
+
+
+@pytest.mark.contract
+def test_mcp_get_run_history_tool_returns_iserror_for_unknown_id() -> None:
+    with TestClient(create_app()) as client:
+        headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "get_run_history",
+                    "arguments": {"run_id": str(uuid4())},
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+    assert "not found" in body["result"]["content"][0]["text"].lower()
