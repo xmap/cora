@@ -118,6 +118,7 @@ from cora.run.features import (
     append_observations,
     complete_run,
     get_run,
+    get_run_history,
     hold_run,
     list_runs,
     record_witnessed_run,
@@ -227,6 +228,7 @@ def register_run_routes(app: FastAPI) -> None:
     app.include_router(adjust_run.router)
     app.include_router(append_observations.router)
     app.include_router(get_run.router)
+    app.include_router(get_run_history.router)
     app.include_router(list_runs.router)
     for validation_cls in (
         InvalidRunNameError,

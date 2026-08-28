@@ -35,9 +35,20 @@
 #
 # The EnvironmentFile path below assumes the env file lives directly in
 # $HOME; adjust both this unit and the printf above together if not.
+#
+# `ConditionHost=lyra` matters: $HOME is NFS-shared with arcturus (both
+# hosts read this same unit file), and this unit's own install steps
+# have no host check baked into the shell commands. Without this guard,
+# enabling it once from the wrong shell starts a second relay directly
+# on arcturus, silently absorbing 127.0.0.1:8099 there and making every
+# local reachability check pass without the real cross-host tunnel
+# (cora-status-tunnel.service) ever being exercised -- exactly what
+# happened 2026-08-28, caught only once STATUS_PUSH_ENABLED was flipped
+# on for real and the relay on lyra never saw a producer connect.
 
 [Unit]
 Description=CORA status relay (receives the live 2-BM feed, serves the status page)
+ConditionHost=lyra
 After=network-online.target
 Wants=network-online.target
 

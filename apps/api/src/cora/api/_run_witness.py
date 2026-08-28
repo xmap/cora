@@ -358,6 +358,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections import deque
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -420,6 +421,12 @@ if TYPE_CHECKING:
 _RECONNECT_DELAY_SECONDS = 5.0
 _CAPTURE_PROGRESS_DEFAULT_FLUSH_TICK_SECONDS = 10.0
 _PAGE_LIMIT = 100
+_PROGRESS_TRAIL_LENGTH = 60
+"""Bounded per-(capture_code, role) trail length for `progress_trails()`.
+Roughly the last minute or two at the substrate's monitor rate -- enough
+for a live viewer to read a slope, not a time-series store. Bounded by
+(open captures x roles x 60), the same shape `_last_progress` and
+`CaptureProgressFeeder`'s own buffer already argue for."""
 
 _log = get_logger(__name__)
 
@@ -507,6 +514,16 @@ class RunWitnessRecorder:
         self._settings = settings
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
         self._last_progress: dict[str, dict[str, CaptureProgressObservation]] = {}
+        self._progress_trail: dict[str, dict[str, deque[CaptureProgressObservation]]] = {}
+        """A short bounded trail per (capture_code, role) alongside the
+        retain-latest `_last_progress` above, so a live viewer can see a
+        recent shape rather than one point. See `_PROGRESS_TRAIL_LENGTH`.
+        Evicted in lockstep with `_last_progress` at the same three
+        sites (`_promote` / `_truncate_stale` / `_record_outcome`'s
+        success path): a stale carry-over must not ride onto a new
+        capture's trail any more than onto its latest reading.
+        `entries_run_observations` remains the durable record; this is
+        an in-memory convenience only."""
         self._last_precondition_bypass: dict[str, CapturePreconditionBypassObservation] = {}
         self._baseline_reader = baseline_reader
         self._capture_path_store = capture_path_store
@@ -582,6 +599,23 @@ class RunWitnessRecorder:
             readings = self._last_progress.get(capture_code)
             if readings:
                 result[run_id] = dict(readings)
+        return result
+
+    def progress_trails(self) -> dict[UUID, dict[str, list[CaptureProgressObservation]]]:
+        """A snapshot of the recent progress trail per role, keyed by
+        run_id, for every currently-open capture.
+
+        Same shape and rationale as `progress_readings()`, oldest first
+        per role, bounded at `_PROGRESS_TRAIL_LENGTH`. A capture with no
+        readings yet is absent from the result, not an empty dict.
+        Returns copies: the caller cannot mutate this recorder's own
+        state through it.
+        """
+        result: dict[UUID, dict[str, list[CaptureProgressObservation]]] = {}
+        for capture_code, run_id in self._open_captures.items():
+            trails = self._progress_trail.get(capture_code)
+            if trails:
+                result[run_id] = {role: list(trail) for role, trail in trails.items() if trail}
         return result
 
     async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
@@ -695,6 +729,9 @@ class RunWitnessRecorder:
             return
         by_role = self._last_progress.setdefault(observation.capture_code, {})
         by_role[observation.role] = observation
+        trail_by_role = self._progress_trail.setdefault(observation.capture_code, {})
+        trail = trail_by_role.setdefault(observation.role, deque(maxlen=_PROGRESS_TRAIL_LENGTH))
+        trail.append(observation)
 
     def observe_precondition_bypass(
         self, observation: CapturePreconditionBypassObservation
@@ -872,6 +909,7 @@ class RunWitnessRecorder:
         # promoting so a stale carry-over cannot ride onto the new
         # Run's eventual outcome.
         self._last_progress.pop(observation.capture_code, None)
+        self._progress_trail.pop(observation.capture_code, None)
         # Slice 13: same reasoning for a retained full_file_name
         # reading -- it describes the PREVIOUS capture's file, not this
         # one's, until a fresh reading arrives.
@@ -1060,6 +1098,7 @@ class RunWitnessRecorder:
         # different capture and must not inherit counts that describe
         # the one being truncated.
         self._last_progress.pop(code, None)
+        self._progress_trail.pop(code, None)
         # Slice 13: same reasoning, for the retained full_file_name
         # reading and its BEGUN reference point.
         self._last_capture_path.pop(code, None)
@@ -1170,6 +1209,7 @@ class RunWitnessRecorder:
         # BEGUN's truncate-then-promote clears them together, keeping
         # the two eviction states in lockstep.
         self._last_progress.pop(code, None)
+        self._progress_trail.pop(code, None)
         self._last_capture_path.pop(code, None)
         self._begun_at.pop(code, None)
         _log.info(

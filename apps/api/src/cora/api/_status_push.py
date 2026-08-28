@@ -29,8 +29,9 @@ to `_run_witness.py`'s hand-rolled shape than to the flag-watcher family.
 Each tick reads and pushes:
 
   - open Runs (`Running` + `Held`), each with `progress` from
-    `RunWitnessRecorder.progress_readings()` (`{}` when unavailable; see
-    `_render_progress`)
+    `RunWitnessRecorder.progress_readings()` and a `progress_trail` from
+    `progress_trails()` (`{}` when unavailable; see `_render_progress` /
+    `_render_progress_trail`)
   - open Subjects (`Received` / `Mounted` / `Measured` / `Removed`;
     `Returned` / `Stored` / `Discarded` are terminal and dropped)
   - open Campaigns (`Planned` / `Active` / `Held`; `Closed` / `Abandoned`
@@ -45,10 +46,18 @@ Each tick reads and pushes:
     (see `_DecisionTail`) rather than paged from the beginning, since
     Decisions have no "open" status to filter on and the table is
     unbounded
+  - each open Run's full exact-timestamped history (`get_run_history`),
+    pushed as a SEPARATE message kind on the same socket (see
+    `_RunHistoryTail`, `build_run_history_message`), refreshed
+    periodically while open and once more, marked terminal, the instant a
+    run leaves the open set -- this is REWIND mode's entire feed
 
-The payload is a full snapshot every push, never a delta: a fresh viewer,
-a reconnecting viewer, and a restarted relay are all served by "here is
-the current one".
+The snapshot payload is a full snapshot every push, never a delta: a
+fresh viewer, a reconnecting viewer, and a restarted relay are all served
+by "here is the current one". Run-history messages are the opposite: each
+one is pushed only when genuinely new (a fresh fetch or a terminal
+checkpoint), never repeated, since `_RunHistoryTail.poll` already tracks
+what is new itself.
 
 Deliberately reads ONLY the in-memory `RunWitnessRecorder` for progress,
 not the Postgres-durable `entries_run_observations` fallback
@@ -65,12 +74,13 @@ Every other watcher here authenticates as its own seeded Agent (a real
 Actor with its own grant set, so a missing grant is auditable per-agent).
 This module still uses `SYSTEM_PRINCIPAL_ID` for every read: the read scope
 has now widened past the single `ListRuns` command this module started
-with, to seven commands across seven BCs, which is exactly the trigger this
+with, to EIGHT commands across seven BCs (`GetRunHistory` joins the
+original seven, still within the Run BC), which is exactly the trigger this
 docstring named for standing up a dedicated seeded identity (mirroring
 `agent/seed_calibration_watcher.py`). That identity is NOT built in this
 change; doing so is a follow-up, tracked so the deferral is visible rather
 than silently indefinite. Until then, a Trust Policy that denies any of the
-seven read commands to `SYSTEM_PRINCIPAL_ID` blinds this feature for that
+eight read commands to `SYSTEM_PRINCIPAL_ID` blinds this feature for that
 domain only (each drain is independently try/except-guarded; see
 `_push_loop`), never the others.
 """
@@ -81,7 +91,7 @@ import asyncio
 import contextlib
 import hashlib
 import json
-from collections import deque
+from collections import OrderedDict, deque
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -101,6 +111,7 @@ from cora.infrastructure.projection import encode_cursor
 from cora.infrastructure.record_export import render_value
 from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_PRINCIPAL_ID
 from cora.run.errors import UnauthorizedError as _RunUnauthorizedError
+from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.list_runs import ListRuns
 from cora.safety.errors import UnauthorizedError as _SafetyUnauthorizedError
 from cora.safety.features.list_clearances import ListClearances
@@ -117,6 +128,8 @@ if TYPE_CHECKING:
     from cora.decision.features.list_decisions.handler import Handler as ListDecisionsHandler
     from cora.enclosure.features.list_enclosures.handler import Handler as ListEnclosuresHandler
     from cora.infrastructure.kernel import Kernel
+    from cora.run.features.get_run_history.handler import Handler as GetRunHistoryHandler
+    from cora.run.features.get_run_history.handler import RunHistoryView
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.safety.features.list_clearances.handler import Handler as ListClearancesHandler
     from cora.subject.features.list_subjects.handler import Handler as ListSubjectsHandler
@@ -139,6 +152,21 @@ _OPEN_CAMPAIGN_STATUSES: list[CampaignStatusFilter] = ["Planned", "Active", "Hel
 _ACTIVE_CLEARANCE_STATUS = "Active"
 _ACTIVE_ENCLOSURE_LIFECYCLE = "Active"
 _DECISION_RING_SIZE = 20
+_PROGRESS_TRAIL_POINTS = 30
+"""Cap on how many trail points ride the wire per (run, role), independent
+of `RunWitnessRecorder`'s own retention -- the payload stays bounded even
+if that retention ever grows."""
+_RUN_HISTORY_RING_SIZE = 20
+"""Producer-side cap on how many run histories `_RunHistoryTail` tracks at
+once, mirroring `_DECISION_RING_SIZE`'s reasoning. The relay keeps its own
+independent cap; this one exists so a long shift with many runs cannot
+grow this process's own memory without bound."""
+_RUN_HISTORY_REFRESH_TICKS = 15
+"""How often (in ticks) an open run's full history re-pushes: 30s at the
+2.0s default tick. A run already visible in LIVE mode does not need its
+REWIND timeline refreshed at the same 2Hz cadence; the terminal push (see
+`_RunHistoryTail.poll`) guarantees the final version is always complete
+regardless of where this clock happened to be when the run closed."""
 _MIN_UUID = UUID(int=0)
 """Sentinel id for `_DecisionTail`'s starting cursor: paired with "now" as
 the cursor's time component, so the `(time, id) > (cursor_time, cursor_id)`
@@ -202,6 +230,31 @@ def _render_progress(run_id: UUID, witness_recorder: RunWitnessRecorder | None) 
     }
 
 
+def _render_progress_trail(
+    run_id: UUID, witness_recorder: RunWitnessRecorder | None
+) -> dict[str, list[dict[str, Any]]]:
+    """The run's recent progress trail per role, JSON-safe, or `{}` when
+    unavailable. Same three-cases-alike `{}` posture as `_render_progress`.
+    Tail-sliced to `_PROGRESS_TRAIL_POINTS` independent of the recorder's
+    own retention, so the wire payload stays bounded either way."""
+    if witness_recorder is None:
+        return {}
+    trails = witness_recorder.progress_trails().get(run_id)
+    if not trails:
+        return {}
+    return {
+        role: [
+            {
+                "value": observation.value,
+                "commanded_total": observation.commanded_total,
+                "observed_at": render_value(observation.observed_at),
+            }
+            for observation in trail[-_PROGRESS_TRAIL_POINTS:]
+        ]
+        for role, trail in trails.items()
+    }
+
+
 async def _drain_open_runs(
     list_runs: ListRunsHandler, deps: Kernel, *, witness_recorder: RunWitnessRecorder | None
 ) -> tuple[list[dict[str, Any]], list[UUID]]:
@@ -230,6 +283,7 @@ async def _drain_open_runs(
                     "name": item.name,
                     "status": item.status,
                     "progress": _render_progress(item.run_id, witness_recorder),
+                    "progress_trail": _render_progress_trail(item.run_id, witness_recorder),
                 }
             )
             raw_run_ids.append(item.run_id)
@@ -408,6 +462,111 @@ class _DecisionTail:
         return list(self._ring)
 
 
+class _RunHistoryTail:
+    """Pushes each open run's full exact-timestamped history to the relay
+    at checkpoints, over the SAME outbound socket the snapshot uses, as a
+    separate message kind -- never inside the snapshot payload itself.
+
+    This is REWIND mode's entire feed. arcturus has no inbound
+    reachability, so a browser cannot ask arcturus for one run's history
+    on demand; instead arcturus proactively pushes full histories, and the
+    relay caches a bounded ring of them for a browser to pull from later
+    (`infra/status-relay/relay.py`). The cost is explicit and accepted:
+    REWIND only reaches runs pushed since the relay's own cache was last
+    populated, never arbitrary history from before this producer (or the
+    relay) last restarted.
+
+    A run's history refreshes every `_RUN_HISTORY_REFRESH_TICKS` while
+    open (cheap: a run visible in LIVE mode does not need its REWIND
+    timeline refreshed at the live tick's own cadence) and once more, the
+    instant it leaves the open-run set, with `terminal=True` -- this is
+    the checkpoint that lets the relay keep a completed run's history
+    after it drops off the live tables. Ring-capped at
+    `_RUN_HISTORY_RING_SIZE`, mirroring `_DecisionTail`'s reasoning:
+    tracking every run this process has ever seen would grow without
+    bound over a long shift.
+
+    One instance lives for the whole `_push_loop` call, not
+    per-connection, same as `_DecisionTail` -- `on_reconnect()` resets
+    only the per-run refresh clocks (not the ring) after a reconnect, so
+    every still-open run re-pushes promptly to repopulate the relay's own
+    cache, which is gone after any relay restart.
+    """
+
+    def __init__(self) -> None:
+        self._ring: OrderedDict[UUID, dict[str, Any]] = OrderedDict()
+        self._ticks_since_refresh: dict[UUID, int] = {}
+        self._open_last_tick: set[UUID] = set()
+
+    def on_reconnect(self) -> None:
+        self._ticks_since_refresh.clear()
+
+    async def poll(
+        self,
+        get_run_history: GetRunHistoryHandler,
+        deps: Kernel,
+        *,
+        open_run_ids: list[UUID],
+        generated_at: str,
+        producer_id: str,
+    ) -> list[dict[str, Any]]:
+        """Full history messages that are NEW this tick, and only those."""
+        open_set = set(open_run_ids)
+        messages: list[dict[str, Any]] = []
+
+        for run_id in open_run_ids:
+            due = (
+                run_id not in self._ticks_since_refresh
+                or self._ticks_since_refresh[run_id] >= _RUN_HISTORY_REFRESH_TICKS
+            )
+            if due:
+                view = await self._fetch(get_run_history, deps, run_id)
+                if view is not None:
+                    messages.append(
+                        self._store(
+                            view, terminal=False, generated_at=generated_at, producer_id=producer_id
+                        )
+                    )
+                self._ticks_since_refresh[run_id] = 0
+            else:
+                self._ticks_since_refresh[run_id] += 1
+
+        for run_id in self._open_last_tick - open_set:
+            view = await self._fetch(get_run_history, deps, run_id)
+            if view is not None:
+                messages.append(
+                    self._store(
+                        view, terminal=True, generated_at=generated_at, producer_id=producer_id
+                    )
+                )
+            self._ticks_since_refresh.pop(run_id, None)
+
+        self._open_last_tick = open_set
+        return messages
+
+    async def _fetch(
+        self, get_run_history: GetRunHistoryHandler, deps: Kernel, run_id: UUID
+    ) -> RunHistoryView | None:
+        return await get_run_history(
+            GetRunHistory(run_id=run_id),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+
+    def _store(
+        self, view: RunHistoryView, *, terminal: bool, generated_at: str, producer_id: str
+    ) -> dict[str, Any]:
+        message = build_run_history_message(
+            view=view, terminal=terminal, generated_at=generated_at, producer_id=producer_id
+        )
+        self._ring[view.run_id] = message
+        self._ring.move_to_end(view.run_id)
+        while len(self._ring) > _RUN_HISTORY_RING_SIZE:
+            self._ring.popitem(last=False)
+        return message
+
+
 def _content_hash(payload: dict[str, Any]) -> str:
     """Stable hash over the change-relevant payload, excluding generated_at
     and sequence, so an unchanged tick can be told apart from a real change."""
@@ -431,6 +590,7 @@ def build_snapshot(
     """Assemble the pushed payload. A pure function so it is unit-testable
     without a socket, a database, or a clock."""
     return {
+        "kind": "snapshot",
         "schema_version": 1,
         "producer_id": producer_id,
         "sequence": sequence,
@@ -445,6 +605,50 @@ def build_snapshot(
     }
 
 
+def build_run_history_message(
+    *,
+    view: RunHistoryView,
+    terminal: bool,
+    generated_at: str,
+    producer_id: str,
+) -> dict[str, Any]:
+    """Assemble one run-history push, a second message kind on the same
+    outbound socket the snapshot uses. Never folded into the snapshot
+    payload itself: that would multiply the live feed's per-tick bytes by
+    an order of magnitude to re-send history that has not changed. A pure
+    function, same rationale as `build_snapshot`."""
+    return {
+        "kind": "run_history",
+        "schema_version": 1,
+        "producer_id": producer_id,
+        "generated_at": generated_at,
+        "run_id": render_value(view.run_id),
+        "name": view.name,
+        "status": view.status,
+        "terminal": terminal,
+        "events": [
+            {
+                "event_type": event.event_type,
+                "occurred_at": render_value(event.occurred_at),
+                "recorded_at": render_value(event.recorded_at),
+                "payload": event.payload,
+            }
+            for event in view.events
+        ],
+        "observations": [
+            {
+                "channel_name": observation.channel_name,
+                "value": observation.value,
+                "categorical_value": observation.categorical_value,
+                "units": observation.units,
+                "sampled_at": render_value(observation.sampled_at),
+            }
+            for observation in view.observations
+        ],
+        "observations_truncated": view.observations_truncated,
+    }
+
+
 async def _build_payload_fields(
     deps: Kernel,
     *,
@@ -456,14 +660,23 @@ async def _build_payload_fields(
     list_enclosures: ListEnclosuresHandler,
     decision_tail: _DecisionTail,
     list_decisions: ListDecisionsHandler,
+    run_history_tail: _RunHistoryTail,
+    get_run_history: GetRunHistoryHandler,
     witness_recorder: RunWitnessRecorder | None,
-) -> dict[str, list[dict[str, Any]]]:
-    """Every domain's rows for one tick. Each drain is independently
-    guarded by the caller's `except _UNAUTHORIZED_ERRORS` (per-domain, not
-    caught here) so a missing grant on one command blinds only that
-    section of the page, never the whole tick."""
+    generated_at: str,
+    producer_id: str,
+) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    """Every domain's rows for one tick, plus any run-history messages that
+    are new this tick. Each drain is independently guarded by the caller's
+    `except _UNAUTHORIZED_ERRORS` (per-domain, not caught here) so a
+    missing grant on one command blinds only that section of the page,
+    never the whole tick.
+
+    Returns `(fields, history_messages)`, not one dict: the histories are
+    not a snapshot field (see `_RunHistoryTail`'s module docstring), so
+    they must never enter `_content_hash`'s change-detection input."""
     runs, raw_run_ids = await _drain_open_runs(list_runs, deps, witness_recorder=witness_recorder)
-    return {
+    fields = {
         "runs": runs,
         "subjects": await _drain_open_subjects(list_subjects, deps),
         "campaigns": await _drain_open_campaigns(list_campaigns, deps),
@@ -472,6 +685,14 @@ async def _build_payload_fields(
         "enclosures": await _drain_active_enclosures(list_enclosures, deps),
         "decisions": await decision_tail.poll(list_decisions, deps),
     }
+    history_messages = await run_history_tail.poll(
+        get_run_history,
+        deps,
+        open_run_ids=raw_run_ids,
+        generated_at=generated_at,
+        producer_id=producer_id,
+    )
+    return fields, history_messages
 
 
 async def _push_loop(
@@ -484,6 +705,7 @@ async def _push_loop(
     list_clearances: ListClearancesHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
+    get_run_history: GetRunHistoryHandler,
     producer_id: str,
     url: str,
     witness_recorder: RunWitnessRecorder | None,
@@ -494,9 +716,10 @@ async def _push_loop(
     reconnect; nothing here distinguishes them further, since v1's only
     remedy for either is "try again".
 
-    `decision_tail` is constructed ONCE, outside the reconnect loop below,
-    so "recent decisions" means since this process started, not since the
-    last successful connection.
+    `decision_tail` and `run_history_tail` are each constructed ONCE,
+    outside the reconnect loop below, so "recent decisions" / "which runs
+    have already had their history pushed" mean since this process
+    started, not since the last successful connection.
     """
     token = deps.settings.status_push_token
     headers = {"Authorization": f"Bearer {token.get_secret_value()}"} if token is not None else {}
@@ -504,6 +727,7 @@ async def _push_loop(
     decision_tail = _DecisionTail(
         started_at_cursor=encode_cursor(created_at=deps.clock.now(), item_id=_MIN_UUID)
     )
+    run_history_tail = _RunHistoryTail()
 
     backoff = _RECONNECT_INITIAL_SECONDS
     sequence = 0
@@ -516,9 +740,11 @@ async def _push_loop(
                 _log.info(f"{_LOG_PREFIX}.connected", url=url)
                 backoff = _RECONNECT_INITIAL_SECONDS
                 last_hash = None  # force one full push right after (re)connect
+                run_history_tail.on_reconnect()
                 ticks_since_push = _HEARTBEAT_TICKS  # push immediately on connect
                 while True:
-                    fields = await _build_payload_fields(
+                    generated_at = deps.clock.now().isoformat()
+                    fields, history_messages = await _build_payload_fields(
                         deps,
                         list_runs=list_runs,
                         list_subjects=list_subjects,
@@ -528,8 +754,17 @@ async def _push_loop(
                         list_enclosures=list_enclosures,
                         decision_tail=decision_tail,
                         list_decisions=list_decisions,
+                        run_history_tail=run_history_tail,
+                        get_run_history=get_run_history,
                         witness_recorder=witness_recorder,
+                        generated_at=generated_at,
+                        producer_id=producer_id,
                     )
+                    # Histories are exempt from the hash/heartbeat gate below
+                    # by construction: `poll` only ever returns what is new
+                    # this tick, so there is nothing to de-duplicate here.
+                    for message in history_messages:
+                        await sock.send(json.dumps(message))
                     content_hash = _content_hash(fields)
                     changed = content_hash != last_hash
                     heartbeat_due = ticks_since_push >= _HEARTBEAT_TICKS
@@ -537,7 +772,7 @@ async def _push_loop(
                         sequence += 1
                         snapshot = build_snapshot(
                             sequence=sequence,
-                            generated_at=deps.clock.now().isoformat(),
+                            generated_at=generated_at,
                             producer_id=producer_id,
                             **fields,
                         )
@@ -569,6 +804,7 @@ async def status_push_lifespan(
     list_clearances: ListClearancesHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
+    get_run_history: GetRunHistoryHandler,
     witness_recorder: RunWitnessRecorder | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn the StatusPush loop for the duration of the context.
@@ -616,6 +852,7 @@ async def status_push_lifespan(
             list_clearances=list_clearances,
             list_enclosures=list_enclosures,
             list_decisions=list_decisions,
+            get_run_history=get_run_history,
             producer_id=producer_id,
             url=url,
             witness_recorder=witness_recorder,
@@ -631,4 +868,4 @@ async def status_push_lifespan(
         _log.info(f"{_LOG_PREFIX}.stopped")
 
 
-__all__ = ["build_snapshot", "status_push_lifespan"]
+__all__ = ["build_run_history_message", "build_snapshot", "status_push_lifespan"]

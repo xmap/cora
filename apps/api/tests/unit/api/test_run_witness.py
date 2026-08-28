@@ -2358,6 +2358,128 @@ async def test_progress_readings_returns_a_copy_not_a_live_reference() -> None:
     assert "injected" not in recorder.progress_readings()[run_id]
 
 
+_PROGRESS_TRAIL_LENGTH = 60
+"""Mirrors `cora.api._run_witness._PROGRESS_TRAIL_LENGTH`. Kept as a local
+constant rather than importing the private module attribute."""
+
+
+@pytest.mark.unit
+async def test_progress_trails_keys_by_run_id_not_capture_code() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_saved", value=10.0))
+
+    trails = recorder.progress_trails()
+    assert set(trails) == {run_id}
+    assert [o.value for o in trails[run_id]["images_saved"]] == [10.0]
+
+
+@pytest.mark.unit
+async def test_progress_trails_is_empty_when_nothing_is_open() -> None:
+    recorder = _recorder(record_witnessed_run=_FakeRecordWitnessedRun())
+
+    assert recorder.progress_trails() == {}
+
+
+@pytest.mark.unit
+async def test_progress_trails_omits_an_open_capture_with_no_reading_yet() -> None:
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: uuid4()}
+    )
+
+    assert recorder.progress_trails() == {}
+
+
+@pytest.mark.unit
+async def test_progress_trails_returns_a_copy_not_a_live_reference() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+    recorder.observe_progress(_progress_obs(role="images_saved", value=1.0))
+
+    snapshot = recorder.progress_trails()
+    snapshot[run_id]["injected"] = [_progress_obs(role="injected", value=99.0)]
+
+    assert "injected" not in recorder.progress_trails()[run_id]
+
+
+@pytest.mark.unit
+async def test_progress_trails_retains_each_readings_own_observed_at() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+    first_at = _NOW
+    second_at = _NOW + timedelta(seconds=1)
+
+    recorder.observe_progress(_progress_obs(role="images_saved", value=1.0, observed_at=first_at))
+    recorder.observe_progress(_progress_obs(role="images_saved", value=2.0, observed_at=second_at))
+
+    trail = recorder.progress_trails()[run_id]["images_saved"]
+    assert [o.observed_at for o in trail] == [first_at, second_at]
+
+
+@pytest.mark.unit
+async def test_progress_trails_evicts_oldest_past_the_bound() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+
+    for i in range(_PROGRESS_TRAIL_LENGTH + 5):
+        recorder.observe_progress(_progress_obs(role="images_saved", value=float(i)))
+
+    trail = recorder.progress_trails()[run_id]["images_saved"]
+    assert len(trail) == _PROGRESS_TRAIL_LENGTH
+    assert [o.value for o in trail][:2] == [5.0, 6.0]
+    assert trail[-1].value == float(_PROGRESS_TRAIL_LENGTH + 4)
+
+
+@pytest.mark.unit
+async def test_promote_clears_the_progress_trail_retained_for_a_different_prior_capture() -> None:
+    """The trail companion to
+    `test_promote_clears_progress_retained_for_a_different_prior_capture`:
+    a stale capture's retained trail must not ride onto the NEW capture
+    `_promote` is about to open for the same code."""
+    stale_run_id = uuid4()
+    fresh_run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(run_id=fresh_run_id),
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        open_captures={_CODE: stale_run_id},
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_collected", value=999.0))
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert recorder.progress_trails().get(fresh_run_id) is None
+
+
+@pytest.mark.unit
+async def test_record_outcome_success_evicts_the_progress_trail() -> None:
+    """The trail companion eviction check for `_record_outcome`'s success
+    path, alongside the existing `_last_progress` coverage in
+    `test_truncate_then_promote_never_leaks_the_stale_captures_progress`."""
+    run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(run_id=run_id),
+        record_witnessed_run_outcome=outcome,
+        truncate_run=_FakeTruncateRun(),
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+    recorder.observe_progress(_progress_obs(role="images_collected", value=17.0))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert recorder.progress_trails() == {}
+
+
 @pytest.mark.unit
 async def test_run_witness_recorder_is_a_pass_through_when_recording_disabled() -> None:
     """The hard no-regression requirement: with recording off, the fake

@@ -15,6 +15,7 @@ from cora.run.features.adjust_run import tool as adjust_run_tool
 from cora.run.features.append_observations import tool as append_observations_tool
 from cora.run.features.complete_run import tool as complete_run_tool
 from cora.run.features.get_run import tool as get_run_tool
+from cora.run.features.get_run_history import tool as get_run_history_tool
 from cora.run.features.hold_run import tool as hold_run_tool
 from cora.run.features.list_runs import tool as list_runs_tool
 from cora.run.features.record_witnessed_run import tool as record_witnessed_run_tool
@@ -87,6 +88,10 @@ def register_run_tools(
     get_run_tool.register(
         mcp,
         get_handler=lambda: get_handlers().get_run,
+    )
+    get_run_history_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().get_run_history,
     )
     list_runs_tool.register(
         mcp,
