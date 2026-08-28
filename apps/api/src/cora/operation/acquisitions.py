@@ -28,11 +28,16 @@ to sibling PVs:
   - `{detector}:DetectorState_RBV` -> read once for final-state evidence
 
 Trigger-mode value mapping translates the substrate-neutral primitive
-vocabulary into AD-coded strings: `ExternalEdge` and `ExternalLevel`
-both collapse to AD's `"External"`; edge polarity vs level is carried
-on the trigger EMITTER (PandABox PCOMP, Aerotech PSO, etc.), not the
-detector. Non-AD detectors will land as their own action bodies; promote
-a shared shape when 3 detector families exist (rule-of-three).
+vocabulary into detector-driver-coded strings via `_TRIGGER_MODE_VALUES`,
+keyed by `ctx.trigger_dialect` (a DEPLOYMENT fact, `Settings.detector_trigger_dialect`,
+not a recipe fact): `ExternalEdge` and `ExternalLevel` always collapse to
+one External value; edge polarity vs level is carried on the trigger
+EMITTER (PandABox PCOMP, Aerotech PSO, etc.), not the detector. The
+`ADCore` dialect writes `"Internal"`/`"External"`; the `ADSpinnaker`
+dialect (APS 2-BM's FLIR camera) writes the INVERTED `"Off"`/`"On"` --
+see `_TRIGGER_MODE_VALUES`'s docstring for why. Non-AD detectors will
+land as their own action bodies; promote a shared shape when 3 detector
+families exist (rule-of-three).
 
 ## `Acquire_RBV` is read by index, not by the word "Done"
 
@@ -89,6 +94,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 from cora.infrastructure.logging import get_logger
+from cora.operation.errors import UnknownTriggerDialectError
 from cora.shared.binary_signal import binary_code
 from cora.shared.quality import believable
 
@@ -101,15 +107,58 @@ if TYPE_CHECKING:
 _log = get_logger(__name__)
 
 
-_AD_TRIGGER_MODE_VALUES: Mapping[str, str] = {
-    "Internal": "Internal",
-    "ExternalEdge": "External",
-    "ExternalLevel": "External",
+_TRIGGER_MODE_VALUES: Mapping[str, Mapping[str, str]] = {
+    "ADCore": {
+        "Internal": "Internal",
+        "ExternalEdge": "External",
+        "ExternalLevel": "External",
+    },
+    "ADSpinnaker": {
+        "Internal": "Off",
+        "ExternalEdge": "On",
+        "ExternalLevel": "On",
+    },
 }
-"""Substrate-neutral trigger_mode value -> areaDetector ADCore string.
+"""Substrate-neutral trigger_mode value -> detector-driver TriggerMode string, per dialect.
 
-AD collapses edge vs level into one `"External"` value; the
-distinction is carried at the trigger emitter, not the detector."""
+The dialect is a DEPLOYMENT fact (which camera driver is installed), not
+a recipe fact ("free-running" is true everywhere; "this camera is a
+FLIR" is true only of this building), so it rides `ActionContext.trigger_dialect`
+(sourced from `Settings.detector_trigger_dialect`), never a `CollectParams` field.
+
+`ADCore` is the plain areaDetector convention: `Internal` stays
+`"Internal"`, both External modes collapse to `"External"` (edge vs
+level is carried at the trigger emitter, not the detector).
+
+`ADSpinnaker` (the FLIR driver at APS 2-BM) is INVERTED relative to
+what a reader would guess: `Internal` maps to `"Off"` and both External
+modes map to `"On"`. This is not a naming quirk to normalise away.
+ADSpinnaker's `TriggerMode` PV does not ask "is the trigger internal or
+external"; it asks "is EXTERNAL triggering enabled". CORA's `Internal`
+(free-running, camera's own clock) is the state where external
+triggering is disabled, hence `Off`. A future reader who assumes
+`Internal -> On` "because On sounds like the trigger is active" has it
+exactly backwards. Confirmed live against `2bmSP1:cam1:TriggerMode`
+(a two-choice DBF_ENUM, `[0] Off` / `[1] On`, no `"Internal"` string in
+the set at all) and against the deployed `tomoscan_2bm.py`, which
+writes `CamTriggerMode='Off'` for its own internal-trigger path.
+"""
+
+
+def _resolve_trigger_mode_value(dialect: str, trigger_mode: str) -> str:
+    """Look up the detector-driver string for `trigger_mode` under `dialect`.
+
+    Raises `UnknownTriggerDialectError` naming the offending dialect and
+    the known ones, rather than letting an unrecognised
+    `ctx.trigger_dialect` surface as a bare `KeyError` deep inside a
+    write call. A wrong dialect must fail loudly: silently falling back
+    to `ADCore` would write a string the real camera's enum does not
+    accept, or worse, one it accepts with the inverted meaning.
+    """
+    table = _TRIGGER_MODE_VALUES.get(dialect)
+    if table is None:
+        raise UnknownTriggerDialectError(dialect, sorted(_TRIGGER_MODE_VALUES))
+    return table[trigger_mode]
 
 
 _POLL_INTERVAL_S: float = 0.05
@@ -265,7 +314,7 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
 
     await ctx.control_port.write(
         f"{params.detector}:TriggerMode",
-        _AD_TRIGGER_MODE_VALUES[params.trigger_mode],
+        _resolve_trigger_mode_value(ctx.trigger_dialect, params.trigger_mode),
     )
     await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
     await ctx.control_port.write(
@@ -284,6 +333,7 @@ async def _run_collect_cycle(ctx: ActionContext, params: CollectParams) -> Mappi
         "stopped_at": stopped_at.isoformat(),
         "repetitions_requested": params.repetitions,
         "trigger_mode": params.trigger_mode,
+        "trigger_dialect": ctx.trigger_dialect,
         "polarity": params.polarity,
         "source": params.source,
         "detector_state_final": state_reading.value,
@@ -445,7 +495,7 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
 
     await ctx.control_port.write(
         f"{params.detector}:TriggerMode",
-        _AD_TRIGGER_MODE_VALUES[params.trigger_mode],
+        _resolve_trigger_mode_value(ctx.trigger_dialect, params.trigger_mode),
     )
     await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
     await ctx.control_port.write(
@@ -473,6 +523,7 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
         "rate_requested": params.rate,
         "repetitions_requested": params.repetitions,
         "trigger_mode": params.trigger_mode,
+        "trigger_dialect": ctx.trigger_dialect,
         "polarity": params.polarity,
         "source": params.source,
         "detector_state_final": state_reading.value,

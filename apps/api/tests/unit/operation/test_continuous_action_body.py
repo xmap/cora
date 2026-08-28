@@ -87,11 +87,14 @@ def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     )
 
 
-def _ctx(port: InMemoryControlPort, params: Mapping[str, Any]) -> ActionContext:
+def _ctx(
+    port: InMemoryControlPort, params: Mapping[str, Any], *, trigger_dialect: str = "ADCore"
+) -> ActionContext:
     return ActionContext(
         control_port=port,
         clock=FakeClock(_FIXED_NOW),
         params=params,
+        trigger_dialect=trigger_dialect,
     )
 
 
@@ -259,6 +262,55 @@ async def test_continuous_writes_in_fly_scan_order_and_returns_evidence() -> Non
     assert result["polarity"] == "Rising"
     assert result["source"] == "2bma:PCOMP1.OUT"
     assert result["detector_state_final"] == "Idle"
+
+
+@pytest.mark.unit
+async def test_continuous_external_edge_ad_spinnaker_dialect_writes_on() -> None:
+    """ADSpinnaker dialect: ExternalEdge -> 'On' (external triggering enabled)."""
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    result = await continuous(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "ExternalEdge",
+                "polarity": "Rising",
+                "source": "2bma:PCOMP1.OUT",
+                "axis": _AXIS,
+                "start": 0.0,
+                "stop": 180.0,
+                "repetitions": 1500,
+                "dwell": 0.025,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+    assert result["trigger_dialect"] == "ADSpinnaker"
+
+
+@pytest.mark.unit
+async def test_continuous_internal_trigger_ad_spinnaker_dialect_writes_off() -> None:
+    """ADSpinnaker dialect: Internal (free-running) -> 'Off' (external triggering disabled)."""
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    await continuous(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "Internal",
+                "axis": _AXIS,
+                "start": 0.0,
+                "stop": 180.0,
+                "repetitions": 1500,
+                "dwell": 0.025,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "Off"
 
 
 @pytest.mark.unit

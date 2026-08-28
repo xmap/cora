@@ -23,6 +23,11 @@ Coverage spans the two boundaries the body sits on:
   - Unseeded Acquire_RBV propagates ControlNotConnectedError
   - Unseeded detector base PVs propagate ControlNotConnectedError from write
 
+  Trigger dialect (ctx.trigger_dialect, per-deployment vocabulary):
+  - ADCore (default) Internal/ExternalEdge/ExternalLevel -> Internal/External/External
+  - ADSpinnaker (APS 2-BM FLIR driver) -> Off/On/On, the INVERTED mapping
+  - Unknown dialect raises UnknownTriggerDialectError, not KeyError
+
   End-to-end via Conductor:
   - InMemoryActionRegistry({"collect": collect}) + ActionStep("collect", ...)
     produces ConductorResult.succeeded=True and a step entry whose
@@ -50,6 +55,7 @@ from cora.operation.conductor import (
     Conductor,
     InMemoryActionRegistry,
 )
+from cora.operation.errors import UnknownTriggerDialectError
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Measurement,
@@ -109,11 +115,14 @@ def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Measurement | None
     )
 
 
-def _ctx(port: InMemoryControlPort, params: Mapping[str, Any]) -> ActionContext:
+def _ctx(
+    port: InMemoryControlPort, params: Mapping[str, Any], *, trigger_dialect: str = "ADCore"
+) -> ActionContext:
     return ActionContext(
         control_port=port,
         clock=FakeClock(_FIXED_NOW),
         params=params,
+        trigger_dialect=trigger_dialect,
     )
 
 
@@ -315,6 +324,7 @@ async def test_collect_internal_trigger_writes_configure_pvs_and_returns_evidenc
         "stopped_at": _FIXED_NOW.isoformat(),
         "repetitions_requested": 5,
         "trigger_mode": "Internal",
+        "trigger_dialect": "ADCore",
         "polarity": None,
         "source": None,
         "detector_state_final": "Idle",
@@ -323,7 +333,7 @@ async def test_collect_internal_trigger_writes_configure_pvs_and_returns_evidenc
 
 @pytest.mark.unit
 async def test_collect_external_edge_maps_trigger_mode_to_ad_external_string() -> None:
-    """ExternalEdge -> areaDetector's 'External' string on TriggerMode."""
+    """ExternalEdge -> areaDetector's 'External' string on TriggerMode (ADCore dialect)."""
     port = InMemoryControlPort()
     _seed_detector(port)
     await collect(
@@ -344,6 +354,7 @@ async def test_collect_external_edge_maps_trigger_mode_to_ad_external_string() -
 
 @pytest.mark.unit
 async def test_collect_external_level_maps_trigger_mode_to_ad_external_string() -> None:
+    """ExternalLevel -> areaDetector's 'External' string on TriggerMode (ADCore dialect)."""
     port = InMemoryControlPort()
     _seed_detector(port)
     await collect(
@@ -359,6 +370,85 @@ async def test_collect_external_level_maps_trigger_mode_to_ad_external_string() 
         )
     )
     assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "External"
+
+
+@pytest.mark.unit
+async def test_collect_internal_trigger_ad_spinnaker_dialect_writes_off() -> None:
+    """ADSpinnaker dialect: Internal (free-running) -> 'Off' (external triggering disabled).
+
+    This is the inverted mapping: the FLIR/Spinnaker driver's TriggerMode
+    asks whether EXTERNAL triggering is enabled, so CORA's free-running
+    Internal is the Off state.
+    """
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    result = await collect(
+        _ctx(
+            port,
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.1},
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "Off"
+    assert result["trigger_dialect"] == "ADSpinnaker"
+
+
+@pytest.mark.unit
+async def test_collect_external_edge_ad_spinnaker_dialect_writes_on() -> None:
+    """ADSpinnaker dialect: ExternalEdge -> 'On' (external triggering enabled)."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    await collect(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "ExternalEdge",
+                "polarity": "Rising",
+                "source": "2bma:PCOMP1.OUT",
+                "repetitions": 10,
+                "dwell": 0.025,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+
+
+@pytest.mark.unit
+async def test_collect_external_level_ad_spinnaker_dialect_writes_on() -> None:
+    """ADSpinnaker dialect: ExternalLevel -> 'On' (external triggering enabled)."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    await collect(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "ExternalLevel",
+                "source": "2bma:gate:OUT",
+                "repetitions": 1,
+                "dwell": 0.5,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+
+
+@pytest.mark.unit
+async def test_collect_unknown_trigger_dialect_raises_named_error() -> None:
+    """An unrecognised trigger_dialect must fail loudly, not KeyError."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    with pytest.raises(UnknownTriggerDialectError, match="unknown detector_trigger_dialect"):
+        await collect(
+            _ctx(
+                port,
+                {"detector": _DETECTOR, "trigger_mode": "Internal", "dwell": 0.1},
+                trigger_dialect="NotARealDialect",
+            )
+        )
 
 
 @pytest.mark.unit

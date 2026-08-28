@@ -38,6 +38,25 @@ class UnknownActionError(Exception):
         self.name = name
 
 
+class UnknownTriggerDialectError(ValueError):
+    """`ActionContext.trigger_dialect` names a dialect `acquisitions` does not know.
+
+    Application-layer, not domain-layer: which detector-driver vocabulary
+    a deployment's camera speaks is a wiring/configuration fact
+    (`Settings.detector_trigger_dialect`), not an aggregate invariant.
+    Raised instead of letting a typo'd or unconfigured dialect surface as
+    a bare `KeyError`, which would name neither the bad value nor what
+    was expected. A wrong dialect must fail loudly: silently falling
+    back to a default would write a string the real camera's enum does
+    not accept, or worse, one it accepts with the inverted meaning.
+    """
+
+    def __init__(self, dialect: str, known_dialects: list[str]) -> None:
+        super().__init__(
+            f"unknown detector_trigger_dialect {dialect!r}; known dialects: {known_dialects}"
+        )
+
+
 class SteeringWireMismatchError(Exception):
     """A steered conduct request's space/objective does not line up with the recipe.
 

@@ -87,11 +87,14 @@ def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     )
 
 
-def _ctx(port: InMemoryControlPort, params: Mapping[str, Any]) -> ActionContext:
+def _ctx(
+    port: InMemoryControlPort, params: Mapping[str, Any], *, trigger_dialect: str = "ADCore"
+) -> ActionContext:
     return ActionContext(
         control_port=port,
         clock=FakeClock(_FIXED_NOW),
         params=params,
+        trigger_dialect=trigger_dialect,
     )
 
 
@@ -209,6 +212,29 @@ async def test_discrete_walks_three_points_in_order_and_runs_collect_per_point()
         assert entry["collect"]["detector_state_final"] == "Idle"
     # The last axis write should be visible on the port now.
     assert (await port.read(_AXIS)).value == 90.0
+
+
+@pytest.mark.unit
+async def test_discrete_internal_trigger_ad_spinnaker_dialect_writes_off_per_point() -> None:
+    """The dialect rides ctx, so every composed collect cycle resolves it the same way."""
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    result = await discrete(
+        _ctx(
+            port,
+            {
+                "detector": _DETECTOR,
+                "trigger_mode": "Internal",
+                "axis": _AXIS,
+                "points": (0.0, 45.0),
+                "dwell": 0.05,
+            },
+            trigger_dialect="ADSpinnaker",
+        )
+    )
+    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "Off"
+    for entry in result["per_point_results"]:
+        assert entry["collect"]["trigger_dialect"] == "ADSpinnaker"
 
 
 @pytest.mark.unit

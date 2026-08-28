@@ -789,6 +789,7 @@ class ActionContext:
     control_port: ControlPort
     clock: Clock
     params: Mapping[str, Any]
+    trigger_dialect: str = "ADCore"
 
 
 ActionBody = Callable[[ActionContext], Awaitable[Mapping[str, Any]]]
@@ -1052,9 +1053,15 @@ class Conductor:
         end_iteration: EndProcedureIterationHandler | None = None,
         append_diagnostics: AppendProcedureDiagnosticsHandler | None = None,
         append_outcomes: AppendProcedureOutcomesHandler | None = None,
+        trigger_dialect: str = "ADCore",
     ) -> None:
         self._control_port = control_port
         self._append_step = append_step
+        # Deployment fact, not a recipe fact: which detector-driver vocabulary
+        # `cora.operation.acquisitions` writes onto TriggerMode. Threaded
+        # through to every `ActionContext` this Conductor builds; see
+        # `Settings.detector_trigger_dialect` for the deployment-facing knob.
+        self._trigger_dialect = trigger_dialect
         # Optional: only wired when a GP/BO substrate is in play. When None,
         # a steered pass whose advice carries diagnostics simply skips the
         # audit write (the decision itself is unaffected). Mirrors the other
@@ -3217,6 +3224,7 @@ class Conductor:
                     control_port=port,
                     clock=self._clock,
                     params=step.params,
+                    trigger_dialect=self._trigger_dialect,
                 )
             )
         except _CONTROL_ERRORS as exc:

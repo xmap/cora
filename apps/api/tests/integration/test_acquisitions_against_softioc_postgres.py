@@ -22,6 +22,14 @@ tier proves wire framing + record routing, not the detector
 finite-state machine. Detector mid-flight timing (Acquire_RBV staying
 at `Acquiring` until pulses complete) is covered at the unit tier via
 the IteratingPort fixture.
+
+The softIOC also carries a `cam2:*` family identical to `cam1:*` except
+`TriggerMode`'s enum, which is shaped like the real ADSpinnaker (FLIR)
+driver at APS 2-BM (`Off`/`On` only, no `Internal`/`External` member).
+`test_conductor_runs_collect_action_ad_spinnaker_dialect_writes_off_against_softioc`
+below is the one test in this file that talks to `cam2:*`, and it is
+the only test whose fixture enum does not already agree by construction
+with the string the dialect under test writes.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -100,6 +108,7 @@ def _build_conductor(
     complete: object,
     abort: object,
     append: object,
+    trigger_dialect: str = "ADCore",
 ) -> Conductor:
     _ = (deps_event_store, db_pool)  # surfaced in the per-test deps closure
     return Conductor(
@@ -111,6 +120,7 @@ def _build_conductor(
         start_procedure=start,  # type: ignore[arg-type]
         complete_procedure=complete,  # type: ignore[arg-type]
         abort_procedure=abort,  # type: ignore[arg-type]
+        trigger_dialect=trigger_dialect,
     )
 
 
@@ -205,6 +215,102 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
         assert trigger_mode.value == "Internal"
         assert acquire_time.value == pytest.approx(0.05)
         assert num_images.value == 3
+
+
+@pytest.mark.integration
+async def test_conductor_runs_collect_action_ad_spinnaker_dialect_writes_off_against_softioc(
+    db_pool: asyncpg.Pool,
+    softioc: str,
+) -> None:
+    """ADSpinnaker dialect writes 'Off' for Internal, against a camera whose
+    TriggerMode enum ONLY accepts Off/On (`cam2:*`, see `_softioc.py`'s
+    "cam2:* -- ADSpinnaker-shaped TriggerMode camera" section).
+
+    This is the fixture-side half of the fix: `cam1:*`'s ADCore-shaped enum
+    happens to accept the same strings the ADCore dialect writes, so every
+    other test in this file proves nothing about a REAL camera's vocabulary.
+    `cam2:*` has a genuinely different enum (no "Internal"/"External" member
+    at all), so this test only passes if the dialect resolution actually
+    picks the ADSpinnaker table, not merely if the write call succeeds.
+    """
+    procedure_id = UUID("01900000-0000-7000-8000-0000020d0400")
+    started_event_id = UUID("01900000-0000-7000-8000-0000020d0401")
+    logbook_id = UUID("01900000-0000-7000-8000-0000020d0402")
+    open_event_id = UUID("01900000-0000-7000-8000-0000020d0403")
+    collect_marker_id = UUID("01900000-0000-7000-8000-0000020d0404")
+    collect_step_id = UUID("01900000-0000-7000-8000-0000020d0405")
+    completed_event_id = UUID("01900000-0000-7000-8000-0000020d0406")
+
+    deps = build_postgres_deps(
+        db_pool,
+        now=_NOW,
+        ids=[
+            started_event_id,
+            logbook_id,
+            open_event_id,
+            collect_marker_id,
+            collect_step_id,
+            completed_event_id,
+        ],
+    )
+    await _seed_defined_procedure(deps.event_store, procedure_id)
+    step_store = PostgresActivityStore(db_pool)
+    control_port = ControlPortRegistry()
+    control_port.register_substrate_port(softioc, EpicsCaControlPort(), "epics_ca")
+    conductor = _build_conductor(
+        deps.event_store,
+        db_pool,
+        control_port,
+        clock=deps.clock,
+        id_generator=deps.id_generator,
+        start=bind_start(deps),
+        complete=bind_complete(deps),
+        abort=bind_abort(deps),
+        append=bind_append(deps, step_store=step_store),
+        trigger_dialect="ADSpinnaker",
+    )
+
+    try:
+        result = await conductor.conduct(
+            procedure_id=procedure_id,
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+            steps=(
+                ActionStep(
+                    name="collect",
+                    params={
+                        "detector": f"{softioc}cam2",
+                        "trigger_mode": "Internal",
+                        "repetitions": 3,
+                        "dwell": 0.05,
+                    },
+                ),
+            ),
+        )
+    finally:
+        await control_port.aclose()
+
+    assert result.succeeded is True
+    assert result.completed_count == 1
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT payload
+            FROM entries_operation_procedure_activities
+            WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'
+            """,
+            procedure_id,
+        )
+    payload = rows[0]["payload"]
+    assert payload["result"] == "ok"
+    result_data = payload["result_data"]
+    assert result_data["trigger_mode"] == "Internal"
+    assert result_data["trigger_dialect"] == "ADSpinnaker"
+
+    async with control_port_reuse(softioc) as port:
+        trigger_mode = await port.read(f"{softioc}cam2:TriggerMode")
+        assert trigger_mode.value == "Off"
 
 
 @pytest.mark.integration

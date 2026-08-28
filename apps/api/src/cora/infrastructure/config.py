@@ -717,6 +717,23 @@ class Settings(BaseSettings):
     # through Settings must set it too; that keystroke is the point.
     control_writes_enabled: bool = False
 
+    # Detector trigger-mode value dialect for `cora.operation.acquisitions`.
+    # Which strings CORA's neutral `trigger_mode` (`Internal` /
+    # `ExternalEdge` / `ExternalLevel`) writes onto a detector's
+    # `TriggerMode` PV is a fact about THIS deployment's camera driver,
+    # not about the recipe: "free-running" is true everywhere forever,
+    # "this camera is a FLIR" is true only of this building. `ADCore`
+    # (default) is the plain areaDetector convention
+    # (`Internal`/`External`); every existing deployment keeps its
+    # current behaviour unchanged. `ADSpinnaker` is the FLIR/Spinnaker
+    # driver at APS 2-BM, whose `TriggerMode` enum only accepts
+    # `Off`/`On` and asks "is external triggering enabled", so CORA's
+    # `Internal` maps to `Off` and both External modes map to `On`,
+    # inverted relative to the ADCore mapping. See
+    # `cora.operation.acquisitions._TRIGGER_MODE_VALUES` for the table
+    # and the inversion's rationale. Read from DETECTOR_TRIGGER_DIALECT.
+    detector_trigger_dialect: Literal["ADCore", "ADSpinnaker"] = "ADCore"
+
     # ComputePort substrate selection for the conduct runtime.
     # `in_memory` (default) is the Simulated fake: the conduct surface
     # is reachable but every job is Simulated, so no real subprocess
