@@ -8,7 +8,12 @@ The first browser-facing surface, `infra/status-relay/page.html` (the live
 2-BM status page; see `docs/stack/deployment.md#live-status-feed`), is one
 static HTML file with a `<script>` tag, no framework, no build step. It gets
 its data from a live WebSocket the relay pushes to, renders a handful of
-tables, and that's it.
+tables, and that's it. A second file, `infra/status-relay/scrubber.js`
+(copy-and-adapted from the paper demo's `docs/javascripts/scrubber-demo.js`,
+deliberately not shared with it), adds a rewind view over one Run's pushed
+history, fetched with a plain `fetch()` against the relay's own two REST
+reads rather than the live socket. Still no framework, no build step, no
+bundler: two plain scripts.
 
 Next.js was picked below for a real multi-page application with routing,
 shared component state, and a build pipeline; this page has none of those.

@@ -79,6 +79,106 @@
   .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
   .no-progress { color: var(--muted); font-style: italic; }
   .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  /* ---- Rewind scrubber, adapted from docs/stylesheets/extra.css's
+     .cora-scrubber block (the paper demo's own styling). Font stacks
+     substituted for system fonts: this page must not depend on the docs
+     site's Google Fonts load to render correctly. Fidelity-badge and
+     tamper-button rules dropped; this page never carries those controls. */
+  .cora-scrubber {
+    --cs-surface: #10141b;
+    --cs-panel: #161c26;
+    --cs-panel-2: #1c2531;
+    --cs-line: #2a323f;
+    --cs-ink: #e7ecf2;
+    --cs-sub: #aab4c2;
+    --cs-mute: #768091;
+    --cs-good: #3fb985;
+    --cs-warn: #e6b24a;
+    --cs-alarm: #f0644b;
+    --cs-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    margin: 1rem 0 0.4rem;
+    border-radius: 14px;
+    background: radial-gradient(120% 140% at 0% 0%, #131a24 0%, var(--cs-surface) 60%);
+    border: 1px solid var(--cs-line);
+    overflow: hidden;
+    color: var(--cs-ink);
+    font-feature-settings: "tnum" 1;
+  }
+  .cora-scrubber__chrome { padding: 0.9rem 1rem 1.1rem; }
+  .cs-titlebar {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    padding-bottom: 0.8rem; border-bottom: 1px solid var(--cs-line);
+  }
+  .cs-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--cs-alarm);
+    box-shadow: 0 0 0 0 rgba(240, 100, 75, 0.55); animation: cs-beacon 2.6s ease-out infinite;
+  }
+  @keyframes cs-beacon {
+    0% { box-shadow: 0 0 0 0 rgba(240, 100, 75, 0.5); }
+    70% { box-shadow: 0 0 0 7px rgba(240, 100, 75, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(240, 100, 75, 0); }
+  }
+  .cs-title { font-weight: 600; font-size: 1.02rem; }
+  .cs-subtitle { font-family: var(--cs-mono); font-size: 0.7rem; color: var(--cs-mute); }
+  .cs-controls { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .cs-btn {
+    font-size: 0.72rem; font-weight: 500; color: var(--cs-sub); background: var(--cs-panel-2);
+    border: 1px solid var(--cs-line); border-radius: 7px; padding: 0.34rem 0.66rem;
+    cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .cs-btn:hover { color: var(--cs-ink); border-color: color-mix(in srgb, var(--cs-warn) 60%, var(--cs-line)); }
+  .cs-play[aria-pressed="true"] { color: #1a130a; background: var(--cs-warn); border-color: var(--cs-warn); }
+  .cs-btn:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
+  .cs-slider:focus-visible { outline: none; }
+  .cs-slider:focus-visible .cs-slider-thumb { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
+  .cs-stage { overflow-x: auto; margin-top: 0.7rem; }
+  .cora-scrubber__svg { display: block; width: 100%; min-width: 640px; height: auto; touch-action: none; cursor: ew-resize; }
+  .cs-baseline, .cs-axis, .cs-tick { stroke: var(--cs-line); stroke-width: 1; }
+  .cs-lane-label { fill: var(--cs-sub); font-size: 11px; }
+  .cs-tick-label { fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 10px; }
+  .cs-run-line { stroke: var(--cs-sub); stroke-width: 1.6; fill: none; }
+  .cs-life-label { font-size: 9.5px; font-weight: 500; fill: var(--cs-sub); }
+  .cs-mark { stroke: var(--cs-surface); stroke-width: 1; transition: opacity 0.12s ease; }
+  .cs-mark--setpoint { fill: var(--cs-ink); }
+  .cs-mark--acquire { fill: var(--cs-sub); }
+  .cs-mark--check { fill: var(--cs-warn); }
+  .cs-future { opacity: 0.25; }
+  .cs-cursor { stroke: var(--cs-alarm); stroke-width: 1.4; stroke-dasharray: 4 3; }
+  .cs-cursor-handle { fill: var(--cs-alarm); stroke: var(--cs-surface); stroke-width: 1.2; }
+  .cs-slider {
+    position: relative; height: 22px; margin: 0.4rem 0 0.2rem; display: flex;
+    align-items: center; cursor: pointer; touch-action: none;
+  }
+  .cs-slider-track {
+    position: relative; flex: 1; margin: 0 2.61% 0 9.13%; height: 5px; border-radius: 3px;
+    background: var(--cs-panel-2); border: 1px solid var(--cs-line);
+  }
+  .cs-slider-fill {
+    position: absolute; inset: 0 auto 0 0; width: 0;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--cs-alarm) 55%, var(--cs-warn)), var(--cs-alarm));
+  }
+  .cs-slider-thumb {
+    position: absolute; top: 50%; left: 0; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--cs-alarm); border: 2px solid var(--cs-surface);
+    transform: translate(-50%, -50%); transition: transform 0.1s ease; pointer-events: none;
+  }
+  .cs-slider:hover .cs-slider-thumb, .cs-slider:focus-visible .cs-slider-thumb { transform: translate(-50%, -50%) scale(1.18); }
+  .cs-panels { display: grid; grid-template-columns: 1fr; gap: 0.7rem; margin-top: 0.6rem; }
+  .cs-readout { background: var(--cs-panel); border: 1px solid var(--cs-line); border-radius: 10px; padding: 0.7rem 0.85rem; }
+  .cs-readout-head { font-family: var(--cs-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--cs-mute); margin-bottom: 0.55rem; }
+  .cs-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.2rem 0; border-bottom: 1px solid color-mix(in srgb, var(--cs-line) 55%, transparent); }
+  .cs-row:last-child { border-bottom: 0; }
+  .cs-row-key { font-size: 0.74rem; color: var(--cs-sub); }
+  .cs-row-val { font-family: var(--cs-mono); font-size: 0.78rem; color: var(--cs-ink); text-align: right; }
+  .cs-tone--good { color: var(--cs-good); }
+  .cs-tone--warn { color: var(--cs-warn); }
+  .cs-omitted-note { font-size: 0.7rem; color: var(--cs-mute); margin-top: 0.5rem; }
+  #rewind-picker { background: var(--row-border); color: var(--fg); border: 1px solid var(--row-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.9rem; }
+  #rewind-back { margin-left: 0.5rem; }
+  @media (prefers-reduced-motion: reduce) {
+    .cs-dot, .cs-mark { animation: none; transition: none; }
+  }
 </style>
 </head>
 <body>
@@ -136,8 +236,21 @@
     <div id="decisions-empty" class="empty" style="display: none;">
       no decisions since this page's producer started
     </div>
+
+    <h2>Rewind</h2>
+    <div>
+      <select id="rewind-picker">
+        <option value="">Pick a run to rewind...</option>
+      </select>
+      <button type="button" id="rewind-back" class="cs-btn" style="display: none;">Back to live</button>
+    </div>
+    <div id="rewind-empty" class="empty">
+      no runs pushed since the relay started -- rewind only reaches runs seen while this relay has been up
+    </div>
+    <div id="rewind-stage"></div>
   </div>
 
+<script src="/scrubber.js"></script>
 <script>
 (function () {
   "use strict";
@@ -334,6 +447,10 @@
     } catch (err) {
       return;
     }
+    if (msg.kind === "run_history_index") {
+      renderRewindPicker(msg.runs);
+      return;
+    }
     if (Object.prototype.hasOwnProperty.call(msg, "producer_connected")) {
       producerConnected = msg.producer_connected;
       if (!producerConnected) {
@@ -353,6 +470,72 @@
     renderDecisions(msg.decisions);
     renderBanner();
   }
+
+  var rewindPickerEl = document.getElementById("rewind-picker");
+  var rewindBackEl = document.getElementById("rewind-back");
+  var rewindStageEl = document.getElementById("rewind-stage");
+  var rewindEmptyEl = document.getElementById("rewind-empty");
+
+  function renderRewindPicker(runs) {
+    var selected = rewindPickerEl.value;
+    while (rewindPickerEl.options.length > 1) {
+      rewindPickerEl.remove(1);
+    }
+    runs.forEach(function (run) {
+      var opt = document.createElement("option");
+      opt.value = run.run_id;
+      opt.textContent = run.name + " (" + run.status + (run.terminal ? ", finished" : "") + ")";
+      rewindPickerEl.appendChild(opt);
+    });
+    rewindPickerEl.value = selected;
+    rewindEmptyEl.style.display = runs.length === 0 ? "block" : "none";
+  }
+
+  function showRewind(runId) {
+    fetch("/run-history/" + encodeURIComponent(runId))
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().then(function (body) {
+            throw new Error(body.detail || "could not load run history");
+          });
+        }
+        return resp.json();
+      })
+      .then(function (history) {
+        rewindStageEl.textContent = "";
+        window.CoraScrubber.mount(rewindStageEl, history);
+        rewindBackEl.style.display = "inline-block";
+      })
+      .catch(function (err) {
+        rewindStageEl.textContent = String(err.message || err);
+      });
+  }
+
+  function backToLive() {
+    rewindPickerEl.value = "";
+    rewindStageEl.textContent = "";
+    rewindBackEl.style.display = "none";
+  }
+
+  rewindPickerEl.addEventListener("change", function () {
+    if (rewindPickerEl.value) {
+      showRewind(rewindPickerEl.value);
+    } else {
+      backToLive();
+    }
+  });
+  rewindBackEl.addEventListener("click", backToLive);
+
+  fetch("/run-history")
+    .then(function (resp) {
+      return resp.json();
+    })
+    .then(function (body) {
+      renderRewindPicker(body.runs || []);
+    })
+    .catch(function () {
+      /* the /watch socket's own index frame will populate this shortly */
+    });
 
   function connect() {
     var proto = window.location.protocol === "https:" ? "wss:" : "ws:";

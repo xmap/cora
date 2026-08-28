@@ -871,6 +871,27 @@ leaving arcturus. `journalctl --user -u cora-status-relay -f` on lyra and
 `journalctl --user -u cora-status-tunnel -f` on arcturus are the two logs to
 watch during first boot.
 
+**Rewind, for the Runs domain only (pilot scope):** alongside the live
+snapshot, arcturus pushes each open Run's full exact-timestamped history
+(`GetRunHistory`) as a second message kind on the same socket, refreshed
+periodically while open and once more, marked terminal, the instant a run
+closes. The relay caches up to 20 of these in memory (`_RUN_HISTORY_CACHE_SIZE`
+in `relay.py`) and serves them to a browser on request:
+
+| Endpoint | Serves |
+| --- | --- |
+| `GET /run-history` | The current index (id, name, status, terminal, generated_at per cached run) |
+| `GET /run-history/<run_id>` | One cached run's full history, or 404 if it was never pushed since this relay started |
+| `GET /scrubber.js` | The rewind scrubber's script (`infra/status-relay/scrubber.js`) |
+
+Both reads are from the relay's own cache; the browser never reaches toward
+arcturus. This is a direct consequence of arcturus having no inbound
+reachability at all: rewind can only ever reach a run pushed since the
+relay's own cache was last populated, capped at 20, and a relay restart
+empties it. The page says so plainly on a miss. The other six live domains
+(Subjects, Campaigns, Datasets, Clearances, Enclosures, Decisions) have no
+rewind; Runs is the only domain with a natural bounded start and end.
+
 ## Deferred
 
 | Concern | Status | Trigger |
