@@ -21,6 +21,7 @@ contract that `test_collect_action_body.py` covers.
   - rate is evidence-only (NOT written to any PV)
   - Evidence carries axis_final_actual = readback of axis after sweep
   - Unconnected axis propagates ControlNotConnectedError
+  - repetitions=None raises UnboundedAcquisitionError before any PV write
 
   End-to-end via Conductor:
   - InMemoryActionRegistry({"continuous": continuous}) + ActionStep
@@ -47,6 +48,7 @@ from cora.operation.conductor import (
     Conductor,
     InMemoryActionRegistry,
 )
+from cora.operation.errors import UnboundedAcquisitionError
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Measurement,
@@ -67,6 +69,7 @@ _AXIS = "2bma:rot:val"
 def _seed_detector_and_axis(port: InMemoryControlPort) -> None:
     port.simulate_connect(f"{_DETECTOR}:TriggerMode")
     port.simulate_connect(f"{_DETECTOR}:AcquireTime")
+    port.simulate_connect(f"{_DETECTOR}:ImageMode")
     port.simulate_connect(f"{_DETECTOR}:NumImages")
     port.simulate_connect(f"{_DETECTOR}:Acquire")
     port.simulate_connect(_AXIS)
@@ -241,13 +244,15 @@ async def test_continuous_writes_in_fly_scan_order_and_returns_evidence() -> Non
     # Fly-scan order:
     #   1. TriggerMode (config)
     #   2. AcquireTime (config)
-    #   3. NumImages (config)
-    #   4. axis -> start (BLOCKING, wait=True)
-    #   5. Acquire = 1 (arm)
-    #   6. axis -> stop (NON-blocking, wait=False)
+    #   3. ImageMode (config, always "Multiple")
+    #   4. NumImages (config)
+    #   5. axis -> start (BLOCKING, wait=True)
+    #   6. Acquire = 1 (arm)
+    #   7. axis -> stop (NON-blocking, wait=False)
     assert addresses == [
         (f"{_DETECTOR}:TriggerMode", "External", True),
         (f"{_DETECTOR}:AcquireTime", 0.025, True),
+        (f"{_DETECTOR}:ImageMode", "Multiple", True),
         (f"{_DETECTOR}:NumImages", 1500, True),
         (_AXIS, 0.0, True),
         (f"{_DETECTOR}:Acquire", 1, True),
@@ -261,6 +266,7 @@ async def test_continuous_writes_in_fly_scan_order_and_returns_evidence() -> Non
     assert result["trigger_mode"] == "ExternalEdge"
     assert result["polarity"] == "Rising"
     assert result["source"] == "2bma:PCOMP1.OUT"
+    assert result["image_mode"] == "Multiple"
     assert result["detector_state_final"] == "Idle"
 
 
@@ -352,6 +358,7 @@ async def test_continuous_rate_is_evidence_only_not_written() -> None:
                 "start": 0.0,
                 "stop": 180.0,
                 "rate": 90.0,
+                "repetitions": 1500,
                 "dwell": 0.025,
             },
         )
@@ -377,6 +384,7 @@ async def test_continuous_unconnected_axis_propagates_not_connected_error() -> N
                     "axis": _AXIS,
                     "start": 0.0,
                     "stop": 180.0,
+                    "repetitions": 1500,
                     "dwell": 0.025,
                 },
             )
@@ -396,6 +404,7 @@ async def test_continuous_reverse_sweep_writes_decreasing_axis_values() -> None:
                 "axis": _AXIS,
                 "start": 180.0,
                 "stop": 0.0,
+                "repetitions": 1500,
                 "dwell": 0.025,
             },
         )
@@ -403,6 +412,35 @@ async def test_continuous_reverse_sweep_writes_decreasing_axis_values() -> None:
     assert result["axis_start_requested"] == 180.0
     assert result["axis_stop_requested"] == 0.0
     assert (await port.read(_AXIS)).value == 0.0
+
+
+@pytest.mark.unit
+async def test_continuous_repetitions_none_raises_before_any_detector_write() -> None:
+    """None repetitions raises UnboundedAcquisitionError and never issues Acquire.
+
+    Same reasoning as `test_collect_repetitions_none_raises_before_any_detector_write`:
+    an unbounded acquisition never asserts `Acquire_RBV` Done on its own,
+    so combining it with this body's unconditional done-poll would hang
+    the caller forever and leave the camera acquiring.
+    """
+    port = InMemoryControlPort()
+    _seed_detector_and_axis(port)
+    with pytest.raises(UnboundedAcquisitionError):
+        await continuous(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "Internal",
+                    "axis": _AXIS,
+                    "start": 0.0,
+                    "stop": 180.0,
+                    "dwell": 0.025,
+                },
+            )
+        )
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
 
 
 # --- end-to-end via Conductor ------------------------------------------

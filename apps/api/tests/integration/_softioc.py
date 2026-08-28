@@ -73,6 +73,10 @@ label-vs-ordinal decode bug (see `cora.operation.acquisitions`'s
 
   - `cam1:TriggerMode`        (mbbo: Internal / External)
   - `cam1:AcquireTime`        (ao,  per-acquisition seconds)
+  - `cam1:ImageMode`          (mbbo: Single / Multiple / Continuous; starts
+                               at Continuous, mirroring the real APS 2-BM
+                               left-on-Continuous condition `collect` must
+                               move off of)
   - `cam1:NumImages`          (longout, bounded count)
   - `cam1:Acquire`            (bo,  start command)
   - `cam1:Acquire_RBV`        (bi,  ZNAM=Done / ONAM=Acquiring)
@@ -98,6 +102,10 @@ templating every record in this file for one PV's difference).
 
   - `cam2:TriggerMode`        (mbbo: Off / On, ADSpinnaker-shaped)
   - `cam2:AcquireTime`        (ao,  per-acquisition seconds)
+  - `cam2:ImageMode`          (mbbo: Single / Multiple / Continuous, same
+                               shape as `cam1:ImageMode`; confirmed
+                               dialect-invariant against the real
+                               `2bmSP1:cam1:ImageMode`)
   - `cam2:NumImages`          (longout, bounded count)
   - `cam2:Acquire`            (bo,  start command)
   - `cam2:Acquire_RBV`        (bi,  ZNAM=Done / ONAM=Acquiring)
@@ -339,6 +347,19 @@ record(ao, "$(P)cam1:AcquireTime") {
   field(PINI, "YES")
 }
 
+# VAL starts at 2 (Continuous), mirroring the real APS 2-BM condition a
+# previous user left the camera in; the integration test proves `collect`
+# moves it to Multiple rather than inheriting whatever it finds.
+record(mbbo, "$(P)cam1:ImageMode") {
+  field(DESC, "AD image mode")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "Single")
+  field(ONST, "Multiple")
+  field(TWST, "Continuous")
+  field(VAL, "2")
+  field(PINI, "YES")
+}
+
 record(longout, "$(P)cam1:NumImages") {
   field(DESC, "Bounded image count")
   field(DTYP, "Soft Channel")
@@ -392,6 +413,16 @@ record(ao, "$(P)cam2:AcquireTime") {
   field(DESC, "Per-acquisition exposure (seconds)")
   field(DTYP, "Soft Channel")
   field(VAL, 0.0)
+  field(PINI, "YES")
+}
+
+record(mbbo, "$(P)cam2:ImageMode") {
+  field(DESC, "AD image mode")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "Single")
+  field(ONST, "Multiple")
+  field(TWST, "Continuous")
+  field(VAL, "2")
   field(PINI, "YES")
 }
 

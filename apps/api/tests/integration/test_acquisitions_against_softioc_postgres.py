@@ -11,8 +11,8 @@ Constructs the Conductor with:
   - real handlers bound against `PostgresEventStore` + `PostgresActivityStore`
 
 The softIOC carries an areaDetector ADCore-shaped PV family
-(`cam1:TriggerMode` / `:AcquireTime` / `:NumImages` / `:Acquire` /
-`:Acquire_RBV` / `:DetectorState_RBV`) plus the existing writable
+(`cam1:TriggerMode` / `:AcquireTime` / `:ImageMode` / `:NumImages` /
+`:Acquire` / `:Acquire_RBV` / `:DetectorState_RBV`) plus the existing writable
 `double_value` scalar used as the axis for `discrete` + `continuous`.
 `cam1:Acquire_RBV` is a `bi` (DBR_ENUM, `ZNAM="Done"` / `ONAM="Acquiring"`)
 seeded at `Done`, so each body's poll loop exits on the first read via
@@ -207,13 +207,18 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
     assert result_data["trigger_mode"] == "Internal"
     assert result_data["repetitions_requested"] == 3
 
-    # Side-effects landed on the real softIOC PVs.
+    # Side-effects landed on the real softIOC PVs. `cam1:ImageMode` starts
+    # at Continuous (see `_softioc.py`, mirroring the real APS 2-BM
+    # left-on-Continuous condition); this proves `collect` moves it to
+    # Multiple rather than inheriting whatever it finds.
     async with control_port_reuse(softioc) as port:
         trigger_mode = await port.read(f"{softioc}cam1:TriggerMode")
         acquire_time = await port.read(f"{softioc}cam1:AcquireTime")
+        image_mode = await port.read(f"{softioc}cam1:ImageMode")
         num_images = await port.read(f"{softioc}cam1:NumImages")
         assert trigger_mode.value == "Internal"
         assert acquire_time.value == pytest.approx(0.05)
+        assert image_mode.value == "Multiple"
         assert num_images.value == 3
 
 
@@ -368,6 +373,7 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
                         "trigger_mode": "Internal",
                         "axis": f"{softioc}double_value",
                         "points": (1.0, 2.0, 3.0),
+                        "repetitions": 1,
                         "dwell": 0.05,
                     },
                 ),

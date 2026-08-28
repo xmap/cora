@@ -57,6 +57,29 @@ class UnknownTriggerDialectError(ValueError):
         )
 
 
+class UnboundedAcquisitionError(Exception):
+    """A detector acquisition body was asked for `repetitions=None` while it waits for completion.
+
+    Application-layer, not domain-layer: whether a given action body's
+    done-poll can tolerate a free-running acquisition is a body-shape
+    fact, not an aggregate invariant. `collect` and `continuous` both
+    wait on `Acquire_RBV` reaching Done with no internal timeout
+    (`cora.operation.acquisitions._await_acquire_done`), and an
+    unbounded acquisition (areaDetector `ImageMode=Continuous`) never
+    asserts Done on its own, so combining the two would hang the
+    caller forever and leave the camera acquiring. Raised before any
+    PV write so a caller who wants free-running acquisition never
+    leaves the camera partially configured through this action body.
+    """
+
+    def __init__(self, detector: str) -> None:
+        super().__init__(
+            f"unbounded acquisition on {detector!r} cannot be combined with waiting for "
+            "completion; a bounded repetitions value is required"
+        )
+        self.detector = detector
+
+
 class SteeringWireMismatchError(Exception):
     """A steered conduct request's space/objective does not line up with the recipe.
 
