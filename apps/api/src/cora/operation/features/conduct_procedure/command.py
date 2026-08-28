@@ -20,7 +20,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from cora.operation.conductor import ConductorFailure, Step
+from cora.operation.conductor import ConductorFailure, Step, WriteValue
 from cora.operation.ports.compute_port import ArtifactRef
 from cora.operation.ports.measurement import Measurement
 
@@ -72,3 +72,13 @@ class ConductProcedureResult:
     measurements: tuple[Measurement, ...] = ()
     artifacts: tuple[ArtifactRef, ...] = ()
     outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
+    substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])
+    """Every address the conduct wrote, in first-write order, last value.
+
+    Threaded from `ConductorResult.substrate_writes`. On a HALT this is
+    what CORA left set: the step loop returns at the failing step, so a
+    recipe's own closing steps never run and nothing restores what
+    earlier steps changed. Surfacing it on the response means an
+    operator reads it in the same breath as the failure, instead of
+    reconstructing it from the step journal.
+    """

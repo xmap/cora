@@ -180,6 +180,7 @@ def bind(
             measurements=result.measurements,
             artifacts=result.artifacts,
             outputs=result.outputs,
+            substrate_writes=result.substrate_writes,
         )
 
     return handler
