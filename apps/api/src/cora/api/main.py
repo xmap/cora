@@ -1445,6 +1445,12 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     status_push_lifespan(
                         deps,
                         list_runs=app.state.run.list_runs,
+                        list_subjects=app.state.subject.list_subjects,
+                        list_campaigns=app.state.campaign.list_campaigns,
+                        list_datasets=app.state.data.list_datasets,
+                        list_clearances=app.state.safety.list_clearances,
+                        list_enclosures=app.state.enclosure.list_enclosures,
+                        list_decisions=app.state.decision.list_decisions,
                         witness_recorder=witness_recorder,
                     ),
                     capture_scan_ingestor_lifespan(

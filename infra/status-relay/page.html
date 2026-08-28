@@ -27,17 +27,24 @@
     color: var(--muted);
     margin: 0 0 1rem 0;
   }
+  h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 1.75rem 0 0.5rem 0;
+  }
   #banner {
     display: inline-block;
     padding: 0.5rem 1rem;
     border-radius: 6px;
     font-weight: 700;
     font-size: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
   #banner.live { background: var(--live); color: #08260f; }
   #banner.stale { background: var(--stale); color: #2b1c00; }
   #banner.dead { background: var(--dead); color: #2b0a09; }
+  #content.dimmed { opacity: 0.5; }
   table {
     border-collapse: collapse;
     width: 100%;
@@ -51,8 +58,7 @@
     vertical-align: top;
   }
   th { color: var(--muted); font-weight: 600; }
-  #runs.dimmed { opacity: 0.5; }
-  #empty { color: var(--muted); font-style: italic; padding: 0.5rem 0; }
+  .empty { color: var(--muted); font-style: italic; padding: 0.25rem 0 0.75rem 0; }
   .progress-role {
     display: flex;
     align-items: center;
@@ -72,18 +78,65 @@
   .progress-bar-fill { background: var(--live); height: 100%; }
   .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
   .no-progress { color: var(--muted); font-style: italic; }
+  .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
 </style>
 </head>
 <body>
-  <h1>CORA / 2-BM: live run status</h1>
+  <h1>CORA / 2-BM: live status</h1>
   <div id="banner">connecting</div>
-  <table id="runs">
-    <thead>
-      <tr><th>Run</th><th>Status</th><th>Progress</th></tr>
-    </thead>
-    <tbody id="runs-body"></tbody>
-  </table>
-  <div id="empty" style="display: none;">no open runs</div>
+
+  <div id="content">
+    <h2>Runs</h2>
+    <table id="runs-table">
+      <thead><tr><th>Run</th><th>Status</th><th>Progress</th></tr></thead>
+      <tbody id="runs-body"></tbody>
+    </table>
+    <div id="runs-empty" class="empty" style="display: none;">no open runs</div>
+
+    <h2>Subjects</h2>
+    <table id="subjects-table">
+      <thead><tr><th>Subject</th><th>Status</th></tr></thead>
+      <tbody id="subjects-body"></tbody>
+    </table>
+    <div id="subjects-empty" class="empty" style="display: none;">no open subjects</div>
+
+    <h2>Campaigns</h2>
+    <table id="campaigns-table">
+      <thead><tr><th>Campaign</th><th>Intent</th><th>Status</th><th>Runs</th></tr></thead>
+      <tbody id="campaigns-body"></tbody>
+    </table>
+    <div id="campaigns-empty" class="empty" style="display: none;">no open campaigns</div>
+
+    <h2>Datasets from runs on screen</h2>
+    <table id="datasets-table">
+      <thead><tr><th>Dataset</th><th>Status</th><th>Run</th></tr></thead>
+      <tbody id="datasets-body"></tbody>
+    </table>
+    <div id="datasets-empty" class="empty" style="display: none;">no datasets from an open run yet</div>
+
+    <h2>Active clearances</h2>
+    <table id="clearances-table">
+      <thead><tr><th>Template</th><th>Risk</th><th>Valid until</th></tr></thead>
+      <tbody id="clearances-body"></tbody>
+    </table>
+    <div id="clearances-empty" class="empty" style="display: none;">no active clearances</div>
+
+    <h2>Enclosures</h2>
+    <table id="enclosures-table">
+      <thead><tr><th>Enclosure</th><th>Permit status</th></tr></thead>
+      <tbody id="enclosures-body"></tbody>
+    </table>
+    <div id="enclosures-empty" class="empty" style="display: none;">no active enclosures</div>
+
+    <h2>Recent decisions</h2>
+    <table id="decisions-table">
+      <thead><tr><th>Choice</th><th>Confidence</th><th>Decided by</th><th>When</th></tr></thead>
+      <tbody id="decisions-body"></tbody>
+    </table>
+    <div id="decisions-empty" class="empty" style="display: none;">
+      no decisions since this page's producer started
+    </div>
+  </div>
 
 <script>
 (function () {
@@ -95,14 +148,22 @@
   var RECONNECT_MAX_MS = 30000;
 
   var bannerEl = document.getElementById("banner");
-  var runsBodyEl = document.getElementById("runs-body");
-  var runsTableEl = document.getElementById("runs");
-  var emptyEl = document.getElementById("empty");
+  var contentEl = document.getElementById("content");
 
   var generatedAt = null;
   var producerConnected = false;
   var socketOpen = false;
   var reconnectDelayMs = RECONNECT_INITIAL_MS;
+
+  function shortId(id) {
+    return id ? String(id).slice(0, 8) : "";
+  }
+
+  function textCell(text) {
+    var cell = document.createElement("td");
+    cell.textContent = text === null || text === undefined ? "" : String(text);
+    return cell;
+  }
 
   function renderProgressCell(progress) {
     var cell = document.createElement("td");
@@ -145,25 +206,96 @@
     return cell;
   }
 
-  function renderRuns(runs) {
-    runsBodyEl.innerHTML = "";
-    if (!runs || runs.length === 0) {
-      runsTableEl.style.display = "none";
+  // Generic section renderer for every domain except Runs, which alone
+  // needs the progress-bar cell above.
+  function renderSection(name, items, rowBuilder) {
+    var tableEl = document.getElementById(name + "-table");
+    var bodyEl = document.getElementById(name + "-body");
+    var emptyEl = document.getElementById(name + "-empty");
+    bodyEl.innerHTML = "";
+    if (!items || items.length === 0) {
+      tableEl.style.display = "none";
       emptyEl.style.display = "block";
       return;
     }
-    runsTableEl.style.display = "table";
+    tableEl.style.display = "table";
     emptyEl.style.display = "none";
-    runs.forEach(function (run) {
+    items.forEach(function (item) {
+      bodyEl.appendChild(rowBuilder(item));
+    });
+  }
+
+  function renderRuns(runs) {
+    renderSection("runs", runs, function (run) {
       var row = document.createElement("tr");
-      var nameCell = document.createElement("td");
-      nameCell.textContent = run.name;
-      var statusCell = document.createElement("td");
-      statusCell.textContent = run.status;
-      row.appendChild(nameCell);
-      row.appendChild(statusCell);
+      row.appendChild(textCell(run.name));
+      row.appendChild(textCell(run.status));
       row.appendChild(renderProgressCell(run.progress));
-      runsBodyEl.appendChild(row);
+      return row;
+    });
+  }
+
+  function renderSubjects(subjects) {
+    renderSection("subjects", subjects, function (s) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(s.name));
+      row.appendChild(textCell(s.status));
+      return row;
+    });
+  }
+
+  function renderCampaigns(campaigns) {
+    renderSection("campaigns", campaigns, function (c) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(c.name));
+      row.appendChild(textCell(c.intent));
+      row.appendChild(textCell(c.status));
+      row.appendChild(textCell(c.run_count));
+      return row;
+    });
+  }
+
+  function renderDatasets(datasets) {
+    renderSection("datasets", datasets, function (d) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(d.name));
+      row.appendChild(textCell(d.status));
+      var runCell = textCell(shortId(d.producing_run_id));
+      runCell.className = "mono";
+      row.appendChild(runCell);
+      return row;
+    });
+  }
+
+  function renderClearances(clearances) {
+    renderSection("clearances", clearances, function (c) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(c.template_code));
+      row.appendChild(textCell(c.risk_band));
+      row.appendChild(textCell(c.valid_until ? c.valid_until : "no expiry set"));
+      return row;
+    });
+  }
+
+  function renderEnclosures(enclosures) {
+    renderSection("enclosures", enclosures, function (e) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(e.name));
+      row.appendChild(textCell(e.permit_status));
+      return row;
+    });
+  }
+
+  function renderDecisions(decisions) {
+    renderSection("decisions", decisions, function (d) {
+      var row = document.createElement("tr");
+      row.appendChild(textCell(d.choice));
+      row.appendChild(textCell(d.confidence_band ? d.confidence_band : "n/a"));
+      var byCell = textCell(shortId(d.decided_by));
+      byCell.className = "mono";
+      row.appendChild(byCell);
+      row.appendChild(textCell(d.created_at ? new Date(d.created_at).toLocaleTimeString() : ""));
+      return row;
     });
   }
 
@@ -171,7 +303,7 @@
     if (!socketOpen || !producerConnected) {
       bannerEl.className = "dead";
       bannerEl.textContent = "DISCONNECTED";
-      runsTableEl.classList.add("dimmed");
+      contentEl.classList.add("dimmed");
       return;
     }
     if (generatedAt === null) {
@@ -183,15 +315,15 @@
     if (ageSeconds < LIVE_SECONDS) {
       bannerEl.className = "live";
       bannerEl.textContent = "LIVE";
-      runsTableEl.classList.remove("dimmed");
+      contentEl.classList.remove("dimmed");
     } else if (ageSeconds < STALE_SECONDS) {
       bannerEl.className = "stale";
       bannerEl.textContent = Math.round(ageSeconds) + "s old";
-      runsTableEl.classList.remove("dimmed");
+      contentEl.classList.remove("dimmed");
     } else {
       bannerEl.className = "dead";
       bannerEl.textContent = Math.round(ageSeconds) + "s old, likely stalled";
-      runsTableEl.classList.add("dimmed");
+      contentEl.classList.add("dimmed");
     }
   }
 
@@ -213,6 +345,12 @@
     producerConnected = true;
     generatedAt = Date.parse(msg.generated_at);
     renderRuns(msg.runs);
+    renderSubjects(msg.subjects);
+    renderCampaigns(msg.campaigns);
+    renderDatasets(msg.datasets);
+    renderClearances(msg.clearances);
+    renderEnclosures(msg.enclosures);
+    renderDecisions(msg.decisions);
     renderBanner();
   }
 

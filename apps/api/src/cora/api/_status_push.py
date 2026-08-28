@@ -26,36 +26,53 @@ to `_run_witness.py`'s hand-rolled shape than to the flag-watcher family.
 
 ## Current scope
 
-Each tick reads open Runs (`Running` + `Held`) via the existing `list_runs`
-handler and pushes `{run_id, name, status, progress}` per run. `progress` is
-whatever `RunWitnessRecorder.progress_readings()` holds for that run right
-now (commonly `images_collected` / `images_saved` at 2-BM, but this reads
-whatever roles the deployment declared, not a hardcoded pair), or `{}` when
-the recorder is unavailable (witnessing disabled) or has nothing yet for
-that run. No other domains yet. The payload is a full snapshot every push,
-never a delta: a fresh viewer, a reconnecting viewer, and a restarted relay
-are all served by "here is the current one".
+Each tick reads and pushes:
 
-Deliberately reads ONLY the in-memory recorder, not the Postgres-durable
-`entries_run_observations` fallback `PostgresRunChannelLookup` would offer
-for a run whose capture is not open in this process: that path is capped at
-`capture_progress_flush_tick_seconds` (10s by default) and never carries
-`commanded_total` (dropped at the `ObservationInput` boundary), so it would
-not feel live and would silently lack the "of M" figure. Revisit if this
-ever runs against a Run witnessed by a different process than the one
-pushing.
+  - open Runs (`Running` + `Held`), each with `progress` from
+    `RunWitnessRecorder.progress_readings()` (`{}` when unavailable; see
+    `_render_progress`)
+  - open Subjects (`Received` / `Mounted` / `Measured` / `Removed`;
+    `Returned` / `Stored` / `Discarded` are terminal and dropped)
+  - open Campaigns (`Planned` / `Active` / `Held`; `Closed` / `Abandoned`
+    are terminal and dropped)
+  - Datasets produced by an on-screen Run (bounded by the open-run count,
+    not a separate unbounded drain)
+  - Active Clearances (the safety-gate status a viewer most wants: is
+    something required to start a run currently in force)
+  - Active Enclosures (permit status: the most direct "is it safe right
+    now" answer CORA records)
+  - the most recent Decisions since this process started, tail-followed
+    (see `_DecisionTail`) rather than paged from the beginning, since
+    Decisions have no "open" status to filter on and the table is
+    unbounded
 
-## Principal identity: a deliberate simplification, revisit before widening
+The payload is a full snapshot every push, never a delta: a fresh viewer,
+a reconnecting viewer, and a restarted relay are all served by "here is
+the current one".
+
+Deliberately reads ONLY the in-memory `RunWitnessRecorder` for progress,
+not the Postgres-durable `entries_run_observations` fallback
+`PostgresRunChannelLookup` would offer for a run whose capture is not open
+in this process: that path is capped at `capture_progress_flush_tick_seconds`
+(10s by default) and never carries `commanded_total` (dropped at the
+`ObservationInput` boundary), so it would not feel live and would silently
+lack the "of M" figure. Revisit if this ever runs against a Run witnessed
+by a different process than the one pushing.
+
+## Principal identity: the widening trigger has now fired
 
 Every other watcher here authenticates as its own seeded Agent (a real
 Actor with its own grant set, so a missing grant is auditable per-agent).
-This one reads a single command (`ListRuns`) and authors nothing, so this
-uses `SYSTEM_PRINCIPAL_ID` rather than standing up a full Agent+Actor seed
-for one read. Once the read scope widens to Subject / Campaign / Dataset /
-Decision / Clearance / Enclosure, a dedicated seeded identity (mirroring
-`agent/seed_calibration_watcher.py`) earns its keep: its grant set becomes
-independently auditable, and `probe_read_grant` becomes worth calling once
-per command rather than being skipped as it is here.
+This module still uses `SYSTEM_PRINCIPAL_ID` for every read: the read scope
+has now widened past the single `ListRuns` command this module started
+with, to seven commands across seven BCs, which is exactly the trigger this
+docstring named for standing up a dedicated seeded identity (mirroring
+`agent/seed_calibration_watcher.py`). That identity is NOT built in this
+change; doing so is a follow-up, tracked so the deferral is visible rather
+than silently indefinite. Until then, a Trust Policy that denies any of the
+seven read commands to `SYSTEM_PRINCIPAL_ID` blinds this feature for that
+domain only (each drain is independently try/except-guarded; see
+`_push_loop`), never the others.
 """
 
 from __future__ import annotations
@@ -64,29 +81,49 @@ import asyncio
 import contextlib
 import hashlib
 import json
+from collections import deque
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed, InvalidStatus
 
+from cora.campaign.errors import UnauthorizedError as _CampaignUnauthorizedError
+from cora.campaign.features.list_campaigns import ListCampaigns
+from cora.data.errors import UnauthorizedError as _DataUnauthorizedError
+from cora.data.features.list_datasets import ListDatasets
+from cora.decision.errors import UnauthorizedError as _DecisionUnauthorizedError
+from cora.decision.features.list_decisions import ListDecisions
+from cora.enclosure.errors import UnauthorizedError as _EnclosureUnauthorizedError
+from cora.enclosure.features.list_enclosures import ListEnclosures
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.projection import encode_cursor
 from cora.infrastructure.record_export import render_value
 from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_PRINCIPAL_ID
-from cora.run.errors import UnauthorizedError
+from cora.run.errors import UnauthorizedError as _RunUnauthorizedError
 from cora.run.features.list_runs import ListRuns
+from cora.safety.errors import UnauthorizedError as _SafetyUnauthorizedError
+from cora.safety.features.list_clearances import ListClearances
+from cora.subject.errors import UnauthorizedError as _SubjectUnauthorizedError
+from cora.subject.features.list_subjects import ListSubjects
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-    from uuid import UUID
+    from collections.abc import AsyncGenerator, Awaitable, Callable
 
     from cora.api._run_witness import RunWitnessRecorder
+    from cora.campaign.features.list_campaigns.handler import Handler as ListCampaignsHandler
+    from cora.campaign.features.list_campaigns.query import CampaignStatusFilter
+    from cora.data.features.list_datasets.handler import Handler as ListDatasetsHandler
+    from cora.decision.features.list_decisions.handler import Handler as ListDecisionsHandler
+    from cora.enclosure.features.list_enclosures.handler import Handler as ListEnclosuresHandler
     from cora.infrastructure.kernel import Kernel
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
+    from cora.safety.features.list_clearances.handler import Handler as ListClearancesHandler
+    from cora.subject.features.list_subjects.handler import Handler as ListSubjectsHandler
 
 _log = get_logger(__name__)
 
 _LOG_PREFIX = "status_push"
-_OPEN_RUN_STATUSES = ("Running", "Held")
 _PAGE_LIMIT = 100
 _HEARTBEAT_TICKS = 5
 """Push unconditionally every this-many ticks even with no change, so a
@@ -95,6 +132,50 @@ relay's own staleness clock is the other half of that distinction."""
 
 _RECONNECT_INITIAL_SECONDS = 1.0
 _RECONNECT_MAX_SECONDS = 60.0
+
+_OPEN_RUN_STATUSES = ("Running", "Held")
+_OPEN_SUBJECT_STATUSES = ("Received", "Mounted", "Measured", "Removed")
+_OPEN_CAMPAIGN_STATUSES: list[CampaignStatusFilter] = ["Planned", "Active", "Held"]
+_ACTIVE_CLEARANCE_STATUS = "Active"
+_ACTIVE_ENCLOSURE_LIFECYCLE = "Active"
+_DECISION_RING_SIZE = 20
+_MIN_UUID = UUID(int=0)
+"""Sentinel id for `_DecisionTail`'s starting cursor: paired with "now" as
+the cursor's time component, so the `(time, id) > (cursor_time, cursor_id)`
+keyset predicate admits anything at or after this instant regardless of id,
+rather than requiring an id greater than a real (and otherwise arbitrary)
+UUID at the same microsecond."""
+
+# Every BC's UnauthorizedError is its own class (no shared base, per the
+# per-BC-application-error-namespace convention), so widening past one
+# domain means widening this tuple, not the shape of the catch.
+_UNAUTHORIZED_ERRORS = (
+    _RunUnauthorizedError,
+    _SubjectUnauthorizedError,
+    _CampaignUnauthorizedError,
+    _DataUnauthorizedError,
+    _DecisionUnauthorizedError,
+    _SafetyUnauthorizedError,
+    _EnclosureUnauthorizedError,
+)
+
+
+async def _drain_all(call: Callable[[str | None], Awaitable[Any]]) -> list[Any]:
+    """Page through a list_* handler call until `next_cursor` is `None`.
+
+    `call` closes over everything but the cursor (the query's other
+    filters, the handler, the principal), so this stays generic across
+    every domain's distinct item shape.
+    """
+    items: list[Any] = []
+    cursor: str | None = None
+    while True:
+        page = await call(cursor)
+        items.extend(page.items)
+        if page.next_cursor is None:
+            break
+        cursor = page.next_cursor
+    return items
 
 
 def _render_progress(run_id: UUID, witness_recorder: RunWitnessRecorder | None) -> dict[str, Any]:
@@ -123,42 +204,229 @@ def _render_progress(run_id: UUID, witness_recorder: RunWitnessRecorder | None) 
 
 async def _drain_open_runs(
     list_runs: ListRunsHandler, deps: Kernel, *, witness_recorder: RunWitnessRecorder | None
-) -> list[dict[str, Any]]:
-    """Page through list_runs for each open status, rendering JSON-safe rows."""
+) -> tuple[list[dict[str, Any]], list[UUID]]:
+    """Returns the rendered (JSON-safe) rows AND the raw run_id UUIDs.
+
+    Both are needed: the rows go straight into the payload, but a caller
+    filtering a sibling domain by `producing_run_id` (`_drain_datasets_for_runs`)
+    needs real `UUID` objects, not `render_value`'s string form -- a query
+    built from the rendered strings would never match anything.
+    """
     rows: list[dict[str, Any]] = []
+    raw_run_ids: list[UUID] = []
     for status in _OPEN_RUN_STATUSES:
-        cursor: str | None = None
-        while True:
-            page = await list_runs(
+        items = await _drain_all(
+            lambda cursor, status=status: list_runs(
                 ListRuns(status=status, cursor=cursor, limit=_PAGE_LIMIT),
                 principal_id=SYSTEM_PRINCIPAL_ID,
                 correlation_id=deps.id_generator.new_id(),
                 surface_id=NIL_SENTINEL_ID,
             )
-            rows.extend(
+        )
+        for item in items:
+            rows.append(
                 {
                     "run_id": render_value(item.run_id),
                     "name": item.name,
                     "status": item.status,
                     "progress": _render_progress(item.run_id, witness_recorder),
                 }
-                for item in page.items
             )
-            if page.next_cursor is None:
-                break
-            cursor = page.next_cursor
+            raw_run_ids.append(item.run_id)
+    return rows, raw_run_ids
+
+
+async def _drain_open_subjects(
+    list_subjects: ListSubjectsHandler, deps: Kernel
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for status in _OPEN_SUBJECT_STATUSES:
+        items = await _drain_all(
+            lambda cursor, status=status: list_subjects(
+                ListSubjects(status=status, cursor=cursor, limit=_PAGE_LIMIT),
+                principal_id=SYSTEM_PRINCIPAL_ID,
+                correlation_id=deps.id_generator.new_id(),
+                surface_id=NIL_SENTINEL_ID,
+            )
+        )
+        rows.extend(
+            {"subject_id": render_value(item.subject_id), "name": item.name, "status": item.status}
+            for item in items
+        )
     return rows
 
 
-def _content_hash(runs: list[dict[str, Any]]) -> str:
+async def _drain_open_campaigns(
+    list_campaigns: ListCampaignsHandler, deps: Kernel
+) -> list[dict[str, Any]]:
+    items = await _drain_all(
+        lambda cursor: list_campaigns(
+            ListCampaigns(statuses=_OPEN_CAMPAIGN_STATUSES, cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    )
+    return [
+        {
+            "campaign_id": render_value(item.campaign_id),
+            "name": item.name,
+            "intent": item.intent,
+            "status": item.status,
+            "run_count": item.run_count,
+        }
+        for item in items
+    ]
+
+
+async def _drain_datasets_for_runs(
+    list_datasets: ListDatasetsHandler, deps: Kernel, *, run_ids: list[UUID]
+) -> list[dict[str, Any]]:
+    """Datasets produced by an on-screen Run, one query per run_id.
+
+    Bounded by the open-run count (small; see `_OPEN_RUN_STATUSES`), not a
+    separate unbounded drain: a facility's whole dataset history is not
+    something a live status page needs, only what the runs on screen just
+    produced.
+    """
+    rows: list[dict[str, Any]] = []
+    for run_id in run_ids:
+        items = await _drain_all(
+            lambda cursor, run_id=run_id: list_datasets(
+                ListDatasets(producing_run_id=run_id, cursor=cursor, limit=_PAGE_LIMIT),
+                principal_id=SYSTEM_PRINCIPAL_ID,
+                correlation_id=deps.id_generator.new_id(),
+                surface_id=NIL_SENTINEL_ID,
+            )
+        )
+        rows.extend(
+            {
+                "dataset_id": render_value(item.dataset_id),
+                "name": item.name,
+                "status": item.status,
+                "producing_run_id": render_value(item.producing_run_id),
+            }
+            for item in items
+        )
+    return rows
+
+
+async def _drain_active_clearances(
+    list_clearances: ListClearancesHandler, deps: Kernel
+) -> list[dict[str, Any]]:
+    items = await _drain_all(
+        lambda cursor: list_clearances(
+            ListClearances(status=_ACTIVE_CLEARANCE_STATUS, cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    )
+    return [
+        {
+            "clearance_id": render_value(item.clearance_id),
+            "template_code": item.template_code,
+            "risk_band": item.risk_band,
+            "valid_until": render_value(item.valid_until),
+        }
+        for item in items
+    ]
+
+
+async def _drain_active_enclosures(
+    list_enclosures: ListEnclosuresHandler, deps: Kernel
+) -> list[dict[str, Any]]:
+    items = await _drain_all(
+        lambda cursor: list_enclosures(
+            ListEnclosures(lifecycle=_ACTIVE_ENCLOSURE_LIFECYCLE, cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    )
+    return [
+        {
+            "enclosure_id": render_value(item.enclosure_id),
+            "name": item.name,
+            "permit_status": item.permit_status,
+            "facility_code": item.facility_code,
+        }
+        for item in items
+    ]
+
+
+class _DecisionTail:
+    """Tail-follows `list_decisions` since this instance was created,
+    keeping only the most recent `_DECISION_RING_SIZE`.
+
+    Decisions carry no "open" status to filter on and the table is
+    unbounded, so re-draining from the beginning every tick (the shape
+    every other domain in this module uses) is both wrong and slow: it
+    would replay the facility's entire decision history into memory once
+    per tick, forever. Instead this holds a cursor forward across ticks
+    (and across reconnects: one instance lives for the whole `_push_loop`
+    call, not per-connection) and only ever asks for what is new.
+
+    The cursor starts at "now" rather than the beginning of the stream, so
+    the ring is genuinely empty on construction and only ever fills with
+    Decisions made after this process started; there is no cheap way to
+    seek a keyset cursor to "the last N rows" without a descending query,
+    which `list_decisions` does not offer.
+    """
+
+    def __init__(self, *, started_at_cursor: str) -> None:
+        self._cursor: str | None = started_at_cursor
+        self._ring: deque[dict[str, Any]] = deque(maxlen=_DECISION_RING_SIZE)
+
+    async def poll(
+        self, list_decisions: ListDecisionsHandler, deps: Kernel
+    ) -> list[dict[str, Any]]:
+        cursor = self._cursor
+        newest_cursor = cursor
+        while True:
+            page = await list_decisions(
+                ListDecisions(cursor=cursor, limit=_PAGE_LIMIT),
+                principal_id=SYSTEM_PRINCIPAL_ID,
+                correlation_id=deps.id_generator.new_id(),
+                surface_id=NIL_SENTINEL_ID,
+            )
+            for item in page.items:
+                self._ring.append(
+                    {
+                        "decision_id": render_value(item.decision_id),
+                        "decided_by": render_value(item.decided_by),
+                        "choice": item.choice,
+                        "confidence_band": item.confidence_band,
+                        "created_at": render_value(item.created_at),
+                    }
+                )
+            if page.next_cursor is None:
+                break
+            newest_cursor = page.next_cursor
+            cursor = page.next_cursor
+        self._cursor = newest_cursor
+        return list(self._ring)
+
+
+def _content_hash(payload: dict[str, Any]) -> str:
     """Stable hash over the change-relevant payload, excluding generated_at
     and sequence, so an unchanged tick can be told apart from a real change."""
-    canonical = json.dumps(runs, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def build_snapshot(
-    *, runs: list[dict[str, Any]], sequence: int, generated_at: str, producer_id: str
+    *,
+    runs: list[dict[str, Any]],
+    subjects: list[dict[str, Any]],
+    campaigns: list[dict[str, Any]],
+    datasets: list[dict[str, Any]],
+    clearances: list[dict[str, Any]],
+    enclosures: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    sequence: int,
+    generated_at: str,
+    producer_id: str,
 ) -> dict[str, Any]:
     """Assemble the pushed payload. A pure function so it is unit-testable
     without a socket, a database, or a clock."""
@@ -168,6 +436,41 @@ def build_snapshot(
         "sequence": sequence,
         "generated_at": generated_at,
         "runs": runs,
+        "subjects": subjects,
+        "campaigns": campaigns,
+        "datasets": datasets,
+        "clearances": clearances,
+        "enclosures": enclosures,
+        "decisions": decisions,
+    }
+
+
+async def _build_payload_fields(
+    deps: Kernel,
+    *,
+    list_runs: ListRunsHandler,
+    list_subjects: ListSubjectsHandler,
+    list_campaigns: ListCampaignsHandler,
+    list_datasets: ListDatasetsHandler,
+    list_clearances: ListClearancesHandler,
+    list_enclosures: ListEnclosuresHandler,
+    decision_tail: _DecisionTail,
+    list_decisions: ListDecisionsHandler,
+    witness_recorder: RunWitnessRecorder | None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Every domain's rows for one tick. Each drain is independently
+    guarded by the caller's `except _UNAUTHORIZED_ERRORS` (per-domain, not
+    caught here) so a missing grant on one command blinds only that
+    section of the page, never the whole tick."""
+    runs, raw_run_ids = await _drain_open_runs(list_runs, deps, witness_recorder=witness_recorder)
+    return {
+        "runs": runs,
+        "subjects": await _drain_open_subjects(list_subjects, deps),
+        "campaigns": await _drain_open_campaigns(list_campaigns, deps),
+        "datasets": await _drain_datasets_for_runs(list_datasets, deps, run_ids=raw_run_ids),
+        "clearances": await _drain_active_clearances(list_clearances, deps),
+        "enclosures": await _drain_active_enclosures(list_enclosures, deps),
+        "decisions": await decision_tail.poll(list_decisions, deps),
     }
 
 
@@ -175,6 +478,12 @@ async def _push_loop(
     deps: Kernel,
     *,
     list_runs: ListRunsHandler,
+    list_subjects: ListSubjectsHandler,
+    list_campaigns: ListCampaignsHandler,
+    list_datasets: ListDatasetsHandler,
+    list_clearances: ListClearancesHandler,
+    list_enclosures: ListEnclosuresHandler,
+    list_decisions: ListDecisionsHandler,
     producer_id: str,
     url: str,
     witness_recorder: RunWitnessRecorder | None,
@@ -183,9 +492,18 @@ async def _push_loop(
     ticks. `websockets`' own `InvalidStatus` (bad token) and `ConnectionClosed`
     (relay restarted, network blip) both fall through to a fresh backoff
     reconnect; nothing here distinguishes them further, since v1's only
-    remedy for either is "try again"."""
+    remedy for either is "try again".
+
+    `decision_tail` is constructed ONCE, outside the reconnect loop below,
+    so "recent decisions" means since this process started, not since the
+    last successful connection.
+    """
     token = deps.settings.status_push_token
     headers = {"Authorization": f"Bearer {token.get_secret_value()}"} if token is not None else {}
+
+    decision_tail = _DecisionTail(
+        started_at_cursor=encode_cursor(created_at=deps.clock.now(), item_id=_MIN_UUID)
+    )
 
     backoff = _RECONNECT_INITIAL_SECONDS
     sequence = 0
@@ -200,19 +518,28 @@ async def _push_loop(
                 last_hash = None  # force one full push right after (re)connect
                 ticks_since_push = _HEARTBEAT_TICKS  # push immediately on connect
                 while True:
-                    runs = await _drain_open_runs(
-                        list_runs, deps, witness_recorder=witness_recorder
+                    fields = await _build_payload_fields(
+                        deps,
+                        list_runs=list_runs,
+                        list_subjects=list_subjects,
+                        list_campaigns=list_campaigns,
+                        list_datasets=list_datasets,
+                        list_clearances=list_clearances,
+                        list_enclosures=list_enclosures,
+                        decision_tail=decision_tail,
+                        list_decisions=list_decisions,
+                        witness_recorder=witness_recorder,
                     )
-                    content_hash = _content_hash(runs)
+                    content_hash = _content_hash(fields)
                     changed = content_hash != last_hash
                     heartbeat_due = ticks_since_push >= _HEARTBEAT_TICKS
                     if changed or heartbeat_due:
                         sequence += 1
                         snapshot = build_snapshot(
-                            runs=runs,
                             sequence=sequence,
                             generated_at=deps.clock.now().isoformat(),
                             producer_id=producer_id,
+                            **fields,
                         )
                         await sock.send(json.dumps(snapshot))
                         last_hash = content_hash
@@ -222,7 +549,7 @@ async def _push_loop(
                     await asyncio.sleep(tick_seconds)
         except asyncio.CancelledError:
             raise
-        except UnauthorizedError:
+        except _UNAUTHORIZED_ERRORS:
             _log.exception(f"{_LOG_PREFIX}.read_unauthorized")
             await asyncio.sleep(tick_seconds)
         except (ConnectionClosed, InvalidStatus, OSError) as err:
@@ -236,6 +563,12 @@ async def status_push_lifespan(
     deps: Kernel,
     *,
     list_runs: ListRunsHandler,
+    list_subjects: ListSubjectsHandler,
+    list_campaigns: ListCampaignsHandler,
+    list_datasets: ListDatasetsHandler,
+    list_clearances: ListClearancesHandler,
+    list_enclosures: ListEnclosuresHandler,
+    list_decisions: ListDecisionsHandler,
     witness_recorder: RunWitnessRecorder | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn the StatusPush loop for the duration of the context.
@@ -277,6 +610,12 @@ async def status_push_lifespan(
         _push_loop(
             deps,
             list_runs=list_runs,
+            list_subjects=list_subjects,
+            list_campaigns=list_campaigns,
+            list_datasets=list_datasets,
+            list_clearances=list_clearances,
+            list_enclosures=list_enclosures,
+            list_decisions=list_decisions,
             producer_id=producer_id,
             url=url,
             witness_recorder=witness_recorder,
