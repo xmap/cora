@@ -158,6 +158,7 @@ def decide(
             capability_id=recipe.capability_id,
             recipe_id=recipe.id,
             max_consecutive_unconverged_iterations=cap,
+            beam_requirement=command.beam_requirement,
             occurred_at=now,
         ),
         RecipeExpansionRecorded(

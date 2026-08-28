@@ -136,6 +136,7 @@ def _expand_step(step: RecipeStep, bindings: Mapping[str, Any]) -> Step:
     return CheckStep(
         address=step.address,
         criterion=_criterion_from_wire(step.criterion),
+        timeout_s=step.timeout_s,
     )
 
 

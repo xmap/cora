@@ -101,6 +101,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
             capability_id=capability_id,
             recipe_id=recipe_id,
             max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
+            beam_requirement=beam_requirement,
         ):
             _ = state  # ProcedureRegistered is the genesis event; prior state ignored
             return Procedure(
@@ -119,6 +120,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 iteration_count=0,
                 consecutive_unconverged_iterations=0,
                 max_consecutive_unconverged_iterations=max_consecutive_unconverged_iterations,
+                beam_requirement=beam_requirement,
             )
         case ProcedureStarted():
             prior = require_state(state, "ProcedureStarted")
@@ -140,6 +142,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case ProcedureCompleted(actuation_kind=actuation_kind):
@@ -162,6 +165,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 # Terminal-set from the conduct's observed kind.
                 actuation_kind=actuation_kind,
             )
@@ -185,6 +189,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 # Terminal-set: routes attempted before the failing step taint it.
                 actuation_kind=actuation_kind,
             )
@@ -208,6 +213,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case ProcedureHeld(actuation_kind=held_actuation_kind):
@@ -239,6 +245,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=merge_actuation_kinds(prior.actuation_kind, held_actuation_kind),
             )
         case ProcedureResumed():
@@ -265,6 +272,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case ProcedureActivitiesLogbookOpened(logbook_id=logbook_id):
@@ -291,6 +299,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case ProcedureDiagnosticLogbookOpened(logbook_id=logbook_id):
@@ -317,6 +326,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case ProcedureOutcomeLogbookOpened(logbook_id=logbook_id):
@@ -343,6 +353,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case RecipeExpansionRecorded():
@@ -384,6 +395,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case ProcedureIterationEnded(converged=converged):
@@ -413,6 +425,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 max_consecutive_unconverged_iterations=(
                     prior.max_consecutive_unconverged_iterations
                 ),
+                beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
         case _:  # pragma: no cover  # exhaustiveness guard

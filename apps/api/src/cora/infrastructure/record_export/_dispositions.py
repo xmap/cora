@@ -1438,6 +1438,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "schema": {"description": "drop:text", "fields": "drop:opaque"},
     },
     "ProcedureRegistered": {
+        "beam_requirement": "keep:enum:BeamRequirement",
         "capability_id": "token:uuid",
         "kind": "drop:text",
         "max_consecutive_unconverged_iterations": "keep:number",
@@ -1454,7 +1455,12 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "procedure_id": "token:uuid",
         "re_establishment_boundary": "keep:number",
     },
-    "ProcedureStarted": {"occurred_at": "keep:time", "procedure_id": "token:uuid"},
+    "ProcedureStarted": {
+        "beam_requirement": "keep:enum:BeamRequirement",
+        "beam_state_at_start": "keep:enum:BeamState",
+        "occurred_at": "keep:time",
+        "procedure_id": "token:uuid",
+    },
     "ProcedureTruncated": {
         "interrupted_at": "keep:time",
         "occurred_at": "keep:time",
@@ -1501,6 +1507,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "output_uri": "drop:text",
             "parameters": "drop:opaque",
             "params": "drop:opaque",
+            "timeout_s": "keep:number",
             "value": "by-value",
             "verify": "keep:number",
         },
@@ -1538,6 +1545,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "output_uri": "drop:text",
             "parameters": "drop:opaque",
             "params": "drop:opaque",
+            "timeout_s": "keep:number",
             "value": "by-value",
             "verify": "keep:number",
         },
@@ -1642,6 +1650,8 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "text_excerpt": "drop:text",
             "workaround_excerpt": "drop:text",
         },
+        "beam_requirement": "keep:enum:BeamRequirement",
+        "beam_state_at_start": "keep:enum:BeamState",
         "campaign_id": "token:uuid",
         "capture_precondition_bypass_snapshot": {
             "beam_preconditions_bypassed": "keep:number",

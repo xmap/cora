@@ -76,6 +76,11 @@ async def test_register_procedure_persists_event_to_postgres_with_target_assets(
         "capability_id": None,
         "recipe_id": None,
         "max_consecutive_unconverged_iterations": None,
+        # additive payload field: whether this Procedure needs beam to
+        # start. Defaults to Required so a Procedure that says nothing is
+        # gated exactly as it was before the field existed; forward-compat
+        # via `payload.get("beam_requirement")` -> None -> Required.
+        "beam_requirement": "Required",
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID

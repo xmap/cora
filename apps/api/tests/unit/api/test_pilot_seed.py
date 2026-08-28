@@ -109,6 +109,47 @@ def test_parser_accepts_shutter_and_acquisition_camera_overrides() -> None:
     assert args.acquisition_camera_name == "Camera"
 
 
+def test_parser_shutter_command_and_status_addresses_are_distinct_records() -> None:
+    """The close COMMAND and the status READBACK must never be the same
+    PV. `BeamBlockingM` is a status leaf every other reader in this
+    codebase treats as read-only (the permit observer, the beam
+    availability lookup, the Run safety envelope); TomoScan's own
+    deployed autosave writes `CloseEPICSC` and reads `BeamBlockingM`
+    back. Collapsing the two would point the setpoint at a record that
+    does not command the shutter, and the check would then confirm a
+    write that never actuated."""
+    args = build_parser().parse_args([])
+    assert args.shutter_close_address == "S02BM-PSS:SBS:CloseEPICSC"
+    assert args.shutter_status_address == "S02BM-PSS:SBS:BeamBlockingM"
+    assert args.shutter_close_address != args.shutter_status_address
+
+
+def test_parser_dark_field_capture_defaults_are_bounded() -> None:
+    args = build_parser().parse_args([])
+    assert args.detector_address == "2bmSP1:cam1"
+    assert args.dark_field_frames == 10
+    assert args.dark_field_dwell_s == 0.05
+
+
+def test_parser_accepts_dark_field_address_overrides() -> None:
+    args = build_parser().parse_args(
+        [
+            "--shutter-close-address",
+            "SIM:SBS:CloseEPICSC",
+            "--shutter-status-address",
+            "SIM:SBS:BeamBlockingM",
+            "--detector-address",
+            "SIM:cam1",
+            "--dark-field-frames",
+            "3",
+        ]
+    )
+    assert args.shutter_close_address == "SIM:SBS:CloseEPICSC"
+    assert args.shutter_status_address == "SIM:SBS:BeamBlockingM"
+    assert args.detector_address == "SIM:cam1"
+    assert args.dark_field_frames == 3
+
+
 def test_asset_seed_namespace_is_the_locked_constant() -> None:
     assert UUID("6c1f4a52-8f2e-4bb0-9d59-1a4c9be1a23d") == ASSET_SEED_NAMESPACE
 

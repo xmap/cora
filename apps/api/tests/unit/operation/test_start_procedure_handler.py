@@ -166,6 +166,12 @@ async def test_handler_appends_procedure_started_event_for_facility_envelope() -
     assert events[1].payload == {
         "procedure_id": str(_PROCEDURE_ID),
         "occurred_at": _NOW.isoformat(),
+        # Bookkeeping recorded on every start. The default Kernel lookup
+        # is AllBeamOpenLookup, so the observation reads "open" here;
+        # the point is that SOMETHING is always recorded, so a skipped
+        # gate cannot be mistaken for a gate that passed.
+        "beam_requirement": "Required",
+        "beam_state_at_start": "Open",
     }
     assert events[1].principal_id == _PRINCIPAL_ID
     assert events[1].correlation_id == _CORRELATION_ID

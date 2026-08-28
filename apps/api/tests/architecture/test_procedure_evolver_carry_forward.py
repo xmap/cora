@@ -76,7 +76,16 @@ _WRITER_ARMS_PER_FIELD: dict[str, frozenset[str]] = {
     # merge_actuation_kinds) so the pre-hold provenance survives the
     # hold->resume boundary.
     "actuation_kind": frozenset({"ProcedureCompleted", "ProcedureAborted", "ProcedureHeld"}),
+    # Declared at genesis and never rewritten: a Procedure's beam need is
+    # a property of the task, not of any transition it makes.
+    "beam_requirement": frozenset(),
 }
+
+#: Fields every arm sets structurally rather than carrying forward:
+#: identity, the operator-facing name, and the FSM status the arm exists
+#: to change. Registered here so the drift catcher below can tell them
+#: apart from a field someone forgot.
+_STRUCTURAL_FIELDS = frozenset({"id", "name", "status"})
 
 
 def _arm_event_type_name(case_node: ast.match_case) -> str | None:
@@ -120,6 +129,42 @@ def _find_evolve_match_cases() -> list[ast.match_case]:
     match_stmt = next((n for n in evolve_func.body if isinstance(n, ast.Match)), None)
     assert match_stmt is not None, "Could not locate `match event:` in `evolve`"
     return list(match_stmt.cases)
+
+
+@pytest.mark.architecture
+def test_carry_forward_field_registry_covers_every_procedure_field() -> None:
+    """`_WRITER_ARMS_PER_FIELD` must enumerate every non-structural field
+    on the Procedure dataclass.
+
+    Without this the guard below silently narrows: it ranges only over
+    the fields someone remembered to list, so a NEW additive field is
+    unchecked from the moment it lands and the arms that drop it pass
+    clean. The sibling check reads as a full-matrix guarantee and would
+    quietly stop being one.
+
+    A new field fails here until it is registered, which is the point:
+    registering it forces the author to decide whether each arm carries
+    it forward or legitimately writes it.
+    """
+    import dataclasses
+
+    from cora.operation.aggregates.procedure.state import Procedure
+
+    actual = {f.name for f in dataclasses.fields(Procedure)}
+    registered = set(_WRITER_ARMS_PER_FIELD) | _STRUCTURAL_FIELDS
+    unregistered = actual - registered
+    stale = registered - actual
+    assert not unregistered, (
+        "Procedure gained field(s) the carry-forward guard does not range over, "
+        "so the guard is blind to them:\n"
+        + "\n".join(f"  - {f}" for f in sorted(unregistered))
+        + "\n\nAdd each to `_WRITER_ARMS_PER_FIELD` (empty frozenset when no arm "
+        "writes it), or to `_STRUCTURAL_FIELDS` when every arm sets it directly."
+    )
+    assert not stale, (
+        "The carry-forward guard names field(s) Procedure no longer has:\n"
+        + "\n".join(f"  - {f}" for f in sorted(stale))
+    )
 
 
 @pytest.mark.architecture

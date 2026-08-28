@@ -126,6 +126,7 @@ from cora.run.aggregates.run import (
     RunSupplyCoverageMismatchError,
     check_safety_envelope,
 )
+from cora.run.aggregates.run.read import load_run
 from cora.run.errors import UnauthorizedError
 from cora.run.features.abort_run import AbortRun
 from cora.run.features.hold_run import HoldRun
@@ -134,6 +135,7 @@ from cora.run.features.resume_run import ResumeRun
 from cora.run.features.stop_run import StopRun
 from cora.run.features.truncate_run import TruncateRun
 from cora.run.ports import InMemoryRunChannelLookup
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -227,6 +229,26 @@ class EnvelopeCheck:
     failed_gate: str | None
 
 
+async def _beam_requirement_for(deps: Kernel, run_id: UUID) -> BeamRequirement:
+    """Read a Run's declared beam requirement for the supervision rule.
+
+    Loads the aggregate rather than reading a projection column. The
+    supervisor is off by default and a beamline runs a handful of
+    concurrent Runs, so the per-tick cost is negligible against a
+    forward-only migration on a live deployment; promote it to
+    `proj_run_summary` if a deployment ever supervises enough Runs for
+    this to show up.
+
+    Fails SAFE: a Run that cannot be loaded is treated as REQUIRED, so a
+    missing or corrupt aggregate keeps the strict beam-Hold behaviour
+    rather than silently exempting the Run from it.
+    """
+    run = await load_run(deps.event_store, run_id)
+    if run is None:
+        return BeamRequirement.REQUIRED
+    return run.beam_requirement
+
+
 def decide_supervision(
     *,
     run_status: str,
@@ -235,8 +257,16 @@ def decide_supervision(
     envelope_ok: bool | None = None,
     settle_ticks_met: bool = False,
     envelope_hold_ready: bool = False,
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED,
 ) -> SupervisionOutcome:
     """Pure supervision rule for one Run (no I/O).
+
+    `beam_requirement` mirrors the start gate: a Run that declared
+    NOT_REQUIRED is never held FOR BEAM, because holding it would
+    undo, one tick later, the exemption that let it start. Every
+    other hold trigger still applies to it, including the
+    envelope-hold path for clearance / supply / enclosure. Defaults
+    to REQUIRED so an existing caller behaves exactly as before.
 
     Hold path (Running): beam is "definitely down" only when the read
     quality is Good and a shutter/permit is closed; a non-Good read is
@@ -286,7 +316,11 @@ def decide_supervision(
             choice="Continue", new_memory=prior, record=False, issue_hold=False
         )
     beam_open = beam.fes_open and beam.sbs_open and beam.fes_permit
-    if beam_open:
+    # An exempt Run is treated as though beam were open: it never
+    # needed beam, so beam being down is not a reason to hold it.
+    # Deliberately routed through the SAME branch rather than an
+    # early return, so the envelope-hold path below still applies.
+    if beam_open or beam_requirement is BeamRequirement.NOT_REQUIRED:
         if not envelope_hold_ready:
             return SupervisionOutcome(
                 choice="Continue", new_memory=None, record=False, issue_hold=False
@@ -1455,6 +1489,7 @@ async def _supervise_tick(
             beam=beam,
             prior=memory.get(item.run_id),
             envelope_hold_ready=envelope_hold_ready,
+            beam_requirement=await _beam_requirement_for(deps, item.run_id),
         )
         _apply_memory(memory, item.run_id, outcome)
         if not outcome.record:
@@ -1524,6 +1559,7 @@ async def _supervise_tick(
             prior=memory.get(item.run_id),
             envelope_ok=check.ok,
             settle_ticks_met=settle_count >= resume_settle_ticks,
+            beam_requirement=await _beam_requirement_for(deps, item.run_id),
         )
         _apply_memory(memory, item.run_id, outcome)
         if not outcome.record:

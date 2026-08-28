@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.identifier import Identifier
 
 
@@ -119,3 +120,17 @@ class StartRun:
     # stays present-and-Verified only). Consumed only by the gate, not
     # persisted on RunStarted (mirrors the beam reading).
     compute_resource_code: str | None = None
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    """Whether this Run needs beam available to start.
+
+    Defaults to `REQUIRED`, so an existing caller that says nothing keeps
+    the pre-existing gate behaviour. Declare `NOT_REQUIRED` for a Run
+    whose measurement is meaningful without beam (a dark-field baseline,
+    whose conducted phase closes the shutter as its first step) or for
+    conduct during the off-beam commissioning window.
+
+    UNLIKE `compute_resource_code` above, this one IS persisted on
+    RunStarted and folded onto Run state. It has to be: the
+    RunSupervisor's beam-Hold rule consults it on every later tick, and
+    a Run that could not say "I never needed beam" would be held a tick
+    after the gate deliberately let it start."""

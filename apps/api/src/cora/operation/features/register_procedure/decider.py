@@ -123,6 +123,7 @@ def decide(
             parent_run_id=command.parent_run_id,
             capability_id=command.capability_id,
             max_consecutive_unconverged_iterations=cap,
+            beam_requirement=command.beam_requirement,
             occurred_at=now,
         )
     ]

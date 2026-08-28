@@ -95,7 +95,15 @@ _WRITER_ARMS_PER_FIELD: dict[str, frozenset[str]] = {
     "hold_claims": frozenset(
         {"RunHeld", "RunResumed", "RunCompleted", "RunAborted", "HoldClaimReleased"}
     ),
+    # Declared at genesis and never rewritten: a Run's beam need is a
+    # property of the work, not of any transition it makes.
+    "beam_requirement": frozenset(),
 }
+
+#: `status` is the one field every arm sets structurally: changing it is
+#: what a transition arm exists to do. Registered so the drift catcher
+#: can tell it apart from a field someone forgot to thread.
+_STRUCTURAL_FIELDS = frozenset({"status"})
 
 
 def _arm_event_type_name(case_node: ast.match_case) -> str | None:
@@ -161,6 +169,38 @@ def test_run_evolver_genesis_arm_sets_every_additive_field() -> None:
         "transition, regardless of what every other arm does. Add it to the\n"
         "genesis Run(...) call, or remove it from _WRITER_ARMS_PER_FIELD if it\n"
         "is genuinely not an additive state field."
+    )
+
+
+@pytest.mark.architecture
+def test_carry_forward_field_registry_covers_every_run_field() -> None:
+    """`_WRITER_ARMS_PER_FIELD` must enumerate every non-structural field
+    on the Run dataclass.
+
+    Without this the two guards below silently narrow: they range only
+    over the fields someone remembered to list, so a NEW additive field
+    is unchecked from the moment it lands and every arm that drops it
+    passes clean, while the suite still reads as a full-matrix
+    guarantee. That is the same blindness that let the
+    `started_by_decision_id` genesis bug land.
+    """
+    import dataclasses
+
+    from cora.run.aggregates.run.state import Run
+
+    actual = {f.name for f in dataclasses.fields(Run)}
+    registered = set(_WRITER_ARMS_PER_FIELD) | _STRUCTURAL_FIELDS
+    unregistered = actual - registered
+    stale = registered - actual
+    assert not unregistered, (
+        "Run gained field(s) the carry-forward guards do not range over, "
+        "so they are blind to them:\n"
+        + "\n".join(f"  - {f}" for f in sorted(unregistered))
+        + "\n\nAdd each to `_WRITER_ARMS_PER_FIELD` (empty frozenset when no arm "
+        "writes it), or to `_STRUCTURAL_FIELDS` when every arm sets it directly."
+    )
+    assert not stale, "The carry-forward guards name field(s) Run no longer has:\n" + "\n".join(
+        f"  - {f}" for f in sorted(stale)
     )
 
 

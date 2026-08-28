@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from cora.shared.beam_requirement import BeamRequirement
+
 
 @dataclass(frozen=True)
 class RegisterProcedureFromRecipe:
@@ -36,3 +38,12 @@ class RegisterProcedureFromRecipe:
     """Optional "patience" cap (>= 1 when set; None = no cap), mirroring
     RegisterProcedure. Folds onto Procedure state at register time;
     Capability-default inheritance is a deferred follow-up."""
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    """Whether this Procedure needs beam available to start, mirroring
+    RegisterProcedure. Declared per Procedure rather than inherited from
+    the Recipe's Capability: `dark_field` and `flat_field` both realize
+    `cora.capability.acquisition`, yet a flat field genuinely needs beam
+    (it images the beam profile) while a dark field is defined by its
+    absence. The Capability is therefore the wrong grain for this axis.
+    A Recipe-level default is a possible later convenience, gated on the
+    same declaration existing here first."""

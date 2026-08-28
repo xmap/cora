@@ -73,6 +73,7 @@ from cora.run.features.stop_run.handler import Handler as StopRunHandler
 from cora.run.features.truncate_run import TruncateRun
 from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
 from cora.run.ports import InMemoryRunChannelLookup, RunChannelLookup
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 20, 12, 0, 0, tzinfo=UTC)
@@ -3287,3 +3288,59 @@ async def test_stall_act_swallows_unauthorized() -> None:
         stall_act_enabled=True,
         stall_settle_ticks=1,
     )  # no raise
+
+
+# ----- BeamRequirement.NOT_REQUIRED and the beam-Hold rule -----
+
+
+@pytest.mark.unit
+def test_beam_down_does_not_hold_a_run_that_never_needed_beam() -> None:
+    """The supervisor must not undo the start gate's exemption.
+
+    `test_beam_down_running_fresh_holds` above is the default: beam
+    down, so hold. A Run that declared NOT_REQUIRED was deliberately
+    allowed to start with beam absent, and holding it on the next tick
+    would reverse that decision seconds later, leaving the exemption
+    useless in practice while looking correct at the gate.
+    """
+    out = decide_supervision(
+        run_status="Running",
+        beam=_beam(fes=False, sbs=False, permit=False),
+        prior=None,
+        beam_requirement=BeamRequirement.NOT_REQUIRED,
+    )
+    assert out.choice == "Continue"
+    assert out.issue_hold is False
+
+
+@pytest.mark.unit
+def test_beam_down_still_holds_a_run_that_declared_it_needed_beam() -> None:
+    """The default is unchanged, pinned beside the exemption."""
+    out = decide_supervision(
+        run_status="Running",
+        beam=_beam(fes=False),
+        prior=None,
+        beam_requirement=BeamRequirement.REQUIRED,
+    )
+    assert out.choice == "Hold"
+    assert out.issue_hold is True
+
+
+@pytest.mark.unit
+def test_exempt_run_is_still_held_by_the_envelope_gate() -> None:
+    """The exemption covers beam alone.
+
+    A confirmed clearance / supply / enclosure failure still holds an
+    exempt Run: those gates have nothing to do with beam, and an
+    exemption that silently widened to them would be a general
+    supervision bypass.
+    """
+    out = decide_supervision(
+        run_status="Running",
+        beam=_beam(fes=False, sbs=False, permit=False),
+        prior=None,
+        envelope_hold_ready=True,
+        beam_requirement=BeamRequirement.NOT_REQUIRED,
+    )
+    assert out.choice == "Hold"
+    assert out.issue_hold is True

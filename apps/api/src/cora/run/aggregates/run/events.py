@@ -90,6 +90,7 @@ from typing import Any, assert_never
 from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
+from cora.infrastructure.ports.beam_availability_lookup import BeamState
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run.state import (
     CapturePreconditionBypassSnapshot,
@@ -97,6 +98,7 @@ from cora.run.aggregates.run.state import (
     ConductMode,
     SafetyEnvelopeVerdict,
 )
+from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookSchema
 
@@ -227,18 +229,30 @@ class RunStarted:
     conduct_mode: ConductMode = ConductMode.CONDUCTED
     # The witnessed genesis's recorded reading of the two live facility
     # signals (enclosure permit, beam availability) instead of an
-    # enforced gate. Always None on a driven Run: a driven Run
-    # necessarily passed both gates to exist at all, so a stored
-    # all-True verdict would carry no information beyond the event's
-    # own existence, the same reason `start_run`'s decider never
-    # persists its beam reading. Only `record_witnessed_run`'s decider
-    # ever constructs a non-None value. Lives on the event payload
-    # only — NOT on Run state, same exclusion as
-    # `acknowledged_cautions` (a forensic genesis snapshot, not
+    # enforced gate. Always None on a driven Run. Only
+    # `record_witnessed_run`'s decider ever constructs a non-None value.
+    # Lives on the event payload only — NOT on Run state, same exclusion
+    # as `acknowledged_cautions` (a forensic genesis snapshot, not
     # something any later transition or read model needs to see).
     # Forward-compat via `payload.get("safety_envelope_verdict")`
     # returning None for legacy streams without the key.
     safety_envelope_verdict: SafetyEnvelopeVerdict | None = None
+    # Beam bookkeeping on the DRIVEN path, the two fields below.
+    #
+    # This pair exists because the older rationale for recording nothing
+    # ("a driven Run necessarily passed the beam gate to exist, so a
+    # stored reading carries no information beyond the event's own
+    # existence") stopped being true when `BeamRequirement` landed. A
+    # driven Run can now start with beam absent, under a declared
+    # exemption, so the event's existence no longer implies beam was
+    # there and the reading has to be recorded to stay recoverable.
+    #
+    # Distinct from `safety_envelope_verdict` above, which is the
+    # WITNESSED path's substitute for gates CORA did not enforce. These
+    # two are the DRIVEN path's record of a gate CORA did evaluate, and
+    # of what the execution declared it needed.
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    beam_state_at_start: BeamState | None = None
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
@@ -930,6 +944,8 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             pinned_calibration_ids=pinned_calibration_ids,
             input_dataset_ids=input_dataset_ids,
             capture_precondition_bypass_snapshot=capture_precondition_bypass_snapshot,
+            beam_requirement=beam_requirement,
+            beam_state_at_start=beam_state_at_start,
             occurred_at=occurred_at,
         ):
             return {
@@ -979,6 +995,12 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                     _capture_precondition_bypass_snapshot_to_payload(
                         capture_precondition_bypass_snapshot
                     )
+                ),
+                # Driven-path beam bookkeeping: what was declared and
+                # what was observed. Pre-slice streams omit both.
+                "beam_requirement": beam_requirement.value,
+                "beam_state_at_start": (
+                    beam_state_at_start.value if beam_state_at_start is not None else None
                 ),
                 "occurred_at": occurred_at.isoformat(),
             }
@@ -1187,6 +1209,30 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             assert_never(event)
 
 
+def _beam_requirement_from(payload: dict[str, Any]) -> BeamRequirement:
+    """Fold the declared beam requirement, defaulting absence to REQUIRED.
+
+    The default direction is the safety-relevant part: a stream written
+    before this field existed replays against the STRICT gate. Defaulting
+    the other way would grant every historical Run an exemption it never
+    declared. Twin of the Procedure-side helper; each aggregate's
+    events module owns its own fold helpers by convention.
+    """
+    raw = payload.get("beam_requirement")
+    if raw is None:
+        return BeamRequirement.REQUIRED
+    return BeamRequirement(raw)
+
+
+def _beam_state_from(payload: dict[str, Any]) -> BeamState | None:
+    """Fold the observed beam state; None is a real member (no beam PVs
+    configured) and is also what a pre-slice stream yields."""
+    raw = payload.get("beam_state_at_start")
+    if raw is None:
+        return None
+    return BeamState(raw)
+
+
 def from_stored(stored: StoredEvent) -> RunEvent:
     """Rebuild a Run event from a StoredEvent loaded from the event store.
 
@@ -1261,6 +1307,8 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                             payload.get("capture_precondition_bypass_snapshot")
                         )
                     ),
+                    beam_requirement=_beam_requirement_from(payload),
+                    beam_state_at_start=_beam_state_from(payload),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 

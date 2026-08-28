@@ -103,6 +103,7 @@ async def test_handler_appends_procedure_registered_event_to_store() -> None:
         "capability_id": None,
         "recipe_id": None,
         "max_consecutive_unconverged_iterations": None,
+        "beam_requirement": "Required",
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID

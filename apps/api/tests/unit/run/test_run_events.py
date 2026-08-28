@@ -125,6 +125,11 @@ def test_to_payload_serializes_run_started_with_subject_to_primitives() -> None:
         # forward-compat via
         # `payload.get("capture_precondition_bypass_snapshot")`.
         "capture_precondition_bypass_snapshot": None,
+        # Driven-path beam bookkeeping. An event built directly (as here)
+        # carries the strict default and no observation; the decider is
+        # what fills the observation in from the pre-flight read.
+        "beam_requirement": "Required",
+        "beam_state_at_start": None,
         "occurred_at": _NOW.isoformat(),
     }
 

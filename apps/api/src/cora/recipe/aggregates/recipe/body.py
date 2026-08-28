@@ -182,6 +182,15 @@ class RecipeCheckStep:
 
     address: str
     criterion: Mapping[str, Any]
+    timeout_s: float | None = None
+    """How long the criterion may take to hold, in seconds; mirrors
+    `CheckStep.timeout_s` exactly. None (the default) is a single
+    instantaneous read, which is what every recipe written before this
+    field does.
+
+    Set it on a check that follows a step which moves hardware. It rides
+    expansion and the determinism hash like any other authored value, so
+    a recipe whose deadline changed is a different recipe."""
 
 
 @dataclass(frozen=True)
@@ -392,6 +401,7 @@ def _step_to_wire(step: RecipeStep) -> dict[str, Any]:
         "kind": "check",
         "address": step.address,
         "criterion": dict(step.criterion),
+        "timeout_s": step.timeout_s,
     }
 
 
@@ -427,9 +437,25 @@ def _step_from_wire(payload: dict[str, Any]) -> RecipeStep:
                 output_ref_name=payload.get("output_ref_name"),
             )
         if kind == "check":
+            # Absent for every pre-slice recipe; `.get` -> None is the
+            # instantaneous read those recipes were authored against.
+            timeout_s = payload.get("timeout_s")
+            if timeout_s is not None and (
+                not isinstance(timeout_s, int | float)
+                or isinstance(timeout_s, bool)
+                or timeout_s <= 0
+            ):
+                # Rejected rather than coerced. Zero or negative is a
+                # caller error, NOT a way to spell "no wait": absence is
+                # how that is spelled, and silently treating -1 as absence
+                # would turn a typo into a check that never waits.
+                raise InvalidRecipeStepShapeError(
+                    f"step kind 'check': timeout_s must be a positive number, got {timeout_s!r}"
+                )
             return RecipeCheckStep(
                 address=payload["address"],
                 criterion=dict(payload["criterion"]),
+                timeout_s=timeout_s,
             )
     except (KeyError, AttributeError, TypeError) as exc:
         raise InvalidRecipeStepShapeError(f"step kind {kind!r}: {exc}") from exc

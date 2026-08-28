@@ -85,6 +85,7 @@ from uuid import UUID
 from cora.campaign.aggregates.campaign import CampaignStatus
 from cora.campaign.aggregates.campaign.events import CampaignRunAdded
 from cora.equipment.aggregates.asset import AssetLifecycle
+from cora.infrastructure.ports.beam_availability_lookup import summarize_beam_state
 from cora.recipe.aggregates.plan import PlanStatus, validate_wire_endpoints
 from cora.run.aggregates.run import (
     CautionAcknowledgement,
@@ -244,6 +245,7 @@ def decide(
         needed_supplies_satisfaction=context.needed_supplies_satisfaction,
         referencing_enclosures=context.referencing_enclosures,
         beam_availability=context.beam_availability,
+        beam_requirement=command.beam_requirement,
     )
 
     if context.plan.status is PlanStatus.DEPRECATED:
@@ -423,6 +425,12 @@ def decide(
             # sort for deterministic byte-form on the event payload; the
             # cardinality check ran earlier via validate_input_dataset_ids.
             input_dataset_ids=tuple(sorted(input_dataset_ids)),
+            # Driven-path beam bookkeeping. Recorded even though the
+            # gate already ran, because a NOT_REQUIRED Run can now
+            # start with beam absent: the event's existence no longer
+            # implies beam was there.
+            beam_requirement=command.beam_requirement,
+            beam_state_at_start=summarize_beam_state(context.beam_availability),
             occurred_at=now,
         )
     ]

@@ -1822,3 +1822,166 @@ async def test_conduct_threads_none_kind_into_complete_for_bare_port() -> None:
     )
     assert result.succeeded is True
     assert complete.calls[0].command.actuation_kind is None
+
+
+# --- check deadline: waiting for a criterion to become true --------------
+#
+# A CheckStep with no `timeout_s` is a single instantaneous read, which is
+# what every check did before this field existed. With one, the check reads
+# once and then consumes the subscription until the criterion holds or the
+# deadline passes. See [[project_conduct_settle_design]].
+
+
+@pytest.mark.unit
+async def test_check_without_timeout_stays_a_single_instantaneous_read() -> None:
+    """The default is unchanged: no deadline, no waiting, mismatch halts.
+
+    Pinned beside the waiting tests so a future edit cannot make every
+    check start waiting by accident.
+    """
+    port = InMemoryControlPort()
+    port.set_reading("sim:shutter", _good_reading("OFF"))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(CheckStep(address="sim:shutter", criterion=EqualsCriterion(expected="ON")),),
+    )
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.error_class == "CheckFailedError"
+    assert appender.calls[0].command.entries[0].payload["waited_s"] == 0.0
+
+
+@pytest.mark.unit
+async def test_check_with_timeout_passes_immediately_when_already_satisfied() -> None:
+    """THE read-first case, and the one a subscribe-only implementation fails.
+
+    A subscription delivers on CHANGE, and a value that is already correct
+    never changes into itself. An implementation that skipped the initial
+    read would wait out the whole deadline here and report a false
+    negative on healthy hardware. This test would hang rather than fail,
+    which is exactly why the generous deadline below is deliberate: the
+    assertion is that it returns immediately.
+    """
+    port = InMemoryControlPort()
+    port.set_reading("sim:shutter", _good_reading("ON"))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+    result = await asyncio.wait_for(
+        conductor.execute(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(
+                CheckStep(
+                    address="sim:shutter",
+                    criterion=EqualsCriterion(expected="ON"),
+                    timeout_s=30.0,
+                ),
+            ),
+        ),
+        timeout=5.0,
+    )
+    assert result.succeeded is True
+    assert appender.calls[0].command.entries[0].payload["waited_s"] == 0.0
+
+
+@pytest.mark.unit
+async def test_check_with_timeout_passes_once_a_later_update_satisfies_it() -> None:
+    """The whole point: the value arrives late and the check still passes."""
+    port = InMemoryControlPort()
+    port.set_reading("sim:shutter", _good_reading("OFF"))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+    task = asyncio.create_task(
+        conductor.execute(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(
+                CheckStep(
+                    address="sim:shutter",
+                    criterion=EqualsCriterion(expected="ON"),
+                    timeout_s=30.0,
+                ),
+            ),
+        )
+    )
+    # Let the check take its initial read and open the subscription, then
+    # deliver the transition the way a real shutter eventually would.
+    await asyncio.sleep(0.1)
+    port.set_reading("sim:shutter", _good_reading("ON"))
+    result = await asyncio.wait_for(task, timeout=5.0)
+
+    assert result.succeeded is True
+    entry = appender.calls[0].command.entries[0]
+    assert entry.payload["result"] == "ok"
+    assert entry.payload["reading"]["value"] == "ON"
+
+
+@pytest.mark.unit
+async def test_check_with_timeout_halts_on_the_last_value_seen_when_it_never_arrives() -> None:
+    """Expiry reuses CheckFailedError and reports the REAL observed value.
+
+    A timeout must not degrade the diagnostic into "timed out": an
+    operator reading the record needs to know the shutter sat at OFF, not
+    merely that CORA gave up.
+    """
+    port = InMemoryControlPort()
+    port.set_reading("sim:shutter", _good_reading("OFF"))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+    result = await asyncio.wait_for(
+        conductor.execute(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(
+                CheckStep(
+                    address="sim:shutter",
+                    criterion=EqualsCriterion(expected="ON"),
+                    timeout_s=0.2,
+                ),
+            ),
+        ),
+        timeout=5.0,
+    )
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.error_class == "CheckFailedError"
+    entry = appender.calls[0].command.entries[0]
+    assert entry.payload["result"] == "failed"
+    assert entry.payload["reading"]["value"] == "OFF"
+
+
+@pytest.mark.unit
+async def test_check_with_timeout_ignores_updates_that_do_not_satisfy() -> None:
+    """Intermediate values are not mistaken for arrival."""
+    port = InMemoryControlPort()
+    port.set_reading("sim:shutter", _good_reading("OFF"))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+    task = asyncio.create_task(
+        conductor.execute(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(
+                CheckStep(
+                    address="sim:shutter",
+                    criterion=EqualsCriterion(expected="ON"),
+                    timeout_s=30.0,
+                ),
+            ),
+        )
+    )
+    await asyncio.sleep(0.1)
+    port.set_reading("sim:shutter", _good_reading("MOVING"))
+    await asyncio.sleep(0.05)
+    assert not task.done(), "a non-satisfying update must not end the wait"
+    port.set_reading("sim:shutter", _good_reading("ON"))
+    result = await asyncio.wait_for(task, timeout=5.0)
+    assert result.succeeded is True

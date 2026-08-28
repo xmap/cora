@@ -33,6 +33,8 @@ enum-in-state, derived-from-event-type-in-evolver convention.
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from cora.shared.beam_requirement import BeamRequirement
+
 
 @dataclass(frozen=True)
 class RegisterProcedure:
@@ -57,6 +59,14 @@ class RegisterProcedure:
     parent_run_id: UUID | None = None
     capability_id: UUID | None = None
     max_consecutive_unconverged_iterations: int | None = None
+    beam_requirement: BeamRequirement = BeamRequirement.REQUIRED
+    """Whether this Procedure needs beam available to start.
+
+    Defaults to `REQUIRED`, so an existing caller that says nothing gets
+    the pre-existing gate behaviour unchanged. Declare `NOT_REQUIRED`
+    for work that is meaningful without beam: a dark-field capture whose
+    own first step closes the shutter, a maintenance power-cycle, or any
+    conduct during the off-beam commissioning window."""
     """Optional "patience" cap (>= 1 when set; None = no cap): max
     consecutive unconverged iterations before `start_iteration` refuses
     the next one. Folds onto Procedure state at register time and is read
