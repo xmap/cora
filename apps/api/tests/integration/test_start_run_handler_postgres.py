@@ -219,6 +219,19 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         # (StartRun never sets it); forward-compat via
         # `payload.get("capture_precondition_bypass_snapshot")`.
         "capture_precondition_bypass_snapshot": None,
+        # additive payload field: whether this Run needs beam to start.
+        # Defaults to Required so a Run that says nothing keeps the
+        # pre-field safety envelope, including on the supervisor's
+        # load-failure path; forward-compat via
+        # `payload.get("beam_requirement")` -> None -> Required.
+        "beam_requirement": "Required",
+        # additive payload field: the beam reading witnessed at start,
+        # recorded whether or not the Run needed beam, so the record says
+        # what the beam WAS and not merely that it was allowed. Open here
+        # because this fixture's lookup reports open; None only when a
+        # deployment configures no beam lookup at all. Forward-compat via
+        # `payload.get("beam_state_at_start")`.
+        "beam_state_at_start": "Open",
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.event_id == run_event_id

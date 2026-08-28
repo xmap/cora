@@ -94,6 +94,16 @@ async def test_start_procedure_persists_event_to_postgres_with_active_target_ass
     assert events[1].correlation_id == _CORRELATION_ID
     assert events[1].payload == {
         "procedure_id": str(procedure_id),
+        # additive payload field carrying the Procedure's own declaration
+        # of whether it needs beam. Defaults to Required, which is what a
+        # Procedure registered without the field folds to; forward-compat
+        # via `payload.get("beam_requirement")` -> None -> Required.
+        "beam_requirement": "Required",
+        # additive payload field recording what the beam actually looked
+        # like when this Procedure started, whether or not it needed beam.
+        # None when the deployment configures no beam lookup at all;
+        # forward-compat via `payload.get("beam_state_at_start")`.
+        "beam_state_at_start": "Open",
         "occurred_at": _NOW.isoformat(),
     }
 
