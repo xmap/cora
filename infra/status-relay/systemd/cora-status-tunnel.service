@@ -1,16 +1,27 @@
-# Keeps one outbound SSH reverse tunnel open from arcturus to lyra, so
-# `cora-api`'s status_push (cora.api._status_push) can reach the relay
-# at ws://127.0.0.1:8099/ingest as if it were local, even though
-# arcturus has no inbound reachability from lyra and 443 is refused
-# outbound (verified 2026-08-28: getent resolves lyra, `nc -vz 443` is
-# refused, `nc -vz 22` connects). SSH on port 22 is the only viable leg.
+# Keeps one outbound SSH local-forward tunnel open from arcturus to
+# lyra, so `cora-api`'s status_push (cora.api._status_push) can reach
+# the relay at ws://127.0.0.1:8099/ingest as if it were local, even
+# though arcturus has no inbound reachability from lyra and 443 is
+# refused outbound (verified 2026-08-28: getent resolves lyra, `nc -vz
+# 443` is refused, `nc -vz 22` connects). SSH on port 22 is the only
+# viable leg.
 #
-# `-R 8099:127.0.0.1:8099` asks lyra to listen on ITS OWN 127.0.0.1:8099
-# and forward anything that arrives there back through this tunnel to
-# arcturus's own 127.0.0.1:8099 -- the relay's `ExecStart` in
-# cora-status-relay.service must keep binding 127.0.0.1, never 0.0.0.0,
-# or lyra's sshd will refuse the remote-forward bind (GatewayPorts is
-# not assumed to be set).
+# `-L 8099:127.0.0.1:8099` asks THIS ssh client (arcturus) to listen on
+# its OWN 127.0.0.1:8099 and forward anything that arrives there,
+# outbound through this tunnel, to lyra's own 127.0.0.1:8099 -- the
+# relay's `ExecStart` in cora-status-relay.service must keep binding
+# 127.0.0.1, never 0.0.0.0, so nothing but this tunnel can reach it.
+#
+# An earlier version of this unit used `-R` here, which is backwards:
+# `-R` makes the REMOTE side (lyra) listen and forward back to the
+# LOCAL side (arcturus), the opposite of what a client with no inbound
+# reachability needs. That shipped silently for days because a stray
+# `cora-status-relay.service` had ALSO been enabled directly on
+# arcturus (no `ConditionHost` guard on that unit at the time), so
+# arcturus's own 127.0.0.1:8099 answered locally and every check looked
+# green without the tunnel ever being exercised. Caught 2026-08-28 once
+# STATUS_PUSH_ENABLED was actually flipped on and the relay on lyra
+# never saw a producer connect despite arcturus logging `connected`.
 #
 # ServerAliveInterval/Count let ssh notice a dead network path and exit
 # rather than sit in a half-broken state; ExitOnForwardFailure means a
@@ -37,7 +48,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -R 8099:127.0.0.1:8099 2bmb@lyra
+ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -L 8099:127.0.0.1:8099 2bmb@lyra
 Restart=always
 RestartSec=15
 StandardOutput=append:/home/beams0/2BMB/dgursoy/cora-status-tunnel.log
