@@ -2085,3 +2085,171 @@ async def test_execute_write_ledger_excludes_a_rejected_write() -> None:
     assert result.succeeded is False
     assert result.failure is not None
     assert dict(result.substrate_writes) == {"2bma:shutter": 1}
+
+
+# --- the ledger survives every wrapper's terminal arm --------------------
+#
+# Each wrapper used to hand-copy a field list onto a fresh ConductorResult,
+# which silently dropped whatever the list omitted. These pin the fields an
+# operator triages a stuck conduct with: what CORA left set, and whether the
+# actuation was real.
+
+
+def _conductor_hold_lifecycle(
+    port: ControlPort,
+    appender: _FakeAppendStep,
+    *,
+    start: _FakeLifecycleHandler,
+    complete: _FakeLifecycleHandler,
+    abort: _FakeLifecycleHandler,
+    hold: _FakeLifecycleHandler,
+    ids: Sequence[UUID] = (),
+) -> Conductor:
+    return Conductor(
+        control_port=port,
+        append_step=appender,
+        clock=FakeClock(_FIXED_NOW),
+        id_generator=_SequenceIdGenerator(list(ids)),
+        start_procedure=start,
+        complete_procedure=complete,
+        abort_procedure=abort,
+        hold_procedure=hold,
+    )
+
+
+def _routed_port(*addresses: str) -> tuple[ControlPortRegistry, InMemoryControlPort]:
+    """A port behind a routing table, so `actuation_kind` resolves to a real
+    value instead of the None a bare InMemoryControlPort yields. Without the
+    table these tests would assert carry-forward of a field that is None on
+    both sides of the fix."""
+    inner = InMemoryControlPort()
+    for address in addresses:
+        inner.simulate_connect(address)
+    registry = ControlPortRegistry()
+    registry.register_control_port("2bma:", inner, is_simulated=False)
+    return registry, inner
+
+
+@pytest.mark.unit
+async def test_conduct_complete_rejection_still_reports_what_was_left_set() -> None:
+    """The steps ran and wrote; only the terminal transition failed. Dropping
+    the ledger here would tell an operator nothing was touched."""
+    port, _ = _routed_port("2bma:shutter")
+    appender = _FakeAppendStep()
+    conductor = _conductor_full_lifecycle(
+        port,
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(raises=RuntimeError("complete rejected")),
+        abort=_FakeLifecycleHandler(),
+        ids=[uuid4() for _ in range(2)],
+    )
+
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="2bma:shutter", value=1),),
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.target == "complete"
+    assert dict(result.substrate_writes) == {"2bma:shutter": 1}
+    assert result.actuation_kind is ActuationKind.PHYSICAL
+
+
+@pytest.mark.unit
+async def test_conduct_or_hold_complete_rejection_still_reports_what_was_left_set() -> None:
+    """conduct_or_hold's complete arm carries the same obligation as conduct's."""
+    port, _ = _routed_port("2bma:shutter")
+    appender = _FakeAppendStep()
+    conductor = _conductor_hold_lifecycle(
+        port,
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(raises=RuntimeError("complete rejected")),
+        abort=_FakeLifecycleHandler(),
+        hold=_FakeLifecycleHandler(),
+        ids=[uuid4() for _ in range(2)],
+    )
+
+    result = await conductor.conduct_or_hold(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="2bma:shutter", value=1),),
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.target == "complete"
+    assert dict(result.substrate_writes) == {"2bma:shutter": 1}
+    assert result.actuation_kind is ActuationKind.PHYSICAL
+
+
+@pytest.mark.unit
+async def test_conduct_or_hold_held_procedure_reports_what_was_left_set() -> None:
+    """A Held Procedure is parked mid-flight awaiting an operator decision,
+    which is exactly when the ledger is load-bearing: the shutter this conduct
+    opened is still open and the recipe's closing steps never ran."""
+    port, inner = _routed_port("2bma:shutter")
+    inner.set_reading("2bma:rot:rbv", _good_reading(12.5))
+    appender = _FakeAppendStep()
+    hold = _FakeLifecycleHandler()
+    conductor = _conductor_hold_lifecycle(
+        port,
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(),
+        abort=_FakeLifecycleHandler(),
+        hold=hold,
+        ids=[uuid4() for _ in range(3)],
+    )
+
+    result = await conductor.conduct_or_hold(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(
+            SetpointStep(address="2bma:shutter", value=1),
+            CheckStep(address="2bma:rot:rbv", criterion=EqualsCriterion(expected=45.0)),
+        ),
+    )
+
+    assert result.held is True
+    assert result.succeeded is False
+    assert len(hold.calls) == 1
+    assert dict(result.substrate_writes) == {"2bma:shutter": 1}
+
+
+@pytest.mark.unit
+async def test_conduct_from_complete_rejection_reports_the_merged_kind_and_ledger() -> None:
+    """The resume tail wrote and the merged kind is what the terminal event
+    carried, so the complete-rejected arm must agree with the success arm on
+    both rather than reporting a bare result."""
+    port, _ = _routed_port("2bma:shutter")
+    appender = _FakeAppendStep()
+    conductor = Conductor(
+        control_port=port,
+        append_step=appender,
+        clock=FakeClock(_FIXED_NOW),
+        id_generator=_SequenceIdGenerator([uuid4() for _ in range(2)]),
+        resume_procedure=_FakeLifecycleHandler(),
+        complete_procedure=_FakeLifecycleHandler(raises=RuntimeError("complete rejected")),
+        abort_procedure=_FakeLifecycleHandler(),
+    )
+
+    result = await conductor.conduct_from(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(SetpointStep(address="2bma:shutter", value=1),),
+        boundary=0,
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.target == "complete"
+    assert dict(result.substrate_writes) == {"2bma:shutter": 1}
+    assert result.actuation_kind is ActuationKind.PHYSICAL

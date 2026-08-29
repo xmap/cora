@@ -1490,12 +1490,12 @@ class Conductor:
             except _LIFECYCLE_RERAISE:
                 raise
             except Exception as exc:
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
-                    measurements=result.measurements,
-                    artifacts=result.artifacts,
-                    outputs=result.outputs,
+                # `replace`, not a fresh ConductorResult: a hand-copied
+                # field list silently drops whatever the caller forgets to
+                # list, and `substrate_writes` is exactly the field an
+                # operator needs on a completion that itself failed.
+                return replace(
+                    result,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1626,12 +1626,8 @@ class Conductor:
             except _LIFECYCLE_RERAISE:
                 raise
             except Exception as exc:
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
-                    measurements=result.measurements,
-                    artifacts=result.artifacts,
-                    outputs=result.outputs,
+                return replace(
+                    result,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1663,16 +1659,11 @@ class Conductor:
                 )
                 held_ok = True
             if held_ok:
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
-                    failure=failure,
-                    actuation_kind=result.actuation_kind,
-                    held=True,
-                    measurements=result.measurements,
-                    artifacts=result.artifacts,
-                    outputs=result.outputs,
-                )
+                # A Held Procedure is parked mid-flight awaiting an operator
+                # decision, which is exactly when `substrate_writes` has to
+                # survive: it is the list of what CORA left set, and the
+                # recipe's own closing steps did not run.
+                return replace(result, failure=failure, held=True)
             return result
         # Non-recoverable step failure (action): best-effort abort, exactly
         # like conduct(). Holding would strand a Procedure whose replay tail
@@ -2784,12 +2775,12 @@ class Conductor:
             except _LIFECYCLE_RERAISE:
                 raise
             except Exception as exc:
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
-                    measurements=result.measurements,
-                    artifacts=result.artifacts,
-                    outputs=result.outputs,
+                # `merged_result`, not `result`: the merged kind is what the
+                # terminal event carried, so the response has to agree with it
+                # on the complete-rejected arm exactly as it does on the
+                # success arm below.
+                return replace(
+                    merged_result,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
