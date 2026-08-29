@@ -17,7 +17,8 @@ serializers and asserts the result is the SAME arm it started as (never a
 serializer arm fails here even though the arity gate stays green.
 """
 
-from typing import get_args
+from dataclasses import MISSING, Field, fields
+from typing import Any, get_args
 
 import pytest
 
@@ -46,7 +47,11 @@ from cora.recipe.aggregates.recipe.body import OutputRef
 _INSTANCES: dict[type, Step] = {
     SetpointStep: SetpointStep(address="2bma:rot:val", value=45.0, verify=True),
     ActionStep: ActionStep(name="collect", params={"repetitions": 3}),
-    CheckStep: CheckStep(address="2bma:shutter", criterion=EqualsCriterion(expected=1)),
+    CheckStep: CheckStep(
+        address="2bma:shutter",
+        criterion=EqualsCriterion(expected=1),
+        timeout_s=30.0,
+    ),
     CaptureStep: CaptureStep(address="2bma:sample:x", capture_name="home"),
     ComputeStep: ComputeStep(
         command=("tomopy", "recon"),
@@ -82,6 +87,43 @@ def _instances_cover_every_arm() -> None:
         f"_INSTANCES is missing a representative for Step arms "
         f"{sorted(a.__name__ for a in missing)}; add one so the serializer "
         f"round-trip covers every arm."
+    )
+
+
+def _default_of(spec: Field[Any]) -> Any:
+    if spec.default is not MISSING:
+        return spec.default
+    return spec.default_factory() if spec.default_factory is not MISSING else MISSING
+
+
+@pytest.mark.architecture
+def test_every_step_arm_representative_sets_every_optional_field() -> None:
+    """Every defaulted field on every arm must be non-default in `_INSTANCES`.
+
+    The round-trip tests below assert `rebuilt == instance`, which only
+    exercises a field the representative actually SETS: a serializer that
+    drops a field left at its default rebuilds the default and compares
+    equal. That is exactly how `CheckStep.timeout_s` shipped dropped by both
+    serializers and unread by `_step_from_payload` while these tests stayed
+    green, and how `ComputeStep.capture_name` needed its own hand-written
+    test to be covered at all.
+
+    Failing here means a new optional field landed on a Step arm without a
+    non-default representative, so nothing downstream proves it survives
+    serialization. Set it in `_INSTANCES` rather than deleting this.
+    """
+    _instances_cover_every_arm()
+    unset: list[str] = []
+    for arm, instance in _INSTANCES.items():
+        for spec in fields(arm):
+            default = _default_of(spec)
+            if default is MISSING:
+                continue  # required, so the representative always supplies it
+            if getattr(instance, spec.name) == default:
+                unset.append(f"{arm.__name__}.{spec.name} (still {default!r})")
+    assert not unset, (
+        "these optional Step fields are left at their default in _INSTANCES, so no "
+        f"serializer round-trip proves they survive: {sorted(unset)}"
     )
 
 
