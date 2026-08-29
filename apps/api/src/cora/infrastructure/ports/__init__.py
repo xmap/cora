@@ -77,6 +77,11 @@ from cora.infrastructure.ports.enclosure_lookup import (
     EnclosureLookup,
     EnclosureLookupResult,
 )
+from cora.infrastructure.ports.event_activity_trail import (
+    EventActivityCursor,
+    EventActivityRow,
+    EventActivityTrail,
+)
 from cora.infrastructure.ports.event_store import (
     ConcurrencyError,
     EventStore,
@@ -245,6 +250,9 @@ __all__ = [
     "Deny",
     "EnclosureLookup",
     "EnclosureLookupResult",
+    "EventActivityCursor",
+    "EventActivityRow",
+    "EventActivityTrail",
     "EventStore",
     "FacilityLookup",
     "FacilityLookupResult",

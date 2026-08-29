@@ -51,6 +51,14 @@ class InMemoryEventStore:
         version = events[-1].version if events else 0
         return events, version
 
+    def all_events(self) -> list[StoredEvent]:
+        """Every event across every stream, unordered. Exists for
+        `InMemoryEventActivityTrail`, which needs a global view this
+        store's stream-keyed dict does not otherwise expose; mirrors
+        `InMemoryObservationStore.all()`'s reason for being."""
+        with self._lock:
+            return [event for events in self._streams.values() for event in events]
+
     async def append(
         self,
         stream_type: str,

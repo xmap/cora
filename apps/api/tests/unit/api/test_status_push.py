@@ -21,10 +21,12 @@ import pytest
 from websockets.asyncio.server import ServerConnection, serve
 
 from cora.api._status_push import (
+    _ActivityTail,
     _DecisionTail,
     _render_progress,
     _render_progress_trail,
     _RunHistoryTail,
+    build_activity_message,
     build_run_history_message,
     build_snapshot,
     status_push_lifespan,
@@ -45,10 +47,16 @@ from cora.enclosure.features.list_enclosures import (
     EnclosureSummaryItem,
     ListEnclosures,
 )
+from cora.infrastructure.adapters.in_memory_event_activity_trail import (
+    InMemoryEventActivityTrail,
+)
+from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, UUIDv7Generator
+from cora.infrastructure.ports.event_activity_trail import EventActivityRow
+from cora.infrastructure.ports.event_store import NewEvent
 from cora.infrastructure.projection import decode_cursor, encode_cursor
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.features.get_run_history import GetRunHistory
@@ -249,13 +257,14 @@ def test_render_progress_trail_tail_slices_independent_of_recorder_retention() -
 # ---------- fakes: one empty-by-default handler per domain ----------
 
 
-def _kernel(**settings_kwargs: object) -> Kernel:
+def _kernel(*, event_store: InMemoryEventStore | None = None, **settings_kwargs: object) -> Kernel:
     settings = Settings(**settings_kwargs)  # type: ignore[arg-type]
     return make_inmemory_kernel(
         settings=settings,
         clock=FakeClock(_NOW),
         id_generator=UUIDv7Generator(),
         authz=AllowAllAuthorize(),
+        event_store=event_store,
     )
 
 
@@ -651,6 +660,131 @@ async def test_run_history_tail_on_reconnect_repushes_a_still_open_run_promptly(
     assert len(after_reconnect) == 1
 
 
+# ---------- build_activity_message ----------
+
+
+@pytest.mark.unit
+def test_build_activity_message_shape() -> None:
+    stream_id = uuid4()
+    row = EventActivityRow(
+        stream_type="Run",
+        stream_id=stream_id,
+        event_type="RunStarted",
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+    )
+
+    message = build_activity_message(rows=[row], generated_at="t0", producer_id="p1")
+
+    assert message == {
+        "kind": "activity",
+        "schema_version": 1,
+        "producer_id": "p1",
+        "generated_at": "t0",
+        "events": [
+            {
+                "stream_type": "Run",
+                "stream_id": str(stream_id),
+                "event_type": "RunStarted",
+                "occurred_at": _NOW.isoformat(),
+                "recorded_at": _NOW.isoformat(),
+            }
+        ],
+    }
+
+
+# ---------- _ActivityTail ----------
+
+
+async def _append_event(
+    store: InMemoryEventStore,
+    *,
+    stream_type: str = "Run",
+    stream_id: UUID | None = None,
+    event_type: str = "RunStarted",
+    occurred_at: datetime = _NOW,
+) -> None:
+    await store.append(
+        stream_type,
+        stream_id or uuid4(),
+        0,
+        [
+            NewEvent(
+                event_id=uuid4(),
+                event_type=event_type,
+                schema_version=1,
+                payload={},
+                occurred_at=occurred_at,
+                correlation_id=uuid4(),
+                principal_id=None,
+            )
+        ],
+    )
+
+
+@pytest.mark.unit
+async def test_activity_tail_starts_empty_even_with_existing_events() -> None:
+    """Mirrors `_DecisionTail`'s own "starts empty" guarantee: the first
+    poll establishes a baseline at the CURRENT tip, never replaying
+    history that predates this tail's construction."""
+    store = InMemoryEventStore()
+    await _append_event(store)
+    trail = InMemoryEventActivityTrail(store)
+    tail = _ActivityTail()
+
+    rows = await tail.poll(trail)
+
+    assert rows == []
+
+
+@pytest.mark.unit
+async def test_activity_tail_returns_a_freshly_appended_event() -> None:
+    store = InMemoryEventStore()
+    trail = InMemoryEventActivityTrail(store)
+    tail = _ActivityTail()
+    await tail.poll(trail)  # establish the baseline
+
+    stream_id = uuid4()
+    await _append_event(store, stream_id=stream_id, event_type="RunHeld")
+    rows = await tail.poll(trail)
+
+    assert len(rows) == 1
+    assert rows[0].stream_type == "Run"
+    assert rows[0].stream_id == stream_id
+    assert rows[0].event_type == "RunHeld"
+
+
+@pytest.mark.unit
+async def test_activity_tail_does_not_repeat_a_row_already_returned() -> None:
+    store = InMemoryEventStore()
+    trail = InMemoryEventActivityTrail(store)
+    tail = _ActivityTail()
+    await tail.poll(trail)
+    await _append_event(store)
+
+    first = await tail.poll(trail)
+    second = await tail.poll(trail)
+
+    assert len(first) == 1
+    assert second == []
+
+
+@pytest.mark.unit
+async def test_activity_tail_never_ships_the_event_payload() -> None:
+    """The whole reason `EventActivityRow` has no `payload` field: proves
+    the tail's output shape structurally cannot carry it, rather than
+    trusting a serializer to drop it."""
+    store = InMemoryEventStore()
+    trail = InMemoryEventActivityTrail(store)
+    tail = _ActivityTail()
+    await tail.poll(trail)
+    await _append_event(store)
+
+    (row,) = await tail.poll(trail)
+
+    assert not hasattr(row, "payload")
+
+
 # ---------- real socket: push against a local WebSocket server ----------
 
 
@@ -752,6 +886,46 @@ async def test_lifespan_pushes_both_a_snapshot_and_a_run_history_message() -> No
         assert history["run_id"] == str(run_id)
         assert history["terminal"] is False
         assert history["events"][0]["event_type"] == "RunStarted"
+
+
+@pytest.mark.unit
+async def test_lifespan_pushes_an_activity_message_when_an_event_is_appended() -> None:
+    """Flowing mode's end-to-end path: an event appended to the store
+    after StatusPush has connected arrives on the wire as its own message
+    kind, event metadata only -- no `payload` key anywhere in it."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        store = InMemoryEventStore()
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=url,
+            status_push_tick_seconds=0.1,
+            event_store=store,
+        )
+
+        async with status_push_lifespan(kernel, **_default_handlers()):
+            first = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            assert first["kind"] == "snapshot"  # the activity baseline is now set
+
+            stream_id = uuid4()
+            await _append_event(store, stream_id=stream_id, event_type="RunStarted")
+
+            activity = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+
+        assert activity["kind"] == "activity"
+        assert len(activity["events"]) == 1
+        event = activity["events"][0]
+        assert event["stream_type"] == "Run"
+        assert event["stream_id"] == str(stream_id)
+        assert event["event_type"] == "RunStarted"
+        assert "payload" not in event
 
 
 @pytest.mark.unit

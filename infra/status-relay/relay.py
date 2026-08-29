@@ -158,6 +158,14 @@ async def _handle_producer(ws: ServerConnection) -> None:
             elif kind == "run_history":
                 _store_run_history(payload)
                 _broadcast_run_history_index()
+            elif kind == "activity":
+                # No relay-side cache, unlike snapshot/run_history: flowing
+                # mode's rolling window lives in each browser, not here, so
+                # this is a pure pass-through. A watcher that connects mid-
+                # flow simply starts receiving from that point on, same as
+                # it already does for the live tables.
+                if _watchers:
+                    websockets.broadcast(_watchers, message)
             else:
                 # Forward compatibility: a newer producer's message kind
                 # must never wedge an older relay.
