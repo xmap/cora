@@ -55,8 +55,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">13 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">13<span class="text"> run</span></button>
+            <span class="text">15 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">15<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">2<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_e97e3591dbcce347_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-29 02:11 +0000
+            created at 2026-08-29 13:16 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -104,7 +104,7 @@
     <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="key">from</span> <span class="nam">dataclasses</span> <span class="key">import</span> <span class="nam">dataclass</span><span class="op">,</span> <span class="nam">field</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="key">from</span> <span class="nam">uuid</span> <span class="key">import</span> <span class="nam">UUID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">conductor</span> <span class="key">import</span> <span class="nam">ConductorFailure</span><span class="op">,</span> <span class="nam">Step</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">conductor</span> <span class="key">import</span> <span class="nam">ConductorFailure</span><span class="op">,</span> <span class="nam">Step</span><span class="op">,</span> <span class="nam">WriteValue</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">compute_port</span> <span class="key">import</span> <span class="nam">ArtifactRef</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">operation</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">measurement</span> <span class="key">import</span> <span class="nam">Measurement</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -156,6 +156,16 @@
     <p class="exc show_exc"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">measurements</span><span class="op">:</span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">Measurement</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span> <span class="op">=</span> <span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc show_exc"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">artifacts</span><span class="op">:</span> <span class="nam">tuple</span><span class="op">[</span><span class="nam">ArtifactRef</span><span class="op">,</span> <span class="op">...</span><span class="op">]</span> <span class="op">=</span> <span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">outputs</span><span class="op">:</span> <span class="nam">Mapping</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">ArtifactRef</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">ArtifactRef</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">substrate_writes</span><span class="op">:</span> <span class="nam">Mapping</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">WriteValue</span><span class="op">]</span> <span class="op">=</span> <span class="nam">field</span><span class="op">(</span><span class="nam">default_factory</span><span class="op">=</span><span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">WriteValue</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Every address the conduct wrote, in first-write order, last value.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="str">    Threaded from `ConductorResult.substrate_writes`. On a HALT this is</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">    what CORA left set: the step loop returns at the failing step, so a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">    recipe&#x27;s own closing steps never run and nothing restores what</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">    earlier steps changed. Surfacing it on the response means an</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">    operator reads it in the same breath as the failure, instead of</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">    reconstructing it from the step journal.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -165,7 +175,7 @@
             <a class="nav" href="z_e97e3591dbcce347_handler_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-29 02:11 +0000
+            created at 2026-08-29 13:16 +0000
         </p>
     </div>
 </footer>
