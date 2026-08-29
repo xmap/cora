@@ -4066,6 +4066,31 @@
             "title": "Procedure Id",
             "type": "string"
           },
+          "substrate_writes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {},
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Every control address this conduct wrote, in first-write order, carrying the last value written to each. CORA does not restore what it sets, and a halt returns at the failing step without running the recipe's remaining steps, so on a failed conduct this is what was left set with nothing having put it back. Reports what was WRITTEN, not what changed: a write whose value already matched the address still appears.",
+            "title": "Substrate Writes",
+            "type": "object"
+          },
           "succeeded": {
             "title": "Succeeded",
             "type": "boolean"

@@ -17,14 +17,22 @@ Coverage spans the two boundaries the body sits on:
   - Internal + repetitions=5 happy path: writes the five configure PVs
     (including ImageMode=Multiple before NumImages and Acquire), polls
     Acquire_RBV (seeded Done immediately), reads DetectorState_RBV,
-    returns the evidence Mapping with timestamps + final state
-  - ExternalEdge trigger maps to AD "External" string on TriggerMode
+    returns the evidence Mapping with timestamps + final state, and a
+    `detector_settings` prior/applied entry for each configuration PV
+  - A configuration PV left at its existing value still shows
+    prior == applied in `detector_settings` (nothing is omitted)
+  - ExternalEdge / ExternalLevel raise UnwiredExternalTriggerError
+    before any PV write, on both trigger dialects: CORA does not
+    configure the trigger emitter, so arming the detector for external
+    triggering and waiting for pulses nothing arranged would hang
+  - polarity / source surface under `requested_not_applied` whenever set
   - repetitions=None raises UnboundedAcquisitionError before any PV
     write, including Acquire (a bounded repetitions is required so the
     Acquire_RBV done-poll can ever terminate)
   - Poll loop iterates while Acquire_RBV stays 1 and exits on 0
   - Unseeded Acquire_RBV propagates ControlNotConnectedError
-  - Unseeded detector base PVs propagate ControlNotConnectedError from write
+  - Unseeded detector base PVs propagate ControlNotConnectedError from
+    the prior-value read that now precedes each configuration write
 
   Trigger dialect (ctx.trigger_dialect, per-deployment vocabulary):
   - ADCore (default) Internal/ExternalEdge/ExternalLevel -> Internal/External/External
@@ -50,7 +58,11 @@ from pydantic import ValidationError
 
 from cora.infrastructure.ports.clock import FakeClock
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.operation.acquisitions import CollectParams, collect
+from cora.operation.acquisitions import (
+    CollectParams,
+    _run_collect_cycle,  # pyright: ignore[reportPrivateUsage]
+    collect,
+)
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.conductor import (
     ActionContext,
@@ -58,7 +70,11 @@ from cora.operation.conductor import (
     Conductor,
     InMemoryActionRegistry,
 )
-from cora.operation.errors import UnboundedAcquisitionError, UnknownTriggerDialectError
+from cora.operation.errors import (
+    UnboundedAcquisitionError,
+    UnknownTriggerDialectError,
+    UnwiredExternalTriggerError,
+)
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     Measurement,
@@ -96,6 +112,38 @@ def _acquire_rbv_reading(
     )
 
 
+def _seed_configure_pvs(port: InMemoryControlPort) -> None:
+    """Seed the four configuration PVs with prior values, and connect `Acquire`.
+
+    `set_reading`, not `simulate_connect`: `collect` now reads each
+    configuration PV's prior value immediately before writing it, so a
+    merely-connected-but-unseeded PV would raise `ControlNotConnectedError`
+    on that read. The prior values are deliberately distinct from what
+    the happy-path tests apply (mirroring the real APS 2-BM
+    left-on-Continuous condition for `ImageMode`), so a test asserting
+    `detector_settings` catches a mutation that records the applied
+    value as its own prior. `Acquire` stays a bare `simulate_connect`:
+    it is a command, never pre-read.
+    """
+    port.set_reading(
+        f"{_DETECTOR}:TriggerMode",
+        Measurement(value="External", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:AcquireTime",
+        Measurement(value=0.0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:ImageMode",
+        Measurement(value="Continuous", kind="Categorical", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.set_reading(
+        f"{_DETECTOR}:NumImages",
+        Measurement(value=0, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
+    port.simulate_connect(f"{_DETECTOR}:Acquire")
+
+
 def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Measurement | None = None) -> None:
     """Seed the six AD-convention PVs `collect` touches.
 
@@ -104,11 +152,7 @@ def _seed_detector(port: InMemoryControlPort, *, acquire_rbv: Measurement | None
     loop pass a custom `Measurement` or replace the port with a
     stateful fixture.
     """
-    port.simulate_connect(f"{_DETECTOR}:TriggerMode")
-    port.simulate_connect(f"{_DETECTOR}:AcquireTime")
-    port.simulate_connect(f"{_DETECTOR}:ImageMode")
-    port.simulate_connect(f"{_DETECTOR}:NumImages")
-    port.simulate_connect(f"{_DETECTOR}:Acquire")
+    _seed_configure_pvs(port)
     port.set_reading(
         f"{_DETECTOR}:Acquire_RBV",
         acquire_rbv if acquire_rbv is not None else _acquire_rbv_reading(),
@@ -167,6 +211,19 @@ class _ScriptedRbvPort:
                 kind="Categorical",
                 quality="Good",
                 produced_at=_FIXED_NOW,
+            )
+        if address in (
+            f"{_DETECTOR}:TriggerMode",
+            f"{_DETECTOR}:AcquireTime",
+            f"{_DETECTOR}:ImageMode",
+            f"{_DETECTOR}:NumImages",
+        ):
+            # The prior-value read `collect` now issues before each
+            # configuration write; this fixture's tests assert write
+            # order and Acquire_RBV decoding, not `detector_settings`
+            # content, so a placeholder reading is sufficient here.
+            return Measurement(
+                value="prior", kind="Categorical", quality="Good", produced_at=_FIXED_NOW
             )
         raise AssertionError(f"unexpected read of {address!r}")
 
@@ -338,48 +395,90 @@ async def test_collect_internal_trigger_writes_configure_pvs_and_returns_evidenc
         "polarity": None,
         "source": None,
         "detector_state_final": "Idle",
+        "detector_settings": {
+            "TriggerMode": {"prior": "External", "applied": "Internal"},
+            "AcquireTime": {"prior": 0.0, "applied": 0.1},
+            "ImageMode": {"prior": "Continuous", "applied": "Multiple"},
+            "NumImages": {"prior": 0, "applied": 5},
+        },
+        "requested_not_applied": {"polarity": None, "source": None},
     }
 
 
 @pytest.mark.unit
-async def test_collect_external_edge_maps_trigger_mode_to_ad_external_string() -> None:
-    """ExternalEdge -> areaDetector's 'External' string on TriggerMode (ADCore dialect)."""
+async def test_collect_unchanged_setting_records_equal_prior_and_applied() -> None:
+    """A configuration PV CORA leaves at its existing value still shows prior == applied.
+
+    `detector_settings` must carry all four configuration PVs regardless
+    of whether the applied value happens to match what was already
+    there; a reader must never have to guess whether a PV was skipped
+    versus genuinely left unchanged.
+    """
     port = InMemoryControlPort()
     _seed_detector(port)
-    await collect(
+    port.set_reading(
+        f"{_DETECTOR}:AcquireTime",
+        Measurement(value=0.1, kind="Scalar", quality="Good", produced_at=_FIXED_NOW),
+    )
+    result = await collect(
         _ctx(
             port,
-            {
-                "detector": _DETECTOR,
-                "trigger_mode": "ExternalEdge",
-                "polarity": "Rising",
-                "source": "2bma:PCOMP1.OUT",
-                "repetitions": 10,
-                "dwell": 0.025,
-            },
+            {"detector": _DETECTOR, "trigger_mode": "Internal", "repetitions": 5, "dwell": 0.1},
         )
     )
-    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "External"
+    assert result["detector_settings"]["AcquireTime"] == {"prior": 0.1, "applied": 0.1}
 
 
 @pytest.mark.unit
-async def test_collect_external_level_maps_trigger_mode_to_ad_external_string() -> None:
-    """ExternalLevel -> areaDetector's 'External' string on TriggerMode (ADCore dialect)."""
+async def test_collect_external_edge_raises_before_any_detector_write() -> None:
+    """ExternalEdge raises UnwiredExternalTriggerError and never issues Acquire (ADCore dialect).
+
+    Mirrors `test_collect_repetitions_none_raises_before_any_detector_write`:
+    CORA does not configure the trigger emitter (see the module
+    docstring's "External triggering is refused, not attempted"), so
+    arming the detector for external triggering and then waiting for
+    pulses nothing arranged would hang forever against real hardware.
+    """
     port = InMemoryControlPort()
     _seed_detector(port)
-    await collect(
-        _ctx(
-            port,
-            {
-                "detector": _DETECTOR,
-                "trigger_mode": "ExternalLevel",
-                "source": "2bma:gate:OUT",
-                "repetitions": 1,
-                "dwell": 0.5,
-            },
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalEdge"):
+        await collect(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalEdge",
+                    "polarity": "Rising",
+                    "source": "2bma:PCOMP1.OUT",
+                    "repetitions": 10,
+                    "dwell": 0.025,
+                },
+            )
         )
-    )
-    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "External"
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
+
+
+@pytest.mark.unit
+async def test_collect_external_level_raises_before_any_detector_write() -> None:
+    """ExternalLevel raises UnwiredExternalTriggerError, never issues Acquire (ADCore dialect)."""
+    port = InMemoryControlPort()
+    _seed_detector(port)
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalLevel"):
+        await collect(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalLevel",
+                    "source": "2bma:gate:OUT",
+                    "repetitions": 1,
+                    "dwell": 0.5,
+                },
+            )
+        )
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
 
 
 @pytest.mark.unit
@@ -404,46 +503,50 @@ async def test_collect_internal_trigger_ad_spinnaker_dialect_writes_off() -> Non
 
 
 @pytest.mark.unit
-async def test_collect_external_edge_ad_spinnaker_dialect_writes_on() -> None:
-    """ADSpinnaker dialect: ExternalEdge -> 'On' (external triggering enabled)."""
+async def test_collect_external_edge_raises_regardless_of_dialect() -> None:
+    """ExternalEdge is refused regardless of dialect: the guard fires before dialect resolution."""
     port = InMemoryControlPort()
     _seed_detector(port)
-    await collect(
-        _ctx(
-            port,
-            {
-                "detector": _DETECTOR,
-                "trigger_mode": "ExternalEdge",
-                "polarity": "Rising",
-                "source": "2bma:PCOMP1.OUT",
-                "repetitions": 10,
-                "dwell": 0.025,
-            },
-            trigger_dialect="ADSpinnaker",
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalEdge"):
+        await collect(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalEdge",
+                    "polarity": "Rising",
+                    "source": "2bma:PCOMP1.OUT",
+                    "repetitions": 10,
+                    "dwell": 0.025,
+                },
+                trigger_dialect="ADSpinnaker",
+            )
         )
-    )
-    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
 
 
 @pytest.mark.unit
-async def test_collect_external_level_ad_spinnaker_dialect_writes_on() -> None:
-    """ADSpinnaker dialect: ExternalLevel -> 'On' (external triggering enabled)."""
+async def test_collect_external_level_raises_regardless_of_dialect() -> None:
+    """ExternalLevel is refused regardless of dialect: the guard fires before dialect resolution."""
     port = InMemoryControlPort()
     _seed_detector(port)
-    await collect(
-        _ctx(
-            port,
-            {
-                "detector": _DETECTOR,
-                "trigger_mode": "ExternalLevel",
-                "source": "2bma:gate:OUT",
-                "repetitions": 1,
-                "dwell": 0.5,
-            },
-            trigger_dialect="ADSpinnaker",
+    with pytest.raises(UnwiredExternalTriggerError, match="ExternalLevel"):
+        await collect(
+            _ctx(
+                port,
+                {
+                    "detector": _DETECTOR,
+                    "trigger_mode": "ExternalLevel",
+                    "source": "2bma:gate:OUT",
+                    "repetitions": 1,
+                    "dwell": 0.5,
+                },
+                trigger_dialect="ADSpinnaker",
+            )
         )
-    )
-    assert (await port.read(f"{_DETECTOR}:TriggerMode")).value == "On"
+    with pytest.raises(ControlNotConnectedError):
+        await port.read(f"{_DETECTOR}:Acquire")
 
 
 @pytest.mark.unit
@@ -516,27 +619,35 @@ async def test_collect_writes_image_mode_multiple_before_num_images_and_acquire(
 
 
 @pytest.mark.unit
-async def test_collect_polarity_and_source_are_evidence_only_not_written() -> None:
-    """Body must NOT touch emitter-side PVs; polarity + source surface only in evidence."""
+async def test_collect_polarity_and_source_appear_under_requested_not_applied_when_set() -> None:
+    """`polarity` / `source` land under `requested_not_applied`, never as written PVs.
+
+    Body execution now refuses every `trigger_mode` other than `Internal`
+    (see the `UnwiredExternalTriggerError` tests above), so a real
+    `collect()` call can never carry a non-Internal trigger_mode through
+    to this evidence-shaping code. `CollectParams.model_construct`
+    bypasses the schema's Internal-implies-no-source rule to exercise
+    the evidence grouping directly: it must echo whatever `polarity` /
+    `source` the params carry, regardless of what a real deployment
+    would ever send through `model_validate`.
+    """
     port = InMemoryControlPort()
     _seed_detector(port)
-    # The emitter PV is intentionally NOT connected: if `collect` ever
-    # tries to write to it, the unseeded port will raise.
-    result = await collect(
-        _ctx(
-            port,
-            {
-                "detector": _DETECTOR,
-                "trigger_mode": "ExternalEdge",
-                "polarity": "Falling",
-                "source": "2bma:PCOMP1.OUT",
-                "repetitions": 3,
-                "dwell": 0.2,
-            },
-        )
+    params = CollectParams.model_construct(
+        detector=_DETECTOR,
+        trigger_mode="Internal",
+        polarity="Falling",
+        source="2bma:PCOMP1.OUT",
+        repetitions=3,
+        dwell=0.2,
     )
+    result = await _run_collect_cycle(_ctx(port, {}), params)
     assert result["polarity"] == "Falling"
     assert result["source"] == "2bma:PCOMP1.OUT"
+    assert result["requested_not_applied"] == {
+        "polarity": "Falling",
+        "source": "2bma:PCOMP1.OUT",
+    }
 
 
 @pytest.mark.unit
@@ -669,11 +780,7 @@ async def test_collect_unreadable_acquire_rbv_warns_once_per_episode(
 async def test_collect_unconnected_acquire_rbv_propagates_not_connected_error() -> None:
     """Acquire_RBV not seeded -> ControlNotConnectedError surfaces from the read."""
     port = InMemoryControlPort()
-    port.simulate_connect(f"{_DETECTOR}:TriggerMode")
-    port.simulate_connect(f"{_DETECTOR}:AcquireTime")
-    port.simulate_connect(f"{_DETECTOR}:ImageMode")
-    port.simulate_connect(f"{_DETECTOR}:NumImages")
-    port.simulate_connect(f"{_DETECTOR}:Acquire")
+    _seed_configure_pvs(port)
     # Deliberately do NOT seed Acquire_RBV / DetectorState_RBV
     with pytest.raises(ControlNotConnectedError):
         await collect(
@@ -691,7 +798,7 @@ async def test_collect_unconnected_acquire_rbv_propagates_not_connected_error() 
 
 @pytest.mark.unit
 async def test_collect_unconnected_trigger_mode_propagates_not_connected_error() -> None:
-    """First write target not seeded -> ControlNotConnectedError surfaces from the write."""
+    """First configuration PV not seeded -> ControlNotConnectedError from its prior-read."""
     port = InMemoryControlPort()  # nothing connected
     with pytest.raises(ControlNotConnectedError):
         await collect(

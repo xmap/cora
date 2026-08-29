@@ -27,25 +27,43 @@ the layer above it: a Recipe that expresses the whole scan as an ordered step
 list, an emitter configured by setpoint steps that precede the action, and the
 conduct running as a phase of a Run.
 
-## The emitter split is the point
+## External triggering is refused, not attempted
 
-The claim under test is the narrowest part of the placement rule. The
-acquisition primitive writes only the detector-side trigger variables. The
-emitter that will actually fire the trigger train, at 2-BM the Aerotech PSO,
-is configured by steps that PRECEDE the action, and the field naming it in the
-request (`source`) is recorded as evidence rather than written by the action.
-Both halves are asserted below: the emitter appears as the address of a
-setpoint step, and it appears again in the action's evidence, and those are
-two different steps.
+`continuous` now refuses any non-Internal `trigger_mode` with
+`UnwiredExternalTriggerError` before writing a single detector PV (see
+`cora.operation.acquisitions`): CORA does not configure the trigger emitter,
+so arming the detector for pulses nothing arranged would hang against real
+hardware. This scenario's Recipe still arms the emitter with setpoint steps
+that PRECEDE the action, exactly as a real fly scan would; what changed is
+the action step that follows them. It no longer runs the sweep.
+
+The refusal is an ordinary halt, not an escape. `UnwiredExternalTriggerError`
+subclasses `ActionRefusedError`, which the Conductor catches on the same arm
+as a substrate error, so the step records a `failed` outcome and both the
+Procedure and the Run reach a terminal state. That distinction is the point:
+an uncaught raise would leave the Procedure at `ProcedureStarted` forever,
+a record asserting a run still in progress against a beamline standing idle.
+
+What this scenario does NOT claim is that the beamline is left tidy. A halt
+returns from the step loop, so the three teardown steps after the action
+never run: the emitter stays armed and the shutter stays open, exactly as
+they would after any other failed step. Compensating for that needs a step
+list that always runs, which CORA does not have and this change does not add.
+
+The `source` field naming the emitter is still evidence-only by construction
+(the action body never writes it); this scenario proves the stronger claim
+that it never gets the chance to write anything for ExternalEdge, because
+the guard fires first.
 
 ## What the simulator can and cannot rehearse
 
-The soft IOC's `cam1:Acquire_RBV` is seeded to the always-Done state, so the
-body's poll loop exits on the first read (see `tests/integration/_softioc.py`).
-That means this tier proves the step ordering, the EPICS wire framing, the
-emitter split, and the provenance the conduct records. It does NOT prove
-trigger consumption: nothing here fires pulses, and no detector counts them.
-That is what commissioning time exercises, with the real PSO.
+The soft IOC's `cam1:Acquire_RBV` is seeded to the always-Done state, so a
+successfully-arming body's poll loop would exit on the first read (see
+`tests/integration/_softioc.py`); that machinery is exercised by
+`test_2bm_flat_field.py` and the other Internal-trigger scenarios. This
+scenario's ExternalEdge sweep never reaches the poll loop at all, so what it
+proves instead is the refusal itself: the guard fires before any detector PV
+write, over real EPICS CA framing, inside a full Recipe-driven conduct.
 
 PV names are pure test-shape (`double_value`, `enum_value`), NOT production
 2-BM addresses, exactly as in `test_2bm_flat_field.py`. The sweep geometry and
@@ -83,7 +101,6 @@ from cora.operation.features.conduct_procedure import bind as bind_conduct
 from cora.operation.features.register_procedure_from_recipe import RegisterProcedureFromRecipe
 from cora.operation.features.register_procedure_from_recipe import bind as bind_register_from_recipe
 from cora.operation.features.start_procedure import bind as bind_start
-from cora.operation.ports.control_port import ActuationKind
 from cora.recipe.aggregates.method import ExecutionPattern
 from cora.recipe.aggregates.recipe import (
     RecipeActionStep,
@@ -118,7 +135,6 @@ _SHUTTER_OPEN = 1
 # label. Both forms appear below for that reason, not by oversight.
 _PSO_DISARMED = 0
 _PSO_ARMED = 1
-_PSO_DISARMED_LABEL = "off"
 _PSO_ARMED_LABEL = "on"
 _RUN_UP_DEG = -5.0
 _SWEEP_END_DEG = 180.0
@@ -128,13 +144,14 @@ _RATE_DEG_S = 30.0
 
 
 @pytest.mark.integration
-async def test_fly_scan_recipe_conducts_sweep_against_softioc(
+async def test_fly_scan_recipe_external_trigger_halts_and_aborts_before_any_detector_write(
     db_pool: asyncpg.Pool,
     softioc: str,
 ) -> None:
-    """Define the fly-scan Recipe, register a Procedure from it, conduct it to
-    Completed against the soft IOC, and confirm the emitter was configured by a
-    setpoint step that preceded the action while the action only named it."""
+    """Define the fly-scan Recipe, register a Procedure from it, and conduct it
+    against the soft IOC: the emitter-arming setpoint steps run and stick, then
+    the ExternalEdge action step is refused before touching a single detector
+    PV, recording a failed outcome and aborting the Procedure and the Run."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
 
     shutter = f"{softioc}long_value"
@@ -280,7 +297,7 @@ async def test_fly_scan_recipe_conducts_sweep_against_softioc(
 
     try:
         await registry.write(emitter, _PSO_DISARMED, wait=True)
-        result = await conduct_phase_then_complete_run(
+        outcome = await conduct_phase_then_complete_run(
             run_id=run_id,
             procedure_id=procedure_id,
             conduct_procedure=conduct,
@@ -291,55 +308,80 @@ async def test_fly_scan_recipe_conducts_sweep_against_softioc(
         )
         emitter_after = await registry.read(emitter)
         rotary_after = await registry.read(rotary)
+        trigger_mode_after = await registry.read(f"{detector}:TriggerMode")
     finally:
         await registry.aclose()
 
-    # ----- Conduct outcome: all eight steps ran, conduct observed Simulated -----
+    # ----- No PV the action would have touched moved -----
+    #
+    # The guard fires before any detector write, so the detector's TriggerMode
+    # is untouched and the axis never taxied toward `start`. The emitter is
+    # still armed: its own teardown setpoint step is AFTER the action in the
+    # Recipe's step list, and the raise never let the conduct reach it.
+    assert trigger_mode_after.value == "Internal"
+    assert rotary_after.value == pytest.approx(0.0)
+    assert emitter_after.value == _PSO_ARMED_LABEL
 
-    assert result.succeeded is True
-    assert result.completed_count == 8
-    assert result.actuation_kind == ActuationKind.SIMULATED.value
+    # ----- The refusal is an ordinary recorded halt, not an escape -----
+    #
+    # `UnwiredExternalTriggerError` subclasses `ActionRefusedError`, which the
+    # Conductor catches on the same arm as a substrate error. The conduct
+    # therefore RETURNS a failure rather than raising through the glue, which
+    # is what lets both aggregates reach a terminal state below.
+    assert outcome.succeeded is False
+    assert outcome.failure is not None
+    assert outcome.failure.error_class == "UnwiredExternalTriggerError"
+    assert outcome.failure.source_kind == "action"
+    assert "ExternalEdge" in outcome.failure.message
 
-    # The sweep ran to its end angle and the emitter was disarmed by its own
-    # teardown step, not left armed by the action.
-    assert rotary_after.value == pytest.approx(_SWEEP_END_DEG)
-    assert emitter_after.value == _PSO_DISARMED_LABEL
-
-    # ----- Procedure stream: recipe-driven genesis pins its expansion -----
-
+    # ----- Procedure stream: started, then ABORTED -----
+    #
+    # The Procedure must not be left at `ProcedureStarted`. A stream with no
+    # terminal event reads, forever, as a run still in progress, which is a
+    # record that contradicts a beamline standing idle. A refused step is a
+    # halt like any other, so the Procedure aborts and says so.
     events, _ = await deps.event_store.load("Procedure", procedure_id)
     event_types = [e.event_type for e in events]
     assert event_types[0] == "ProcedureRegistered"
     assert "RecipeExpansionRecorded" in event_types
-    assert event_types[-1] == "ProcedureCompleted"
+    assert "ProcedureStarted" in event_types
+    assert "ProcedureCompleted" not in event_types
+    assert "ProcedureAborted" in event_types
     registered = next(e for e in events if e.event_type == "ProcedureRegistered")
     assert registered.payload["parent_run_id"] == str(run_id)
 
-    # ----- The emitter split, asserted on the journal -----
+    # ----- Activity journal: the refused action recorded its own failure -----
     #
-    # Two facts, and they must come from two different steps. The emitter is the
-    # address of setpoint steps (it was configured), and it is the `source` in
-    # the action's evidence (it was named). If the action had written it, there
-    # would be no setpoint step carrying that address.
+    # The two setpoint/check pairs before the action (shutter open, emitter
+    # armed) recorded their outcome normally, and the action recorded a
+    # `failed` outcome naming the refusal beside its in-flight marker. That
+    # outcome row is the point of routing `ActionRefusedError` through the
+    # Conductor's failure arm: without it the journal would show a step that
+    # started and never resolved. The three teardown steps after the action
+    # (disarm emitter, close shutter, check closed) still never ran, because
+    # a halt returns from the step loop rather than continuing; the emitter
+    # is left armed and the shutter open, which no part of this change
+    # addresses and which a compensating step list would have to.
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
             "SELECT step_kind, payload FROM entries_operation_procedure_activities "
-            "WHERE procedure_id = $1 AND payload->>'result' IS DISTINCT FROM 'in_flight'",
+            "WHERE procedure_id = $1",
             procedure_id,
         )
 
-    setpoint_addresses = [r["payload"]["address"] for r in rows if r["step_kind"] == "setpoint"]
-    assert emitter in setpoint_addresses
+    # No ORDER BY: the fixed test clock stamps every entry with the same
+    # `sampled_at`, so row order here is not the step order. Membership,
+    # not position, is what this journal check can prove.
+    completed_rows = [r for r in rows if r["payload"].get("result") != "in_flight"]
+    assert len(completed_rows) == 5
+    setpoint_addresses = {
+        r["payload"]["address"] for r in completed_rows if r["step_kind"] == "setpoint"
+    }
+    assert setpoint_addresses == {shutter, emitter}
 
     action_rows = [r for r in rows if r["step_kind"] == "action"]
-    assert len(action_rows) == 1
-    evidence = action_rows[0]["payload"]["result_data"]
-    assert evidence["source"] == emitter
-    assert evidence["polarity"] == "Rising"
-    assert evidence["trigger_mode"] == "ExternalEdge"
-    # The rate is carried as evidence too; the body does not write an axis-rate
-    # PV, which is why the recipe would set one itself on a real deployment.
-    assert evidence["rate_requested"] == pytest.approx(_RATE_DEG_S)
-    assert evidence["axis_start_requested"] == pytest.approx(_RUN_UP_DEG)
-    assert evidence["axis_stop_requested"] == pytest.approx(_SWEEP_END_DEG)
-    assert evidence["repetitions_requested"] == _PROJECTIONS
+    assert len(action_rows) == 2
+    action_results = {r["payload"]["result"] for r in action_rows}
+    assert action_results == {"in_flight", "failed"}
+    failed_action = next(r for r in action_rows if r["payload"]["result"] == "failed")
+    assert failed_action["payload"]["error_class"] == "UnwiredExternalTriggerError"

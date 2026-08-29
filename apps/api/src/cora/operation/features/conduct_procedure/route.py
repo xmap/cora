@@ -29,7 +29,7 @@ which a slice cannot import directly). This slice owns only the
 conduct-specific request/response envelope.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
@@ -89,6 +89,18 @@ class ConductProcedureResponse(BaseModel):
     succeeded: bool
     failure: ConductorFailureResponse | None = None
     actuation_kind: str | None = None
+    substrate_writes: dict[str, int | float | bool | str | list[Any]] = Field(
+        default_factory=dict[str, int | float | bool | str | list[Any]],
+        description=(
+            "Every control address this conduct wrote, in first-write "
+            "order, carrying the last value written to each. CORA does "
+            "not restore what it sets, and a halt returns at the failing "
+            "step without running the recipe's remaining steps, so on a "
+            "failed conduct this is what was left set with nothing having "
+            "put it back. Reports what was WRITTEN, not what changed: a "
+            "write whose value already matched the address still appears."
+        ),
+    )
 
 
 def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
@@ -102,6 +114,12 @@ def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
         succeeded=result.succeeded,
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
+        # `list(v)` normalises the tuple arm of `WriteValue`: JSON has no
+        # tuple, and letting pydantic coerce it silently would make the
+        # wire type depend on which arm a caller happened to write.
+        substrate_writes={
+            k: list(v) if isinstance(v, tuple) else v for k, v in result.substrate_writes.items()
+        },
     )
 
 

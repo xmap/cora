@@ -207,6 +207,17 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
     assert result_data["trigger_mode"] == "Internal"
     assert result_data["repetitions_requested"] == 3
 
+    # `cam1:ImageMode` starts at Continuous (see `_softioc.py`, mirroring the
+    # real APS 2-BM left-on-Continuous condition); the recorded prior value
+    # must match what the IOC actually held before this capture, proving
+    # the record's `prior` is read from the substrate, not assumed.
+    assert result_data["detector_settings"] == {
+        "TriggerMode": {"prior": "Internal", "applied": "Internal"},
+        "AcquireTime": {"prior": 0.0, "applied": 0.05},
+        "ImageMode": {"prior": "Continuous", "applied": "Multiple"},
+        "NumImages": {"prior": 0, "applied": 3},
+    }
+
     # Side-effects landed on the real softIOC PVs. `cam1:ImageMode` starts
     # at Continuous (see `_softioc.py`, mirroring the real APS 2-BM
     # left-on-Continuous condition); this proves `collect` moves it to

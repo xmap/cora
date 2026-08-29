@@ -132,7 +132,12 @@ from cora.operation.aggregates.procedure import (
     ProcedureNotFoundError,
     merge_actuation_kinds,
 )
-from cora.operation.errors import CheckFailedError, UnauthorizedError, UnknownActionError
+from cora.operation.errors import (
+    ActionRefusedError,
+    CheckFailedError,
+    UnauthorizedError,
+    UnknownActionError,
+)
 from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.abort_procedure.handler import Handler as AbortProcedureHandler
 from cora.operation.features.append_activities.command import (
@@ -271,6 +276,12 @@ in the result body as a structured lifecycle failure."""
 
 _STEP_KIND_SETPOINT = "setpoint"
 _STEP_KIND_ACTION = "action"
+WriteValue = int | float | bool | str | tuple[Any, ...]
+"""Value shape `ControlPort.write` accepts, named so the write ledger on
+`_ActuationObserver` and `ConductorResult` can state it once rather than
+repeating the union at each site and drifting from the port's signature."""
+
+
 _STEP_KIND_CHECK = "check"
 _STEP_KIND_CAPTURE = "capture"
 _STEP_KIND_COMPUTE = "compute"
@@ -952,6 +963,22 @@ class ConductorResult:
     measurements: tuple[Measurement, ...] = ()
     artifacts: tuple[ArtifactRef, ...] = ()
     outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
+    substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])
+    """Every address this conduct wrote, in first-write order, last value.
+
+    Present on the success and the failure construction alike, because a
+    conduct changes the world either way. It earns its place on the
+    FAILURE one: a halt returns from the step loop, so a recipe's own
+    closing steps do not run, and this is then the list of what was left
+    set with nothing having put it back. Without it an operator has to
+    reconstruct that from the step journal at exactly the moment they
+    are least able to.
+
+    It reports what CORA WROTE, not what it changed: a write whose value
+    already matched the PV still appears. Deciding otherwise would mean
+    reading every address back, which is a second round of substrate
+    traffic to answer a question the operator did not ask.
+    """
 
     @property
     def succeeded(self) -> bool:
@@ -983,6 +1010,7 @@ class _ActuationObserver:
             inner, "route_is_simulated", None
         )
         self._simulated_flags: set[bool] = set()
+        self._substrate_writes: dict[str, WriteValue] = {}
 
     def _observe(self, address: str) -> None:
         if self._route_is_simulated is None:
@@ -1006,10 +1034,32 @@ class _ActuationObserver:
     ) -> None:
         self._observe(address)
         await self._inner.write(address, value, wait=wait, timeout_s=timeout_s)
+        # AFTER the inner write, so a rejected write is not reported as
+        # something CORA left set. Last-value-wins per address: a step that
+        # writes the same PV twice leaves it at the second value, and that
+        # is what an operator has to deal with.
+        self._substrate_writes[address] = value
 
     def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         self._observe(address)
         return self._inner.subscribe(address)
+
+    @property
+    def substrate_writes(self) -> Mapping[str, WriteValue]:
+        """Every address this conduct wrote, in first-write order, last value.
+
+        CORA does not restore what it sets (see `acquisitions`' prior /
+        applied recording for why a tidy-up write would clobber a
+        concurrent client), so on a HALT this is the list of things left
+        as CORA put them, with the recipe's own closing steps unrun. An
+        operator reading a failed conduct should not have to reconstruct
+        that from the step journal.
+
+        Reads are deliberately absent: reading changes nothing, and
+        mixing them in would bury the writes that actually need
+        attention.
+        """
+        return dict(self._substrate_writes)
 
     @property
     def actuation_kind(self) -> ActuationKind | None:
@@ -1169,6 +1219,7 @@ class Conductor:
                     completed_count=completed,
                     failure=failure,
                     actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
+                    substrate_writes=observer.substrate_writes,
                     measurements=tuple(compute.measurements),
                     artifacts=tuple(compute.artifacts),
                     outputs=dict(outputs),
@@ -1178,6 +1229,7 @@ class Conductor:
             procedure_id=procedure_id,
             completed_count=completed,
             actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
+            substrate_writes=observer.substrate_writes,
             measurements=tuple(compute.measurements),
             artifacts=tuple(compute.artifacts),
             outputs=dict(outputs),
@@ -1268,6 +1320,7 @@ class Conductor:
                         ),
                     ),
                     actuation_kind=observer.actuation_kind,
+                    substrate_writes=observer.substrate_writes,
                 )
             if isinstance(step, ComputeStep):
                 # Halt-for-operator, same posture as an acquisition: a compute
@@ -1290,6 +1343,7 @@ class Conductor:
                         ),
                     ),
                     actuation_kind=observer.actuation_kind,
+                    substrate_writes=observer.substrate_writes,
                 )
             with with_dispatch_correlation_id(correlation_id):
                 if isinstance(step, SetpointStep):
@@ -1310,12 +1364,14 @@ class Conductor:
                     completed_count=completed,
                     failure=failure,
                     actuation_kind=observer.actuation_kind,
+                    substrate_writes=observer.substrate_writes,
                 )
             completed += 1
         return ConductorResult(
             procedure_id=procedure_id,
             completed_count=completed,
             actuation_kind=observer.actuation_kind,
+            substrate_writes=observer.substrate_writes,
             outputs=dict(outputs),
         )
 
@@ -3227,7 +3283,14 @@ class Conductor:
                     trigger_dialect=self._trigger_dialect,
                 )
             )
-        except _CONTROL_ERRORS as exc:
+        # `ActionRefusedError` rides the SAME arm as a substrate error, and
+        # deliberately so. A body that refuses has written nothing (that is
+        # the base class's stated promise), so the only honest outcome is a
+        # recorded step failure and a terminal Procedure. Letting it
+        # propagate instead, which is what an uncaught exception does here,
+        # leaves the Procedure at `ProcedureStarted` with no outcome row for
+        # the step: a record that says a run is still going when it stopped.
+        except (*_CONTROL_ERRORS, ActionRefusedError) as exc:
             await self._record(
                 envelope=envelope,
                 index=index,

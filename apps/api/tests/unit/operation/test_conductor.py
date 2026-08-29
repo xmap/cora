@@ -1985,3 +1985,103 @@ async def test_check_with_timeout_ignores_updates_that_do_not_satisfy() -> None:
     port.set_reading("sim:shutter", _good_reading("ON"))
     result = await asyncio.wait_for(task, timeout=5.0)
     assert result.succeeded is True
+
+
+# --- substrate_writes: what a halt left set ------------------------------
+
+
+@pytest.mark.unit
+async def test_execute_halt_reports_the_writes_it_left_set() -> None:
+    """A halt returns at the failing step, so the recipe's own closing steps
+    never run. The ledger is what tells an operator which addresses were left
+    as CORA put them, without reconstructing it from the step journal."""
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:shutter")
+    port.simulate_connect("2bma:emitter")
+    port.set_reading("2bma:rot:rbv", _good_reading(12.5))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4() for _ in range(4)])
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(
+            SetpointStep(address="2bma:shutter", value=1),
+            SetpointStep(address="2bma:emitter", value=1),
+            CheckStep(address="2bma:rot:rbv", criterion=EqualsCriterion(expected=45.0)),
+            SetpointStep(address="2bma:shutter", value=0),
+        ),
+    )
+
+    assert result.succeeded is False
+    assert dict(result.substrate_writes) == {"2bma:shutter": 1, "2bma:emitter": 1}
+    assert list(result.substrate_writes) == ["2bma:shutter", "2bma:emitter"]
+
+
+@pytest.mark.unit
+async def test_execute_write_ledger_keeps_the_last_value_per_address() -> None:
+    """Last-value-wins: a PV written twice is left at the second value, and
+    that is the one an operator has to deal with."""
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:shutter")
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4() for _ in range(2)])
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(
+            SetpointStep(address="2bma:shutter", value=1),
+            SetpointStep(address="2bma:shutter", value=0),
+        ),
+    )
+
+    assert result.succeeded is True
+    assert dict(result.substrate_writes) == {"2bma:shutter": 0}
+
+
+@pytest.mark.unit
+async def test_execute_write_ledger_omits_reads() -> None:
+    """Reads change nothing; including them would bury the writes that need
+    attention."""
+    port = InMemoryControlPort()
+    port.set_reading("2bma:rot:rbv", _good_reading(12.5))
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4()])
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(CheckStep(address="2bma:rot:rbv", criterion=EqualsCriterion(expected=12.5)),),
+    )
+
+    assert result.succeeded is True
+    assert dict(result.substrate_writes) == {}
+
+
+@pytest.mark.unit
+async def test_execute_write_ledger_excludes_a_rejected_write() -> None:
+    """The ledger records AFTER the inner write returns, so an address the
+    substrate refused is not reported as something CORA left set. Reporting
+    it would send an operator to put back a value that was never applied."""
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:shutter")
+    appender = _FakeAppendStep()
+    conductor = _conductor(port, appender, ids=[uuid4() for _ in range(2)])
+
+    result = await conductor.execute(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(
+            SetpointStep(address="2bma:shutter", value=1),
+            SetpointStep(address="2bma:never-connected", value=1),
+        ),
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert dict(result.substrate_writes) == {"2bma:shutter": 1}
