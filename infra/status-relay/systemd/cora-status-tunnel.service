@@ -39,7 +39,10 @@
 #
 # Verify from arcturus, once both this and cora-status-relay.service are
 # up: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8099/`
-# should print 200 without ever leaving arcturus.
+# should print 401 (the relay is reachable and answering, just refusing
+# the request for lacking the viewer Basic-auth credentials -- see
+# cora-status-relay.service's own STATUS_RELAY_VIEWER_USER/PASSWORD) --
+# all without this curl ever leaving arcturus.
 
 [Unit]
 Description=CORA status-push reverse tunnel to lyra (arcturus has no inbound reachability)

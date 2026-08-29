@@ -22,12 +22,16 @@ from websockets.asyncio.server import ServerConnection, serve
 
 from cora.api._status_push import (
     _ActivityTail,
+    _answer_request,
     _DecisionTail,
+    _Inbound,
+    _parse_inbound,
     _render_progress,
     _render_progress_trail,
     _RunHistoryTail,
     build_activity_message,
     build_run_history_message,
+    build_run_history_response,
     build_snapshot,
     status_push_lifespan,
 )
@@ -59,6 +63,7 @@ from cora.infrastructure.ports.event_activity_trail import EventActivityRow
 from cora.infrastructure.ports.event_store import NewEvent
 from cora.infrastructure.projection import decode_cursor, encode_cursor
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.run.errors import UnauthorizedError as RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.get_run_history.handler import RunHistoryEvent, RunHistoryView
 from cora.run.features.list_runs import ListRuns, RunListPage, RunSummaryItem
@@ -125,6 +130,30 @@ def test_status_push_settings_accept_valid() -> None:
     )
     assert settings.status_push_tick_seconds == 1.0
     assert settings.status_push_url == "ws://127.0.0.1:9/ingest"
+
+
+@pytest.mark.unit
+def test_status_push_request_max_per_tick_rejects_above_the_cap() -> None:
+    with pytest.raises(ValueError, match="status_push_request_max_per_tick"):
+        Settings(status_push_request_max_per_tick=9)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+def test_status_push_request_max_per_tick_rejects_negative() -> None:
+    with pytest.raises(ValueError, match="status_push_request_max_per_tick"):
+        Settings(status_push_request_max_per_tick=-1)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+def test_status_push_request_max_per_tick_accepts_the_disabling_zero() -> None:
+    settings = Settings(status_push_request_max_per_tick=0)  # type: ignore[call-arg]
+    assert settings.status_push_request_max_per_tick == 0
+
+
+@pytest.mark.unit
+def test_status_push_request_max_per_tick_accepts_the_upper_bound() -> None:
+    settings = Settings(status_push_request_max_per_tick=8)  # type: ignore[call-arg]
+    assert settings.status_push_request_max_per_tick == 8
 
 
 # ---------- pure: _render_progress ----------
@@ -640,6 +669,308 @@ async def test_run_history_tail_ring_evicts_past_the_cap() -> None:
         )
 
     assert len(tail._ring) == 20
+
+
+@pytest.mark.unit
+async def test_cached_terminal_is_none_for_a_run_never_seen() -> None:
+    assert _RunHistoryTail().cached_terminal(uuid4()) is None
+
+
+@pytest.mark.unit
+async def test_cached_terminal_is_none_while_a_run_is_still_open() -> None:
+    run_id = uuid4()
+    get_run_history = _make_get_run_history({run_id: _history_view(run_id)})
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+
+    assert tail.cached_terminal(run_id) is None
+
+
+@pytest.mark.unit
+async def test_cached_terminal_returns_the_message_once_a_run_closes() -> None:
+    run_id = uuid4()
+    get_run_history = _make_get_run_history({run_id: _history_view(run_id)})
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+    await tail.poll(get_run_history, kernel, open_run_ids=[], generated_at="t1", producer_id="p1")
+
+    cached = tail.cached_terminal(run_id)
+    assert cached is not None
+    assert cached["run_id"] == str(run_id)
+    assert cached["terminal"] is True
+
+
+# ---------- pure: build_run_history_response / _parse_inbound ----------
+
+
+@pytest.mark.unit
+def test_build_run_history_response_shape() -> None:
+    response = build_run_history_response(
+        request_id="r1",
+        status="ok",
+        generated_at="2026-06-22T12:00:00+00:00",
+        producer_id="p1",
+        source="read",
+        history={"kind": "run_history"},
+    )
+
+    assert response == {
+        "kind": "run_history_response",
+        "schema_version": 1,
+        "producer_id": "p1",
+        "request_id": "r1",
+        "generated_at": "2026-06-22T12:00:00+00:00",
+        "status": "ok",
+        "source": "read",
+        "history": {"kind": "run_history"},
+    }
+
+
+@pytest.mark.unit
+def test_build_run_history_response_defaults_source_and_history_to_none() -> None:
+    response = build_run_history_response(
+        request_id="r1", status="not_found", generated_at="t", producer_id="p1"
+    )
+
+    assert response["source"] is None
+    assert response["history"] is None
+
+
+@pytest.mark.unit
+def test_parse_inbound_rejects_non_json() -> None:
+    assert _parse_inbound("not json") is None
+
+
+@pytest.mark.unit
+def test_parse_inbound_drops_an_unrecognized_kind_with_no_reply() -> None:
+    """Mirrors `relay.py`'s own `producer.unknown_kind` posture: forward
+    compatibility means logging and dropping, never guessing a reply."""
+    assert _parse_inbound(json.dumps({"kind": "something_else", "request_id": "x"})) is None
+
+
+@pytest.mark.unit
+def test_parse_inbound_drops_a_request_with_no_usable_request_id() -> None:
+    assert _parse_inbound(json.dumps({"kind": "run_history_request"})) is None
+
+
+@pytest.mark.unit
+def test_parse_inbound_marks_unsupported_schema_version_but_still_replies() -> None:
+    item = _parse_inbound(
+        json.dumps({"kind": "run_history_request", "request_id": "r1", "schema_version": 99})
+    )
+
+    assert item == _Inbound(request_id="r1", run_id=None, status="unsupported")
+
+
+@pytest.mark.unit
+def test_parse_inbound_marks_a_malformed_run_id() -> None:
+    item = _parse_inbound(
+        json.dumps(
+            {
+                "kind": "run_history_request",
+                "request_id": "r1",
+                "schema_version": 1,
+                "run_id": "not-a-uuid",
+            }
+        )
+    )
+
+    assert item == _Inbound(request_id="r1", run_id=None, status="malformed")
+
+
+@pytest.mark.unit
+def test_parse_inbound_accepts_a_well_formed_request() -> None:
+    run_id = uuid4()
+    item = _parse_inbound(
+        json.dumps(
+            {
+                "kind": "run_history_request",
+                "request_id": "r1",
+                "schema_version": 1,
+                "run_id": str(run_id),
+            }
+        )
+    )
+
+    assert item == _Inbound(request_id="r1", run_id=run_id, status=None)
+
+
+# ---------- _answer_request ----------
+
+
+@pytest.mark.unit
+async def test_answer_request_echoes_a_pre_resolved_status_without_touching_deps() -> None:
+    item = _Inbound(request_id="r1", run_id=None, status="malformed")
+
+    response = await _answer_request(
+        item,
+        deps=_kernel(),
+        get_run_history=_make_get_run_history(),
+        run_history_tail=_RunHistoryTail(),
+        producer_id="p1",
+        generated_at="t",
+    )
+
+    assert response["status"] == "malformed"
+    assert response["request_id"] == "r1"
+    assert response["history"] is None
+
+
+@pytest.mark.unit
+async def test_answer_request_is_not_found_when_get_run_history_returns_none() -> None:
+    item = _Inbound(request_id="r1", run_id=uuid4(), status=None)
+
+    response = await _answer_request(
+        item,
+        deps=_kernel(),
+        get_run_history=_make_get_run_history(),
+        run_history_tail=_RunHistoryTail(),
+        producer_id="p1",
+        generated_at="t",
+    )
+
+    assert response["status"] == "not_found"
+
+
+@pytest.mark.unit
+async def test_answer_request_becomes_unauthorized_instead_of_raising() -> None:
+    """The single highest-severity failure mode this design guards against:
+    see this module's Transport section."""
+
+    async def denying_get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        raise RunUnauthorizedError("denied")
+
+    item = _Inbound(request_id="r1", run_id=uuid4(), status=None)
+
+    response = await _answer_request(
+        item,
+        deps=_kernel(),
+        get_run_history=denying_get_run_history,
+        run_history_tail=_RunHistoryTail(),
+        producer_id="p1",
+        generated_at="t",
+    )
+
+    assert response["status"] == "unauthorized"
+    assert response["history"] is None
+
+
+@pytest.mark.unit
+async def test_answer_request_becomes_error_instead_of_raising_on_any_other_exception() -> None:
+    async def broken_get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        raise RuntimeError("boom")
+
+    item = _Inbound(request_id="r1", run_id=uuid4(), status=None)
+
+    response = await _answer_request(
+        item,
+        deps=_kernel(),
+        get_run_history=broken_get_run_history,
+        run_history_tail=_RunHistoryTail(),
+        producer_id="p1",
+        generated_at="t",
+    )
+
+    assert response["status"] == "error"
+
+
+@pytest.mark.unit
+async def test_answer_request_serves_a_cached_terminal_run_without_a_fresh_read() -> None:
+    run_id = uuid4()
+    calls = 0
+
+    async def counting_get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        nonlocal calls
+        calls += 1
+        return _history_view(run_id)
+
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+    await tail.poll(
+        counting_get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+    await tail.poll(
+        counting_get_run_history, kernel, open_run_ids=[], generated_at="t1", producer_id="p1"
+    )
+    assert calls == 2  # one open-set fetch, one terminal checkpoint
+
+    item = _Inbound(request_id="r1", run_id=run_id, status=None)
+    response = await _answer_request(
+        item,
+        deps=kernel,
+        get_run_history=counting_get_run_history,
+        run_history_tail=tail,
+        producer_id="p1",
+        generated_at="t2",
+    )
+
+    assert response["status"] == "ok"
+    assert response["source"] == "cache"
+    assert calls == 2  # no additional read
+
+
+@pytest.mark.unit
+async def test_answer_request_does_not_serve_a_non_terminal_cached_run() -> None:
+    run_id = uuid4()
+    calls = 0
+
+    async def counting_get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        nonlocal calls
+        calls += 1
+        return _history_view(run_id)
+
+    tail = _RunHistoryTail()
+    kernel = _kernel()
+    await tail.poll(
+        counting_get_run_history, kernel, open_run_ids=[run_id], generated_at="t0", producer_id="p1"
+    )
+    assert calls == 1
+
+    item = _Inbound(request_id="r1", run_id=run_id, status=None)
+    response = await _answer_request(
+        item,
+        deps=kernel,
+        get_run_history=counting_get_run_history,
+        run_history_tail=tail,
+        producer_id="p1",
+        generated_at="t1",
+    )
+
+    assert response["status"] == "ok"
+    assert response["source"] == "read"
+    assert calls == 2  # fresh read, not served from the non-terminal cache
 
 
 @pytest.mark.unit
@@ -1176,6 +1507,278 @@ async def test_lifespan_pushes_active_enclosures_only() -> None:
         snapshot = json.loads(raw)
         assert len(snapshot["enclosures"]) == 1
         assert snapshot["enclosures"][0]["name"] == "2-BM-B"
+
+
+# ---------- on-demand requests: first-ever inbound-frame tests ----------
+#
+# Every end-to-end test above uses a fake relay that only drains
+# (`async for message in ws: ...`); these need one that can also send a
+# frame back, since these are the first tests in this file to exercise
+# the producer's `_read_requests` reader task at all.
+
+
+def _bidirectional_handler(received: asyncio.Queue[str], sock_box: list[ServerConnection]) -> Any:
+    """A fake relay `/ingest` handler that drains into `received`, same as
+    every handler above, AND stashes the live `ServerConnection` in
+    `sock_box` so the test itself can send a `run_history_request` back."""
+
+    async def handler(ws: ServerConnection) -> None:
+        sock_box.append(ws)
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    return handler
+
+
+async def _wait_until_connected(sock_box: list[ServerConnection]) -> None:
+    for _ in range(200):
+        if sock_box:
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("producer never connected to the fake relay")
+
+
+@pytest.mark.unit
+async def test_request_serving_resumes_snapshot_cadence_once_a_slow_read_completes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The load-bearing cadence test: while one on-demand request is being
+    served, the tick loop's single writer/server phase is legitimately
+    busy (this design has no per-item timeout, see this module's
+    Transport section), but it must resume normal snapshot cadence the
+    moment that read completes, with no reconnect and no runaway retry."""
+    monkeypatch.setattr("cora.api._status_push._REQUEST_PHASE_BUDGET_SECONDS", 5.0, raising=False)
+    received: asyncio.Queue[str] = asyncio.Queue()
+    sock_box: list[ServerConnection] = []
+    handler = _bidirectional_handler(received, sock_box)
+    release_read = asyncio.Event()
+
+    async def slow_get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        await release_read.wait()
+        return None
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=url,
+            status_push_tick_seconds=0.1,
+            status_push_request_max_per_tick=2,
+        )
+
+        async with status_push_lifespan(
+            kernel, **_default_handlers(get_run_history=slow_get_run_history)
+        ):
+            first = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            assert first["kind"] == "snapshot"
+            first_sequence = first["sequence"]
+            await _wait_until_connected(sock_box)
+
+            await sock_box[0].send(
+                json.dumps(
+                    {
+                        "kind": "run_history_request",
+                        "schema_version": 1,
+                        "request_id": "hang-1",
+                        "run_id": str(uuid4()),
+                    }
+                )
+            )
+
+            # The read is deliberately held open; no further message can
+            # arrive while the tick loop's one writer is blocked inside
+            # `_answer_request`.
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(received.get(), timeout=0.3)
+
+            release_read.set()
+
+            resumed = False
+            for _ in range(20):
+                msg = json.loads(await asyncio.wait_for(received.get(), timeout=2))
+                if msg["kind"] == "run_history_response":
+                    assert msg["status"] == "not_found"
+                    assert msg["request_id"] == "hang-1"
+                    continue
+                assert msg["kind"] == "snapshot"
+                assert msg["sequence"] > first_sequence
+                resumed = True
+                break
+            assert resumed
+
+
+@pytest.mark.unit
+async def test_unauthorized_on_demand_request_does_not_disconnect_the_producer() -> None:
+    """The single highest-severity failure mode named in this module's
+    Transport section: an `UnauthorizedError` from a request-triggered
+    read must never escape into `_push_loop`'s own reconnect handling.
+    Asserted on the observable consequence -- exactly one producer
+    connection is ever accepted -- rather than on internal state."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+    sock_box: list[ServerConnection] = []
+    connection_count = 0
+
+    async def handler(ws: ServerConnection) -> None:
+        nonlocal connection_count
+        connection_count += 1
+        sock_box.append(ws)
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async def denying_get_run_history(
+        query: GetRunHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunHistoryView | None:
+        raise RunUnauthorizedError("denied")
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=url,
+            status_push_tick_seconds=0.1,
+            status_push_request_max_per_tick=2,
+        )
+
+        async with status_push_lifespan(
+            kernel, **_default_handlers(get_run_history=denying_get_run_history)
+        ):
+            first = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            assert first["kind"] == "snapshot"
+            await _wait_until_connected(sock_box)
+
+            await sock_box[0].send(
+                json.dumps(
+                    {
+                        "kind": "run_history_request",
+                        "schema_version": 1,
+                        "request_id": "req-1",
+                        "run_id": str(uuid4()),
+                    }
+                )
+            )
+
+            saw_unauthorized = False
+            saw_snapshot_after = False
+            for _ in range(30):
+                msg = json.loads(await asyncio.wait_for(received.get(), timeout=2))
+                if msg.get("kind") == "run_history_response":
+                    assert msg["status"] == "unauthorized"
+                    saw_unauthorized = True
+                    continue
+                assert msg["kind"] == "snapshot"
+                if saw_unauthorized:
+                    saw_snapshot_after = True
+                    break
+
+        assert saw_unauthorized
+        assert saw_snapshot_after  # ticks kept arriving normally afterward
+        assert connection_count == 1  # never reconnected
+
+
+@pytest.mark.unit
+async def test_request_max_per_tick_zero_disables_the_reader_entirely() -> None:
+    received: asyncio.Queue[str] = asyncio.Queue()
+    sock_box: list[ServerConnection] = []
+    handler = _bidirectional_handler(received, sock_box)
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=url,
+            status_push_tick_seconds=0.1,
+            status_push_request_max_per_tick=0,
+        )
+
+        async with status_push_lifespan(kernel, **_default_handlers()):
+            first = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            assert first["kind"] == "snapshot"
+            await _wait_until_connected(sock_box)
+
+            await sock_box[0].send(
+                json.dumps(
+                    {
+                        "kind": "run_history_request",
+                        "schema_version": 1,
+                        "request_id": "req-1",
+                        "run_id": str(uuid4()),
+                    }
+                )
+            )
+
+            # Only snapshots ever arrive: no reader task, no response, no
+            # crash.
+            for _ in range(5):
+                msg = json.loads(await asyncio.wait_for(received.get(), timeout=2))
+                assert msg["kind"] == "snapshot"
+
+
+@pytest.mark.unit
+async def test_request_is_answered_after_a_reconnect(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fresh reader task is created per connection (see `_push_loop`'s
+    own docstring); this proves it actually comes back after one."""
+    monkeypatch.setattr("cora.api._status_push._RECONNECT_INITIAL_SECONDS", 0.02, raising=False)
+    received: asyncio.Queue[str] = asyncio.Queue()
+    sock_box: list[ServerConnection] = []
+    handler = _bidirectional_handler(received, sock_box)
+
+    server = await serve(handler, "127.0.0.1", 0)
+    port = next(iter(server.sockets)).getsockname()[1]
+    url = f"ws://127.0.0.1:{port}/ingest"
+    kernel = _kernel(
+        status_push_enabled=True,
+        status_push_url=url,
+        status_push_tick_seconds=0.1,
+        status_push_request_max_per_tick=2,
+    )
+
+    async with status_push_lifespan(kernel, **_default_handlers()):
+        await asyncio.wait_for(received.get(), timeout=5)
+
+        server.close()
+        await server.wait_closed()
+        sock_box.clear()
+        while not received.empty():
+            received.get_nowait()
+
+        server = await serve(handler, "127.0.0.1", port)
+        await asyncio.wait_for(received.get(), timeout=10)
+        await _wait_until_connected(sock_box)
+
+        await sock_box[0].send(
+            json.dumps(
+                {
+                    "kind": "run_history_request",
+                    "schema_version": 1,
+                    "request_id": "post-reconnect",
+                    "run_id": str(uuid4()),
+                }
+            )
+        )
+        for _ in range(20):
+            msg = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            if msg.get("kind") == "run_history_response":
+                assert msg["request_id"] == "post-reconnect"
+                assert msg["status"] == "not_found"
+                break
+        else:
+            raise AssertionError("never got a response after reconnecting")
+
+    server.close()
+    await server.wait_closed()
 
 
 @pytest.mark.unit
