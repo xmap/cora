@@ -22,6 +22,7 @@ vocabulary. Tuples-on-the-wire arrive as lists; the converter widens to
 tuple for the in-process Conductor.
 """
 
+from collections.abc import Mapping
 from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -35,6 +36,7 @@ from cora.operation.conductor import (
     SetpointStep,
     Step,
     WithinToleranceCriterion,
+    WriteValue,
 )
 
 STEP_BATCH_MAX = 500
@@ -177,3 +179,16 @@ def failure_to_wire(failure: ConductorFailure) -> ConductorFailureResponse:
         error_class=failure.error_class,
         message=failure.message,
     )
+
+
+def substrate_writes_to_wire(
+    substrate_writes: Mapping[str, WriteValue],
+) -> dict[str, int | float | bool | str | list[Any]]:
+    """Project `ConductorResult.substrate_writes` onto its JSON wire shape.
+
+    `list(v)` normalises the tuple arm of `WriteValue`: JSON has no tuple,
+    and letting pydantic coerce it silently would make the wire type depend
+    on which arm a caller happened to write. Shared by every conduct-family
+    `result_to_wire` (conduct / conduct_or_hold / conduct_from) now that a
+    third call site would otherwise repeat it."""
+    return {k: list(v) if isinstance(v, tuple) else v for k, v in substrate_writes.items()}

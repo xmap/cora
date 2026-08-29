@@ -3897,6 +3897,31 @@
             "title": "Re Establishment Boundary",
             "type": "integer"
           },
+          "substrate_writes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {},
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Every control address this replay wrote, in first-write order, carrying the last value written to each. Present on an acquisition halt too: the Procedure is left Running with setpoints re-driven and nothing having put them back.",
+            "title": "Substrate Writes",
+            "type": "object"
+          },
           "succeeded": {
             "title": "Succeeded",
             "type": "boolean"
@@ -3984,6 +4009,31 @@
             "format": "uuid",
             "title": "Procedure Id",
             "type": "string"
+          },
+          "substrate_writes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {},
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "Every control address this conduct wrote, in first-write order, carrying the last value written to each. Present on a HELD outcome too: a paused Procedure's recipe closing steps have not run, so this is what was left set.",
+            "title": "Substrate Writes",
+            "type": "object"
           },
           "succeeded": {
             "title": "Succeeded",

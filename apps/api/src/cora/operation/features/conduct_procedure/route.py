@@ -47,6 +47,7 @@ from cora.operation._conduct_wire import (
     StepRequest,
     failure_to_wire,
     step_from_wire,
+    substrate_writes_to_wire,
 )
 from cora.operation.features.conduct_procedure.command import (
     ConductProcedure,
@@ -114,12 +115,7 @@ def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
         succeeded=result.succeeded,
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
-        # `list(v)` normalises the tuple arm of `WriteValue`: JSON has no
-        # tuple, and letting pydantic coerce it silently would make the
-        # wire type depend on which arm a caller happened to write.
-        substrate_writes={
-            k: list(v) if isinstance(v, tuple) else v for k, v in result.substrate_writes.items()
-        },
+        substrate_writes=substrate_writes_to_wire(result.substrate_writes),
     )
 
 

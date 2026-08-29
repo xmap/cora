@@ -203,6 +203,10 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
             acquisition_halt=acquisition_halt,
             failure=result.failure,
             actuation_kind=actuation_kind,
+            measurements=result.measurements,
+            artifacts=result.artifacts,
+            outputs=result.outputs,
+            substrate_writes=result.substrate_writes,
         )
 
     return handler

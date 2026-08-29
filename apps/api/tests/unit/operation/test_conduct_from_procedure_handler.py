@@ -212,6 +212,9 @@ async def test_clean_tail_resumes_then_auto_completes() -> None:
     assert await _status(store) is ProcedureStatus.COMPLETED
     assert (await port.read("2bma:a")).value == 1.0
     assert (await port.read("2bma:b")).value == 2.0
+    # `ConductFromProcedureResult` used to lack this field entirely. See
+    # [[project_field_drop_bug_class]].
+    assert result.substrate_writes == {"2bma:a": 1.0, "2bma:b": 2.0}
 
 
 @pytest.mark.unit
@@ -262,6 +265,10 @@ async def test_acquisition_halt_resumes_but_leaves_running() -> None:
     assert "ProcedureResumed" in types
     assert "ProcedureCompleted" not in types
     assert "ProcedureAborted" not in types
+    # The exact case this field earns its place on: an acquisition halt
+    # leaves the Procedure Running with the setpoint re-driven and nothing
+    # having put it back.
+    assert result.substrate_writes == {"2bma:a": 1.0}
 
 
 @pytest.mark.unit
