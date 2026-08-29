@@ -6,9 +6,13 @@
 #
 # Binds 127.0.0.1 ONLY, by design: a viewer reaches it the same way
 # /docs is reached today, an SSH tunnel, not a direct network address.
-# Widening the bind address later is a one-line ExecStart change, but
-# do it together with adding viewer-side authentication (there is none
-# today; the token below only gates the PRODUCER side), never alone.
+# Widening the bind address later is a one-line ExecStart change; the
+# viewer-side authentication that widening used to be blocked on now
+# exists (STATUS_RELAY_VIEWER_USER/PASSWORD, HTTP Basic, every path but
+# /ingest), added specifically because /run-history/<id> can now reach
+# any run in the record on demand, not only the up-to-20 most recently
+# pushed one. STATUS_RELAY_TOKEN below is a SEPARATE credential that
+# gates only the PRODUCER's own /ingest connection.
 #
 # Reuses the same shared-NFS-home checkout and venv arcturus already
 # runs from (`websockets` is already a dependency of apps/api, pulled
@@ -24,7 +28,8 @@
 # install on arcturus):
 #
 #   mkdir -p ~/cora-status-relay-secrets   # or wherever you keep it
-#   printf 'STATUS_RELAY_TOKEN=%s\n' '<paste the generated token>' \
+#   printf 'STATUS_RELAY_TOKEN=%s\nSTATUS_RELAY_VIEWER_USER=%s\nSTATUS_RELAY_VIEWER_PASSWORD=%s\n' \
+#       '<paste the generated token>' '<pick a viewer username>' '<pick a viewer password>' \
 #       > ~/cora-status-relay.env
 #   chmod 600 ~/cora-status-relay.env
 #   cp infra/status-relay/systemd/cora-status-relay.service \

@@ -541,6 +541,14 @@ class Settings(BaseSettings):
     status_push_url: str | None = None
     status_push_token: SecretStr | None = None
 
+    # `status_push_request_max_per_tick` bounds how many relay-originated
+    # `run_history_request` frames the producer answers per tick, drained
+    # after that tick's snapshot send and before its sleep (see
+    # `cora.api._status_push`'s reader-task design). `0` disables the reader
+    # task entirely, restoring the write-only socket byte for byte -- the
+    # rollback lever and the load dial in one field, no extra boolean needed.
+    status_push_request_max_per_tick: int = 2
+
     # `liveness_posture` governs whether the authorization gate reads
     # `Actor.active` for the calling principal, the switch an operator flips
     # with deactivate_actor / reactivate_actor. Three states, because
@@ -2024,6 +2032,22 @@ class Settings(BaseSettings):
             msg = (
                 f"status_push_tick_seconds must be >= 0.1, got {value}; "
                 "values below 100ms would tight-loop the pusher"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("status_push_request_max_per_tick")
+    @classmethod
+    def _validate_status_push_request_max_per_tick(cls, value: int) -> int:
+        """0..8: 0 disables the reader task; the upper bound keeps one
+        pathological tick's serve phase bounded (`_REQUEST_INBOX_SIZE`
+        in `_status_push.py` is 2x this cap, so overflow past it means
+        the relay is misbehaving, not real load)."""
+        if not 0 <= value <= 8:
+            msg = (
+                f"status_push_request_max_per_tick must be between 0 and 8, got {value}; "
+                "0 disables the reader task, and above 8 risks a tick's serve phase "
+                "growing unbounded"
             )
             raise ValueError(msg)
         return value

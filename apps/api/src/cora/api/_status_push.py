@@ -56,6 +56,12 @@ Each tick reads and pushes:
     since this process's own "now" (`_ActivityTail`,
     `EventActivityTrail`), pushed as a third message kind whenever
     something new has happened -- this is flowing mode's entire feed
+  - answers, on demand, a relay-originated `run_history_request` for ONE
+    run's full history (`_read_requests` / `_answer_request` /
+    `build_run_history_response`), reusing the very same `get_run_history`
+    read the periodic push above already makes -- this is REWIND's path to
+    ANY run in the record, not only the up-to-20 most recently pushed one
+    the relay happens to still be caching
 
 The snapshot payload is a full snapshot every push, never a delta: a
 fresh viewer, a reconnecting viewer, and a restarted relay are all served
@@ -73,6 +79,44 @@ in this process: that path is capped at `capture_progress_flush_tick_seconds`
 lack the "of M" figure. Revisit if this ever runs against a Run witnessed
 by a different process than the one pushing.
 
+## On-demand requests: one reader task, the tick loop stays the sole writer
+
+The socket was write-only through Step 1: `sock.send` was called from
+exactly one coroutine, and nothing ever called `sock.recv`. Answering a
+relay-originated request needs the socket to read too, and the design
+below is deliberately conservative about how.
+
+`_read_requests` is a single reader task, created inside the same
+`async with connect(...)` block as the tick loop, that ONLY parses
+inbound frames onto a bounded inbox (`_REQUEST_INBOX_SIZE`); it never
+sends and never touches `deps`. The tick loop remains the sole writer
+AND the sole consumer of that inbox, draining up to
+`status_push_request_max_per_tick` items per tick via `_serve_requests`,
+after that tick's snapshot send and before its sleep -- so a slow or
+misbehaving request delays only the NEXT tick's snapshot, never the
+current one's, and snapshot cadence never depends on how many requests
+happen to be waiting.
+
+**The one rule that matters more than the others here**: `_answer_request`
+must never let an exception escape, `UnauthorizedError` most of all. If it
+did, the exception would propagate out of the tick loop into `_push_loop`'s
+own `except _UNAUTHORIZED_ERRORS` / `except (ConnectionClosed, ...)`
+handlers, which exit the `async with connect(...)` block and reopen
+arcturus's only outbound channel. A browser could then force the
+beamline's entire live feed to drop and reconnect just by requesting a
+run it is not allowed to read. `_answer_request` therefore catches
+`_UNAUTHORIZED_ERRORS` and any other `Exception` itself and turns each
+into an ordinary `"unauthorized"` / `"error"` response instead.
+
+A response is served from `_RunHistoryTail`'s own ring
+(`_RunHistoryTail.cached_terminal`) when the requested run is already
+cached there, and ONLY when that entry is marked terminal: a live run's
+timeline already refreshes every `_RUN_HISTORY_REFRESH_TICKS`, so REWIND
+on a running scan should never show a stale cached copy. That lookup is
+read-only by design -- a request-triggered read must never insert into or
+evict from the ring, whose eviction order otherwise mirrors only what
+this tail has genuinely pushed.
+
 ## Principal identity: the widening trigger has now fired
 
 Every other watcher here authenticates as its own seeded Agent (a real
@@ -88,6 +132,16 @@ than silently indefinite. Until then, a Trust Policy that denies any of the
 eight read commands to `SYSTEM_PRINCIPAL_ID` blinds this feature for that
 domain only (each drain is independently try/except-guarded; see
 `_push_loop`), never the others.
+
+The on-demand request path above makes `GetRunHistory` reachable from a
+browser at any time, not only on this module's own fixed tick, which is
+a materially larger claim on `SYSTEM_PRINCIPAL_ID` than the periodic push
+alone -- it does not add a NINTH command (it is the same `GetRunHistory`
+call the periodic push already makes, under the same identity, with the
+same `_UNAUTHORIZED_ERRORS` catch), but it does mean a wider surface can
+now trigger it on demand. The seeded-identity follow-up named above
+applies here with more force as a result; it remains deferred rather than
+bundled into this change, which is scoped to the transport itself.
 
 `_ActivityTail`'s read is a NINTH, and it is a different KIND of gap, not
 just a bigger one: `EventActivityTrail` is a raw infrastructure port, not
@@ -109,7 +163,8 @@ import contextlib
 import hashlib
 import json
 from collections import OrderedDict, deque
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from websockets.asyncio.client import connect
@@ -144,6 +199,8 @@ from cora.subject.features.list_subjects import ListSubjects
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
+
+    from websockets.asyncio.client import ClientConnection
 
     from cora.api._run_witness import RunWitnessRecorder
     from cora.campaign.features.list_campaigns.handler import Handler as ListCampaignsHandler
@@ -210,6 +267,24 @@ the cursor's time component, so the `(time, id) > (cursor_time, cursor_id)`
 keyset predicate admits anything at or after this instant regardless of id,
 rather than requiring an id greater than a real (and otherwise arbitrary)
 UUID at the same microsecond."""
+
+_REQUEST_INBOX_SIZE = 8
+"""Bound on `_read_requests`' inbox queue: 2x the relay's own in-flight
+cap (`_MAX_INFLIGHT_REQUESTS` in `relay.py`). Overflow past this means the
+relay is misbehaving or the producer has fallen badly behind, not real
+load; an overflowing frame is dropped and logged, never blocked on, so the
+reader task can keep draining the socket."""
+_REQUEST_PHASE_BUDGET_SECONDS = 1.5
+"""Wall-clock budget for one tick's WHOLE request-serving phase (not a
+per-item timeout), so worst-case tick skew stays a constant regardless of
+how many items are drained. Worst case a tick becomes
+`tick_seconds + 1.5s`; at the 2.0s default that is 3.5s, still inside the
+10s heartbeat window `_HEARTBEAT_TICKS` already gives the relay to notice
+a stall."""
+_MAX_INBOUND_FRAME_BYTES = 16384
+"""Passed as `max_size=` to `connect()`. A `run_history_request` frame is
+on the order of 200 bytes; this is a pre-parse safety bound against a
+misbehaving or compromised relay, not a working limit."""
 
 # Every BC's UnauthorizedError is its own class (no shared base, per the
 # per-BC-application-error-namespace convention), so widening past one
@@ -603,6 +678,22 @@ class _RunHistoryTail:
             self._ring.popitem(last=False)
         return message
 
+    def cached_terminal(self, run_id: UUID) -> dict[str, Any] | None:
+        """The cached history message for `run_id`, if this tail is
+        holding one AND it is marked terminal, else `None`.
+
+        Read-only and terminal-only by design (see this module's "On-demand
+        requests" section): a live run's timeline already refreshes every
+        `_RUN_HISTORY_REFRESH_TICKS`, so an on-demand answer for an
+        in-flight run should do a fresh read rather than risk a stale
+        cached copy, and a request-triggered read must never insert into
+        or evict from `_ring`, whose eviction order otherwise mirrors only
+        what this tail has genuinely pushed."""
+        message = self._ring.get(run_id)
+        if message is None or not message.get("terminal"):
+            return None
+        return message
+
 
 class _ActivityTail:
     """Tail-follows the whole `events` table for flowing mode's lanes:
@@ -643,6 +734,227 @@ class _ActivityTail:
             if len(page) < _ACTIVITY_PAGE_LIMIT:
                 break
         return rows
+
+
+@dataclass(frozen=True)
+class _Inbound:
+    """One inbound frame off the relay, already fully parsed and resolved.
+
+    `status` is `None` for a well-formed request that still needs a real
+    answer (`_answer_request` does the lookup); otherwise it is a terminal
+    status `_parse_inbound` has already decided (`"malformed"` /
+    `"unsupported"`), so `_answer_request` has exactly one shape either
+    way: read `status`, and if it is set, echo it back without touching
+    `deps` at all."""
+
+    request_id: str
+    run_id: UUID | None
+    status: str | None
+
+
+def _parse_inbound(message: str | bytes) -> _Inbound | None:
+    """Parse one frame off the relay into an `_Inbound`, or `None` when it
+    cannot be answered at all.
+
+    `None` covers two cases, both logged and dropped rather than raised,
+    mirroring `relay.py`'s own `producer.unknown_kind` posture: a frame
+    that is not valid JSON, and a recognized-or-not `kind` with no usable
+    `request_id` to reply against. A recognized `kind` with an unsupported
+    `schema_version` is NOT one of these -- `request_id` is still usable
+    there, so it gets an `"unsupported"` response rather than silence.
+    """
+    try:
+        parsed: Any = json.loads(message)
+    except (TypeError, ValueError):
+        _log.warning(f"{_LOG_PREFIX}.malformed_inbound")
+        return None
+    if not isinstance(parsed, dict):
+        _log.warning(f"{_LOG_PREFIX}.unknown_inbound_kind", kind=None)
+        return None
+    payload = cast("dict[str, Any]", parsed)
+    if payload.get("kind") != "run_history_request":
+        _log.warning(f"{_LOG_PREFIX}.unknown_inbound_kind", kind=payload.get("kind"))
+        return None
+    request_id = payload.get("request_id")
+    if not isinstance(request_id, str):
+        _log.warning(f"{_LOG_PREFIX}.request_missing_id")
+        return None
+    if payload.get("schema_version") != 1:
+        return _Inbound(request_id=request_id, run_id=None, status="unsupported")
+    raw_run_id = payload.get("run_id")
+    try:
+        run_id = UUID(raw_run_id) if isinstance(raw_run_id, str) else None
+    except ValueError:
+        run_id = None
+    if run_id is None:
+        return _Inbound(request_id=request_id, run_id=None, status="malformed")
+    return _Inbound(request_id=request_id, run_id=run_id, status=None)
+
+
+async def _read_requests(sock: ClientConnection, inbox: asyncio.Queue[_Inbound]) -> None:
+    """Parses every inbound frame onto the bounded `inbox`, nothing else.
+
+    This is the ONLY coroutine that calls `sock.recv` (implicitly, via
+    `async for`); it never calls `sock.send` and never touches `deps`. The
+    tick loop in `_push_loop` remains the sole writer and the sole
+    consumer of `inbox` (see this module's "On-demand requests" section
+    for why the split is this conservative)."""
+    async for message in sock:
+        item = _parse_inbound(message)
+        if item is None:
+            continue
+        try:
+            inbox.put_nowait(item)
+        except asyncio.QueueFull:
+            _log.warning(f"{_LOG_PREFIX}.request_inbox_full", request_id=item.request_id)
+
+
+def build_run_history_response(
+    *,
+    request_id: str,
+    status: str,
+    generated_at: str,
+    producer_id: str,
+    source: str | None = None,
+    history: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Assemble one answer to a relay's `run_history_request`. A pure
+    function, same rationale as `build_snapshot`: unit-testable without a
+    socket. `history`, when present, is byte-identical to
+    `build_run_history_message`'s own output, so the relay can feed a
+    successful response straight into its existing cache with zero
+    transformation."""
+    return {
+        "kind": "run_history_response",
+        "schema_version": 1,
+        "producer_id": producer_id,
+        "request_id": request_id,
+        "generated_at": generated_at,
+        "status": status,
+        "source": source,
+        "history": history,
+    }
+
+
+async def _answer_request(
+    item: _Inbound,
+    *,
+    deps: Kernel,
+    get_run_history: GetRunHistoryHandler,
+    run_history_tail: _RunHistoryTail,
+    producer_id: str,
+    generated_at: str,
+) -> dict[str, Any]:
+    """Answer one relay-originated request. MUST NEVER raise: see this
+    module's "On-demand requests" section for why an escaping exception
+    here, `UnauthorizedError` most of all, is the single highest-severity
+    failure mode in this whole feature."""
+    if item.status is not None:
+        return build_run_history_response(
+            request_id=item.request_id,
+            status=item.status,
+            generated_at=generated_at,
+            producer_id=producer_id,
+        )
+    assert item.run_id is not None  # status is None only when run_id parsed cleanly
+
+    cached = run_history_tail.cached_terminal(item.run_id)
+    if cached is not None:
+        return build_run_history_response(
+            request_id=item.request_id,
+            status="ok",
+            generated_at=generated_at,
+            producer_id=producer_id,
+            source="cache",
+            history=cached,
+        )
+
+    try:
+        view = await get_run_history(
+            GetRunHistory(run_id=item.run_id),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    except _UNAUTHORIZED_ERRORS:
+        _log.warning(f"{_LOG_PREFIX}.request_unauthorized", run_id=str(item.run_id))
+        return build_run_history_response(
+            request_id=item.request_id,
+            status="unauthorized",
+            generated_at=generated_at,
+            producer_id=producer_id,
+        )
+    except Exception:
+        # See this module's "On-demand requests" section: anything else
+        # unhandled here must still become a response, never a socket
+        # teardown.
+        _log.exception(f"{_LOG_PREFIX}.request_failed", run_id=str(item.run_id))
+        return build_run_history_response(
+            request_id=item.request_id,
+            status="error",
+            generated_at=generated_at,
+            producer_id=producer_id,
+        )
+
+    if view is None:
+        return build_run_history_response(
+            request_id=item.request_id,
+            status="not_found",
+            generated_at=generated_at,
+            producer_id=producer_id,
+        )
+    terminal = view.status not in _OPEN_RUN_STATUSES
+    history = build_run_history_message(
+        view=view, terminal=terminal, generated_at=generated_at, producer_id=producer_id
+    )
+    return build_run_history_response(
+        request_id=item.request_id,
+        status="ok",
+        generated_at=generated_at,
+        producer_id=producer_id,
+        source="read",
+        history=history,
+    )
+
+
+async def _serve_requests(
+    inbox: asyncio.Queue[_Inbound],
+    sock: ClientConnection,
+    *,
+    deps: Kernel,
+    get_run_history: GetRunHistoryHandler,
+    run_history_tail: _RunHistoryTail,
+    producer_id: str,
+    generated_at: str,
+    max_per_tick: int,
+) -> None:
+    """Drain up to `max_per_tick` already-queued requests, within one
+    shared wall-clock budget for the whole phase (`_REQUEST_PHASE_BUDGET_SECONDS`)
+    rather than a per-item timeout, so worst-case tick skew stays a
+    constant regardless of how many items are drained this tick. Called
+    from `_push_loop` after the snapshot send and before the tick's sleep,
+    so a slow request delays only the NEXT tick's snapshot, never the
+    current one's."""
+    if max_per_tick <= 0:
+        return
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + _REQUEST_PHASE_BUDGET_SECONDS
+    served = 0
+    while served < max_per_tick and loop.time() < deadline:
+        try:
+            item = inbox.get_nowait()
+        except asyncio.QueueEmpty:
+            break
+        response = await _answer_request(
+            item,
+            deps=deps,
+            get_run_history=get_run_history,
+            run_history_tail=run_history_tail,
+            producer_id=producer_id,
+            generated_at=generated_at,
+        )
+        await sock.send(json.dumps(response))
+        served += 1
 
 
 def _content_hash(payload: dict[str, Any]) -> str:
@@ -829,6 +1141,7 @@ async def _push_loop(
     producer_id: str,
     url: str,
     witness_recorder: RunWitnessRecorder | None,
+    request_max_per_tick: int,
 ) -> None:
     """Reconnect-with-backoff outer loop; one open connection sends many
     ticks. `websockets`' own `InvalidStatus` (bad token) and `ConnectionClosed`
@@ -841,6 +1154,13 @@ async def _push_loop(
     decisions" / "which runs have already had their history pushed" /
     "which events have already been tailed" mean since this process
     started, not since the last successful connection.
+
+    A fresh `_read_requests` reader task is created PER connection, inside
+    the `async with connect(...)` block below, and torn down in a
+    `finally` before that block exits (cancel + gather, never
+    `asyncio.TaskGroup`: see this module's "On-demand requests" section
+    for why). `request_max_per_tick <= 0` skips creating the inbox and the
+    reader task entirely, restoring the write-only socket byte for byte.
     """
     token = deps.settings.status_push_token
     headers = {"Authorization": f"Bearer {token.get_secret_value()}"} if token is not None else {}
@@ -858,55 +1178,83 @@ async def _push_loop(
 
     while True:
         try:
-            async with connect(url, additional_headers=headers) as sock:
+            async with connect(
+                url, additional_headers=headers, max_size=_MAX_INBOUND_FRAME_BYTES
+            ) as sock:
                 _log.info(f"{_LOG_PREFIX}.connected", url=url)
                 backoff = _RECONNECT_INITIAL_SECONDS
                 last_hash = None  # force one full push right after (re)connect
                 run_history_tail.on_reconnect()
                 ticks_since_push = _HEARTBEAT_TICKS  # push immediately on connect
-                while True:
-                    generated_at = deps.clock.now().isoformat()
-                    fields, extra_messages = await _build_payload_fields(
-                        deps,
-                        list_runs=list_runs,
-                        list_subjects=list_subjects,
-                        list_campaigns=list_campaigns,
-                        list_datasets=list_datasets,
-                        list_clearances=list_clearances,
-                        list_enclosures=list_enclosures,
-                        decision_tail=decision_tail,
-                        list_decisions=list_decisions,
-                        run_history_tail=run_history_tail,
-                        get_run_history=get_run_history,
-                        activity_tail=activity_tail,
-                        activity_trail=activity_trail,
-                        witness_recorder=witness_recorder,
-                        generated_at=generated_at,
-                        producer_id=producer_id,
-                    )
-                    # Extras (run history, activity) are exempt from the
-                    # hash/heartbeat gate below by construction: each tail's
-                    # `poll` only ever returns what is new this tick, so
-                    # there is nothing to de-duplicate here.
-                    for message in extra_messages:
-                        await sock.send(json.dumps(message))
-                    content_hash = _content_hash(fields)
-                    changed = content_hash != last_hash
-                    heartbeat_due = ticks_since_push >= _HEARTBEAT_TICKS
-                    if changed or heartbeat_due:
-                        sequence += 1
-                        snapshot = build_snapshot(
-                            sequence=sequence,
+
+                inbox: asyncio.Queue[_Inbound] | None = None
+                reader_task: asyncio.Task[None] | None = None
+                if request_max_per_tick > 0:
+                    inbox = asyncio.Queue(maxsize=_REQUEST_INBOX_SIZE)
+                    reader_task = asyncio.create_task(_read_requests(sock, inbox))
+                try:
+                    while True:
+                        generated_at = deps.clock.now().isoformat()
+                        fields, extra_messages = await _build_payload_fields(
+                            deps,
+                            list_runs=list_runs,
+                            list_subjects=list_subjects,
+                            list_campaigns=list_campaigns,
+                            list_datasets=list_datasets,
+                            list_clearances=list_clearances,
+                            list_enclosures=list_enclosures,
+                            decision_tail=decision_tail,
+                            list_decisions=list_decisions,
+                            run_history_tail=run_history_tail,
+                            get_run_history=get_run_history,
+                            activity_tail=activity_tail,
+                            activity_trail=activity_trail,
+                            witness_recorder=witness_recorder,
                             generated_at=generated_at,
                             producer_id=producer_id,
-                            **fields,
                         )
-                        await sock.send(json.dumps(snapshot))
-                        last_hash = content_hash
-                        ticks_since_push = 0
-                    else:
-                        ticks_since_push += 1
-                    await asyncio.sleep(tick_seconds)
+                        # Extras (run history, activity) are exempt from the
+                        # hash/heartbeat gate below by construction: each tail's
+                        # `poll` only ever returns what is new this tick, so
+                        # there is nothing to de-duplicate here.
+                        for message in extra_messages:
+                            await sock.send(json.dumps(message))
+                        content_hash = _content_hash(fields)
+                        changed = content_hash != last_hash
+                        heartbeat_due = ticks_since_push >= _HEARTBEAT_TICKS
+                        if changed or heartbeat_due:
+                            sequence += 1
+                            snapshot = build_snapshot(
+                                sequence=sequence,
+                                generated_at=generated_at,
+                                producer_id=producer_id,
+                                **fields,
+                            )
+                            await sock.send(json.dumps(snapshot))
+                            last_hash = content_hash
+                            ticks_since_push = 0
+                        else:
+                            ticks_since_push += 1
+                        # After the snapshot send, before the sleep: a slow
+                        # or hung request delays only the NEXT tick, never
+                        # this one (see this module's "On-demand requests"
+                        # section).
+                        if inbox is not None:
+                            await _serve_requests(
+                                inbox,
+                                sock,
+                                deps=deps,
+                                get_run_history=get_run_history,
+                                run_history_tail=run_history_tail,
+                                producer_id=producer_id,
+                                generated_at=generated_at,
+                                max_per_tick=request_max_per_tick,
+                            )
+                        await asyncio.sleep(tick_seconds)
+                finally:
+                    if reader_task is not None:
+                        reader_task.cancel()
+                        await asyncio.gather(reader_task, return_exceptions=True)
         except asyncio.CancelledError:
             raise
         except _UNAUTHORIZED_ERRORS:
@@ -996,6 +1344,7 @@ async def status_push_lifespan(
             producer_id=producer_id,
             url=url,
             witness_recorder=witness_recorder,
+            request_max_per_tick=deps.settings.status_push_request_max_per_tick,
         ),
         name="status-push",
     )

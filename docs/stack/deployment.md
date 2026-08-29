@@ -836,13 +836,15 @@ URL and whether a tunnel unit runs alongside it change.
 **Access posture, decided deliberately:** the relay binds `127.0.0.1` on
 lyra, not lyra's real network address. A viewer reaches it exactly like
 `/docs` today, an SSH tunnel
-(`ssh -L 8099:127.0.0.1:8099 2bmb@lyra`), not a direct URL.
-This ships the feature with zero change to who can see anything. Widening the
-bind address later is a one-line `ExecStart` change in
-`cora-status-relay.service`, but do it together with adding viewer-side
-authentication (there is none today; the token below only gates the
-PRODUCER's connection, not a browser's), never alone: see the access-posture
-note in that unit file.
+(`ssh -L 8099:127.0.0.1:8099 2bmb@lyra`), not a direct URL. On top of that,
+every path but `/ingest` requires a second, independent gate: HTTP Basic
+auth (`STATUS_RELAY_VIEWER_USER` / `STATUS_RELAY_VIEWER_PASSWORD` below),
+added when `/run-history/<id>` stopped being limited to the relay's own
+20-run cache and became able to reach any run in the record on demand (see
+"Rewind" below). Widening the bind address later is still a one-line
+`ExecStart` change in `cora-status-relay.service`; the viewer-side
+authentication that widening used to be blocked on now exists, but that is
+a decision to make deliberately, not a side effect of this change.
 
 **Units** (`infra/status-relay/systemd/`, install instructions in each
 file's header comment, mirroring `infra/backup/systemd/`'s own pattern):
@@ -864,10 +866,22 @@ dies the moment nobody is logged in.
 | `STATUS_PUSH_ENABLED` | `false` | The switch. Off by default like every other outbound-egress toggle in this file |
 | `STATUS_PUSH_URL` | unset → task logs once and stands down | The relay's ingest endpoint as seen from arcturus, `ws://127.0.0.1:8099/ingest` once the tunnel unit is running |
 | `STATUS_PUSH_TOKEN` | unset → no `Authorization` header sent | Must match the relay's `STATUS_RELAY_TOKEN` on lyra exactly |
+| `STATUS_PUSH_REQUEST_MAX_PER_TICK` | `2` | How many relay-originated `run_history_request`s arcturus answers per tick (see "Rewind" below). `0` disables the request-reading task entirely, restoring the write-only socket byte for byte -- the rollback lever if this path ever misbehaves against the live feed |
+
+**Env vars on lyra** (`~/cora-status-relay.env`, `EnvironmentFile` in
+`cora-status-relay.service`, not tracked in this repo):
+
+| Var | When you set it |
+| --- | --- |
+| `STATUS_RELAY_TOKEN` | Always. Must match `STATUS_PUSH_TOKEN` on arcturus exactly; gates only the producer's `/ingest` connection |
+| `STATUS_RELAY_VIEWER_USER` | Always. The shared login every path but `/ingest` requires (HTTP Basic) |
+| `STATUS_RELAY_VIEWER_PASSWORD` | Always. Paired with the above; the relay refuses to start if either is unset |
 
 **Verify:** `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8099/`
-from arcturus should print `200` once both units are up, entirely without
-leaving arcturus. `journalctl --user -u cora-status-relay -f` on lyra and
+from arcturus should print `401` once both units are up (the relay is
+reachable and answering, just refusing the request for lacking viewer
+credentials), entirely without leaving arcturus. Add `-u <user>:<password>`
+to see `200`. `journalctl --user -u cora-status-relay -f` on lyra and
 `journalctl --user -u cora-status-tunnel -f` on arcturus are the two logs to
 watch during first boot.
 
@@ -881,16 +895,32 @@ in `relay.py`) and serves them to a browser on request:
 | Endpoint | Serves |
 | --- | --- |
 | `GET /run-history` | The current index (id, name, status, terminal, generated_at per cached run) |
-| `GET /run-history/<run_id>` | One cached run's full history, or 404 if it was never pushed since this relay started |
+| `GET /run-history/<run_id>` | One run's full history: served from the relay's own cache when present; on a cache miss, asked of the live producer on demand (see below), so this reaches ANY run in the record, not only a cached one |
 | `GET /scrubber.js` | The rewind scrubber's script (`infra/status-relay/scrubber.js`) |
 
-Both reads are from the relay's own cache; the browser never reaches toward
-arcturus. This is a direct consequence of arcturus having no inbound
-reachability at all: rewind can only ever reach a run pushed since the
-relay's own cache was last populated, capped at 20, and a relay restart
-empties it. The page says so plainly on a miss. The other six live domains
-(Subjects, Campaigns, Datasets, Clearances, Enclosures, Decisions) have no
-rewind; Runs is the only domain with a natural bounded start and end.
+**Any run in the record, not just the cache.** Since arcturus has no
+inbound reachability, the relay cannot simply ask it for a run on demand
+the way a normal backend would; instead the SAME outbound socket the
+producer already holds open for the live feed carries the question too.
+A cache miss on `GET /run-history/<run_id>` makes the relay send a
+`run_history_request` (a fourth message kind, this one relay-to-producer)
+over that socket, arcturus's own `_read_requests` reader task picks it up,
+and `GetRunHistory` answers it under the SAME `SYSTEM_PRINCIPAL_ID` read
+the periodic push already uses -- a `run_history_response` comes back with
+one of `ok / not_found / unauthorized / malformed / unsupported / error`,
+mapped to `200 / 404 / 502 / 502 / 502 / 502` respectively (`503` for
+"producer not connected and not cached", `504` for "producer did not
+answer in time", `503` with `Retry-After` for "too many requests already
+in flight"). A successful answer is cached exactly like a proactively-
+pushed one, so a second fetch for the same run needs no round trip. See
+`cora.api._status_push`'s "On-demand requests" section for the producer
+side's design (in particular: why an `UnauthorizedError` from this path
+must never disconnect the live feed) and `infra/status-relay/relay.py`'s
+own module docstring for the relay side's pending-request registry.
+
+The other six live domains (Subjects, Campaigns, Datasets, Clearances,
+Enclosures, Decisions) have no rewind; Runs is the only domain with a
+natural bounded start and end.
 
 **Activity tail (producer + relay only, no page yet):** arcturus also tail-
 follows the whole `events` table -- every BC, event metadata only
@@ -917,6 +947,7 @@ frontend that will.
 | Runtime orchestrator (k8s / Cloud Run / ECS / bare VMs) | Deferred | First non-local deployment |
 | Event-sourced `ActorIdpBindings` (JIT Actor provisioning) | Deferred | First case where adding an operator is too high-friction via config-time bindings |
 | `trust.check_others` permission separation | Watch item | When ABAC lands or first cross-tenant deploy |
-| Live status feed: wider viewer access | Deferred | The relay binds loopback-only on purpose (see "Live status feed" above); widening it needs viewer-side authentication built first, which does not exist today |
+| Live status feed: wider viewer access | Deferred | The relay binds loopback-only on purpose (see "Live status feed" above). Viewer-side authentication that widening used to be blocked on now exists (HTTP Basic, `STATUS_RELAY_VIEWER_USER`/`PASSWORD`); widening the bind address is still a deliberate decision to make, not an automatic next step |
+| Live status feed: dedicated seeded identity for `SYSTEM_PRINCIPAL_ID` reads | Deferred | Every StatusPush read (including the on-demand `GetRunHistory` path) still authenticates as `SYSTEM_PRINCIPAL_ID`; see the "Principal identity" section of `cora.api._status_push`'s module docstring. On-demand reachability widens the practical exposure of this debt without changing its shape |
 
 Bootstrap policy, Surface decomposition, HTTP edge auth, permission queries, and MCP edge-auth parity are all in place.
