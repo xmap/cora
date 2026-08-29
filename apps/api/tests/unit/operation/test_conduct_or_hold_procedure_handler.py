@@ -286,6 +286,33 @@ async def test_clean_run_completes() -> None:
     assert result.completed_count == 1
     assert await _status(store) is ProcedureStatus.COMPLETED
     assert (await port.read("2bma:a")).value == 1.0
+    # `ConductOrHoldProcedureResult` used to lack this field entirely (a fifth
+    # instance of the field-drop class). See [[project_field_drop_bug_class]].
+    assert result.substrate_writes == {"2bma:a": 1.0}
+
+
+@pytest.mark.unit
+async def test_recoverable_check_failure_pauses_to_held_preserves_prior_write() -> None:
+    """A setpoint that lands, then a check that fails: substrate_writes on the
+    Held result must still show the setpoint (exactly when a paused Procedure's
+    closing steps have NOT run and an operator needs to know what was left set).
+    """
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:a")  # the setpoint lands
+    # "2bma:b" is NOT connected -> the read fails (recoverable check failure)
+    await _seed_defined(store)
+    result = await _call(
+        _make_conduct_or_hold(_deps(store), port),
+        (
+            SetpointStep(address="2bma:a", value=2.0),
+            CheckStep(address="2bma:b", criterion=EqualsCriterion(expected=1.0)),
+        ),
+    )
+
+    assert result.held is True
+    assert result.succeeded is False
+    assert result.substrate_writes == {"2bma:a": 2.0}
 
 
 @pytest.mark.unit

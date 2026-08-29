@@ -34,6 +34,15 @@ class _ToolResult(BaseModel):
     succeeded: bool
     failure: dict[str, Any] | None = None
     actuation_kind: str | None = None
+    substrate_writes: dict[str, int | float | bool | str | list[Any]] = Field(
+        default_factory=dict[str, int | float | bool | str | list[Any]],
+        description=(
+            "Every control address this conduct wrote, in first-write order, "
+            "carrying the last value written to each. Present on a failed "
+            "conduct too: it is what CORA left set with nothing having put "
+            "it back."
+        ),
+    )
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -79,4 +88,5 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             succeeded=wire.succeeded,
             failure=wire.failure.model_dump() if wire.failure is not None else None,
             actuation_kind=wire.actuation_kind,
+            substrate_writes=wire.substrate_writes,
         )

@@ -31,6 +31,7 @@ from cora.operation.conductor import (
     Step,
     WithinToleranceCriterion,
     step_to_payload,
+    steps_from_payload,
 )
 from cora.operation.features.conduct_procedure.route import (
     ConductProcedureRequest,
@@ -105,3 +106,33 @@ def test_step_to_payload_round_trips_through_step_from_wire(step: Step) -> None:
     request = ConductProcedureRequest.model_validate({"steps": [payload]})
     rebuilt = step_from_wire(request.steps[0])
     assert rebuilt == step
+
+
+@pytest.mark.unit
+def test_step_to_payload_carries_a_check_deadline_through_its_own_inverse() -> None:
+    """`steps_from_payload`, not the HTTP wire, is the real inverse a resume
+    reads through. The deadline used to be dropped here, so a resumed conduct
+    silently re-ran the check as an instantaneous read."""
+    step = CheckStep(
+        address="2bma:shutter",
+        criterion=EqualsCriterion(expected="Open"),
+        timeout_s=30.0,
+    )
+
+    payload = step_to_payload(step)
+
+    assert payload["timeout_s"] == 30.0
+    assert steps_from_payload([payload]) == (step,)
+
+
+@pytest.mark.unit
+def test_step_to_payload_omits_the_deadline_key_when_a_check_has_none() -> None:
+    """Absence is how "no deadline" is spelled. Emitting an explicit null
+    would change the payload of every check authored before `timeout_s`
+    existed, and with it the determinism hash of every pinned expansion."""
+    step = CheckStep(address="2bma:shutter", criterion=EqualsCriterion(expected="Open"))
+
+    payload = step_to_payload(step)
+
+    assert "timeout_s" not in payload
+    assert steps_from_payload([payload]) == (step,)

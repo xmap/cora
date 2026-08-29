@@ -12,11 +12,13 @@ cancellation keep `conduct`'s abort posture.
 as `ConductProcedure`).
 """
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from uuid import UUID
 
-from cora.operation.conductor import ConductorFailure, Step
+from cora.operation.conductor import ConductorFailure, Step, WriteValue
+from cora.operation.ports.compute_port import ArtifactRef
+from cora.operation.ports.measurement import Measurement
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,12 @@ class ConductOrHoldProcedureResult:
     terminal `Aborted` one: both carry `succeeded=False` + `failure`, but only
     a `held` Procedure can be `conduct_from`-ed. A `held` Procedure whose hold
     transition failed (left Running) reports `held=False`.
+
+    `measurements` / `artifacts` / `outputs` / `substrate_writes` mirror
+    `ConductProcedureResult`'s fields verbatim (see there for the full
+    rationale): threaded from `ConductorResult`, and present on a HELD
+    outcome too -- that is exactly when `substrate_writes` matters most,
+    since a Held Procedure's recipe closing steps have not run.
     """
 
     procedure_id: UUID
@@ -45,3 +53,7 @@ class ConductOrHoldProcedureResult:
     held: bool = False
     failure: ConductorFailure | None = None
     actuation_kind: str | None = None
+    measurements: tuple[Measurement, ...] = ()
+    artifacts: tuple[ArtifactRef, ...] = ()
+    outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
+    substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])

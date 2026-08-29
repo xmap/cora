@@ -260,6 +260,11 @@ async def test_never_converges_cap_trips_aborts_without_extra_start() -> None:
     assert transcript.events[-1] == "abort_procedure"
     # The open iteration is always closed before the abort (B3): last end before abort.
     assert transcript.events[-2] == "end_iteration[2=False]"
+    # The correction setpoint from the last pass must survive onto the
+    # cap-abort result: `_abort_unconverged_cap` used to copy only
+    # completed_count/measurements from `last_result`. See
+    # [[project_field_drop_bug_class]].
+    assert _ROT_CENTER_ADDR in result.substrate_writes
 
 
 @pytest.mark.unit
@@ -334,8 +339,11 @@ async def test_absent_convergence_name_after_successful_pass_loud_fails() -> Non
 
     # The pass block has NO deposit-ComputeStep into the convergence name (the
     # compute step carries no capture_name), so the successful pass leaves the
-    # convergence slot empty.
+    # convergence slot empty. A SetpointStep runs first so the pass still
+    # leaves a real substrate write behind for the ledger-fidelity assertion
+    # below.
     pass_block: tuple[object, ...] = (
+        SetpointStep(address=_ROT_CENTER_ADDR, value=1.0),
         ComputeStep(
             command=("tomopy", "find_center"),
             input_uris=("file:///a.h5",),
@@ -359,6 +367,10 @@ async def test_absent_convergence_name_after_successful_pass_loud_fails() -> Non
     # The iteration is closed (converged=None) before the abort.
     assert transcript.end_iteration_verdicts == [None]
     assert transcript.events[-1] == "abort_procedure"
+    # The pass's setpoint write must survive: this branch used to build a
+    # fresh ConductorResult instead of `replace(result, ...)`, dropping
+    # substrate_writes entirely. See [[project_field_drop_bug_class]].
+    assert result.substrate_writes == {_ROT_CENTER_ADDR: 1.0}
 
 
 class _AlwaysOutOfToleranceComputePort(InMemoryComputePort):
@@ -423,6 +435,58 @@ async def test_uncapped_never_converging_aborts_at_absolute_ceiling(
     # the last recorded boundary is an end_iteration (no dangling open start),
     # i.e. the aggregate's current_iteration_index is None at the terminal.
     assert transcript.events[-2] == "end_iteration[3=False]"
+    # Same fix as the cap-abort above, shared helper `_abort_absolute_ceiling`.
+    # See [[project_field_drop_bug_class]].
+    assert _ROT_CENTER_ADDR in result.substrate_writes
+
+
+@pytest.mark.unit
+async def test_converged_complete_rejected_preserves_ledger() -> None:
+    """A rejected `complete_procedure` on convergence still reports the ledger.
+
+    `_complete_converged`'s except-arm used to build a fresh ConductorResult
+    from `result.completed_count` / `result.measurements` alone, dropping
+    `substrate_writes` and the folded `actuation_kind` that `merged` already
+    carries. See [[project_field_drop_bug_class]]."""
+    control = InMemoryControlPort()
+    control.simulate_connect(_ROT_CENTER_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_offset_measurement(0.1),),))
+
+    async def complete_procedure(command: object, **_: object) -> None:
+        msg = "Procedure not in Running"
+        raise RuntimeError(msg)
+
+    async def _noop(command: object, **_: object) -> None:
+        return None
+
+    conductor = Conductor(
+        control_port=control,
+        append_step=_FakeAppendStep(),
+        clock=FakeClock(_FIXED_NOW),
+        id_generator=_FakeIdGen(),
+        compute_port=compute,
+        start_procedure=_noop,
+        complete_procedure=complete_procedure,
+        abort_procedure=_noop,
+        start_iteration=_noop,
+        end_iteration=_noop,
+    )
+
+    result = await conductor.conduct_until_converged(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        convergence_capture_name=_CONVERGENCE_NAME,
+        criterion=WithinToleranceCriterion(expected=0.0, tolerance=0.5),
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.error_class == "RuntimeError"
+    assert _ROT_CENTER_ADDR in result.substrate_writes
+    assert [m.name for m in result.measurements] == [_CONVERGENCE_NAME]
 
 
 @pytest.mark.unit

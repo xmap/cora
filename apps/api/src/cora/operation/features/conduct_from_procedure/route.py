@@ -14,7 +14,7 @@ guard faults map to HTTP codes: 403 (authz deny), 404 (no procedure),
 pinned resolved steps -- corruption).
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
@@ -26,7 +26,11 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.operation._conduct_wire import ConductorFailureResponse, failure_to_wire
+from cora.operation._conduct_wire import (
+    ConductorFailureResponse,
+    failure_to_wire,
+    substrate_writes_to_wire,
+)
 from cora.operation.features.conduct_from_procedure.command import (
     ConductFromProcedure,
     ConductFromProcedureResult,
@@ -66,6 +70,15 @@ class ConductFromProcedureResponse(BaseModel):
     acquisition_halt: bool
     failure: ConductorFailureResponse | None = None
     actuation_kind: str | None = None
+    substrate_writes: dict[str, int | float | bool | str | list[Any]] = Field(
+        default_factory=dict[str, int | float | bool | str | list[Any]],
+        description=(
+            "Every control address this replay wrote, in first-write "
+            "order, carrying the last value written to each. Present on "
+            "an acquisition halt too: the Procedure is left Running with "
+            "setpoints re-driven and nothing having put them back."
+        ),
+    )
 
 
 def result_to_wire(result: ConductFromProcedureResult) -> ConductFromProcedureResponse:
@@ -81,6 +94,7 @@ def result_to_wire(result: ConductFromProcedureResult) -> ConductFromProcedureRe
         acquisition_halt=result.acquisition_halt,
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
+        substrate_writes=substrate_writes_to_wire(result.substrate_writes),
     )
 
 

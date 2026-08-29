@@ -204,11 +204,19 @@ def _step_to_wire(step: Step) -> dict[str, Any]:
             "capture_name": step.capture_name,
             "output_ref_name": step.output_ref_name,
         }
-    return {
+    check: dict[str, Any] = {
         "kind": "check",
         "address": step.address,
         "criterion": _criterion_to_wire(step.criterion),
     }
+    # This is the determinism-hash serializer, so omitting `timeout_s` made a
+    # recipe whose deadline changed hash identically to the old one, against
+    # what RecipeCheckStep.timeout_s documents. Emitted only when set, so
+    # every recipe that never used the field keeps its existing steps_hash
+    # and no pinned expansion is invalidated.
+    if step.timeout_s is not None:
+        check["timeout_s"] = step.timeout_s
+    return check
 
 
 def steps_to_wire(steps: tuple[Step, ...]) -> list[dict[str, Any]]:

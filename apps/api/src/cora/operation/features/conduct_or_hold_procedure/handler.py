@@ -161,6 +161,10 @@ def bind(
             actuation_kind=(
                 result.actuation_kind.value if result.actuation_kind is not None else None
             ),
+            measurements=result.measurements,
+            artifacts=result.artifacts,
+            outputs=result.outputs,
+            substrate_writes=result.substrate_writes,
         )
 
     return handler

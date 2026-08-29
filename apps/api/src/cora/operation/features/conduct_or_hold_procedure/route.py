@@ -21,7 +21,7 @@ slice owns only the conduct-or-hold-specific request/response envelope, which ad
 the `held` discriminator.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
@@ -39,6 +39,7 @@ from cora.operation._conduct_wire import (
     StepRequest,
     failure_to_wire,
     step_from_wire,
+    substrate_writes_to_wire,
 )
 from cora.operation.features.conduct_or_hold_procedure.command import (
     ConductOrHoldProcedure,
@@ -82,6 +83,15 @@ class ConductOrHoldProcedureResponse(BaseModel):
     held: bool = False
     failure: ConductorFailureResponse | None = None
     actuation_kind: str | None = None
+    substrate_writes: dict[str, int | float | bool | str | list[Any]] = Field(
+        default_factory=dict[str, int | float | bool | str | list[Any]],
+        description=(
+            "Every control address this conduct wrote, in first-write "
+            "order, carrying the last value written to each. Present on a "
+            "HELD outcome too: a paused Procedure's recipe closing steps "
+            "have not run, so this is what was left set."
+        ),
+    )
 
 
 def result_to_wire(result: ConductOrHoldProcedureResult) -> ConductOrHoldProcedureResponse:
@@ -96,6 +106,7 @@ def result_to_wire(result: ConductOrHoldProcedureResult) -> ConductOrHoldProcedu
         held=result.held,
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
+        substrate_writes=substrate_writes_to_wire(result.substrate_writes),
     )
 
 

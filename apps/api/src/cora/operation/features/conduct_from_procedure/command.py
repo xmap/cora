@@ -8,10 +8,13 @@ conduct orchestration) but for the resume path; carries the
 `ProcedureResumed` and `Conductor.execute_from`).
 """
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from uuid import UUID
 
-from cora.operation.conductor import ConductorFailure
+from cora.operation.conductor import ConductorFailure, WriteValue
+from cora.operation.ports.compute_port import ArtifactRef
+from cora.operation.ports.measurement import Measurement
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,12 @@ class ConductFromProcedureResult:
     re-driven / re-run tail steps that succeeded; `actuation_kind` is the
     Conductor's observed kind over the replay (None when nothing
     instrumented was actuated).
+
+    `measurements` / `artifacts` / `outputs` / `substrate_writes` mirror
+    `ConductProcedureResult`'s fields verbatim: threaded from the replay
+    tail's `ConductorResult`, so `substrate_writes` is present on an
+    acquisition halt too (the resume left the Procedure Running with
+    setpoints re-driven and nothing having put them back).
     """
 
     procedure_id: UUID
@@ -44,3 +53,7 @@ class ConductFromProcedureResult:
     acquisition_halt: bool = False
     failure: ConductorFailure | None = None
     actuation_kind: str | None = None
+    measurements: tuple[Measurement, ...] = ()
+    artifacts: tuple[ArtifactRef, ...] = ()
+    outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
+    substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])
