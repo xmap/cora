@@ -51,6 +51,11 @@ Each tick reads and pushes:
     `_RunHistoryTail`, `build_run_history_message`), refreshed
     periodically while open and once more, marked terminal, the instant a
     run leaves the open set -- this is REWIND mode's entire feed
+  - event metadata (`stream_type`, `stream_id`, `event_type`, timestamps
+    only, NEVER `payload`) tail-followed across the WHOLE `events` table
+    since this process's own "now" (`_ActivityTail`,
+    `EventActivityTrail`), pushed as a third message kind whenever
+    something new has happened -- this is flowing mode's entire feed
 
 The snapshot payload is a full snapshot every push, never a delta: a
 fresh viewer, a reconnecting viewer, and a restarted relay are all served
@@ -83,6 +88,18 @@ than silently indefinite. Until then, a Trust Policy that denies any of the
 eight read commands to `SYSTEM_PRINCIPAL_ID` blinds this feature for that
 domain only (each drain is independently try/except-guarded; see
 `_push_loop`), never the others.
+
+`_ActivityTail`'s read is a NINTH, and it is a different KIND of gap, not
+just a bigger one: `EventActivityTrail` is a raw infrastructure port, not
+a `list_*`/`get_*` command handler, so it never calls `deps.authz.authorize`
+at all. Every other read here can be individually denied by a Trust Policy
+naming its command; this one cannot be denied at all short of disabling
+StatusPush entirely. That is acceptable for what it ships (event metadata
+across every BC, never a value, never PII) but it is a real asymmetry with
+the eight commands above, not an equivalent case of the same debt -- flagged
+here so it is a deliberate, visible trade-off rather than something a future
+reader has to rediscover by reading past the authorize call that is not
+there.
 """
 
 from __future__ import annotations
@@ -106,6 +123,13 @@ from cora.decision.errors import UnauthorizedError as _DecisionUnauthorizedError
 from cora.decision.features.list_decisions import ListDecisions
 from cora.enclosure.errors import UnauthorizedError as _EnclosureUnauthorizedError
 from cora.enclosure.features.list_enclosures import ListEnclosures
+from cora.infrastructure.adapters.in_memory_event_activity_trail import (
+    InMemoryEventActivityTrail,
+)
+from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
+from cora.infrastructure.adapters.postgres_event_activity_trail import (
+    PostgresEventActivityTrail,
+)
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.projection import encode_cursor
 from cora.infrastructure.record_export import render_value
@@ -128,6 +152,11 @@ if TYPE_CHECKING:
     from cora.decision.features.list_decisions.handler import Handler as ListDecisionsHandler
     from cora.enclosure.features.list_enclosures.handler import Handler as ListEnclosuresHandler
     from cora.infrastructure.kernel import Kernel
+    from cora.infrastructure.ports.event_activity_trail import (
+        EventActivityCursor,
+        EventActivityRow,
+        EventActivityTrail,
+    )
     from cora.run.features.get_run_history.handler import Handler as GetRunHistoryHandler
     from cora.run.features.get_run_history.handler import RunHistoryView
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
@@ -167,6 +196,14 @@ _RUN_HISTORY_REFRESH_TICKS = 15
 REWIND timeline refreshed at the same 2Hz cadence; the terminal push (see
 `_RunHistoryTail.poll`) guarantees the final version is always complete
 regardless of where this clock happened to be when the run closed."""
+_ACTIVITY_PAGE_LIMIT = 500
+"""Per-`read_since` call cap for `_ActivityTail`. Measured against the real
+2-BM deployment (2026-08-28): 13,822 events total, ever, across 25 stream
+types, with the busiest hour carrying 228. This limit is not a working
+constraint at that volume; it exists so a pathological backlog (a long
+disconnect, or a future higher-throughput deployment) cannot pull an
+unbounded result set into memory in one call. `_ActivityTail.poll` loops
+on this until it catches up, so no event is skipped, only batched."""
 _MIN_UUID = UUID(int=0)
 """Sentinel id for `_DecisionTail`'s starting cursor: paired with "now" as
 the cursor's time component, so the `(time, id) > (cursor_time, cursor_id)`
@@ -567,6 +604,47 @@ class _RunHistoryTail:
         return message
 
 
+class _ActivityTail:
+    """Tail-follows the whole `events` table for flowing mode's lanes:
+    THAT something happened, and WHAT KIND, across every BC -- never the
+    payload (see `cora.infrastructure.ports.event_activity_trail`'s module
+    docstring for why). Pushed as a third message kind on the same
+    outbound socket the snapshot and run-history messages use.
+
+    Unlike `_DecisionTail` and `_RunHistoryTail`, there is no relay-side
+    cache to repopulate on reconnect: flowing mode's window lives in the
+    BROWSER, not the relay, so this tail carries no ring and needs no
+    `on_reconnect()`. The cursor itself is enough -- constructed once,
+    outside the reconnect loop, so a producer-side reconnect resumes
+    exactly where it left off rather than replaying or dropping the gap.
+
+    The cursor starts at `head()` (this process's own "now"), the same
+    empty-until-something-happens posture `_DecisionTail` takes, not a
+    replay of the whole event history: flowing mode is about recent
+    activity, not full record recovery (REWIND already exists for that).
+    """
+
+    def __init__(self) -> None:
+        self._cursor: EventActivityCursor | None = None
+
+    async def poll(self, activity_trail: EventActivityTrail) -> list[EventActivityRow]:
+        if self._cursor is None:
+            self._cursor = await activity_trail.head()
+            return []
+        rows: list[EventActivityRow] = []
+        while True:
+            page, next_cursor = await activity_trail.read_since(
+                cursor=self._cursor, limit=_ACTIVITY_PAGE_LIMIT
+            )
+            self._cursor = next_cursor
+            if not page:
+                break
+            rows.extend(page)
+            if len(page) < _ACTIVITY_PAGE_LIMIT:
+                break
+        return rows
+
+
 def _content_hash(payload: dict[str, Any]) -> str:
     """Stable hash over the change-relevant payload, excluding generated_at
     and sequence, so an unchanged tick can be told apart from a real change."""
@@ -649,6 +727,37 @@ def build_run_history_message(
     }
 
 
+def build_activity_message(
+    *, rows: list[EventActivityRow], generated_at: str, producer_id: str
+) -> dict[str, Any]:
+    """Assemble one activity push -- flowing mode's entire feed. The
+    browser accumulates these into its own rolling window; this producer
+    holds no window of its own, only the tail cursor. Event metadata only
+    (`stream_type`, `stream_id`, `event_type`, timestamps): never
+    `event.payload`, see `EventActivityTrail`'s own module docstring.
+
+    Unlike `build_snapshot`, never sent when `rows` is empty: there is no
+    heartbeat need here, since "no message this tick" already means
+    "nothing happened", exactly the information a heartbeat would
+    otherwise carry. Caller checks `if rows:` before calling this."""
+    return {
+        "kind": "activity",
+        "schema_version": 1,
+        "producer_id": producer_id,
+        "generated_at": generated_at,
+        "events": [
+            {
+                "stream_type": row.stream_type,
+                "stream_id": render_value(row.stream_id),
+                "event_type": row.event_type,
+                "occurred_at": render_value(row.occurred_at),
+                "recorded_at": render_value(row.recorded_at),
+            }
+            for row in rows
+        ],
+    }
+
+
 async def _build_payload_fields(
     deps: Kernel,
     *,
@@ -662,19 +771,22 @@ async def _build_payload_fields(
     list_decisions: ListDecisionsHandler,
     run_history_tail: _RunHistoryTail,
     get_run_history: GetRunHistoryHandler,
+    activity_tail: _ActivityTail,
+    activity_trail: EventActivityTrail,
     witness_recorder: RunWitnessRecorder | None,
     generated_at: str,
     producer_id: str,
 ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
-    """Every domain's rows for one tick, plus any run-history messages that
-    are new this tick. Each drain is independently guarded by the caller's
-    `except _UNAUTHORIZED_ERRORS` (per-domain, not caught here) so a
-    missing grant on one command blinds only that section of the page,
-    never the whole tick.
+    """Every domain's rows for one tick, plus any extra messages (run
+    history, activity) that are new this tick. Each drain is independently
+    guarded by the caller's `except _UNAUTHORIZED_ERRORS` (per-domain, not
+    caught here) so a missing grant on one command blinds only that
+    section of the page, never the whole tick.
 
-    Returns `(fields, history_messages)`, not one dict: the histories are
-    not a snapshot field (see `_RunHistoryTail`'s module docstring), so
-    they must never enter `_content_hash`'s change-detection input."""
+    Returns `(fields, extra_messages)`, not one dict: neither run history
+    nor activity is a snapshot field (see `_RunHistoryTail`'s and
+    `_ActivityTail`'s module docstrings), so neither may enter
+    `_content_hash`'s change-detection input."""
     runs, raw_run_ids = await _drain_open_runs(list_runs, deps, witness_recorder=witness_recorder)
     fields = {
         "runs": runs,
@@ -685,14 +797,21 @@ async def _build_payload_fields(
         "enclosures": await _drain_active_enclosures(list_enclosures, deps),
         "decisions": await decision_tail.poll(list_decisions, deps),
     }
-    history_messages = await run_history_tail.poll(
+    extra_messages = await run_history_tail.poll(
         get_run_history,
         deps,
         open_run_ids=raw_run_ids,
         generated_at=generated_at,
         producer_id=producer_id,
     )
-    return fields, history_messages
+    activity_rows = await activity_tail.poll(activity_trail)
+    if activity_rows:
+        extra_messages.append(
+            build_activity_message(
+                rows=activity_rows, generated_at=generated_at, producer_id=producer_id
+            )
+        )
+    return fields, extra_messages
 
 
 async def _push_loop(
@@ -706,6 +825,7 @@ async def _push_loop(
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
+    activity_trail: EventActivityTrail,
     producer_id: str,
     url: str,
     witness_recorder: RunWitnessRecorder | None,
@@ -716,9 +836,10 @@ async def _push_loop(
     reconnect; nothing here distinguishes them further, since v1's only
     remedy for either is "try again".
 
-    `decision_tail` and `run_history_tail` are each constructed ONCE,
-    outside the reconnect loop below, so "recent decisions" / "which runs
-    have already had their history pushed" mean since this process
+    `decision_tail`, `run_history_tail` and `activity_tail` are each
+    constructed ONCE, outside the reconnect loop below, so "recent
+    decisions" / "which runs have already had their history pushed" /
+    "which events have already been tailed" mean since this process
     started, not since the last successful connection.
     """
     token = deps.settings.status_push_token
@@ -728,6 +849,7 @@ async def _push_loop(
         started_at_cursor=encode_cursor(created_at=deps.clock.now(), item_id=_MIN_UUID)
     )
     run_history_tail = _RunHistoryTail()
+    activity_tail = _ActivityTail()
 
     backoff = _RECONNECT_INITIAL_SECONDS
     sequence = 0
@@ -744,7 +866,7 @@ async def _push_loop(
                 ticks_since_push = _HEARTBEAT_TICKS  # push immediately on connect
                 while True:
                     generated_at = deps.clock.now().isoformat()
-                    fields, history_messages = await _build_payload_fields(
+                    fields, extra_messages = await _build_payload_fields(
                         deps,
                         list_runs=list_runs,
                         list_subjects=list_subjects,
@@ -756,14 +878,17 @@ async def _push_loop(
                         list_decisions=list_decisions,
                         run_history_tail=run_history_tail,
                         get_run_history=get_run_history,
+                        activity_tail=activity_tail,
+                        activity_trail=activity_trail,
                         witness_recorder=witness_recorder,
                         generated_at=generated_at,
                         producer_id=producer_id,
                     )
-                    # Histories are exempt from the hash/heartbeat gate below
-                    # by construction: `poll` only ever returns what is new
-                    # this tick, so there is nothing to de-duplicate here.
-                    for message in history_messages:
+                    # Extras (run history, activity) are exempt from the
+                    # hash/heartbeat gate below by construction: each tail's
+                    # `poll` only ever returns what is new this tick, so
+                    # there is nothing to de-duplicate here.
+                    for message in extra_messages:
                         await sock.send(json.dumps(message))
                     content_hash = _content_hash(fields)
                     changed = content_hash != last_hash
@@ -842,6 +967,20 @@ async def status_push_lifespan(
         f"{_LOG_PREFIX}.started",
         tick_seconds=deps.settings.status_push_tick_seconds,
     )
+    # Constructed here, not threaded in as a caller-supplied parameter like
+    # the eight query handlers above: this port has exactly one consumer
+    # (this module), so it is not a Kernel field (see
+    # `EventActivityTrail`'s own module docstring), and `deps.pool` /
+    # `deps.event_store` are already on hand. Mirrors the
+    # `if deps.pool is not None:` branch every BC's own `wire_<bc>` uses.
+    activity_trail: EventActivityTrail
+    if deps.pool is not None:
+        activity_trail = PostgresEventActivityTrail(deps.pool)
+    else:
+        assert isinstance(deps.event_store, InMemoryEventStore), (
+            "deps.pool is None implies every adapter is in-memory"
+        )
+        activity_trail = InMemoryEventActivityTrail(deps.event_store)
     task = asyncio.create_task(
         _push_loop(
             deps,
@@ -853,6 +992,7 @@ async def status_push_lifespan(
             list_enclosures=list_enclosures,
             list_decisions=list_decisions,
             get_run_history=get_run_history,
+            activity_trail=activity_trail,
             producer_id=producer_id,
             url=url,
             witness_recorder=witness_recorder,

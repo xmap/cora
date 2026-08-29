@@ -892,6 +892,18 @@ empties it. The page says so plainly on a miss. The other six live domains
 (Subjects, Campaigns, Datasets, Clearances, Enclosures, Decisions) have no
 rewind; Runs is the only domain with a natural bounded start and end.
 
+**Activity tail (producer + relay only, no page yet):** arcturus also tail-
+follows the whole `events` table -- every BC, event metadata only
+(`stream_type`, `stream_id`, `event_type`, timestamps; never `payload`) --
+and pushes what's new as a third message kind, `"activity"`, whenever
+something has happened. The relay broadcasts it straight through to every
+watcher with no cache of its own: unlike the snapshot and run-history rings,
+there is nothing here for a freshly-connecting browser to catch up on, by
+design, since the intended consumer (a flowing, rolling-window view) holds
+its own window client-side rather than asking the relay to hold one for it.
+Nothing in `page.html` reads this message kind yet; it lands ahead of the
+frontend that will.
+
 ## Deferred
 
 | Concern | Status | Trigger |
