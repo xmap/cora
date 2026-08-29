@@ -233,6 +233,14 @@ class Recipe:
     one is deprecated with replacement. None on
     Deprecated-without-replacement and on Defined/Versioned. LOINC
     `MAP_TO` precedent matching `Capability.replaced_by_capability_id`.
+
+    `closing_steps` is an additive, OPTIONAL second step list (default
+    `()`, no non-emptiness check): steps the Conductor walks after
+    `steps` ends on a real terminal (Completed or Aborted), never on a
+    Held pause. Authored, never derived; unlike `steps`, an empty
+    `closing_steps` is the common case, not an error. Replaced wholesale
+    by `version_recipe` alongside `steps`. See
+    [[project_conduct_closing_steps_design]].
     """
 
     id: UUID
@@ -242,6 +250,7 @@ class Recipe:
     status: RecipeStatus = RecipeStatus.DEFINED
     version: str | None = None
     replaced_by_recipe_id: UUID | None = None
+    closing_steps: tuple[RecipeStep, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.steps:

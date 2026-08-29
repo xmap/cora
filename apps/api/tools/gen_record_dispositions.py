@@ -77,6 +77,11 @@ _OVERRIDE_WIRE_KEYS: dict[tuple[str, str], str] = {
     ("SealOnlineKeyRotated", "facility_code"): "facility_id",
     ("SealRepublishingStarted", "facility_code"): "facility_id",
     ("SealRepublishingCompleted", "facility_code"): "facility_id",
+    # `to_payload` writes the closing-steps list under the short wire key
+    # "closing" (matching the operation-BC vocabulary the design settled
+    # on: "closing steps", not "teardown"), not the dataclass field name.
+    ("RecipeDefined", "closing_steps"): "closing",
+    ("RecipeVersioned", "closing_steps"): "closing",
 }
 
 # A field's TYPE-DRIVEN disposition is occasionally the wrong call for
