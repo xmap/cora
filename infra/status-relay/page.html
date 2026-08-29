@@ -176,6 +176,18 @@
   .cs-omitted-note { font-size: 0.7rem; color: var(--cs-mute); margin-top: 0.5rem; }
   #rewind-picker { background: var(--row-border); color: var(--fg); border: 1px solid var(--row-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.9rem; }
   #rewind-back { margin-left: 0.5rem; }
+  #flowing-status { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.5rem 0; min-height: 1.1em; }
+  /* Not `.cs-btn`: that class reads `--cs-*` custom properties scoped to
+     `.cora-scrubber`, and this button sits outside it (scaffold()
+     rebuilds #flowing-stage's whole innerHTML on every mount, so nothing
+     meant to survive a remount can live inside it). Own styling, same
+     palette as #rewind-picker just above. */
+  #flowing-resume {
+    display: none;
+    background: var(--live); color: #08260f; border: none; border-radius: 6px;
+    padding: 0.35rem 0.75rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    margin-bottom: 0.75rem;
+  }
   @media (prefers-reduced-motion: reduce) {
     .cs-dot, .cs-mark { animation: none; transition: none; }
   }
@@ -186,6 +198,11 @@
   <div id="banner">connecting</div>
 
   <div id="content">
+    <h2>Live activity</h2>
+    <div id="flowing-status"></div>
+    <button type="button" id="flowing-resume">Resume following</button>
+    <div id="flowing-stage"></div>
+
     <h2>Runs</h2>
     <table id="runs-table">
       <thead><tr><th>Run</th><th>Status</th><th>Progress</th></tr></thead>
@@ -440,25 +457,165 @@
     }
   }
 
-  function handleMessage(event) {
-    var msg;
-    try {
-      msg = JSON.parse(event.data);
-    } catch (err) {
+  // ---- Flowing mode: a bounded rolling window of the whole record's
+  // activity tail, always sliding, sharing the REWIND scrubber renderer
+  // via the same subject-neutral timeline document (see scrubber.js's own
+  // module comment). Two things distinguish this from REWIND: the window
+  // has no fixed end (it is "now", re-fetched into the document on every
+  // update) and there is no single subject with a "current status" -- a
+  // busy hour touches many Runs, many Decisions -- so every lane here is
+  // read the same generic "last event" way, none of them primary.
+  var FLOWING_WINDOW_MS = 2 * 60 * 60 * 1000;
+  var FLOWING_RESLIDE_MS = 60 * 1000;
+
+  // Many-to-one by design, not one lane per stream_type: the measured
+  // 2-BM record has 25 distinct stream types, but `Run` and `Decision`
+  // alone are 91% of all events, so a lane per type would mean a handful
+  // of dense lanes next to a long tail of near-empty ones. This mirrors
+  // the page's own seven domain tables above, plus one "Other" catch-all
+  // for everything that isn't one of them (Actor, Agent, Calibration,
+  // Allocation, and the rest of the 42-type event vocabulary), so the
+  // lane count is fixed and the layout never reflows.
+  var STREAM_TYPE_TO_DOMAIN = {
+    Run: "runs",
+    Subject: "subjects",
+    Campaign: "campaigns",
+    Dataset: "datasets",
+    Distribution: "datasets",
+    Acquisition: "datasets",
+    Clearance: "clearances",
+    ClearanceTemplate: "clearances",
+    Enclosure: "enclosures",
+    Decision: "decisions",
+  };
+  var DOMAIN_ORDER = [
+    "runs", "subjects", "campaigns", "datasets", "clearances", "enclosures", "decisions", "other",
+  ];
+  var DOMAIN_LABEL = {
+    runs: "Runs",
+    subjects: "Subjects",
+    campaigns: "Campaigns",
+    datasets: "Datasets",
+    clearances: "Clearances",
+    enclosures: "Enclosures",
+    decisions: "Decisions",
+    other: "Other",
+  };
+
+  var flowing = { buffer: [], following: true, pausedAtMs: 0 };
+  var flowingStageEl = document.getElementById("flowing-stage");
+  var flowingResumeEl = document.getElementById("flowing-resume");
+  var flowingStatusEl = document.getElementById("flowing-status");
+
+  function pruneFlowingBuffer(nowMs) {
+    var cutoff = nowMs - FLOWING_WINDOW_MS;
+    flowing.buffer = flowing.buffer.filter(function (e) {
+      return Date.parse(e.occurred_at) >= cutoff;
+    });
+  }
+
+  function activityToTimelineDocument(buffer, domainFromIso, domainToIso) {
+    var lanesByDomain = {};
+    DOMAIN_ORDER.forEach(function (key) {
+      lanesByDomain[key] = {
+        lane_id: "domain:" + key,
+        label: DOMAIN_LABEL[key],
+        render: "markers",
+        points: [],
+      };
+    });
+    buffer.forEach(function (e) {
+      var domain = STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other";
+      lanesByDomain[domain].points.push({ t: e.occurred_at, label: e.event_type });
+    });
+    return {
+      // No lane here represents one subject's current status the way
+      // REWIND's Run lifecycle lane does, so this deliberately names a
+      // lane_id no real lane uses: buildModel() then falls through to
+      // `primaryLane = null`, and every lane, this one included, reads
+      // through the generic "last event" path in renderReadout.
+      subject_lane_id: "__no_subject__",
+      title: "Live activity",
+      subtitle: buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 2h",
+      domain: { from: domainFromIso, to: domainToIso },
+      lanes: DOMAIN_ORDER.map(function (key) {
+        return lanesByDomain[key];
+      }),
+    };
+  }
+
+  function updateFlowingStatus() {
+    if (flowing.following) {
+      flowingStatusEl.textContent = "";
       return;
     }
-    if (msg.kind === "run_history_index") {
-      renderRewindPicker(msg.runs);
-      return;
+    var pausedAtMs = flowing.pausedAtMs;
+    var newCount = flowing.buffer.filter(function (e) {
+      return Date.parse(e.occurred_at) > pausedAtMs;
+    }).length;
+    flowingStatusEl.textContent =
+      newCount > 0
+        ? "Paused: " + newCount + " new event" + (newCount === 1 ? "" : "s") + " since you started scrubbing"
+        : "Paused";
+  }
+
+  function pauseFollowing() {
+    if (!flowing.following) return;
+    flowing.following = false;
+    flowing.pausedAtMs = Date.now();
+    flowingResumeEl.style.display = "inline-block";
+    updateFlowingStatus();
+  }
+
+  function resumeFollowing() {
+    flowing.following = true;
+    flowingResumeEl.style.display = "none";
+    renderFlowing();
+  }
+  flowingResumeEl.addEventListener("click", resumeFollowing);
+
+  function renderFlowing() {
+    var nowMs = Date.now();
+    pruneFlowingBuffer(nowMs);
+    var doc = activityToTimelineDocument(
+      flowing.buffer,
+      new Date(nowMs - FLOWING_WINDOW_MS).toISOString(),
+      new Date(nowMs).toISOString()
+    );
+    window.CoraScrubber.mount(flowingStageEl, doc, {
+      chromeTitle: "Live activity",
+      subtitle: doc.subtitle,
+      sliderLabel: "Fold cursor: time within the last 2 hours",
+      follow: true,
+      showPlay: false,
+      showJumpLast: false,
+      onScrub: pauseFollowing,
+    });
+    updateFlowingStatus();
+  }
+
+  function handleActivity(msg) {
+    var events = msg.events || [];
+    if (events.length === 0) return;
+    flowing.buffer = flowing.buffer.concat(events);
+    pruneFlowingBuffer(Date.now());
+    if (flowing.following) {
+      renderFlowing();
+    } else {
+      updateFlowingStatus();
     }
-    if (Object.prototype.hasOwnProperty.call(msg, "producer_connected")) {
-      producerConnected = msg.producer_connected;
-      if (!producerConnected) {
-        generatedAt = null;
-      }
-      renderBanner();
-      return;
-    }
+  }
+
+  // The window keeps sliding even with no NEW activity: an event that
+  // scrolled out the left edge an hour ago should disappear from view on
+  // its own, not wait for a fresh event to trigger the re-render that
+  // would notice it.
+  renderFlowing();
+  setInterval(function () {
+    if (flowing.following) renderFlowing();
+  }, FLOWING_RESLIDE_MS);
+
+  function handleSnapshot(msg) {
     producerConnected = true;
     generatedAt = Date.parse(msg.generated_at);
     renderRuns(msg.runs);
@@ -469,6 +626,44 @@
     renderEnclosures(msg.enclosures);
     renderDecisions(msg.decisions);
     renderBanner();
+  }
+
+  function handleMessage(event) {
+    var msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch (err) {
+      return;
+    }
+    // The connection-state frame carries no `kind` at all (see relay.py's
+    // `_connection_state_message`), so it is checked before the switch
+    // below rather than as one of its cases.
+    if (Object.prototype.hasOwnProperty.call(msg, "producer_connected")) {
+      producerConnected = msg.producer_connected;
+      if (!producerConnected) {
+        generatedAt = null;
+      }
+      renderBanner();
+      return;
+    }
+    // A real `kind` switch, not an unconditional fallthrough: an
+    // unrecognized kind must be dropped, never mistaken for a snapshot --
+    // that used to be exactly what happened to "activity" messages before
+    // this switch existed, which would have blanked every live table on
+    // each one.
+    switch (msg.kind) {
+      case "snapshot":
+        handleSnapshot(msg);
+        break;
+      case "run_history_index":
+        renderRewindPicker(msg.runs);
+        break;
+      case "activity":
+        handleActivity(msg);
+        break;
+      default:
+        window.console && console.warn && console.warn("status-page: unknown message kind", msg.kind);
+    }
   }
 
   var rewindPickerEl = document.getElementById("rewind-picker");
