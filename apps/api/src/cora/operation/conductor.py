@@ -4245,11 +4245,18 @@ def step_to_payload(step: Step) -> dict[str, Any]:
             "capture_name": step.capture_name,
             "output_ref_name": step.output_ref_name,
         }
-    return {
+    check: dict[str, Any] = {
         "kind": "check",
         "address": step.address,
         "criterion": _criterion_to_dict(step.criterion),
     }
+    # Emitted only when set. Absence is how "no deadline" is spelled, and
+    # every recipe authored before `timeout_s` existed has None here, so
+    # conditional emission keeps their payloads and determinism hashes
+    # byte-identical rather than invalidating every pinned expansion.
+    if step.timeout_s is not None:
+        check["timeout_s"] = step.timeout_s
+    return check
 
 
 def _criterion_from_dict(criterion: Mapping[str, Any]) -> CheckCriterion:
@@ -4301,8 +4308,12 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
             output_ref_name=payload.get("output_ref_name"),
         )
     if kind == "check":
+        # `.get`: absent for every step pinned before `timeout_s` existed,
+        # and absent by design for a check with no deadline.
         return CheckStep(
-            address=payload["address"], criterion=_criterion_from_dict(payload["criterion"])
+            address=payload["address"],
+            criterion=_criterion_from_dict(payload["criterion"]),
+            timeout_s=payload.get("timeout_s"),
         )
     msg = f"unknown step kind: {kind!r}"
     raise ValueError(msg)
