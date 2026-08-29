@@ -6645,6 +6645,12 @@
             "title": "Capability Id",
             "type": "string"
           },
+          "closing_steps": {
+            "additionalProperties": true,
+            "description": "Optional wire-format closing-step sequence, same shape as `steps`: `{steps: [...]}`. The Conductor walks these after `steps` ends on a real terminal (Completed or Aborted), never on a Held pause. Empty by default; most recipes have none.",
+            "title": "Closing Steps",
+            "type": "object"
+          },
           "name": {
             "description": "Display name for the new Recipe.",
             "maxLength": 200,
@@ -11846,12 +11852,17 @@
         "type": "string"
       },
       "RecipeResponse": {
-        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. `status` is the StrEnum's\nstring value (Defined / Versioned / Deprecated). `version` is\nthe operator-supplied label of the most recent `version_recipe`\ncall (null until first version). `steps` is the wire-format\ndict (BindingRef sentinels serialize as `{__binding__: name}`).\n`replaced_by_recipe_id` is null on Defined / Versioned /\nDeprecated-without-replacement; populated when a deprecation\nsupplied a successor pointer. `created_at` / `versioned_at` /\n`deprecated_at` are projection-sourced lifecycle timestamps\n(Path C); see module docstring for null semantics.",
+        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. `status` is the StrEnum's\nstring value (Defined / Versioned / Deprecated). `version` is\nthe operator-supplied label of the most recent `version_recipe`\ncall (null until first version). `steps` is the wire-format\ndict (BindingRef sentinels serialize as `{__binding__: name}`).\n`replaced_by_recipe_id` is null on Defined / Versioned /\nDeprecated-without-replacement; populated when a deprecation\nsupplied a successor pointer. `created_at` / `versioned_at` /\n`deprecated_at` are projection-sourced lifecycle timestamps\n(Path C); see module docstring for null semantics. `closing_steps`\nmirrors `steps`' wire shape; empty for the common case of a recipe\nwith no closing steps.",
         "properties": {
           "capability_id": {
             "format": "uuid",
             "title": "Capability Id",
             "type": "string"
+          },
+          "closing_steps": {
+            "additionalProperties": true,
+            "title": "Closing Steps",
+            "type": "object"
           },
           "created_at": {
             "anyOf": [
@@ -11939,6 +11950,7 @@
           "status",
           "version",
           "steps",
+          "closing_steps",
           "replaced_by_recipe_id"
         ],
         "title": "RecipeResponse",
@@ -17230,6 +17242,12 @@
       "VersionRecipeRequest": {
         "description": "Body for `POST /recipes/{recipe_id}/version`.",
         "properties": {
+          "closing_steps": {
+            "additionalProperties": true,
+            "description": "Replacement closing-step sequence, same shape as `steps` (wholesale replace alongside it). Empty by default.",
+            "title": "Closing Steps",
+            "type": "object"
+          },
           "steps": {
             "additionalProperties": true,
             "description": "Replacement step sequence for the new version (wholesale replace; the prior steps are dropped). BindingRef sentinels are re-validated against the CURRENT Capability.parameters_schema.",

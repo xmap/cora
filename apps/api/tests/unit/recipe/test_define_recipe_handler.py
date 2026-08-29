@@ -193,6 +193,52 @@ async def test_handler_raises_binding_unknown_parameter_when_schema_missing_key(
 
 
 @pytest.mark.unit
+async def test_handler_raises_binding_unknown_parameter_for_a_bad_ref_in_closing_steps() -> None:
+    """A bad BindingRef in closing_steps must be caught too, not just in steps
+    -- proving the handler validates the CONCATENATED walk, not steps alone."""
+    _, deps = await _build_seeded_deps(
+        parameters_schema={"type": "object", "properties": {"angle": {"type": "number"}}}
+    )
+    handler = define_recipe.bind(deps)
+
+    with pytest.raises(RecipeBindingReferencesUnknownParameterError):
+        await handler(
+            DefineRecipe(
+                name="R",
+                capability_id=_CAPABILITY_ID,
+                steps=(RecipeSetpointStep(address="dev:x", value=BindingRef("angle")),),
+                closing_steps=(
+                    RecipeSetpointStep(address="dev:shutter", value=BindingRef("enrgy")),
+                ),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+
+@pytest.mark.unit
+async def test_handler_persists_closing_steps_on_the_recipe() -> None:
+    store, deps = await _build_seeded_deps()
+    handler = define_recipe.bind(deps)
+
+    recipe_id = await handler(
+        DefineRecipe(
+            name="R",
+            capability_id=_CAPABILITY_ID,
+            steps=(RecipeSetpointStep(address="dev:x", value=1.0),),
+            closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert recipe_id == _NEW_ID
+    recipe_events, _ = await store.load("Recipe", _NEW_ID)
+    assert recipe_events[0].payload["closing"]["steps"] == [
+        {"kind": "setpoint", "address": "dev:shutter", "value": 0.0, "verify": False}
+    ]
+
+
+@pytest.mark.unit
 async def test_handler_raises_empty_recipe_steps_when_command_steps_empty() -> None:
     _, deps = await _build_seeded_deps()
     handler = define_recipe.bind(deps)

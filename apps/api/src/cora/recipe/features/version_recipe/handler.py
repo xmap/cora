@@ -116,9 +116,11 @@ def bind(deps: Kernel) -> Handler:
         capability = await load_capability(deps.event_store, state.capability_id)
         if capability is None:
             raise CapabilityNotFoundError(state.capability_id)
-        validate_recipe_steps_against_capability_schema(command.steps, capability.parameters_schema)
-        validate_capture_refs(command.steps)
-        validate_output_refs(command.steps)
+        # ONE concatenated walk; see define_recipe/handler.py for why not two.
+        all_steps = command.steps + command.closing_steps
+        validate_recipe_steps_against_capability_schema(all_steps, capability.parameters_schema)
+        validate_capture_refs(all_steps)
+        validate_output_refs(all_steps)
 
         domain_events = decide(state=state, command=command, now=now)
 

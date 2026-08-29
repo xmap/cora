@@ -78,3 +78,21 @@ def test_mcp_get_recipe_tool_returns_structured_recipe_state() -> None:
     assert body["id"] == recipe_id
     assert body["status"] == "Defined"
     assert body["capability_id"] == capability_id
+
+
+@pytest.mark.contract
+def test_mcp_get_recipe_tool_surfaces_closing_steps_defined_via_mcp() -> None:
+    with TestClient(create_app()) as client:
+        session_headers = open_session(client)
+        cap_result = _call_tool(client, session_headers, "define_capability", _capability_args(), 2)
+        capability_id = cap_result["structuredContent"]["capability_id"]
+        args = _recipe_args(capability_id)
+        args["closing_steps"] = {
+            "steps": [{"kind": "setpoint", "address": "dev:shutter", "value": 0.0}],
+        }
+        recipe_result = _call_tool(client, session_headers, "define_recipe", args, 3)
+        recipe_id = recipe_result["structuredContent"]["recipe_id"]
+        result = _call_tool(client, session_headers, "get_recipe", {"recipe_id": recipe_id}, 4)
+    assert result["isError"] is False
+    body = result["structuredContent"]
+    assert body["closing_steps"]["steps"][0]["address"] == "dev:shutter"

@@ -110,9 +110,15 @@ def bind(deps: Kernel) -> Handler:
         capability = await load_capability(deps.event_store, command.capability_id)
         if capability is None:
             raise CapabilityNotFoundError(command.capability_id)
-        validate_recipe_steps_against_capability_schema(command.steps, capability.parameters_schema)
-        validate_capture_refs(command.steps)
-        validate_output_refs(command.steps)
+        # ONE concatenated walk, not two: `validate_output_refs`'s one-sink
+        # rule asserts at end-of-call, so validating closing_steps as a
+        # second pass starting cold would falsely reject a valid
+        # chained-compute recipe. This also gives "closing may read a main
+        # capture, not the reverse" for free, with no new concept.
+        all_steps = command.steps + command.closing_steps
+        validate_recipe_steps_against_capability_schema(all_steps, capability.parameters_schema)
+        validate_capture_refs(all_steps)
+        validate_output_refs(all_steps)
 
         new_id = deps.id_generator.new_id()
         now = deps.clock.now()

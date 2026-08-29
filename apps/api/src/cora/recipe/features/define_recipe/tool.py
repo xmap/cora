@@ -64,6 +64,18 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 ),
             ),
         ],
+        closing_steps: Annotated[
+            dict[str, Any] | None,
+            Field(
+                default=None,
+                description=(
+                    "Optional closing-step sequence, same shape as `steps`. "
+                    "The Conductor walks these after `steps` ends on a real "
+                    "terminal (Completed or Aborted), never on a Held pause. "
+                    "Omit or pass None for no closing steps (the common case)."
+                ),
+            ),
+        ] = None,
     ) -> DefineRecipeOutput:
         handler = get_handler()
         recipe_id = await handler(
@@ -71,6 +83,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 name=name,
                 capability_id=capability_id,
                 steps=steps_from_dict(steps),
+                closing_steps=steps_from_dict(
+                    closing_steps if closing_steps is not None else {"steps": []}
+                ),
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

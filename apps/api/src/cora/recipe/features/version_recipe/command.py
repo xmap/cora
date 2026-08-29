@@ -19,8 +19,13 @@ from cora.recipe.aggregates.recipe import RecipeStep
 
 @dataclass(frozen=True)
 class VersionRecipe:
-    """Issue a new version label + replacement steps for an existing Recipe."""
+    """Issue a new version label + replacement steps for an existing Recipe.
+
+    `closing_steps` is additive and optional (default `()`); it
+    REPLACES wholesale alongside `steps`. See `Recipe.closing_steps`.
+    """
 
     recipe_id: UUID
     version_tag: str
     steps: tuple[RecipeStep, ...]
+    closing_steps: tuple[RecipeStep, ...] = ()

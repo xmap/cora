@@ -46,7 +46,9 @@ class RecipeResponse(BaseModel):
     Deprecated-without-replacement; populated when a deprecation
     supplied a successor pointer. `created_at` / `versioned_at` /
     `deprecated_at` are projection-sourced lifecycle timestamps
-    (Path C); see module docstring for null semantics.
+    (Path C); see module docstring for null semantics. `closing_steps`
+    mirrors `steps`' wire shape; empty for the common case of a recipe
+    with no closing steps.
     """
 
     id: UUID
@@ -55,6 +57,7 @@ class RecipeResponse(BaseModel):
     status: str
     version: str | None
     steps: dict[str, Any]
+    closing_steps: dict[str, Any]
     replaced_by_recipe_id: UUID | None
     created_at: datetime | None = None
     versioned_at: datetime | None = None
@@ -111,6 +114,7 @@ async def get_recipes(
         status=recipe.status.value,
         version=recipe.version,
         steps=steps_to_dict(recipe.steps),
+        closing_steps=steps_to_dict(recipe.closing_steps),
         replaced_by_recipe_id=recipe.replaced_by_recipe_id,
         created_at=timestamps.created_at if timestamps is not None else None,
         versioned_at=timestamps.versioned_at if timestamps is not None else None,

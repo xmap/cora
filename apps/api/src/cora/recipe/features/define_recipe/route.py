@@ -44,6 +44,15 @@ class DefineRecipeRequest(BaseModel):
             "`{__binding__: name}` to reference a Capability parameter."
         ),
     )
+    closing_steps: dict[str, Any] = Field(
+        default_factory=lambda: {"steps": []},
+        description=(
+            "Optional wire-format closing-step sequence, same shape as "
+            "`steps`: `{steps: [...]}`. The Conductor walks these after "
+            "`steps` ends on a real terminal (Completed or Aborted), never "
+            "on a Held pause. Empty by default; most recipes have none."
+        ),
+    )
 
 
 class DefineRecipeResponse(BaseModel):
@@ -111,6 +120,7 @@ async def post_recipes(
             name=body.name,
             capability_id=body.capability_id,
             steps=steps_from_dict(body.steps),
+            closing_steps=steps_from_dict(body.closing_steps),
         ),
         principal_id=principal_id,
         correlation_id=cid,

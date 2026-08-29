@@ -27,8 +27,13 @@ from cora.recipe.aggregates.recipe import RecipeStep
 
 @dataclass(frozen=True)
 class DefineRecipe:
-    """Define a new Recipe against an existing Capability."""
+    """Define a new Recipe against an existing Capability.
+
+    `closing_steps` is additive and optional (default `()`); see
+    `Recipe.closing_steps`.
+    """
 
     name: str
     capability_id: UUID
     steps: tuple[RecipeStep, ...]
+    closing_steps: tuple[RecipeStep, ...] = ()
