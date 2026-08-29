@@ -295,6 +295,10 @@ async def test_conduct_until_advised_decide_port_raises_folds_into_recorded_deci
     assert transcript.end_iteration_converged == [None]
     assert transcript.end_iteration_advised_stop == [None]
     assert transcript.events[-1] == "abort_procedure"
+    # The pass's setpoint write must survive onto the abort result: a hand-copied
+    # field list would drop it (this branch used to build a fresh ConductorResult
+    # instead of `replace(result, ...)`). See [[project_field_drop_bug_class]].
+    assert _MOTOR_ADDR in result.substrate_writes
 
 
 @pytest.mark.unit
@@ -402,6 +406,9 @@ async def test_conduct_until_advised_missing_objective_deposit_loud_fails() -> N
     assert transcript.start_iteration_indices == [1]
     assert transcript.end_iteration_converged == [None]
     assert transcript.events[-1] == "abort_procedure"
+    # See [[project_field_drop_bug_class]]: this branch used to drop the pass's
+    # ledger by building a fresh ConductorResult instead of `replace(result, ...)`.
+    assert _MOTOR_ADDR in result.substrate_writes
 
 
 @pytest.mark.unit
@@ -648,3 +655,57 @@ async def test_conduct_until_advised_records_no_outcomes_when_handler_unwired() 
     )
 
     assert result.succeeded is True
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_complete_rejected_preserves_ledger() -> None:
+    """A rejected `complete_procedure` on brain-Stop still reports the pass's ledger.
+
+    `_complete_advised`'s except-arm used to build a fresh ConductorResult from
+    `result.completed_count` / `result.measurements` alone, dropping
+    `substrate_writes` (and the folded `actuation_kind` `merged` already carries).
+    See [[project_field_drop_bug_class]]."""
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(2.0),),))
+    brain = InMemoryDecidePort()
+    brain.set_advice_sequence([SteeringAdvice(verdict=SteeringVerdict.STOP)])
+
+    async def complete_procedure(command: object, **_: object) -> None:
+        msg = "Procedure not in Running"
+        raise RuntimeError(msg)
+
+    async def _noop(command: object, **_: object) -> None:
+        return None
+
+    conductor = Conductor(
+        control_port=control,
+        append_step=_FakeAppendStep(),
+        clock=FakeClock(_FIXED_NOW),
+        id_generator=_FakeIdGen(),
+        compute_port=compute,
+        start_procedure=_noop,
+        complete_procedure=complete_procedure,
+        abort_procedure=_noop,
+        start_iteration=_noop,
+        end_iteration=_noop,
+    )
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=brain,
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.error_class == "RuntimeError"
+    assert _MOTOR_ADDR in result.substrate_writes
+    assert [m.name for m in result.measurements] == [_OBJECTIVE_NAME]

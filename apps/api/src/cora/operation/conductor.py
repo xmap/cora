@@ -1964,14 +1964,16 @@ class Conductor:
                     folded_kind=folded_kind,
                     envelope_kwargs=envelope_kwargs,
                 )
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
+                # `replace`, not a fresh ConductorResult: `result` is this pass's
+                # ledger (substrate_writes / artifacts / outputs), and a
+                # hand-copied field list is exactly the bug class #744 fixed on
+                # the wrapper terminals. See [[project_field_drop_bug_class]].
+                return replace(
+                    result,
                     failure=failure,
                     actuation_kind=(
                         ActuationKind(folded_kind) if folded_kind is not None else None
                     ),
-                    measurements=result.measurements,
                 )
             converged = _criterion_matches(criterion, pass_captures[convergence_capture_name])
             await self._end_iteration(
@@ -2014,10 +2016,12 @@ class Conductor:
         except _LIFECYCLE_RERAISE:
             raise
         except Exception as exc:
-            return ConductorResult(
-                procedure_id=procedure_id,
-                completed_count=result.completed_count,
-                measurements=result.measurements,
+            # `replace(merged, ...)`, not a fresh ConductorResult: `merged`
+            # already carries the folded actuation_kind alongside `result`'s
+            # ledger, and a hand-copied field list drops both. See
+            # [[project_field_drop_bug_class]].
+            return replace(
+                merged,
                 failure=ConductorFailure(
                     step_index=None,
                     source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -2058,8 +2062,18 @@ class Conductor:
                 ),
                 **envelope_kwargs,
             )
+        # None-safe carry-forward of the last pass's ledger: no pass may have
+        # run yet (cap=0 aborts before the first start_iteration), so there is
+        # no ConductorResult to `replace`. Every field the ledger carries must
+        # be threaded here by name or it silently reports empty on an abort
+        # that followed real hardware writes. See [[project_field_drop_bug_class]].
         completed_count = last_result.completed_count if last_result is not None else 0
         measurements = last_result.measurements if last_result is not None else ()
+        artifacts = last_result.artifacts if last_result is not None else ()
+        outputs: Mapping[str, ArtifactRef] = last_result.outputs if last_result is not None else {}
+        substrate_writes: Mapping[str, WriteValue] = (
+            last_result.substrate_writes if last_result is not None else {}
+        )
         return ConductorResult(
             procedure_id=procedure_id,
             completed_count=completed_count,
@@ -2072,6 +2086,9 @@ class Conductor:
             ),
             actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
             measurements=measurements,
+            artifacts=artifacts,
+            outputs=outputs,
+            substrate_writes=substrate_writes,
         )
 
     async def _abort_absolute_ceiling(
@@ -2104,8 +2121,16 @@ class Conductor:
                 ),
                 **envelope_kwargs,
             )
+        # None-safe carry-forward; see `_abort_unconverged_cap` above for why
+        # every ledger field, not just completed_count/measurements, must be
+        # threaded from `last_result`.
         completed_count = last_result.completed_count if last_result is not None else 0
         measurements = last_result.measurements if last_result is not None else ()
+        artifacts = last_result.artifacts if last_result is not None else ()
+        outputs: Mapping[str, ArtifactRef] = last_result.outputs if last_result is not None else {}
+        substrate_writes: Mapping[str, WriteValue] = (
+            last_result.substrate_writes if last_result is not None else {}
+        )
         return ConductorResult(
             procedure_id=procedure_id,
             completed_count=completed_count,
@@ -2118,6 +2143,9 @@ class Conductor:
             ),
             actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
             measurements=measurements,
+            artifacts=artifacts,
+            outputs=outputs,
+            substrate_writes=substrate_writes,
         )
 
     async def _abort_after_failed_pass(
@@ -2517,14 +2545,14 @@ class Conductor:
                     folded_kind=folded_kind,
                     envelope_kwargs=envelope_kwargs,
                 )
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
+                # `replace`, not a fresh ConductorResult: see the twin fix in
+                # `_run_convergence_loop`. [[project_field_drop_bug_class]].
+                return replace(
+                    result,
                     failure=failure,
                     actuation_kind=(
                         ActuationKind(folded_kind) if folded_kind is not None else None
                     ),
-                    measurements=result.measurements,
                 )
             observation = SteeringObservation(
                 point=seed_point,
@@ -2579,14 +2607,14 @@ class Conductor:
                     folded_kind=folded_kind,
                     envelope_kwargs=envelope_kwargs,
                 )
-                return ConductorResult(
-                    procedure_id=procedure_id,
-                    completed_count=result.completed_count,
+                # `replace`, not a fresh ConductorResult; same fix as the two
+                # sibling sites above. [[project_field_drop_bug_class]].
+                return replace(
+                    result,
                     failure=failure,
                     actuation_kind=(
                         ActuationKind(folded_kind) if folded_kind is not None else None
                     ),
-                    measurements=result.measurements,
                 )
             audit = advice_to_audit_fields(advice)
             await self._end_iteration(
@@ -2654,10 +2682,10 @@ class Conductor:
         except _LIFECYCLE_RERAISE:
             raise
         except Exception as exc:
-            return ConductorResult(
-                procedure_id=procedure_id,
-                completed_count=result.completed_count,
-                measurements=result.measurements,
+            # `replace(merged, ...)`, not a fresh ConductorResult; same fix as
+            # `_complete_converged`. [[project_field_drop_bug_class]].
+            return replace(
+                merged,
                 failure=ConductorFailure(
                     step_index=None,
                     source_kind=_SOURCE_KIND_LIFECYCLE,
