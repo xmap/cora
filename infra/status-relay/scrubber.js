@@ -30,7 +30,19 @@
    boot hook, no fixed #cora-scrubber id: the caller owns the element and
    hands over an already-fetched document. Idempotent: a second mount on
    the same element tears down its listeners and rebuilds, so switching
-   subjects never leaks a drag/keyboard handler onto stale DOM. */
+   subjects never leaks a drag/keyboard handler onto stale DOM.
+
+   `opts.follow: true` is the one flag that changes this module's own
+   behavior rather than just being forwarded: it pins the cursor to the
+   document's live edge on mount instead of the start, and disables Play
+   / "jump to last event" by default (`opts.showPlay`/`showJumpLast:
+   false`), since both assume a closed, already-finished timeline. It does
+   NOT make this module re-render on new data by itself: a flowing-window
+   caller (page.html) re-fetches its own accumulated buffer and calls
+   mount() again on each update, and passes `opts.onScrub` to learn the
+   moment a user grabs the cursor, so it can stop doing that until the
+   viewer asks to resume. This module still knows nothing about what
+   "following" means; it only reports the one signal a caller needs. */
 (function () {
   "use strict";
 
@@ -42,6 +54,7 @@
   const LANE_START = 34;
   const LANE_HEIGHT = 40;
   const MAX_SERIES_LANES = 6;
+  const MAX_MARKER_LABELS = 12;
   const AXIS_MARGIN = 44;
 
   function parseT(iso) {
@@ -183,6 +196,13 @@
     for (const lane of model.lanes) {
       const y = laneY.get(lane.lane_id);
       if (lane.render === "markers") {
+        // A REWIND run has a handful of lifecycle events at most, so a
+        // text label above every marker reads fine. A flowing window's
+        // domain lane can hold far more (a busy hour of Decisions,
+        // say), where the same labels would overlap into noise; past
+        // this count, keep the marks (still hoverable via the readout at
+        // any folded instant) and drop only the always-on labels.
+        const showLabels = lane.points.length <= MAX_MARKER_LABELS;
         lane.points.forEach((p) => {
           const x = X(p.secs);
           const m = svg("rect", {
@@ -194,10 +214,12 @@
           });
           g.appendChild(m);
           timed.push({ el: m, t: p.secs });
-          const lab = svg("text", { x, y: y - 10, class: "cs-life-label", "text-anchor": "middle" });
-          lab.textContent = p.label;
-          g.appendChild(lab);
-          timed.push({ el: lab, t: p.secs });
+          if (showLabels) {
+            const lab = svg("text", { x, y: y - 10, class: "cs-life-label", "text-anchor": "middle" });
+            lab.textContent = p.label;
+            g.appendChild(lab);
+            timed.push({ el: lab, t: p.secs });
+          }
         });
       } else {
         const numeric = lane.points.filter((p) => p.value !== null && p.value !== undefined);
@@ -273,9 +295,17 @@
     for (const lane of model.lanes) {
       if (lane === model.primaryLane) continue;
       const reading = folded.readings[lane.lane_id];
-      const text = reading
-        ? `${reading.text != null ? reading.text : reading.value} @ ${fmtClock(t0, reading.secs)}`
-        : "no reading yet";
+      let text;
+      if (!reading) {
+        text = "no reading yet";
+      } else if (lane.render === "markers") {
+        // A non-primary markers lane (every domain lane in a flowing
+        // window with no single subject, see mount()'s `follow` option):
+        // there is no value to show, only the most recent event's label.
+        text = `${reading.label} @ ${fmtClock(t0, reading.secs)}`;
+      } else {
+        text = `${reading.text != null ? reading.text : reading.value} @ ${fmtClock(t0, reading.secs)}`;
+      }
       rows.push([lane.label, text, null]);
     }
     for (const [k, v, tone] of rows) {
@@ -292,9 +322,18 @@
     }
   }
 
-  function wireDrag(root, model, scene, state) {
+  function wireDrag(root, model, scene, state, opts) {
     const svgEl = scene.g;
     const slider = root.querySelector(".cs-slider");
+    const onScrub = opts && opts.onScrub;
+    // Fired once per user-initiated move, never from a programmatic
+    // setCursor (mount()'s own initial positioning, or a caller re-
+    // rendering a still-followed live window): this is how a flowing-mode
+    // caller learns "pause following, the viewer grabbed the cursor"
+    // without this module knowing anything about what "following" means.
+    const notifyScrub = () => {
+      if (onScrub) onScrub();
+    };
 
     const secsFromEvent = (clientX) => {
       const rect = svgEl.getBoundingClientRect();
@@ -360,6 +399,7 @@
       e.preventDefault();
       slider.focus();
       stopPlay();
+      notifyScrub();
       setCursor(secsFromEvent(e.clientX));
       const onMove = (ev) => setCursor(secsFromEvent(ev.clientX));
       const onUp = () => {
@@ -382,6 +422,7 @@
       e.preventDefault();
       slider.focus();
       stopPlay();
+      notifyScrub();
       sliderDragging = true;
       try {
         slider.setPointerCapture(e.pointerId);
@@ -413,6 +454,7 @@
         End: 1e9,
       };
       if (e.key === " " || e.key === "Spacebar") {
+        if (opts && opts.showPlay === false) return;
         e.preventDefault();
         state.playing ? stopPlay() : startPlay();
         return;
@@ -420,6 +462,7 @@
       if (!(e.key in map)) return;
       e.preventDefault();
       stopPlay();
+      notifyScrub();
       if (e.key === "Home") setCursor(0);
       else if (e.key === "End") setCursor(model.xmax);
       else setCursor(state.cursor + map[e.key]);
@@ -433,6 +476,20 @@
       model.omittedSeries > 0
         ? `<div class="cs-omitted-note">+${model.omittedSeries} more lane(s) not shown</div>`
         : "";
+    // Play (a synthetic-rate replay) and "jump to last event" both assume
+    // a closed, already-finished timeline; neither means anything for an
+    // open-ended flowing window, so a caller opts out of both rather than
+    // this module guessing from the document shape. `jumpLabel` still
+    // lets a caller keep the button under a different label, but flowing
+    // mode's caller (page.html) opts out entirely and owns its own
+    // "Resume following" control instead.
+    const showPlay = opts.showPlay !== false;
+    const showJumpLast = opts.showJumpLast !== false;
+    const controlsHtml =
+      (showPlay ? '<button type="button" class="cs-btn cs-play" aria-pressed="false">Play</button>' : "") +
+      (showJumpLast
+        ? `<button type="button" class="cs-btn cs-jump-last">${opts.jumpLabel || "Jump to last event"}</button>`
+        : "");
     root.classList.add("cora-scrubber");
     root.innerHTML = `
       <div class="cora-scrubber__chrome">
@@ -440,10 +497,7 @@
           <span class="cs-dot" aria-hidden="true"></span>
           <span class="cs-title"></span>
           <span class="cs-subtitle"></span>
-          <div class="cs-controls">
-            <button type="button" class="cs-btn cs-play" aria-pressed="false">Play</button>
-            <button type="button" class="cs-btn cs-jump-last">Jump to last event</button>
-          </div>
+          <div class="cs-controls">${controlsHtml}</div>
         </div>
         <div class="cs-stage"></div>
         <div class="cs-slider" tabindex="0" role="slider"
@@ -486,22 +540,34 @@
       chromeTitle: opts.chromeTitle || "Timeline",
       subtitle,
       sliderLabel: opts.sliderLabel || "Fold cursor: time within the window",
+      showPlay: opts.showPlay,
+      showJumpLast: opts.showJumpLast,
+      jumpLabel: opts.jumpLabel,
     });
     const scene = renderTimeline(model, scale);
     root.querySelector(".cs-stage").appendChild(scene.g);
 
     const state = { scale, cursor: 0, playing: false, rafId: 0 };
-    const controls = wireDrag(root, model, scene, state);
+    const controls = wireDrag(root, model, scene, state, opts);
 
-    root.querySelector(".cs-play").addEventListener("click", () => {
-      state.playing ? controls.stopPlay() : controls.startPlay();
-    });
-    root.querySelector(".cs-jump-last").addEventListener("click", () => {
-      controls.stopPlay();
-      controls.setCursor(model.xmax);
-    });
+    const playBtn = root.querySelector(".cs-play");
+    if (playBtn) {
+      playBtn.addEventListener("click", () => {
+        state.playing ? controls.stopPlay() : controls.startPlay();
+      });
+    }
+    const jumpBtn = root.querySelector(".cs-jump-last");
+    if (jumpBtn) {
+      jumpBtn.addEventListener("click", () => {
+        controls.stopPlay();
+        controls.setCursor(model.xmax);
+      });
+    }
 
-    controls.setCursor(0);
+    // `opts.follow`: pin the cursor to the live edge (this is a flowing
+    // window, not a fixed replay with a natural "start"); otherwise the
+    // existing REWIND behavior of starting at the beginning is unchanged.
+    controls.setCursor(opts.follow ? model.xmax : 0);
 
     root._coraScrubberCleanup = () => {
       controls.stopPlay();

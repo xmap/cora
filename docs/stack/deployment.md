@@ -922,17 +922,28 @@ The other six live domains (Subjects, Campaigns, Datasets, Clearances,
 Enclosures, Decisions) have no rewind; Runs is the only domain with a
 natural bounded start and end.
 
-**Activity tail (producer + relay only, no page yet):** arcturus also tail-
-follows the whole `events` table -- every BC, event metadata only
+**Activity tail, and the flowing-window view it feeds:** arcturus also
+tail-follows the whole `events` table -- every BC, event metadata only
 (`stream_type`, `stream_id`, `event_type`, timestamps; never `payload`) --
 and pushes what's new as a third message kind, `"activity"`, whenever
 something has happened. The relay broadcasts it straight through to every
 watcher with no cache of its own: unlike the snapshot and run-history rings,
 there is nothing here for a freshly-connecting browser to catch up on, by
-design, since the intended consumer (a flowing, rolling-window view) holds
+design, since the consumer (the page's own "Live activity" section) holds
 its own window client-side rather than asking the relay to hold one for it.
-Nothing in `page.html` reads this message kind yet; it lands ahead of the
-frontend that will.
+
+`page.html` accumulates these into a client-side rolling window (2h, a
+client constant, not a server one: the producer streams what is new, the
+browser decides how much to keep), bucketed into the same seven domains as
+the live tables above plus an eighth "Other" catch-all for everything else
+in the 42-type event vocabulary, and renders it through the same subject-
+neutral scrubber REWIND uses (`scrubber.js`'s `follow` option), pinned to
+"now" at the right edge. Dragging the cursor pauses following rather than
+fighting it: new activity keeps accumulating (a "Paused: N new events"
+line says how much), and a "Resume following" control jumps back to live.
+No lane here is a REWIND-style "primary" subject with a current status --
+a busy hour touches many Runs, many Decisions -- so every lane reads
+through the same generic last-event path.
 
 ## Deferred
 
