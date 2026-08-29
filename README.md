@@ -274,7 +274,7 @@
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
 | src/cora/api/\_run\_supervisor.py                                                        |      490 |       27 |      194 |       21 |     92.7% |310, 332, 339, 494, 699-700, 860-861, 918, 944, 947, 953, 955, 981-982, 1165-\>1175, 1351, 1354, 1357, 1360, 1362-1363, 1366, 1369, 1372, 1570, 1579-\>1544, 1665, 1688 |
 | src/cora/api/\_run\_witness.py                                                           |      404 |       22 |      132 |        6 |     94.4% |679, 934-938, 979, 1041, 1072, 1116, 1133, 1135, 1160, 1182, 1269, 1364, 1434-1436, 1438-\>1440, 1445, 1456-1459, 1464 |
-| src/cora/api/\_status\_push.py                                                           |      231 |        5 |       42 |        3 |     97.1% |205, 459-460, 536-\>542, 788-789 |
+| src/cora/api/\_status\_push.py                                                           |      263 |        6 |       52 |        5 |     96.5% |242, 496-497, 573-\>579, 643-\>635, 913-914, 978 |
 | src/cora/api/capture\_watch\_preflight.py                                                |      217 |        3 |       82 |        1 |     98.7% |534, 642-643 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                                     |      431 |        7 |       66 |        4 |     97.8% |394-\>393, 819-820, 1288-1300, 1490-\>1495, 1497-\>1500 |
@@ -1466,7 +1466,8 @@
 | src/cora/infrastructure/adapters/in\_memory\_clearance\_template\_lookup.py              |       15 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_credential\_lookup.py                       |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_enclosure\_lookup.py                        |       28 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/infrastructure/adapters/in\_memory\_event\_store.py                             |       61 |        0 |       18 |        0 |    100.0% |           |
+| src/cora/infrastructure/adapters/in\_memory\_event\_activity\_trail.py                   |       23 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/infrastructure/adapters/in\_memory\_event\_store.py                             |       64 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_facility\_lookup.py                         |       28 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_family\_lookup.py                           |       15 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/in\_memory\_idempotency\_store.py                       |       67 |        2 |       18 |        2 |     95.3% |  121, 138 |
@@ -1476,6 +1477,7 @@
 | src/cora/infrastructure/adapters/in\_memory\_signer.py                                   |       30 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/adapters/introspection\_token\_verifier.py                       |      126 |        7 |       44 |        5 |     92.9% |257-258, 277-\>279, 333, 338, 352, 354-355 |
 | src/cora/infrastructure/adapters/jwt\_token\_verifier.py                                 |       79 |        6 |       16 |        0 |     93.7% |171, 196-199, 247 |
+| src/cora/infrastructure/adapters/postgres\_event\_activity\_trail.py                     |       23 |        1 |        4 |        1 |     92.6% |        52 |
 | src/cora/infrastructure/adapters/postgres\_event\_store.py                               |       72 |        4 |       26 |        5 |     90.8% |122, 192, 236, 243-\>238, 250 |
 | src/cora/infrastructure/adapters/postgres\_idempotency\_store.py                         |       40 |        2 |       12 |        2 |     92.3% |  127, 153 |
 | src/cora/infrastructure/adapters/postgres\_profile\_store.py                             |       36 |        5 |        4 |        0 |     82.5% |    99-103 |
@@ -1510,7 +1512,7 @@
 | src/cora/infrastructure/observability/log\_processor.py                                  |       15 |        0 |        4 |        1 |     94.7% |   41-\>43 |
 | src/cora/infrastructure/observability/provider.py                                        |       49 |        7 |       12 |        2 |     82.0% |171-191, 208 |
 | src/cora/infrastructure/observability/surface\_context.py                                |       18 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/infrastructure/ports/\_\_init\_\_.py                                            |       35 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/\_\_init\_\_.py                                            |       36 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/allocation\_lookup.py                                      |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/assembly\_lookup.py                                        |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/asset\_lookup.py                                           |       17 |        0 |        0 |        0 |    100.0% |           |
@@ -1528,6 +1530,7 @@
 | src/cora/infrastructure/ports/credential\_lookup.py                                      |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/dataset\_distribution\_lookup.py                           |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/enclosure\_lookup.py                                       |       17 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/ports/event\_activity\_trail.py                                  |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/event\_publisher.py                                        |        4 |        4 |        0 |        0 |      0.0% |     51-57 |
 | src/cora/infrastructure/ports/event\_store.py                                            |       34 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/ports/facility\_lookup.py                                        |       12 |        0 |        0 |        0 |    100.0% |           |
@@ -2708,7 +2711,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **61701** | **1388** | **9368** |  **418** | **97.2%** |           |
+| **TOTAL**                                                                                | **61795** | **1390** | **9386** |  **421** | **97.2%** |           |
 
 
 ## Setup coverage badge
