@@ -62,6 +62,7 @@ from cora.enclosure.aggregates.enclosure import (
 from cora.enclosure.errors import UnauthorizedError
 from cora.enclosure.features import (
     decommission_enclosure,
+    get_enclosure_history,
     list_enclosures,
     observe_enclosure_status,
     register_enclosure,
@@ -132,6 +133,7 @@ def register_enclosure_routes(app: FastAPI) -> None:
     app.include_router(register_enclosure.router)
     app.include_router(decommission_enclosure.router)
     app.include_router(list_enclosures.router)
+    app.include_router(get_enclosure_history.router)
     # Stub router inclusion for the in-process-only observe slice. The
     # router carries no routes by design; this include satisfies the
     # routes-completeness architecture fitness without exposing a
