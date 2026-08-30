@@ -54,11 +54,19 @@ the up-to-20 most recently pushed one:
                               guard, since the caller here is the producer,
                               not a human viewer)
   - `WS  /watch`              a browser connects here; sent the current
-                              snapshot (or a "no producer yet" state) and
-                              the run-history index immediately on connect,
-                              then every subsequent snapshot, run-history
-                              index update, and producer connect /
-                              disconnect transition, live
+                              snapshot (or a "no producer yet" state), the
+                              run-history index, and every cached enclosure
+                              timeline immediately on connect, then every
+                              subsequent snapshot, run-history index
+                              update, enclosure-timeline update, and
+                              producer connect / disconnect transition,
+                              live. Enclosure timelines are pure
+                              pass-through PLUS a replay cache (unlike
+                              run history's cache-or-ask-the-producer
+                              shape): at pilot scale there are only a
+                              handful of enclosures, so the whole set
+                              fits in memory with no eviction and no
+                              on-demand request path is needed at all
 
 Run: `STATUS_RELAY_TOKEN=<token> STATUS_RELAY_VIEWER_USER=<user>
 STATUS_RELAY_VIEWER_PASSWORD=<password> python relay.py [--host 0.0.0.0]
@@ -144,6 +152,14 @@ _pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
 `_MAX_INFLIGHT_REQUESTS`."""
 _watchers: set[ServerConnection] = set()
 _run_histories: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_enclosure_timelines: dict[str, dict[str, Any]] = {}
+"""Every enclosure this relay has ever received a timeline for, keyed by
+`enclosure_id`. A plain dict, not an `OrderedDict` with a cap like
+`_run_histories`: at pilot scale there are only a handful of Enclosures,
+so the whole subject set fits in memory with no eviction, and REWIND
+reaching any of them needs no producer round trip the way reaching any
+RUN does -- see `cora.api._status_push._EnclosureTimelineTail`'s own
+docstring for why."""
 
 
 def _require_token() -> str:
@@ -215,6 +231,14 @@ def _store_run_history(message: dict[str, Any]) -> None:
         _run_histories.popitem(last=False)
 
 
+def _store_enclosure_timeline(message: dict[str, Any]) -> None:
+    enclosure_id = message.get("enclosure_id")
+    if not isinstance(enclosure_id, str):
+        _log.warning("producer.malformed_enclosure_timeline")
+        return
+    _enclosure_timelines[enclosure_id] = message
+
+
 def _fail_all_pending(reason: str) -> None:
     """Resolve every in-flight `run_history_request` with an exception
     immediately, rather than letting each one sit until its own
@@ -263,6 +287,18 @@ async def _handle_producer(ws: ServerConnection) -> None:
             elif kind == "run_history":
                 _store_run_history(payload)
                 _broadcast_run_history_index()
+            elif kind == "enclosure_timeline":
+                # Unlike `activity`, DOES cache (in `_enclosure_timelines`,
+                # replayed to every new watcher in `_handle_watcher`): a
+                # REWIND viewer picking an enclosure needs its timeline to
+                # still be here after connecting, not only future updates.
+                # Unlike `run_history`, needs no producer round trip on a
+                # cache miss: there is no cache miss at pilot scale, since
+                # every enclosure's timeline is pushed on every producer
+                # (re)connect (see `_EnclosureTimelineTail.on_reconnect`).
+                _store_enclosure_timeline(payload)
+                if _watchers:
+                    websockets.broadcast(_watchers, message)
             elif kind == "activity":
                 # No relay-side cache, unlike snapshot/run_history: flowing
                 # mode's rolling window lives in each browser, not here, so
@@ -306,6 +342,8 @@ async def _handle_watcher(ws: ServerConnection) -> None:
             await ws.send(json.dumps(_latest_snapshot))
         await ws.send(_connection_state_message())
         await ws.send(json.dumps(_run_history_index()))
+        for message in _enclosure_timelines.values():
+            await ws.send(json.dumps(message))
         async for _ in ws:
             pass  # watchers never send anything meaningful; drain and ignore
     finally:

@@ -98,12 +98,14 @@
     if (model.primaryLane) {
       let point = null;
       let state = null;
+      let tone = null;
       for (const p of model.primaryLane.points) {
         if (p.secs > t + 1e-6) break;
         point = p;
         if (p.state) state = p.state;
+        if (p.tone) tone = p.tone;
       }
-      primary = { point, state };
+      primary = { point, state, tone };
     }
     const readings = {};
     for (const lane of model.lanes) {
@@ -138,6 +140,7 @@
           secs: parseT(p.t) - t0,
           label: p.label,
           state: p.state || null,
+          tone: p.tone || null,
           value: p.value,
           text: p.text != null ? p.text : null,
         }))
@@ -285,7 +288,11 @@
     const rows = [["clock", fmtClock(t0, cursor), null]];
     if (folded.primary) {
       const state = folded.primary.state || "not started";
-      rows.push(["status", state, state === "paused" ? "warn" : "good"]);
+      // A point-supplied `tone` (e.g. an enclosure's NotPermitted) wins;
+      // absent one, the only vocabulary this module itself knows is the
+      // Run lifecycle's "paused" -> warn convention.
+      const tone = folded.primary.tone || (state === "paused" ? "warn" : "good");
+      rows.push(["status", state, tone]);
       rows.push([
         "last event",
         folded.primary.point ? `${folded.primary.point.label} @ ${fmtClock(t0, folded.primary.point.secs)}` : "none yet",
@@ -531,11 +538,17 @@
 
     const model = buildModel(doc);
     const scale = buildScale(model.xmax);
+    // Generic over WHAT truncated (`observations` for a run, `events` for
+    // an enclosure, ...): report every truthy key by name rather than
+    // hardcoding one domain's vocabulary.
+    const truncatedKeys = doc.truncated
+      ? Object.keys(doc.truncated).filter((k) => doc.truncated[k])
+      : [];
     const subtitle =
       (doc.title || "") +
       (doc.title && doc.subtitle ? " · " : "") +
       (doc.subtitle || "") +
-      (doc.truncated && doc.truncated.observations ? " · observations truncated" : "");
+      (truncatedKeys.length ? ` · ${truncatedKeys.join(", ")} truncated` : "");
     scaffold(root, model, {
       chromeTitle: opts.chromeTitle || "Timeline",
       subtitle,

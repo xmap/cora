@@ -51,6 +51,15 @@ Each tick reads and pushes:
     `_RunHistoryTail`, `build_run_history_message`), refreshed
     periodically while open and once more, marked terminal, the instant a
     run leaves the open set -- this is REWIND mode's entire feed
+  - each Active Enclosure's permit/lifecycle timeline
+    (`get_enclosure_history`), pushed as a FOURTH message kind whenever it
+    changes (see `_EnclosureTimelineTail`, `build_enclosure_timeline_message`)
+    -- REWIND's second subject, proving the timeline document scrubber.js
+    renders is genuinely subject-neutral. Unlike run history, this needs
+    NO on-demand request path: at pilot scale there are only a handful of
+    Enclosures with a sparse transition rate, so the whole subject set
+    fits in every push and there is nothing a bounded cache could ever
+    fail to hold
   - event metadata (`stream_type`, `stream_id`, `event_type`, timestamps
     only, NEVER `payload`) tail-followed across the WHOLE `events` table
     since this process's own "now" (`_ActivityTail`,
@@ -123,9 +132,10 @@ Every other watcher here authenticates as its own seeded Agent (a real
 Actor with its own grant set, so a missing grant is auditable per-agent).
 This module still uses `SYSTEM_PRINCIPAL_ID` for every read: the read scope
 has now widened past the single `ListRuns` command this module started
-with, to EIGHT commands across seven BCs (`GetRunHistory` joins the
-original seven, still within the Run BC), which is exactly the trigger this
-docstring named for standing up a dedicated seeded identity (mirroring
+with, to NINE commands across seven BCs (`GetRunHistory` joins the Run
+BC's own `ListRuns`; `GetEnclosureHistory` joins the Enclosure BC's own
+`ListEnclosures`), which is exactly the trigger this docstring named for
+standing up a dedicated seeded identity (mirroring
 `agent/seed_calibration_watcher.py`). That identity is NOT built in this
 change; doing so is a follow-up, tracked so the deferral is visible rather
 than silently indefinite. Until then, a Trust Policy that denies any of the
@@ -177,6 +187,7 @@ from cora.data.features.list_datasets import ListDatasets
 from cora.decision.errors import UnauthorizedError as _DecisionUnauthorizedError
 from cora.decision.features.list_decisions import ListDecisions
 from cora.enclosure.errors import UnauthorizedError as _EnclosureUnauthorizedError
+from cora.enclosure.features.get_enclosure_history import GetEnclosureHistory
 from cora.enclosure.features.list_enclosures import ListEnclosures
 from cora.infrastructure.adapters.in_memory_event_activity_trail import (
     InMemoryEventActivityTrail,
@@ -207,6 +218,10 @@ if TYPE_CHECKING:
     from cora.campaign.features.list_campaigns.query import CampaignStatusFilter
     from cora.data.features.list_datasets.handler import Handler as ListDatasetsHandler
     from cora.decision.features.list_decisions.handler import Handler as ListDecisionsHandler
+    from cora.enclosure.features.get_enclosure_history.handler import EnclosureHistoryView
+    from cora.enclosure.features.get_enclosure_history.handler import (
+        Handler as GetEnclosureHistoryHandler,
+    )
     from cora.enclosure.features.list_enclosures.handler import Handler as ListEnclosuresHandler
     from cora.infrastructure.kernel import Kernel
     from cora.infrastructure.ports.event_activity_trail import (
@@ -501,7 +516,13 @@ async def _drain_active_clearances(
 
 async def _drain_active_enclosures(
     list_enclosures: ListEnclosuresHandler, deps: Kernel
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[UUID]]:
+    """Returns the rendered (JSON-safe) rows AND the raw enclosure_id
+    UUIDs, mirroring `_drain_open_runs`: the rows go straight into the
+    snapshot payload, but `_EnclosureTimelineTail.poll` needs real `UUID`
+    objects to call `get_enclosure_history` with, not `render_value`'s
+    string form.
+    """
     items = await _drain_all(
         lambda cursor: list_enclosures(
             ListEnclosures(lifecycle=_ACTIVE_ENCLOSURE_LIFECYCLE, cursor=cursor, limit=_PAGE_LIMIT),
@@ -510,15 +531,19 @@ async def _drain_active_enclosures(
             surface_id=NIL_SENTINEL_ID,
         )
     )
-    return [
-        {
-            "enclosure_id": render_value(item.enclosure_id),
-            "name": item.name,
-            "permit_status": item.permit_status,
-            "facility_code": item.facility_code,
-        }
-        for item in items
-    ]
+    rows: list[dict[str, Any]] = []
+    raw_enclosure_ids: list[UUID] = []
+    for item in items:
+        rows.append(
+            {
+                "enclosure_id": render_value(item.enclosure_id),
+                "name": item.name,
+                "permit_status": item.permit_status,
+                "facility_code": item.facility_code,
+            }
+        )
+        raw_enclosure_ids.append(item.enclosure_id)
+    return rows, raw_enclosure_ids
 
 
 class _DecisionTail:
@@ -693,6 +718,86 @@ class _RunHistoryTail:
         if message is None or not message.get("terminal"):
             return None
         return message
+
+
+class _EnclosureTimelineTail:
+    """Pushes each Active enclosure's redacted permit/lifecycle timeline
+    to the relay whenever it changes, over the SAME outbound socket the
+    snapshot uses, as a fourth message kind.
+
+    Unlike `_RunHistoryTail`, this needs neither a ring nor a per-subject
+    refresh clock. At pilot scale there are only a handful of Enclosures,
+    and their transition rate is sparse: the `observe_enclosure_status`
+    decider short-circuits an identical-status observation, so every
+    `EnclosurePermitObserved` actually on the stream is a genuine change.
+    Polling every enclosure's full history every tick is therefore cheap
+    (an event-stream load with no observation join, unlike Run), and the
+    whole subject set fits in a plain dict with no eviction needed. REWIND
+    reaching any enclosure in the record needs no on-demand request path
+    the way reaching any RUN did: there is nothing a bounded cache could
+    ever fail to hold when it can hold every enclosure at once.
+
+    `_last_hash` tracks each enclosure's last-pushed content hash so a
+    quiet enclosure produces no repeat traffic tick over tick, the same
+    role `_content_hash` plays for the snapshot itself -- and, like that
+    hash, computed over `lanes` / `title` / `subtitle` / `truncated`
+    ONLY, never the full document: `document["domain"]["to"]` is
+    `generated_at`, which differs on every tick by construction, so
+    hashing it would defeat the whole point of deduplication (an
+    unchanged enclosure would never be recognized as unchanged).
+    `on_reconnect()` clears it so a fresh relay connection, whose own
+    cache is empty, gets one full repush of every enclosure -- the same
+    repopulate-after-reconnect posture `_RunHistoryTail.on_reconnect`
+    takes for the run-history ring.
+    """
+
+    def __init__(self) -> None:
+        self._last_hash: dict[UUID, str] = {}
+
+    def on_reconnect(self) -> None:
+        self._last_hash.clear()
+
+    async def poll(
+        self,
+        get_enclosure_history: GetEnclosureHistoryHandler,
+        deps: Kernel,
+        *,
+        enclosure_ids: list[UUID],
+        generated_at: str,
+        producer_id: str,
+    ) -> list[dict[str, Any]]:
+        """Timeline messages that are NEW this tick, and only those."""
+        messages: list[dict[str, Any]] = []
+        for enclosure_id in enclosure_ids:
+            view = await get_enclosure_history(
+                GetEnclosureHistory(enclosure_id=enclosure_id),
+                principal_id=SYSTEM_PRINCIPAL_ID,
+                correlation_id=deps.id_generator.new_id(),
+                surface_id=NIL_SENTINEL_ID,
+            )
+            if view is None:
+                continue
+            message = build_enclosure_timeline_message(
+                view=view, generated_at=generated_at, producer_id=producer_id
+            )
+            document = message["document"]
+            # Excludes `domain` (its `to` is `generated_at`, which
+            # differs every tick regardless of whether anything about
+            # the enclosure itself changed -- see this class's own
+            # docstring).
+            content_hash = _content_hash(
+                {
+                    "lanes": document["lanes"],
+                    "title": document["title"],
+                    "subtitle": document["subtitle"],
+                    "truncated": document["truncated"],
+                }
+            )
+            if self._last_hash.get(enclosure_id) == content_hash:
+                continue
+            self._last_hash[enclosure_id] = content_hash
+            messages.append(message)
+        return messages
 
 
 class _ActivityTail:
@@ -1039,6 +1144,138 @@ def build_run_history_message(
     }
 
 
+_ENCLOSURE_GENESIS_PERMIT_STATE = "Unknown"
+"""What `EnclosureRegistered` puts the permit axis into. Not carried in
+that event's own payload -- the evolver seeds it from the event TYPE (see
+`enclosure/aggregates/enclosure/evolver.py`) -- so this message builder
+states it explicitly rather than reading a field that does not exist."""
+_ENCLOSURE_GENESIS_LIFECYCLE_STATE = "Active"
+_ENCLOSURE_DECOMMISSIONED_STATE = "Decommissioned"
+_ENCLOSURE_PERMIT_TONE = {
+    "Permitted": "good",
+    "NotPermitted": "warn",
+    "Unknown": "warn",
+}
+"""Scrubber readout tint per permit value. This is exactly the kind of
+domain vocabulary `scrubber.js` itself must never hardcode (per its own
+module docstring): a marker point's optional `tone` field lets a producer
+supply it, and the Run lens simply never sets one."""
+
+
+def build_enclosure_timeline_message(
+    *,
+    view: EnclosureHistoryView,
+    generated_at: str,
+    producer_id: str,
+) -> dict[str, Any]:
+    """Assemble one enclosure-timeline push: a subject-neutral timeline
+    document (see `infra/status-relay/scrubber.js`'s own module
+    docstring) over an Enclosure's permit and lifecycle axes -- the
+    second subject this feed has ever pushed alongside Run, and the
+    proof that the document shape is genuinely subject-neutral rather
+    than shaped around Run specifically.
+
+    Ships state transitions ONLY: `to_status` / `occurred_at` / the
+    event's own type. NEVER `reason`, `monitor_ref`, `triggered_by`, or
+    any substrate address. `EnclosurePermitObserved.reason` and
+    `.monitor_ref` embed the PSS PV address behind the reading (e.g.
+    "PSS permit observation via S02BM-PSS:StaA:SecureM"), which this
+    repo's own export redaction tier already drops before anything
+    leaves the facility (`_redact_tier2.py`'s `permit_probe.source_id`
+    rationale: pairing a reachability failure with the exact substrate
+    address is closer to a security disclosure about a safety system
+    than to science). `get_enclosure_history`'s own view legitimately
+    carries that detail for an on-network reader; this function is
+    where it must stop, because this message is what actually leaves
+    the beamline network for the external relay.
+
+    Two marker lanes, both derived from the same event stream: `permit`
+    (the primary / `subject_lane_id`, folded from
+    `EnclosurePermitObserved.to_status` and `EnclosureRegistered`'s
+    implicit genesis `Unknown`) and `lifecycle` (folded from
+    `EnclosureRegistered`'s implicit genesis `Active` and
+    `EnclosureDecommissioned`'s terminal `Decommissioned`) -- the same
+    two orthogonal axes `evolver.py` folds onto aggregate state,
+    preserved here at the event-log grain instead of collapsed to only
+    the latest value.
+
+    `domain.to` is `generated_at`, not the last event's own timestamp:
+    unlike a Run, which closes, an Enclosure's permit status is a
+    standing claim ("still Permitted as of now"), so the window should
+    read as current through the moment this message was generated
+    rather than stop dead at whatever the last transition happened to
+    be.
+
+    An event type this function does not recognize is skipped, not
+    raised: a future Enclosure event a producer predates must never
+    break the live feed, mirroring the relay's own
+    `producer.unknown_kind` forward-compatibility posture."""
+    permit_points: list[dict[str, Any]] = []
+    lifecycle_points: list[dict[str, Any]] = []
+    for event in view.events:
+        occurred_at = render_value(event.occurred_at)
+        if event.event_type == "EnclosureRegistered":
+            permit_points.append(
+                {
+                    "t": occurred_at,
+                    "label": _ENCLOSURE_GENESIS_PERMIT_STATE,
+                    "state": _ENCLOSURE_GENESIS_PERMIT_STATE,
+                    "tone": _ENCLOSURE_PERMIT_TONE[_ENCLOSURE_GENESIS_PERMIT_STATE],
+                }
+            )
+            lifecycle_points.append(
+                {
+                    "t": occurred_at,
+                    "label": _ENCLOSURE_GENESIS_LIFECYCLE_STATE,
+                    "state": _ENCLOSURE_GENESIS_LIFECYCLE_STATE,
+                }
+            )
+        elif event.event_type == "EnclosurePermitObserved":
+            to_status = event.payload.get("to_status", _ENCLOSURE_GENESIS_PERMIT_STATE)
+            permit_points.append(
+                {
+                    "t": occurred_at,
+                    "label": to_status,
+                    "state": to_status,
+                    "tone": _ENCLOSURE_PERMIT_TONE.get(to_status, "warn"),
+                }
+            )
+        elif event.event_type == "EnclosureDecommissioned":
+            lifecycle_points.append(
+                {
+                    "t": occurred_at,
+                    "label": _ENCLOSURE_DECOMMISSIONED_STATE,
+                    "state": _ENCLOSURE_DECOMMISSIONED_STATE,
+                }
+            )
+
+    domain_from = permit_points[0]["t"] if permit_points else generated_at
+    document = {
+        "domain": {"from": domain_from, "to": generated_at},
+        "lanes": [
+            {"lane_id": "permit", "label": "Permit", "render": "markers", "points": permit_points},
+            {
+                "lane_id": "lifecycle",
+                "label": "Lifecycle",
+                "render": "markers",
+                "points": lifecycle_points,
+            },
+        ],
+        "subject_lane_id": "permit",
+        "title": view.name,
+        "subtitle": view.permit_status,
+        "truncated": {"events": view.events_truncated},
+    }
+    return {
+        "kind": "enclosure_timeline",
+        "schema_version": 1,
+        "producer_id": producer_id,
+        "generated_at": generated_at,
+        "enclosure_id": render_value(view.enclosure_id),
+        "document": document,
+    }
+
+
 def build_activity_message(
     *, rows: list[EventActivityRow], generated_at: str, producer_id: str
 ) -> dict[str, Any]:
@@ -1083,6 +1320,8 @@ async def _build_payload_fields(
     list_decisions: ListDecisionsHandler,
     run_history_tail: _RunHistoryTail,
     get_run_history: GetRunHistoryHandler,
+    enclosure_timeline_tail: _EnclosureTimelineTail,
+    get_enclosure_history: GetEnclosureHistoryHandler,
     activity_tail: _ActivityTail,
     activity_trail: EventActivityTrail,
     witness_recorder: RunWitnessRecorder | None,
@@ -1090,23 +1329,26 @@ async def _build_payload_fields(
     producer_id: str,
 ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
     """Every domain's rows for one tick, plus any extra messages (run
-    history, activity) that are new this tick. Each drain is independently
-    guarded by the caller's `except _UNAUTHORIZED_ERRORS` (per-domain, not
-    caught here) so a missing grant on one command blinds only that
-    section of the page, never the whole tick.
+    history, enclosure timelines, activity) that are new this tick. Each
+    drain is independently guarded by the caller's
+    `except _UNAUTHORIZED_ERRORS` (per-domain, not caught here) so a
+    missing grant on one command blinds only that section of the page,
+    never the whole tick.
 
-    Returns `(fields, extra_messages)`, not one dict: neither run history
-    nor activity is a snapshot field (see `_RunHistoryTail`'s and
-    `_ActivityTail`'s module docstrings), so neither may enter
-    `_content_hash`'s change-detection input."""
+    Returns `(fields, extra_messages)`, not one dict: none of run
+    history, enclosure timelines, or activity is a snapshot field (see
+    `_RunHistoryTail`'s, `_EnclosureTimelineTail`'s, and `_ActivityTail`'s
+    module docstrings), so none of them may enter `_content_hash`'s
+    change-detection input."""
     runs, raw_run_ids = await _drain_open_runs(list_runs, deps, witness_recorder=witness_recorder)
+    enclosures, raw_enclosure_ids = await _drain_active_enclosures(list_enclosures, deps)
     fields = {
         "runs": runs,
         "subjects": await _drain_open_subjects(list_subjects, deps),
         "campaigns": await _drain_open_campaigns(list_campaigns, deps),
         "datasets": await _drain_datasets_for_runs(list_datasets, deps, run_ids=raw_run_ids),
         "clearances": await _drain_active_clearances(list_clearances, deps),
-        "enclosures": await _drain_active_enclosures(list_enclosures, deps),
+        "enclosures": enclosures,
         "decisions": await decision_tail.poll(list_decisions, deps),
     }
     extra_messages = await run_history_tail.poll(
@@ -1115,6 +1357,15 @@ async def _build_payload_fields(
         open_run_ids=raw_run_ids,
         generated_at=generated_at,
         producer_id=producer_id,
+    )
+    extra_messages.extend(
+        await enclosure_timeline_tail.poll(
+            get_enclosure_history,
+            deps,
+            enclosure_ids=raw_enclosure_ids,
+            generated_at=generated_at,
+            producer_id=producer_id,
+        )
     )
     activity_rows = await activity_tail.poll(activity_trail)
     if activity_rows:
@@ -1137,6 +1388,7 @@ async def _push_loop(
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
+    get_enclosure_history: GetEnclosureHistoryHandler,
     activity_trail: EventActivityTrail,
     producer_id: str,
     url: str,
@@ -1149,11 +1401,12 @@ async def _push_loop(
     reconnect; nothing here distinguishes them further, since v1's only
     remedy for either is "try again".
 
-    `decision_tail`, `run_history_tail` and `activity_tail` are each
-    constructed ONCE, outside the reconnect loop below, so "recent
-    decisions" / "which runs have already had their history pushed" /
-    "which events have already been tailed" mean since this process
-    started, not since the last successful connection.
+    `decision_tail`, `run_history_tail`, `enclosure_timeline_tail` and
+    `activity_tail` are each constructed ONCE, outside the reconnect loop
+    below, so "recent decisions" / "which runs have already had their
+    history pushed" / "which enclosure timelines have already been
+    pushed" / "which events have already been tailed" mean since this
+    process started, not since the last successful connection.
 
     A fresh `_read_requests` reader task is created PER connection, inside
     the `async with connect(...)` block below, and torn down in a
@@ -1169,6 +1422,7 @@ async def _push_loop(
         started_at_cursor=encode_cursor(created_at=deps.clock.now(), item_id=_MIN_UUID)
     )
     run_history_tail = _RunHistoryTail()
+    enclosure_timeline_tail = _EnclosureTimelineTail()
     activity_tail = _ActivityTail()
 
     backoff = _RECONNECT_INITIAL_SECONDS
@@ -1185,6 +1439,7 @@ async def _push_loop(
                 backoff = _RECONNECT_INITIAL_SECONDS
                 last_hash = None  # force one full push right after (re)connect
                 run_history_tail.on_reconnect()
+                enclosure_timeline_tail.on_reconnect()
                 ticks_since_push = _HEARTBEAT_TICKS  # push immediately on connect
 
                 inbox: asyncio.Queue[_Inbound] | None = None
@@ -1207,6 +1462,8 @@ async def _push_loop(
                             list_decisions=list_decisions,
                             run_history_tail=run_history_tail,
                             get_run_history=get_run_history,
+                            enclosure_timeline_tail=enclosure_timeline_tail,
+                            get_enclosure_history=get_enclosure_history,
                             activity_tail=activity_tail,
                             activity_trail=activity_trail,
                             witness_recorder=witness_recorder,
@@ -1278,6 +1535,7 @@ async def status_push_lifespan(
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
+    get_enclosure_history: GetEnclosureHistoryHandler,
     witness_recorder: RunWitnessRecorder | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn the StatusPush loop for the duration of the context.
@@ -1340,6 +1598,7 @@ async def status_push_lifespan(
             list_enclosures=list_enclosures,
             list_decisions=list_decisions,
             get_run_history=get_run_history,
+            get_enclosure_history=get_enclosure_history,
             activity_trail=activity_trail,
             producer_id=producer_id,
             url=url,
@@ -1357,4 +1616,9 @@ async def status_push_lifespan(
         _log.info(f"{_LOG_PREFIX}.stopped")
 
 
-__all__ = ["build_run_history_message", "build_snapshot", "status_push_lifespan"]
+__all__ = [
+    "build_enclosure_timeline_message",
+    "build_run_history_message",
+    "build_snapshot",
+    "status_push_lifespan",
+]

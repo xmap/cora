@@ -24,12 +24,14 @@ from cora.api._status_push import (
     _ActivityTail,
     _answer_request,
     _DecisionTail,
+    _EnclosureTimelineTail,
     _Inbound,
     _parse_inbound,
     _render_progress,
     _render_progress_trail,
     _RunHistoryTail,
     build_activity_message,
+    build_enclosure_timeline_message,
     build_run_history_message,
     build_run_history_response,
     build_snapshot,
@@ -45,6 +47,11 @@ from cora.decision.features.list_decisions import (
     DecisionListPage,
     DecisionSummaryItem,
     ListDecisions,
+)
+from cora.enclosure.features.get_enclosure_history import GetEnclosureHistory
+from cora.enclosure.features.get_enclosure_history.handler import (
+    EnclosureHistoryEvent,
+    EnclosureHistoryView,
 )
 from cora.enclosure.features.list_enclosures import (
     EnclosureListPage,
@@ -425,12 +432,29 @@ def _make_get_run_history(views: dict[UUID, RunHistoryView] | None = None):
     return get_run_history
 
 
+def _make_get_enclosure_history(views: dict[UUID, EnclosureHistoryView] | None = None):
+    views = views or {}
+
+    async def get_enclosure_history(
+        query: GetEnclosureHistory,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> EnclosureHistoryView | None:
+        return views.get(query.enclosure_id)
+
+    return get_enclosure_history
+
+
 def _default_handlers(**overrides: Any) -> dict[str, Any]:
     """Empty-by-default fakes for every domain `status_push_lifespan` needs,
     so a test overriding one domain doesn't have to spell out the other six.
-    `get_run_history` defaults to always returning `None`, so the default
-    fixture never emits a run-history message -- tests exercising REWIND
-    mode pass an explicit `views` mapping via `_make_get_run_history`."""
+    `get_run_history` and `get_enclosure_history` both default to always
+    returning `None`, so the default fixture never emits a run-history or
+    enclosure-timeline message -- tests exercising REWIND mode pass an
+    explicit `views` mapping via `_make_get_run_history` /
+    `_make_get_enclosure_history`."""
     defaults: dict[str, Any] = {
         "list_runs": _make_list_runs([]),
         "list_subjects": _make_list_subjects([]),
@@ -440,6 +464,7 @@ def _default_handlers(**overrides: Any) -> dict[str, Any]:
         "list_enclosures": _make_list_enclosures([]),
         "list_decisions": _make_list_decisions([]),
         "get_run_history": _make_get_run_history(),
+        "get_enclosure_history": _make_get_enclosure_history(),
     }
     defaults.update(overrides)
     return defaults
@@ -706,6 +731,381 @@ async def test_cached_terminal_returns_the_message_once_a_run_closes() -> None:
     assert cached is not None
     assert cached["run_id"] == str(run_id)
     assert cached["terminal"] is True
+
+
+# ---------- pure: build_enclosure_timeline_message ----------
+
+
+def _enclosure_history_view(
+    enclosure_id: UUID,
+    *,
+    name: str = "2-BM-A",
+    permit_status: str = "Permitted",
+    lifecycle: str = "Active",
+    events: list[EnclosureHistoryEvent] | None = None,
+    events_truncated: bool = False,
+) -> EnclosureHistoryView:
+    if events is None:
+        events = [
+            EnclosureHistoryEvent(
+                event_id=uuid4(),
+                event_type="EnclosureRegistered",
+                version=1,
+                occurred_at=_NOW,
+                recorded_at=_NOW,
+                payload={"enclosure_id": str(enclosure_id), "name": name},
+            )
+        ]
+    return EnclosureHistoryView(
+        enclosure_id=enclosure_id,
+        name=name,
+        permit_status=permit_status,
+        lifecycle=lifecycle,
+        events=events,
+        events_truncated=events_truncated,
+    )
+
+
+def _permit_observed_event(
+    *, from_status: str, to_status: str, occurred_at: datetime, version: int
+) -> EnclosureHistoryEvent:
+    """A realistic `EnclosurePermitObserved` history row, payload included,
+    with the PSS-address-carrying fields (`reason`, `monitor_ref`) a real
+    stored event actually has -- so redaction tests exercise the real
+    shape, not a payload that was already safe by construction."""
+    return EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosurePermitObserved",
+        version=version,
+        occurred_at=occurred_at,
+        recorded_at=occurred_at,
+        payload={
+            "from_status": from_status,
+            "to_status": to_status,
+            "reason": "PSS permit observation via S02BM-PSS:StaA:SecureM",
+            "trigger": "Monitor",
+            "triggered_by": str(uuid4()),
+            "monitor_ref": "EpicsPv:S02BM-PSS:StaA:SecureM",
+            "observed_at": None,
+        },
+    )
+
+
+@pytest.mark.unit
+def test_build_enclosure_timeline_message_shape_for_genesis_only() -> None:
+    enclosure_id = uuid4()
+    view = _enclosure_history_view(enclosure_id, permit_status="Unknown")
+
+    message = build_enclosure_timeline_message(
+        view=view, generated_at="2026-08-30T12:00:05+00:00", producer_id="p1"
+    )
+
+    assert message["kind"] == "enclosure_timeline"
+    assert message["schema_version"] == 1
+    assert message["producer_id"] == "p1"
+    assert message["enclosure_id"] == str(enclosure_id)
+    document = message["document"]
+    assert document["domain"] == {"from": _NOW.isoformat(), "to": "2026-08-30T12:00:05+00:00"}
+    assert document["subject_lane_id"] == "permit"
+    assert document["title"] == "2-BM-A"
+    assert document["subtitle"] == "Unknown"
+    assert document["truncated"] == {"events": False}
+    permit_lane = next(lane for lane in document["lanes"] if lane["lane_id"] == "permit")
+    lifecycle_lane = next(lane for lane in document["lanes"] if lane["lane_id"] == "lifecycle")
+    assert permit_lane["points"] == [
+        {"t": _NOW.isoformat(), "label": "Unknown", "state": "Unknown", "tone": "warn"}
+    ]
+    assert lifecycle_lane["points"] == [
+        {"t": _NOW.isoformat(), "label": "Active", "state": "Active"}
+    ]
+
+
+@pytest.mark.unit
+def test_build_enclosure_timeline_message_folds_permit_transitions_in_order() -> None:
+    enclosure_id = uuid4()
+    genesis = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureRegistered",
+        version=1,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        payload={},
+    )
+    permitted = _permit_observed_event(
+        from_status="Unknown",
+        to_status="Permitted",
+        occurred_at=_NOW + timedelta(seconds=5),
+        version=2,
+    )
+    not_permitted = _permit_observed_event(
+        from_status="Permitted",
+        to_status="NotPermitted",
+        occurred_at=_NOW + timedelta(seconds=10),
+        version=3,
+    )
+    view = _enclosure_history_view(
+        enclosure_id, permit_status="NotPermitted", events=[genesis, permitted, not_permitted]
+    )
+
+    message = build_enclosure_timeline_message(
+        view=view, generated_at="2026-08-30T12:00:20+00:00", producer_id="p1"
+    )
+
+    permit_lane = next(lane for lane in message["document"]["lanes"] if lane["lane_id"] == "permit")
+    assert [p["label"] for p in permit_lane["points"]] == ["Unknown", "Permitted", "NotPermitted"]
+    assert [p["tone"] for p in permit_lane["points"]] == ["warn", "good", "warn"]
+
+
+@pytest.mark.unit
+def test_build_enclosure_timeline_message_decommission_lands_on_lifecycle_lane_only() -> None:
+    enclosure_id = uuid4()
+    genesis = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureRegistered",
+        version=1,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        payload={},
+    )
+    decommissioned = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureDecommissioned",
+        version=2,
+        occurred_at=_NOW + timedelta(seconds=5),
+        recorded_at=_NOW + timedelta(seconds=5),
+        payload={"reason": "instrument removed", "triggered_by": str(uuid4())},
+    )
+    view = _enclosure_history_view(
+        enclosure_id, lifecycle="Decommissioned", events=[genesis, decommissioned]
+    )
+
+    message = build_enclosure_timeline_message(
+        view=view, generated_at="2026-08-30T12:00:10+00:00", producer_id="p1"
+    )
+
+    permit_lane = next(lane for lane in message["document"]["lanes"] if lane["lane_id"] == "permit")
+    lifecycle_lane = next(
+        lane for lane in message["document"]["lanes"] if lane["lane_id"] == "lifecycle"
+    )
+    assert len(permit_lane["points"]) == 1  # genesis only; decommission never touches permit
+    assert [p["label"] for p in lifecycle_lane["points"]] == ["Active", "Decommissioned"]
+
+
+@pytest.mark.unit
+def test_build_enclosure_timeline_message_truncated_key_is_events_not_observations() -> None:
+    enclosure_id = uuid4()
+    view = _enclosure_history_view(enclosure_id, events_truncated=True)
+
+    message = build_enclosure_timeline_message(view=view, generated_at="t1", producer_id="p1")
+
+    assert message["document"]["truncated"] == {"events": True}
+
+
+@pytest.mark.unit
+def test_build_enclosure_timeline_message_never_carries_reason_or_monitor_ref_or_source() -> None:
+    """The load-bearing redaction test for this whole lens: the raw
+    EnclosureHistoryEvent payloads DO carry the PSS PV address (via
+    `reason` and `monitor_ref`), because `get_enclosure_history` is a
+    general-purpose on-network read that legitimately ships full detail
+    (see its handler's own docstring). This function is the layer where
+    that must stop, because its output is what actually leaves the
+    beamline network for the external relay."""
+    enclosure_id = uuid4()
+    genesis = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureRegistered",
+        version=1,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        payload={},
+    )
+    observed = _permit_observed_event(
+        from_status="Unknown",
+        to_status="Permitted",
+        occurred_at=_NOW + timedelta(seconds=5),
+        version=2,
+    )
+    view = _enclosure_history_view(enclosure_id, events=[genesis, observed])
+
+    message = build_enclosure_timeline_message(view=view, generated_at="t1", producer_id="p1")
+
+    serialized = json.dumps(message)
+    assert "S02BM-PSS" not in serialized
+    assert "reason" not in serialized
+    assert "monitor_ref" not in serialized
+    assert "triggered_by" not in serialized
+    assert observed.payload["triggered_by"] not in serialized
+
+
+@pytest.mark.unit
+def test_build_enclosure_timeline_message_skips_an_unrecognized_event_type() -> None:
+    """Forward compatibility, mirroring the relay's own
+    `producer.unknown_kind` posture: a future Enclosure event this
+    producer predates must never break the live feed."""
+    enclosure_id = uuid4()
+    genesis = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureRegistered",
+        version=1,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        payload={},
+    )
+    from_the_future = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureSomethingNotYetInvented",
+        version=2,
+        occurred_at=_NOW + timedelta(seconds=5),
+        recorded_at=_NOW + timedelta(seconds=5),
+        payload={},
+    )
+    view = _enclosure_history_view(enclosure_id, events=[genesis, from_the_future])
+
+    message = build_enclosure_timeline_message(view=view, generated_at="t1", producer_id="p1")
+
+    permit_lane = next(lane for lane in message["document"]["lanes"] if lane["lane_id"] == "permit")
+    lifecycle_lane = next(
+        lane for lane in message["document"]["lanes"] if lane["lane_id"] == "lifecycle"
+    )
+    assert len(permit_lane["points"]) == 1
+    assert len(lifecycle_lane["points"]) == 1
+
+
+# ---------- _EnclosureTimelineTail ----------
+
+
+@pytest.mark.unit
+async def test_enclosure_timeline_tail_emits_on_first_sight() -> None:
+    enclosure_id = uuid4()
+    get_enclosure_history = _make_get_enclosure_history(
+        {enclosure_id: _enclosure_history_view(enclosure_id)}
+    )
+    tail = _EnclosureTimelineTail()
+    kernel = _kernel()
+
+    messages = await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t0",
+        producer_id="p1",
+    )
+
+    assert len(messages) == 1
+    assert messages[0]["enclosure_id"] == str(enclosure_id)
+
+
+@pytest.mark.unit
+async def test_enclosure_timeline_tail_emits_nothing_when_unchanged() -> None:
+    enclosure_id = uuid4()
+    get_enclosure_history = _make_get_enclosure_history(
+        {enclosure_id: _enclosure_history_view(enclosure_id)}
+    )
+    tail = _EnclosureTimelineTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t0",
+        producer_id="p1",
+    )
+    second = await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t1",
+        producer_id="p1",
+    )
+
+    assert second == []
+
+
+@pytest.mark.unit
+async def test_enclosure_timeline_tail_emits_again_once_the_document_changes() -> None:
+    enclosure_id = uuid4()
+    genesis = EnclosureHistoryEvent(
+        event_id=uuid4(),
+        event_type="EnclosureRegistered",
+        version=1,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        payload={},
+    )
+    views = {enclosure_id: _enclosure_history_view(enclosure_id, events=[genesis])}
+    get_enclosure_history = _make_get_enclosure_history(views)
+    tail = _EnclosureTimelineTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t0",
+        producer_id="p1",
+    )
+    observed = _permit_observed_event(
+        from_status="Unknown",
+        to_status="Permitted",
+        occurred_at=_NOW + timedelta(seconds=5),
+        version=2,
+    )
+    views[enclosure_id] = _enclosure_history_view(enclosure_id, events=[genesis, observed])
+    second = await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t1",
+        producer_id="p1",
+    )
+
+    assert len(second) == 1
+
+
+@pytest.mark.unit
+async def test_enclosure_timeline_tail_on_reconnect_repushes_an_unchanged_enclosure() -> None:
+    enclosure_id = uuid4()
+    get_enclosure_history = _make_get_enclosure_history(
+        {enclosure_id: _enclosure_history_view(enclosure_id)}
+    )
+    tail = _EnclosureTimelineTail()
+    kernel = _kernel()
+
+    await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t0",
+        producer_id="p1",
+    )
+    tail.on_reconnect()
+    after_reconnect = await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[enclosure_id],
+        generated_at="t1",
+        producer_id="p1",
+    )
+
+    assert len(after_reconnect) == 1
+
+
+@pytest.mark.unit
+async def test_enclosure_timeline_tail_skips_an_enclosure_the_handler_cannot_find() -> None:
+    tail = _EnclosureTimelineTail()
+    kernel = _kernel()
+    get_enclosure_history = _make_get_enclosure_history({})
+
+    messages = await tail.poll(
+        get_enclosure_history,
+        kernel,
+        enclosure_ids=[uuid4()],
+        generated_at="t0",
+        producer_id="p1",
+    )
+
+    assert messages == []
 
 
 # ---------- pure: build_run_history_response / _parse_inbound ----------
@@ -1507,6 +1907,79 @@ async def test_lifespan_pushes_active_enclosures_only() -> None:
         snapshot = json.loads(raw)
         assert len(snapshot["enclosures"]) == 1
         assert snapshot["enclosures"][0]["name"] == "2-BM-B"
+
+
+@pytest.mark.unit
+async def test_lifespan_pushes_enclosure_timeline_alongside_the_snapshot() -> None:
+    """End to end against a real socket: an Active enclosure with a
+    wired `get_enclosure_history` produces an `enclosure_timeline`
+    message on the same connection as the snapshot, and that message
+    carries no PSS PV address -- the redaction that matters happens on
+    the actual wire, not just inside the pure builder."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True, status_push_url=url, status_push_tick_seconds=0.1
+        )
+        enclosure_id = uuid4()
+        active = EnclosureSummaryItem(
+            enclosure_id=enclosure_id,
+            name="2-BM-A",
+            facility_code="cora",
+            lifecycle="Active",
+            permit_status="Permitted",
+            registered_at=_NOW,
+            registered_by=uuid4(),
+            last_permit_status_changed_at=None,
+            last_permit_status_reason=None,
+            last_trigger=None,
+            last_source_kind=None,
+            last_source_id=None,
+            last_source_observed_at=None,
+            decommissioned_at=None,
+            decommissioned_by=None,
+        )
+        genesis = EnclosureHistoryEvent(
+            event_id=uuid4(),
+            event_type="EnclosureRegistered",
+            version=1,
+            occurred_at=_NOW,
+            recorded_at=_NOW,
+            payload={},
+        )
+        observed = _permit_observed_event(
+            from_status="Unknown", to_status="Permitted", occurred_at=_NOW, version=2
+        )
+        view = _enclosure_history_view(
+            enclosure_id, name="2-BM-A", permit_status="Permitted", events=[genesis, observed]
+        )
+
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(
+                list_enclosures=_make_list_enclosures([active]),
+                get_enclosure_history=_make_get_enclosure_history({enclosure_id: view}),
+            ),
+        ):
+            first = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+            second = json.loads(await asyncio.wait_for(received.get(), timeout=5))
+
+        by_kind = {first.get("kind"): first, second.get("kind"): second}
+        assert "enclosure_timeline" in by_kind
+        assert "snapshot" in by_kind
+        timeline = by_kind["enclosure_timeline"]
+        assert timeline["enclosure_id"] == str(enclosure_id)
+        assert timeline["document"]["title"] == "2-BM-A"
+        assert timeline["document"]["subject_lane_id"] == "permit"
+        assert "S02BM-PSS" not in json.dumps(timeline)
+        assert "reason" not in json.dumps(timeline)
 
 
 # ---------- on-demand requests: first-ever inbound-frame tests ----------

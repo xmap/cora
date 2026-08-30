@@ -79,6 +79,8 @@
   .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
   .no-progress { color: var(--muted); font-style: italic; }
   .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
+  tr.clickable-row { cursor: pointer; }
+  tr.clickable-row:hover { background: var(--row-border); }
 
   /* ---- Rewind scrubber, adapted from docs/stylesheets/extra.css's
      .cora-scrubber block (the paper demo's own styling). Font stacks
@@ -285,6 +287,19 @@
   var socketOpen = false;
   var reconnectDelayMs = RECONNECT_INITIAL_MS;
 
+  // ---- REWIND's second subject: an Enclosure's own permit/lifecycle
+  // timeline. Unlike a run's history (fetched on click from
+  // /run-history/<id>), an enclosure's timeline document arrives
+  // entirely via push (the "enclosure_timeline" message) -- there is no
+  // fetch here at all, see infra/status-relay/relay.py's own module
+  // docstring for why REWIND-for-enclosures needs no on-demand request
+  // path the way REWIND-for-runs does. `enclosureTimelines` accumulates
+  // every one ever received, keyed by enclosure_id; `activeEnclosureId`
+  // is set while its timeline is the one mounted in the REWIND stage, so
+  // a later push for that SAME enclosure can live-remount it.
+  var enclosureTimelines = {};
+  var activeEnclosureId = null;
+
   function shortId(id) {
     return id ? String(id).slice(0, 8) : "";
   }
@@ -412,6 +427,10 @@
       var row = document.createElement("tr");
       row.appendChild(textCell(e.name));
       row.appendChild(textCell(e.permit_status));
+      row.className = "clickable-row";
+      row.addEventListener("click", function () {
+        showEnclosureTimeline(e.enclosure_id);
+      });
       return row;
     });
   }
@@ -658,6 +677,9 @@
       case "run_history_index":
         renderRewindPicker(msg.runs);
         break;
+      case "enclosure_timeline":
+        handleEnclosureTimeline(msg);
+        break;
       case "activity":
         handleActivity(msg);
         break;
@@ -754,7 +776,20 @@
     };
   }
 
+  // Shared by both REWIND subjects (a run's fetched history, an
+  // enclosure's pushed timeline): mount a ready-made timeline document
+  // into the one REWIND stage and reveal "Back to live". The two
+  // subjects differ only in how they OBTAIN a document -- see
+  // `showRewind` (fetch) and `showEnclosureTimeline` (map lookup) below
+  // -- never in how one gets displayed once obtained.
+  function mountTimelineInStage(doc, opts) {
+    rewindStageEl.textContent = "";
+    window.CoraScrubber.mount(rewindStageEl, doc, opts);
+    rewindBackEl.style.display = "inline-block";
+  }
+
   function showRewind(runId) {
+    activeEnclosureId = null;
     fetch("/run-history/" + encodeURIComponent(runId))
       .then(function (resp) {
         if (!resp.ok) {
@@ -765,16 +800,41 @@
         return resp.json();
       })
       .then(function (history) {
-        rewindStageEl.textContent = "";
-        window.CoraScrubber.mount(rewindStageEl, runHistoryToTimelineDocument(history), {
+        mountTimelineInStage(runHistoryToTimelineDocument(history), {
           chromeTitle: "Rewind",
           sliderLabel: "Fold cursor: time within the run",
         });
-        rewindBackEl.style.display = "inline-block";
       })
       .catch(function (err) {
         rewindStageEl.textContent = String(err.message || err);
       });
+  }
+
+  function handleEnclosureTimeline(msg) {
+    enclosureTimelines[msg.enclosure_id] = msg.document;
+    // A push for the enclosure currently on screen updates it live,
+    // the same way an open run's REWIND view would if it re-fetched --
+    // it does not today, but an enclosure's timeline changes rarely
+    // enough (see _EnclosureTimelineTail's own docstring) that
+    // remounting on every push costs nothing.
+    if (msg.enclosure_id === activeEnclosureId) {
+      showEnclosureTimeline(msg.enclosure_id);
+    }
+  }
+
+  function showEnclosureTimeline(enclosureId) {
+    rewindPickerEl.value = "";
+    activeEnclosureId = enclosureId;
+    var doc = enclosureTimelines[enclosureId];
+    if (!doc) {
+      rewindStageEl.textContent = "no timeline pushed yet for this enclosure";
+      rewindBackEl.style.display = "inline-block";
+      return;
+    }
+    mountTimelineInStage(doc, {
+      chromeTitle: "Rewind",
+      sliderLabel: "Fold cursor: time within the enclosure's history",
+    });
   }
 
   function backToLive() {
@@ -782,6 +842,7 @@
       rewindStageEl._coraScrubberCleanup();
     }
     rewindPickerEl.value = "";
+    activeEnclosureId = null;
     rewindStageEl.textContent = "";
     rewindBackEl.style.display = "none";
   }
