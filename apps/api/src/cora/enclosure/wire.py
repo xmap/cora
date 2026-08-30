@@ -30,6 +30,8 @@ Subject / Equipment (composition order matters, innermost first):
     raises `EnclosureCannotDecommissionError` -> HTTP 409, so
     HTTP-layer caching adds no value.)
   - `list_enclosures` (read; cursor-paginated over the projection)
+  - `get_enclosure_history` (read; one enclosure's own event stream,
+    exact timestamps, mirrors `get_run_history`)
 """
 
 from dataclasses import dataclass
@@ -42,6 +44,7 @@ from cora.enclosure.aggregates.enclosure import (
 )
 from cora.enclosure.features import (
     decommission_enclosure,
+    get_enclosure_history,
     list_enclosures,
     observe_enclosure_status,
     register_enclosure,
@@ -61,6 +64,7 @@ class EnclosureHandlers:
     observe_enclosure_status: observe_enclosure_status.Handler
     decommission_enclosure: decommission_enclosure.Handler
     list_enclosures: list_enclosures.Handler
+    get_enclosure_history: get_enclosure_history.Handler
     permit_probe_store: PermitProbeStore
     """The permit-probe trail's write store. Surfaced on the bundle,
     not a handler, so the FastAPI lifespan can hand it to the permit
@@ -102,6 +106,12 @@ def wire_enclosure(deps: Kernel) -> EnclosureHandlers:
         list_enclosures=with_tracing(
             list_enclosures.bind(deps),
             command_name="ListEnclosures",
+            bc=_BC,
+            kind="query",
+        ),
+        get_enclosure_history=with_tracing(
+            get_enclosure_history.bind(deps),
+            command_name="GetEnclosureHistory",
             bc=_BC,
             kind="query",
         ),

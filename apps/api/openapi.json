@@ -7344,6 +7344,92 @@
         "title": "EditionKind",
         "type": "string"
       },
+      "EnclosureHistoryEventItem": {
+        "description": "One event off the enclosure's own stream, primitives only.",
+        "properties": {
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "version",
+          "occurred_at",
+          "recorded_at",
+          "payload"
+        ],
+        "title": "EnclosureHistoryEventItem",
+        "type": "object"
+      },
+      "EnclosureHistoryResponse": {
+        "description": "Read-side DTO at the API boundary for one enclosure's full history.",
+        "properties": {
+          "enclosure_id": {
+            "format": "uuid",
+            "title": "Enclosure Id",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EnclosureHistoryEventItem"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "events_truncated": {
+            "title": "Events Truncated",
+            "type": "boolean"
+          },
+          "lifecycle": {
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "permit_status": {
+            "title": "Permit Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enclosure_id",
+          "name",
+          "permit_status",
+          "lifecycle",
+          "events",
+          "events_truncated"
+        ],
+        "title": "EnclosureHistoryResponse",
+        "type": "object"
+      },
       "EnclosureListResponse": {
         "description": "Page of enclosures plus opaque next-page cursor.",
         "properties": {
@@ -31439,6 +31525,73 @@
           }
         },
         "summary": "Decommission an Enclosure (terminal: Active -> Decommissioned)",
+        "tags": [
+          "enclosure"
+        ]
+      }
+    },
+    "/enclosures/{enclosure_id}/history": {
+      "get": {
+        "operationId": "get_enclosure_history_route_enclosures__enclosure_id__history_get",
+        "parameters": [
+          {
+            "description": "Target enclosure's id.",
+            "in": "path",
+            "name": "enclosure_id",
+            "required": true,
+            "schema": {
+              "description": "Target enclosure's id.",
+              "format": "uuid",
+              "title": "Enclosure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnclosureHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No enclosure exists with the given id."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "Get an enclosure's full exact-timestamped history",
         "tags": [
           "enclosure"
         ]

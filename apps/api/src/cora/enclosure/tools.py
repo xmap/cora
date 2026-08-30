@@ -12,6 +12,7 @@ from collections.abc import Callable
 from mcp.server.fastmcp import FastMCP
 
 from cora.enclosure.features.decommission_enclosure import tool as decommission_enclosure_tool
+from cora.enclosure.features.get_enclosure_history import tool as get_enclosure_history_tool
 from cora.enclosure.features.list_enclosures import tool as list_enclosures_tool
 from cora.enclosure.features.observe_enclosure_status import tool as observe_enclosure_status_tool
 from cora.enclosure.features.register_enclosure import tool as register_enclosure_tool
@@ -43,4 +44,8 @@ def register_enclosure_tools(
     list_enclosures_tool.register(
         mcp,
         get_handler=lambda: get_handlers().list_enclosures,
+    )
+    get_enclosure_history_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().get_enclosure_history,
     )
