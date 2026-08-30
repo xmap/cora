@@ -491,12 +491,18 @@
   // 2-BM record has 25 distinct stream types, but `Run` and `Decision`
   // alone are 91% of all events, so a lane per type would mean a handful
   // of dense lanes next to a long tail of near-empty ones. This mirrors
-  // the page's own seven domain tables above, plus one "Other" catch-all
-  // for everything that isn't one of them (Actor, Agent, Calibration,
-  // Allocation, and the rest of the 42-type event vocabulary), so the
-  // lane count is fixed and the layout never reflows.
+  // the page's own seven domain tables above, plus two more (Procedures,
+  // Cautions) that have no table of their own anywhere on the page but
+  // are worth a permanent lane regardless: Procedure is the only signal
+  // for "what's actually executing right now" within an open Run, and
+  // Caution is the beamline's safety-advisory channel, both too
+  // operationally load-bearing to leave folded into the "Other"
+  // catch-all below with Actor, Agent, Calibration, Allocation, and the
+  // rest of the 42-type event vocabulary. Lane count is still fixed
+  // either way, so the layout never reflows.
   var STREAM_TYPE_TO_DOMAIN = {
     Run: "runs",
+    Procedure: "procedures",
     Subject: "subjects",
     Campaign: "campaigns",
     Dataset: "datasets",
@@ -504,18 +510,22 @@
     Acquisition: "datasets",
     Clearance: "clearances",
     ClearanceTemplate: "clearances",
+    Caution: "cautions",
     Enclosure: "enclosures",
     Decision: "decisions",
   };
   var DOMAIN_ORDER = [
-    "runs", "subjects", "campaigns", "datasets", "clearances", "enclosures", "decisions", "other",
+    "runs", "procedures", "subjects", "campaigns", "datasets", "clearances", "cautions",
+    "enclosures", "decisions", "other",
   ];
   var DOMAIN_LABEL = {
     runs: "Runs",
+    procedures: "Procedures",
     subjects: "Subjects",
     campaigns: "Campaigns",
     datasets: "Datasets",
     clearances: "Clearances",
+    cautions: "Cautions",
     enclosures: "Enclosures",
     decisions: "Decisions",
     other: "Other",
@@ -555,7 +565,7 @@
       // through the generic "last event" path in renderReadout.
       subject_lane_id: "__no_subject__",
       title: "Live activity",
-      subtitle: buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 2h",
+      subtitle: buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 15m",
       domain: { from: domainFromIso, to: domainToIso },
       lanes: DOMAIN_ORDER.map(function (key) {
         return lanesByDomain[key];

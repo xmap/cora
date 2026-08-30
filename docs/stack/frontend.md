@@ -29,8 +29,9 @@ adapters rather than the producer emitting documents directly (each is
 expected to move server-side and disappear eventually):
 `runHistoryToTimelineDocument`, bridging the still-Run-shaped `run_history`
 wire payload for REWIND, and `activityToTimelineDocument`, bucketing the
-relay's `"activity"` messages into a rolling 15-minute window across seven
-domains plus an "Other" catch-all, for the page's "Live activity" section.
+relay's `"activity"` messages into a rolling 15-minute window across nine
+named domains plus an "Other" catch-all, for the page's "Live activity"
+section.
 All three lenses share the renderer via `mount()`'s `follow` option, which
 pins the cursor to the live edge instead of the start and disables replay
 controls that assume a closed timeline (Play, jump-to-last), and via an
