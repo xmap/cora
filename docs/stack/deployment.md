@@ -947,11 +947,13 @@ there is nothing here for a freshly-connecting browser to catch up on, by
 design, since the consumer (the page's own "Live activity" section) holds
 its own window client-side rather than asking the relay to hold one for it.
 
-`page.html` accumulates these into a client-side rolling window (2h, a
+`page.html` accumulates these into a client-side rolling window (15m, a
 client constant, not a server one: the producer streams what is new, the
 browser decides how much to keep), bucketed into the same seven domains as
-the live tables above plus an eighth "Other" catch-all for everything else
-in the 42-type event vocabulary, and renders it through the same subject-
+the live tables above, two more (Procedures, Cautions) that have no table
+of their own but are worth a permanent lane regardless, plus a tenth
+"Other" catch-all for everything else in the 42-type event vocabulary, and
+renders it through the same subject-
 neutral scrubber REWIND uses (`scrubber.js`'s `follow` option), pinned to
 "now" at the right edge. Dragging the cursor pauses following rather than
 fighting it: new activity keeps accumulating (a "Paused: N new events"
