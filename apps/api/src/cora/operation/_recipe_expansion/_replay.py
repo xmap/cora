@@ -24,7 +24,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from cora.infrastructure.ports.event_store import StoredEvent
-from cora.operation._recipe_expansion._expand import steps_to_wire
+from cora.operation._recipe_expansion._expand import steps_to_wire_with_closing
 from cora.operation.aggregates.procedure import (
     RecipeExpansionRecordNotFoundError,
     RecipeExpansionReplayMismatchError,
@@ -121,6 +121,8 @@ def verify_steps_hash(
     procedure_id: UUID,
     steps: tuple[Step, ...],
     pins: RecipeExpansionPins,
+    *,
+    closing_steps: tuple[Step, ...] = (),
 ) -> None:
     """Verify the re-expanded steps still hash to the recorded `steps_hash`.
 
@@ -129,8 +131,16 @@ def verify_steps_hash(
     produces different output for the same input than at write time);
     runs AFTER `verify_bindings_hash` because steps drift downstream
     of bindings is a confusing diagnostic.
+
+    `closing_steps` composes into the SAME pinned hash (one pin, no
+    aliasing): `steps_hash` was written over `steps_to_wire_with_closing`
+    at registration time, so replay must recompute the same combined
+    form. Defaults to `()`, which reproduces the pre-closing-steps hash
+    exactly for every recipe that has never used the field.
     """
-    recomputed = hashlib.sha256(canonical_json_bytes(steps_to_wire(steps))).hexdigest()
+    recomputed = hashlib.sha256(
+        canonical_json_bytes(steps_to_wire_with_closing(steps, closing_steps))
+    ).hexdigest()
     if recomputed != pins.steps_hash:
         raise RecipeExpansionReplayMismatchError(procedure_id, "steps")
 

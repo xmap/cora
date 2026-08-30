@@ -127,7 +127,11 @@ def bind(
         if procedure is None:
             raise ProcedureNotFoundError(command.procedure_id)
 
-        steps = await resolve_and_pin_conduct_steps(
+        # `_closing_steps` is unused here by design: this loop refuses a
+        # closing-bearing Recipe outright (v1 scope; see
+        # [[project_conduct_closing_steps_design]]), so it never reaches a
+        # non-empty value past that guard.
+        steps, _closing_steps = await resolve_and_pin_conduct_steps(
             deps,
             command_name=_COMMAND_NAME,
             procedure=procedure,

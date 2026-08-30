@@ -1584,6 +1584,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     "ResolvedStepsRecorded": {
         "occurred_at": "keep:time",
         "procedure_id": "token:uuid",
+        "resolved_closing_steps": "drop:opaque",
         "resolved_steps": "drop:opaque",
         "step_count": "keep:number",
     },

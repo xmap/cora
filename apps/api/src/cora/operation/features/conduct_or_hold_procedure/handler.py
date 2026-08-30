@@ -121,7 +121,10 @@ def bind(
         if procedure is None:
             raise ProcedureNotFoundError(command.procedure_id)
 
-        steps = await resolve_and_pin_conduct_steps(
+        # `_closing_steps`: resolved and pinned onto ResolvedStepsRecorded
+        # above, but not yet handed to the Conductor -- that lands with
+        # _run_closing. See [[project_conduct_closing_steps_design]].
+        steps, _closing_steps = await resolve_and_pin_conduct_steps(
             deps,
             command_name=_COMMAND_NAME,
             procedure=procedure,

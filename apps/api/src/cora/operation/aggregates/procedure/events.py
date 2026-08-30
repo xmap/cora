@@ -590,6 +590,13 @@ class ResolvedStepsRecorded:
     rewrite. `step_count` is a denorm for cheap read-side checks, mirror
     of `RecipeExpansionRecorded.step_count`.
 
+    `resolved_closing_steps` is the SAME resolution applied to the
+    Recipe's `closing_steps`, kept in a SEPARATE field rather than
+    flattened onto `resolved_steps`: a flat pin would let an
+    operator-supplied `conduct_from` boundary land inside the closing
+    region, and `execute_from` would replay closing steps as main steps
+    at absolute indices. Empty by default (additive, optional).
+
     Provenance-only: the evolver leaves Procedure state unchanged when
     this event arrives (mirrors `RecipeExpansionRecorded`).
     """
@@ -598,6 +605,7 @@ class ResolvedStepsRecorded:
     resolved_steps: tuple[Mapping[str, Any], ...]
     step_count: int
     occurred_at: datetime
+    resolved_closing_steps: tuple[Mapping[str, Any], ...] = ()
 
 
 # Discriminated union of every event the Procedure aggregate emits.
@@ -882,12 +890,14 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             resolved_steps=resolved_steps,
             step_count=step_count,
             occurred_at=occurred_at,
+            resolved_closing_steps=resolved_closing_steps,
         ):
             return {
                 "procedure_id": str(procedure_id),
                 "resolved_steps": [dict(step) for step in resolved_steps],
                 "step_count": step_count,
                 "occurred_at": occurred_at.isoformat(),
+                "resolved_closing_steps": [dict(step) for step in resolved_closing_steps],
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
@@ -1143,6 +1153,11 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     resolved_steps=tuple(dict(step) for step in payload["resolved_steps"]),
                     step_count=int(payload["step_count"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # `.get`, not `["resolved_closing_steps"]`: a stored event
+                    # from before closing steps existed has no such key.
+                    resolved_closing_steps=tuple(
+                        dict(step) for step in payload.get("resolved_closing_steps", [])
+                    ),
                 ),
             )
         case _:

@@ -7,7 +7,8 @@ parameterized step tuple into the concrete `Step` list a Procedure conducts, and
 that replay / verify that resolution:
 
   - `_expand`: the pure `expand(steps, bindings) -> Step list` substitution kernel
-    (+ `steps_to_wire` / `canonical_json_bytes` for provenance hashing).
+    (+ `steps_to_wire` / `steps_to_wire_with_closing` / `canonical_json_bytes`
+    for provenance hashing).
   - `_replay`: locate + verify the genesis `RecipeExpansionRecorded` provenance
     on the `conduct_procedure` path (re-expand and compare pinned hashes).
   - `_resolved_steps_replay`: locate the pinned `ResolvedStepsRecorded` provenance
@@ -21,6 +22,7 @@ from cora.operation._recipe_expansion._expand import (
     canonical_json_bytes,
     expand,
     steps_to_wire,
+    steps_to_wire_with_closing,
 )
 from cora.operation._recipe_expansion._replay import (
     MismatchField,
@@ -43,6 +45,7 @@ __all__ = [
     "find_resolved_steps_record",
     "pins_from_payload",
     "steps_to_wire",
+    "steps_to_wire_with_closing",
     "verify_bindings_hash",
     "verify_steps_hash",
 ]

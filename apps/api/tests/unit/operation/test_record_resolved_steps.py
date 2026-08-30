@@ -74,6 +74,36 @@ def test_decide_records_resolved_steps_for_defined_procedure() -> None:
 
 
 @pytest.mark.unit
+def test_decide_records_resolved_closing_steps_in_a_separate_field() -> None:
+    """resolved_closing_steps is NOT flattened into resolved_steps: a flat pin
+    would let a conduct_from boundary land inside the closing region."""
+    _, registered = _registered()
+    state = fold([registered])
+    steps = ({"kind": "setpoint", "address": "2bma:rot", "value": 1.0, "verify": False},)
+    closing = ({"kind": "setpoint", "address": "2bma:shutter", "value": 0.0, "verify": False},)
+
+    events = decide_resolved_steps_recorded(state, steps, now=_NOW, resolved_closing_steps=closing)
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.resolved_steps == steps
+    assert event.resolved_closing_steps == closing
+    assert event.step_count == 2  # 1 main + 1 closing, mirrors RecipeExpansionRecorded
+
+
+@pytest.mark.unit
+def test_decide_defaults_resolved_closing_steps_to_empty() -> None:
+    _, registered = _registered()
+    state = fold([registered])
+    steps = ({"kind": "setpoint", "address": "a", "value": 1.0, "verify": False},)
+
+    event = decide_resolved_steps_recorded(state, steps, now=_NOW)[0]
+
+    assert event.resolved_closing_steps == ()
+    assert event.step_count == 1
+
+
+@pytest.mark.unit
 def test_decide_records_nothing_when_state_is_none() -> None:
     steps = ({"kind": "setpoint", "address": "a", "value": 1.0, "verify": False},)
     assert decide_resolved_steps_recorded(None, steps, now=_NOW) == []

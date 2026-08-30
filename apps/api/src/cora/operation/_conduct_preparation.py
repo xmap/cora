@@ -66,6 +66,7 @@ def decide_resolved_steps_recorded(
     resolved_steps: Sequence[Mapping[str, Any]],
     *,
     now: datetime,
+    resolved_closing_steps: Sequence[Mapping[str, Any]] = (),
 ) -> list[ResolvedStepsRecorded]:
     """Pin the resolved step list iff the Procedure is pre-conduct (Defined).
 
@@ -77,16 +78,22 @@ def decide_resolved_steps_recorded(
     normal lifecycle failure, preserving the conduct route's failures-in-body
     contract instead of raising a fresh HTTP error here. Kept as a pure
     function so the decision is unit-testable without an event store.
+
+    `resolved_closing_steps` is the SAME resolution applied to the Recipe's
+    closing steps, pinned separately (not flattened into `resolved_steps`)
+    so a resume boundary can never land inside the closing region.
     """
     if state is None or state.status is not ProcedureStatus.DEFINED:
         return []
     steps = tuple(dict(step) for step in resolved_steps)
+    closing_steps = tuple(dict(step) for step in resolved_closing_steps)
     return [
         ResolvedStepsRecorded(
             procedure_id=state.id,
             resolved_steps=steps,
-            step_count=len(steps),
+            step_count=len(steps) + len(closing_steps),
             occurred_at=now,
+            resolved_closing_steps=closing_steps,
         )
     ]
 
@@ -102,16 +109,22 @@ async def resolve_and_pin_conduct_steps(
     principal_id: UUID,
     correlation_id: UUID,
     causation_id: UUID | None,
-) -> tuple[Step, ...]:
+) -> tuple[tuple[Step, ...], tuple[Step, ...]]:
     """Resolve the final conduct step list + pin it as `ResolvedStepsRecorded`.
 
     The shared pre-Conductor work for `conduct` / `conduct_or_hold`: recipe
     re-expansion (recipe-driven Procedures) -> pseudoaxis constituent
-    expansion (Run-phase Procedures) -> pin. Returns the resolved steps to
-    hand to the Conductor. `command_name` rides the pinned event's metadata.
+    expansion (Run-phase Procedures) -> pin. Returns `(steps, closing_steps)`
+    to hand to the Conductor. `command_name` rides the pinned event's
+    metadata.
+
+    A legacy (non-recipe-driven) Procedure has no closing steps: `caller_steps`
+    is an inline list with no separate closing half, so `closing_steps` is
+    always `()` on that path.
     """
+    closing_steps: tuple[Step, ...] = ()
     if procedure.recipe_id is not None:
-        steps = await _re_expand_steps(
+        steps, closing_steps = await _re_expand_steps(
             procedure_id=procedure.id,
             recipe_id=procedure.recipe_id,
             caller_steps=caller_steps,
@@ -146,9 +159,17 @@ async def resolve_and_pin_conduct_steps(
     # Pre-Conductor PseudoAxis expansion: rewrite any virtual-axis SetpointStep
     # into N sequential constituent SetpointSteps so the Conductor's dispatch
     # loop walks the constituents in declared order. ActionStep / CheckStep
-    # pass through unchanged ([[project-pseudoaxis-design]] v3).
+    # pass through unchanged ([[project-pseudoaxis-design]] v3). Closing steps
+    # get the SAME expansion, or a pseudoaxis closing setpoint would reach the
+    # Conductor unresolved.
     steps = await expansion_port.expand_pseudoaxis(
         steps,
+        event_store=deps.event_store,
+        correlation_id=correlation_id,
+        constituent_resolver=constituent_resolver,
+    )
+    closing_steps = await expansion_port.expand_pseudoaxis(
+        closing_steps,
         event_store=deps.event_store,
         correlation_id=correlation_id,
         constituent_resolver=constituent_resolver,
@@ -163,6 +184,7 @@ async def resolve_and_pin_conduct_steps(
         procedure,
         tuple(step_to_payload(step) for step in steps),
         now=deps.clock.now(),
+        resolved_closing_steps=tuple(step_to_payload(step) for step in closing_steps),
     )
     if resolved_steps_events:
         _, current_version = await deps.event_store.load(
@@ -187,7 +209,7 @@ async def resolve_and_pin_conduct_steps(
             ],
         )
 
-    return steps
+    return steps, closing_steps
 
 
 async def _re_expand_steps(
@@ -198,7 +220,7 @@ async def _re_expand_steps(
     stored_events: list[StoredEvent],
     event_store: EventStore,
     expansion_port: RecipeExpander,
-) -> tuple[Step, ...]:
+) -> tuple[tuple[Step, ...], tuple[Step, ...]]:
     """Run the recipe-replay gate per [[project-run-procedure-replay-design]].
 
     Six steps: reject non-empty caller steps -> find_recipe_expansion_record
@@ -209,7 +231,8 @@ async def _re_expand_steps(
     propagates from helper) -> load_capability + reject Deprecated
     (raise ProcedureBoundCapabilityDeprecatedError, symmetric to
     start_run's RunBoundPlanDeprecatedError) -> verify_bindings_hash ->
-    expand -> verify_steps_hash -> return the re-expanded tuple.
+    expand (both `recipe.steps` and `recipe.closing_steps`) ->
+    verify_steps_hash (one combined pin) -> return `(steps, closing_steps)`.
     """
     if list(caller_steps):
         raise ProcedureStepsForbiddenForRecipeDrivenError(procedure_id)
@@ -244,6 +267,8 @@ async def _re_expand_steps(
         raise ProcedureBoundCapabilityDeprecatedError(procedure_id, recipe.capability_id)
 
     verify_bindings_hash(procedure_id, pins)
-    expanded = expansion_port.expand(recipe.steps, dict(pins.bindings))
-    verify_steps_hash(procedure_id, expanded, pins)
-    return expanded
+    bindings_dict = dict(pins.bindings)
+    expanded = expansion_port.expand(recipe.steps, bindings_dict)
+    expanded_closing = expansion_port.expand(recipe.closing_steps, bindings_dict)
+    verify_steps_hash(procedure_id, expanded, pins, closing_steps=expanded_closing)
+    return expanded, expanded_closing

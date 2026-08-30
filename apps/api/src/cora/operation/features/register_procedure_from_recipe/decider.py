@@ -50,7 +50,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from cora.operation._recipe_expansion import canonical_json_bytes, steps_to_wire
+from cora.operation._recipe_expansion import canonical_json_bytes, steps_to_wire_with_closing
 from cora.operation.aggregates.procedure import (
     PROCEDURE_KIND_MAX_LENGTH,
     RECIPE_EXPANSION_STEP_MAX,
@@ -78,15 +78,19 @@ from cora.shared.bounded_text import validate_bounded_text
 from cora.shared.json_schema_validation import validate_values_against_schema
 
 
-def _hash_steps(steps: tuple[Step, ...]) -> str:
+def _hash_steps(steps: tuple[Step, ...], closing_steps: tuple[Step, ...]) -> str:
     """Content-address the expanded Step tuple per memo §RecipeExpansionRecorded.
 
     Hashing the expanded steps (not the unexpanded Recipe template)
     pins what the Conductor will actually execute, so a Recipe
     re-version that produces equivalent expanded steps still hashes
-    identically.
+    identically. One combined pin over main + closing (no aliasing):
+    an empty `closing_steps` reproduces the pre-closing-steps hash
+    byte-for-byte, so no existing pinned expansion is invalidated.
     """
-    return hashlib.sha256(canonical_json_bytes(steps_to_wire(steps))).hexdigest()
+    return hashlib.sha256(
+        canonical_json_bytes(steps_to_wire_with_closing(steps, closing_steps))
+    ).hexdigest()
 
 
 def _hash_bindings(bindings: Mapping[str, Any]) -> str:
@@ -136,16 +140,17 @@ def decide(
         raise InvalidProcedureIterationCapError(cap)
 
     steps_first = expansion_port.expand(recipe.steps, bindings_dict)
-    if len(steps_first) > RECIPE_EXPANSION_STEP_MAX:
-        raise RecipeExpansionOverflowError(
-            step_count=len(steps_first), cap=RECIPE_EXPANSION_STEP_MAX
-        )
+    closing_first = expansion_port.expand(recipe.closing_steps, bindings_dict)
+    total_count = len(steps_first) + len(closing_first)
+    if total_count > RECIPE_EXPANSION_STEP_MAX:
+        raise RecipeExpansionOverflowError(step_count=total_count, cap=RECIPE_EXPANSION_STEP_MAX)
 
-    # Determinism check: re-expand and compare. The port wraps a pure
-    # function; any divergence is a server-side bug in the port or the
+    # Determinism check: re-expand both lists and compare. The port wraps a
+    # pure function; any divergence is a server-side bug in the port or the
     # recipe body.
     steps_second = expansion_port.expand(recipe.steps, bindings_dict)
-    if steps_first != steps_second:
+    closing_second = expansion_port.expand(recipe.closing_steps, bindings_dict)
+    if steps_first != steps_second or closing_first != closing_second:
         raise RecipeExpansionDeterminismError(recipe.id)
 
     return [
@@ -169,9 +174,9 @@ def decide(
             capability_version=capability.version,
             bindings=bindings_dict,
             expansion_port_version=expansion_port.version,
-            steps_hash=_hash_steps(steps_first),
+            steps_hash=_hash_steps(steps_first, closing_first),
             bindings_hash=_hash_bindings(bindings_dict),
-            step_count=len(steps_first),
+            step_count=total_count,
             occurred_at=now,
         ),
     ]
