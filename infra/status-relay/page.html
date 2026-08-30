@@ -484,7 +484,7 @@
   // update) and there is no single subject with a "current status" -- a
   // busy hour touches many Runs, many Decisions -- so every lane here is
   // read the same generic "last event" way, none of them primary.
-  var FLOWING_WINDOW_MS = 2 * 60 * 60 * 1000;
+  var FLOWING_WINDOW_MS = 15 * 60 * 1000;
   var FLOWING_RESLIDE_MS = 60 * 1000;
 
   // Many-to-one by design, not one lane per stream_type: the measured
@@ -604,7 +604,7 @@
     window.CoraScrubber.mount(flowingStageEl, doc, {
       chromeTitle: "Live activity",
       subtitle: doc.subtitle,
-      sliderLabel: "Fold cursor: time within the last 2 hours",
+      sliderLabel: "Fold cursor: time within the last 15 minutes",
       follow: true,
       showPlay: false,
       showJumpLast: false,
