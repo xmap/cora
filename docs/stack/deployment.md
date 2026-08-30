@@ -918,9 +918,24 @@ side's design (in particular: why an `UnauthorizedError` from this path
 must never disconnect the live feed) and `infra/status-relay/relay.py`'s
 own module docstring for the relay side's pending-request registry.
 
-The other six live domains (Subjects, Campaigns, Datasets, Clearances,
-Enclosures, Decisions) have no rewind; Runs is the only domain with a
-natural bounded start and end.
+Of the other six live domains, only Enclosures has a rewind of its own
+(see below); Subjects, Campaigns, Datasets, Clearances, and Decisions do
+not.
+
+**Enclosure timelines, REWIND's second subject.** Every Active enclosure's
+permit/lifecycle history is pushed as its own message kind, `"enclosure_timeline"`,
+whenever it changes (`_EnclosureTimelineTail` in `cora.api._status_push`).
+Unlike run history, this needs no on-demand request path at all: at pilot
+scale there are only a handful of Enclosures and their transition rate is
+sparse, so the whole subject set fits in every push and the relay simply
+caches every one it has ever received (`relay.py`'s `_enclosure_timelines`,
+no eviction) and replays the full set to a browser on every `/watch`
+connect. Reaching "any enclosure in the record" therefore needs neither a
+producer round trip nor a bounded ring the way reaching any Run does. The
+document ships permit and lifecycle STATE transitions only -- never the
+`reason` or `monitor_ref` fields the underlying events carry, since those
+embed the PSS PV address behind the reading, exactly what this repo's
+export redaction tier already drops before anything leaves the facility.
 
 **Activity tail, and the flowing-window view it feeds:** arcturus also
 tail-follows the whole `events` table -- every BC, event metadata only

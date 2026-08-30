@@ -67,6 +67,21 @@ async def _get(url: str, headers: dict[str, str] | None = None) -> tuple[int, ob
     return await loop.run_in_executor(None, _blocking_request, url, headers or {})
 
 
+async def _recv_until_kind(ws, kind: str, *, max_frames: int = 10, timeout: float = 5) -> dict:
+    """Receive frames off a `/watch` socket until one with `"kind": kind`
+    arrives. `/watch` sends an initial burst of several frame kinds on
+    connect (connection-state, run-history index, replayed enclosure
+    timelines) whose exact count is an implementation detail this test
+    file should not have to track; this skips past whichever ones do not
+    match rather than asserting a fixed frame count."""
+    for _ in range(max_frames):
+        raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
+        msg = json.loads(raw)
+        if isinstance(msg, dict) and msg.get("kind") == kind:
+            return msg
+    raise AssertionError(f"no {kind!r} frame received within {max_frames} frames")
+
+
 class _RelayHarness:
     """Starts a real `relay.py` server on an ephemeral port for the
     duration of one `async with` block, mirroring `relay._run`'s own body
@@ -88,6 +103,7 @@ class _RelayHarness:
         relay._pending.clear()
         relay._watchers.clear()
         relay._run_histories.clear()
+        relay._enclosure_timelines.clear()
 
         check_viewer_auth = relay.basic_auth(
             realm="cora-status", credentials=(_VIEWER_USER, _VIEWER_PASSWORD)
@@ -124,6 +140,12 @@ class _RelayHarness:
         return websockets.connect(
             f"ws://127.0.0.1:{self.port}/ingest",
             additional_headers={"Authorization": f"Bearer {_TOKEN}"},
+        )
+
+    def connect_watcher(self) -> websockets.connect:
+        return websockets.connect(
+            f"ws://127.0.0.1:{self.port}/watch",
+            additional_headers={"Authorization": _AUTH_HEADER},
         )
 
 
@@ -321,6 +343,75 @@ async def test_too_many_inflight_requests_is_503_with_retry_after() -> None:
         assert len(busy) >= 1, "expected at least one 503 (too many in flight)"
         for task in pending:
             task.cancel()
+
+
+def _sample_enclosure_timeline(enclosure_id: str) -> dict:
+    return {
+        "kind": "enclosure_timeline",
+        "schema_version": 1,
+        "producer_id": "p1",
+        "generated_at": "2026-08-30T00:00:00+00:00",
+        "enclosure_id": enclosure_id,
+        "document": {
+            "domain": {"from": "2026-08-09T11:04:00+00:00", "to": "2026-08-30T00:00:00+00:00"},
+            "lanes": [
+                {"lane_id": "permit", "label": "Permit", "render": "markers", "points": []},
+                {"lane_id": "lifecycle", "label": "Lifecycle", "render": "markers", "points": []},
+            ],
+            "subject_lane_id": "permit",
+            "title": "2-BM-A",
+            "subtitle": "Permitted",
+            "truncated": {"events": False},
+        },
+    }
+
+
+async def test_enclosure_timeline_from_producer_is_broadcast_to_a_connected_watcher() -> None:
+    async with _RelayHarness() as harness, harness.connect_watcher() as watcher:
+        async with harness.connect_producer() as producer:
+            timeline = _sample_enclosure_timeline(str(uuid4()))
+            await producer.send(json.dumps(timeline))
+            received = await _recv_until_kind(watcher, "enclosure_timeline")
+            assert received == timeline, received
+
+
+async def test_enclosure_timeline_is_replayed_to_a_watcher_that_connects_later() -> None:
+    """The behavior that makes REWIND reach an enclosure without any
+    on-demand request path: unlike `activity`, a pushed timeline is
+    cached (`relay._enclosure_timelines`) and replayed on every new
+    `/watch` connection, not just broadcast to whoever happened to
+    already be listening."""
+    async with _RelayHarness() as harness:
+        enclosure_id = str(uuid4())
+        async with harness.connect_producer() as producer:
+            timeline = _sample_enclosure_timeline(enclosure_id)
+            await producer.send(json.dumps(timeline))
+            # Give the relay's event loop a turn to process the frame
+            # before a fresh watcher connects and expects to see it.
+            await asyncio.sleep(0.1)
+
+            async with harness.connect_watcher() as watcher:
+                received = await _recv_until_kind(watcher, "enclosure_timeline")
+                assert received == timeline, received
+
+
+async def test_malformed_enclosure_timeline_without_enclosure_id_is_dropped() -> None:
+    async with _RelayHarness() as harness, harness.connect_producer() as producer:
+        await producer.send(
+            json.dumps(
+                {
+                    "kind": "enclosure_timeline",
+                    "schema_version": 1,
+                    "producer_id": "p1",
+                    "generated_at": "2026-08-30T00:00:00+00:00",
+                    "document": {},
+                }
+            )
+        )
+        # No reply is expected either way; give the relay a turn to process
+        # (and, if it were going to, mis-store) the frame.
+        await asyncio.sleep(0.1)
+        assert relay._enclosure_timelines == {}
 
 
 TESTS: list[Callable[[], Awaitable[None]]] = [

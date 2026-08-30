@@ -17,19 +17,25 @@ socket. Still no framework, no build step, no bundler: two plain scripts.
 `scrubber.js` itself knows nothing about Runs or any other CORA domain: it
 renders a subject-neutral "timeline document" (a time domain plus a list of
 marker/series lanes), so a later lens over a different kind of subject is a
-server-side change, not a frontend one. Two document producers exist in
-`page.html` today, both client-side adapters rather than the producer
-emitting documents directly (each is expected to move server-side and
-disappear eventually): `runHistoryToTimelineDocument`, bridging the still-
-Run-shaped `run_history` wire payload for REWIND, and
-`activityToTimelineDocument`, bucketing the relay's `"activity"` messages
-into a rolling 2-hour window across seven domains plus an "Other" catch-
-all, for the page's "Live activity" section. The two share the renderer via
-`mount()`'s `follow` option, which pins the cursor to the live edge instead
-of the start and disables replay controls that assume a closed timeline
-(Play, jump-to-last), and via an `onScrub` callback the caller uses to
-learn a viewer grabbed the cursor and pause its own re-rendering rather
-than fight the drag.
+server-side change, not a frontend one. That claim was untested until the
+Enclosure lens landed: `page.html` stores each pushed `"enclosure_timeline"`
+message's `document` field and mounts it verbatim on a row click, with zero
+client-side adapting. It is proof the design works, not a counter-example
+to the paragraph below -- the two adapters that follow exist only because
+Run and the flowing window predate this shape.
+
+Two document producers exist in `page.html` today, both client-side
+adapters rather than the producer emitting documents directly (each is
+expected to move server-side and disappear eventually):
+`runHistoryToTimelineDocument`, bridging the still-Run-shaped `run_history`
+wire payload for REWIND, and `activityToTimelineDocument`, bucketing the
+relay's `"activity"` messages into a rolling 2-hour window across seven
+domains plus an "Other" catch-all, for the page's "Live activity" section.
+All three lenses share the renderer via `mount()`'s `follow` option, which
+pins the cursor to the live edge instead of the start and disables replay
+controls that assume a closed timeline (Play, jump-to-last), and via an
+`onScrub` callback the caller uses to learn a viewer grabbed the cursor and
+pause its own re-rendering rather than fight the drag.
 
 Next.js was picked below for a real multi-page application with routing,
 shared component state, and a build pipeline; this page has none of those.
