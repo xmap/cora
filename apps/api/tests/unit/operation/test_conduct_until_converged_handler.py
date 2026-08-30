@@ -13,6 +13,7 @@ Covers:
   - result_to_wire serializes success + failure
 """
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -26,9 +27,11 @@ from cora.infrastructure.ports import Allow, Deny
 from cora.infrastructure.ports.clock import FakeClock
 from cora.infrastructure.ports.id_generator import UUIDv7Generator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation._recipe_expansion import steps_to_wire_with_closing
 from cora.operation.adapters.in_memory_recipe_expander import InMemoryRecipeExpander
 from cora.operation.aggregates.procedure import (
     ProcedureRegistered,
+    RecipeExpansionRecorded,
     event_type_name,
     to_payload,
 )
@@ -40,16 +43,113 @@ from cora.operation.conductor import (
     Step,
     WithinToleranceCriterion,
 )
-from cora.operation.errors import UnauthorizedError
+from cora.operation.errors import UnauthorizedError, UnsupportedClosingStepsError
 from cora.operation.features.conduct_until_converged.command import (
     ConductUntilConverged,
     ConductUntilConvergedResult,
 )
 from cora.operation.features.conduct_until_converged.handler import bind
 from cora.operation.features.conduct_until_converged.route import result_to_wire
+from cora.recipe.aggregates.recipe import RecipeDefined, RecipeSetpointStep
+from cora.recipe.aggregates.recipe import event_type_name as recipe_event_type_name
+from cora.recipe.aggregates.recipe import to_payload as recipe_to_payload
+from cora.shared.canonical_json import canonical_json_bytes
 
 _NOW = datetime(2026, 6, 24, 12, 0, 0, tzinfo=UTC)
 _CRITERION = WithinToleranceCriterion(expected=0.0, tolerance=0.5)
+
+
+async def _seed_recipe_driven_procedure_with_closing_steps(
+    store: InMemoryEventStore, procedure_id: UUID
+) -> None:
+    """Seed a recipe-driven, Defined Procedure whose Recipe carries a
+    non-empty closing_steps -- the shape conduct_until_converged must
+    refuse (v1 scope). No Capability stream needed: `load_capability`
+    returning None is treated as "not deprecated"."""
+    recipe_id = uuid4()
+    capability_id = uuid4()
+    recipe_steps = (RecipeSetpointStep(address="dev:x", value=1.0),)
+    recipe_closing_steps = (RecipeSetpointStep(address="dev:shutter", value=0.0),)
+    recipe_event = RecipeDefined(
+        recipe_id=recipe_id,
+        name="R",
+        capability_id=capability_id,
+        steps=recipe_steps,
+        closing_steps=recipe_closing_steps,
+        occurred_at=_NOW,
+    )
+    await store.append(
+        stream_type="Recipe",
+        stream_id=recipe_id,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=recipe_event_type_name(recipe_event),
+                payload=recipe_to_payload(recipe_event),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="seed",
+                correlation_id=uuid4(),
+                causation_id=None,
+                principal_id=uuid4(),
+            ),
+        ],
+    )
+    expanded: tuple[Step, ...] = tuple(
+        SetpointStep(address=s.address, value=s.value)  # type: ignore[arg-type]
+        for s in recipe_steps
+    )
+    expanded_closing: tuple[Step, ...] = tuple(
+        SetpointStep(address=s.address, value=s.value)  # type: ignore[arg-type]
+        for s in recipe_closing_steps
+    )
+    steps_hash = hashlib.sha256(
+        canonical_json_bytes(steps_to_wire_with_closing(expanded, expanded_closing))
+    ).hexdigest()
+    bindings_hash = hashlib.sha256(canonical_json_bytes({})).hexdigest()
+    events = [
+        ProcedureRegistered(
+            procedure_id=procedure_id,
+            name="P",
+            kind="bakeout",
+            target_asset_ids=(),
+            parent_run_id=None,
+            capability_id=capability_id,
+            recipe_id=recipe_id,
+            occurred_at=_NOW,
+        ),
+        RecipeExpansionRecorded(
+            procedure_id=procedure_id,
+            recipe_id=recipe_id,
+            recipe_version=None,
+            capability_id=capability_id,
+            capability_version=None,
+            bindings={},
+            expansion_port_version="v2-pseudoaxis-aware",
+            steps_hash=steps_hash,
+            bindings_hash=bindings_hash,
+            step_count=len(recipe_steps) + len(recipe_closing_steps),
+            occurred_at=_NOW,
+        ),
+    ]
+    await store.append(
+        stream_type="Procedure",
+        stream_id=procedure_id,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=event_type_name(event),  # type: ignore[arg-type]
+                payload=to_payload(event),  # type: ignore[arg-type]
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="seed",
+                correlation_id=uuid4(),
+                causation_id=None,
+                principal_id=uuid4(),
+            )
+            for event in events
+        ],
+    )
 
 
 async def _seed_procedure(
@@ -281,3 +381,31 @@ def test_result_to_wire_serializes_cap_abort_failure() -> None:
     assert wire.failure is not None
     assert wire.failure.error_class == "ConvergenceIterationCapReached"
     assert wire.failure.step_index is None
+
+
+@pytest.mark.unit
+async def test_handler_refuses_a_closing_bearing_recipe() -> None:
+    """v1 scope: a loop-driving slice has no defined place to run
+    _run_closing, so it refuses rather than silently dropping the Recipe's
+    closing steps. The Conductor is never invoked."""
+    procedure_id = uuid4()
+    store = InMemoryEventStore()
+    await _seed_recipe_driven_procedure_with_closing_steps(store, procedure_id)
+    conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=0))
+    handler = bind(
+        _deps(_FakeAuthz(), store),  # type: ignore[arg-type]
+        conductor=conductor,  # type: ignore[arg-type]
+        expansion_port=InMemoryRecipeExpander(),
+    )
+    with pytest.raises(UnsupportedClosingStepsError) as exc:
+        await handler(
+            ConductUntilConverged(
+                procedure_id=procedure_id,
+                convergence_capture_name="offset",
+                criterion=_CRITERION,
+            ),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+        )
+    assert exc.value.procedure_id == procedure_id
+    assert conductor.calls == []

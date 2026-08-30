@@ -22,7 +22,7 @@ vocabulary. Tuples-on-the-wire arrive as lists; the converter widens to
 tuple for the in-process Conductor.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -192,3 +192,15 @@ def substrate_writes_to_wire(
     `result_to_wire` (conduct / conduct_or_hold / conduct_from) now that a
     third call site would otherwise repeat it."""
     return {k: list(v) if isinstance(v, tuple) else v for k, v in substrate_writes.items()}
+
+
+def closing_failures_to_wire(
+    closing_failures: Sequence[ConductorFailure],
+) -> list[ConductorFailureResponse]:
+    """Project `ConductorResult.closing_failures` onto its JSON wire shape.
+
+    Reuses `failure_to_wire` per entry -- a closing failure has the exact
+    same shape as the main-walk `failure`, just isolated into its own list
+    rather than halting the walk. Empty by default: most conducts have no
+    closing steps at all, or every closing step ran clean."""
+    return [failure_to_wire(f) for f in closing_failures]

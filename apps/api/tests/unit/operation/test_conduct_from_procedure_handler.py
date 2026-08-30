@@ -38,8 +38,15 @@ from cora.operation.aggregates.procedure import (
     load_procedure,
     to_payload,
 )
-from cora.operation.conductor import ActionStep, Conductor, SetpointStep, Step, step_to_payload
-from cora.operation.errors import UnauthorizedError
+from cora.operation.conductor import (
+    ActionStep,
+    CaptureStep,
+    Conductor,
+    SetpointStep,
+    Step,
+    step_to_payload,
+)
+from cora.operation.errors import ClosingCaptureBeforeBoundaryError, UnauthorizedError
 from cora.operation.features import (
     abort_procedure,
     append_activities,
@@ -55,6 +62,8 @@ from cora.operation.features.conduct_from_procedure import (
     Handler as ConductFromHandler,
 )
 from cora.operation.ports.control_port import ActuationKind, ControlPort
+from cora.operation.ports.measurement import Measurement
+from cora.recipe.aggregates.recipe.body import CaptureRef
 from cora.run.aggregates.run import RunHeld, RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
@@ -100,6 +109,7 @@ async def _seed_held_with_steps(
     store: InMemoryEventStore,
     *,
     steps: Sequence[Step],
+    closing_steps: Sequence[Step] = (),
     procedure_id: UUID = _PROCEDURE_ID,
     parent_run_id: UUID | None = None,
     held_actuation_kind: str | None = None,
@@ -108,6 +118,7 @@ async def _seed_held_with_steps(
     (the pinned resolved steps) + Started + Held. `held_actuation_kind` is the
     kind the pre-hold conduct observed (carried on ProcedureHeld)."""
     resolved = tuple(step_to_payload(s) for s in steps)
+    resolved_closing = tuple(step_to_payload(s) for s in closing_steps)
     events = [
         ProcedureRegistered(
             procedure_id=procedure_id,
@@ -120,7 +131,8 @@ async def _seed_held_with_steps(
         ResolvedStepsRecorded(
             procedure_id=procedure_id,
             resolved_steps=resolved,
-            step_count=len(resolved),
+            resolved_closing_steps=resolved_closing,
+            step_count=len(resolved) + len(resolved_closing),
             occurred_at=_PRIOR,
         ),
         ProcedureStarted(procedure_id=procedure_id, occurred_at=_PRIOR),
@@ -180,6 +192,10 @@ async def _status(store: InMemoryEventStore) -> ProcedureStatus:
     state = await load_procedure(store, _PROCEDURE_ID)
     assert state is not None
     return state.status
+
+
+def _good_reading(value: float) -> Measurement:
+    return Measurement(value=value, kind="Scalar", quality="Good", produced_at=_NOW)
 
 
 async def _call(handler: ConductFromHandler, boundary: int) -> ConductFromProcedureResult:
@@ -444,3 +460,65 @@ async def test_conduct_from_folds_pre_hold_actuation_kind_into_completion() -> N
     assert state is not None
     assert state.status is ProcedureStatus.COMPLETED
     assert state.actuation_kind == ActuationKind.HYBRID.value
+
+
+@pytest.mark.unit
+async def test_clean_tail_resume_also_runs_pinned_closing_steps() -> None:
+    """resolved_closing_steps is read off the pinned record and handed to
+    Conductor.conduct_from, not just parsed and discarded."""
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:a")
+    port.simulate_connect("2bma:shutter")
+    await _seed_held_with_steps(
+        store,
+        steps=(SetpointStep(address="2bma:a", value=1.0),),
+        closing_steps=(SetpointStep(address="2bma:shutter", value=0.0),),
+    )
+    deps = _deps(store)
+    result = await _call(_make_conduct_from(deps, port), 0)
+
+    assert result.succeeded is True
+    assert (await port.read("2bma:shutter")).value == 0.0
+    assert result.substrate_writes == {"2bma:a": 1.0, "2bma:shutter": 0.0}
+
+
+@pytest.mark.unit
+async def test_raises_closing_capture_before_boundary_when_only_prefix_declares_it() -> None:
+    """A closing CaptureRef naming a capture only a PRE-boundary main step
+    declares would resolve against nothing (captures start empty on resume) --
+    rejected up front rather than surfacing as a closing_failures entry."""
+    store = InMemoryEventStore()
+    await _seed_held_with_steps(
+        store,
+        steps=(
+            CaptureStep(address="2bma:a", capture_name="a_readback"),
+            SetpointStep(address="2bma:b", value=2.0),
+        ),
+        closing_steps=(SetpointStep(address="2bma:shutter", value=CaptureRef("a_readback")),),
+    )
+    deps = _deps(store)
+    with pytest.raises(ClosingCaptureBeforeBoundaryError) as exc:
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 1)  # skips the CaptureStep
+    assert exc.value.capture_name == "a_readback"
+    assert exc.value.boundary == 1
+
+
+@pytest.mark.unit
+async def test_closing_capture_declared_at_boundary_is_accepted() -> None:
+    """The same capture_name, declared AT the boundary (re-run this resume),
+    is fine: it will be populated before the closing step reads it."""
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.set_reading("2bma:a", _good_reading(1.0))
+    port.simulate_connect("2bma:shutter")
+    await _seed_held_with_steps(
+        store,
+        steps=(CaptureStep(address="2bma:a", capture_name="a_readback"),),
+        closing_steps=(SetpointStep(address="2bma:shutter", value=CaptureRef("a_readback")),),
+    )
+    deps = _deps(store)
+    result = await _call(_make_conduct_from(deps, port), 0)
+
+    assert result.succeeded is True
+    assert (await port.read("2bma:shutter")).value == 1.0

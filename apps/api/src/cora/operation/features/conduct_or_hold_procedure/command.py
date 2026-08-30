@@ -57,3 +57,10 @@ class ConductOrHoldProcedureResult:
     artifacts: tuple[ArtifactRef, ...] = ()
     outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
     substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])
+    closing_failures: tuple[ConductorFailure, ...] = ()
+    """Every closing step that failed, threaded from `ConductorResult.closing_failures`.
+
+    Always empty on a `held=True` outcome: closing runs only on a real
+    terminal (Completed / Aborted), never on Held. Isolated from `failure`:
+    a closing failure never flips `succeeded`.
+    """

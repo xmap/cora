@@ -67,7 +67,7 @@ from cora.operation.conductor import (
     Step,
     step_to_payload,
 )
-from cora.operation.errors import UnauthorizedError
+from cora.operation.errors import UnauthorizedError, UnsupportedClosingStepsError
 from cora.operation.features import (
     abort_procedure,
     append_activities,
@@ -217,6 +217,7 @@ async def _seed_held_steered(
     open_pass: bool = False,
     extra_outcome: tuple[int, float, float] | None = None,
     procedure_id: UUID = _PROCEDURE_ID,
+    resolved_closing_steps: tuple[Step, ...] = (),
 ) -> None:
     """Land a conducted-then-Held steered Procedure with recorded closed passes.
 
@@ -233,6 +234,7 @@ async def _seed_held_steered(
     open pass. It is recovered + re-fed by the resume.
     """
     resolved = tuple(step_to_payload(s) for s in _steered_block())
+    resolved_closing = tuple(step_to_payload(s) for s in resolved_closing_steps)
     events: list[ProcedureEvent] = [
         ProcedureRegistered(
             procedure_id=procedure_id,
@@ -245,7 +247,8 @@ async def _seed_held_steered(
         ResolvedStepsRecorded(
             procedure_id=procedure_id,
             resolved_steps=resolved,
-            step_count=len(resolved),
+            resolved_closing_steps=resolved_closing,
+            step_count=len(resolved) + len(resolved_closing),
             occurred_at=_PRIOR,
         ),
         ProcedureStarted(procedure_id=procedure_id, occurred_at=_PRIOR),
@@ -623,6 +626,28 @@ async def test_resume_authz_deny_raises_unauthorized() -> None:
     deps = _deps(store, deny=True)
 
     with pytest.raises(UnauthorizedError):
+        await _call(_make_conduct_from(deps, port, compute, outcome_store))
+
+
+@pytest.mark.unit
+async def test_resume_refuses_a_closing_bearing_pinned_record() -> None:
+    """v1 scope, mirroring conduct_until_advised's forward-direction refusal:
+    the pinned record already carries resolved_closing_steps when the bound
+    Recipe has any, so no fresh Recipe load is needed to reject here."""
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(
+        store,
+        outcome_store,
+        closed=[(3.0, 2.0)],
+        resolved_closing_steps=(SetpointStep(address="2bma:shutter", value=0.0),),
+    )
+    deps = _deps(store)
+
+    with pytest.raises(UnsupportedClosingStepsError):
         await _call(_make_conduct_from(deps, port, compute, outcome_store))
     assert await _status(store) is ProcedureStatus.HELD
 

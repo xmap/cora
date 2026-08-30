@@ -64,16 +64,46 @@ from cora.operation.aggregates.procedure import (
     ResolvedStepsRecordNotFoundError,
     load_procedure_with_events,
 )
-from cora.operation.conductor import Conductor, is_acquisition_halt, steps_from_payload
-from cora.operation.errors import UnauthorizedError
+from cora.operation.conductor import (
+    CaptureStep,
+    ComputeStep,
+    Conductor,
+    SetpointStep,
+    Step,
+    is_acquisition_halt,
+    steps_from_payload,
+)
+from cora.operation.errors import ClosingCaptureBeforeBoundaryError, UnauthorizedError
 from cora.operation.features.conduct_from_procedure.command import (
     ConductFromProcedure,
     ConductFromProcedureResult,
 )
+from cora.recipe.aggregates.recipe.body import CaptureRef
 
 _COMMAND_NAME = "ConductFromProcedure"
 
 _log = get_logger(__name__)
+
+
+def _capture_names_declared_from(steps: tuple[Step, ...], boundary: int) -> frozenset[str]:
+    """Capture names a main step at or after `boundary` deposits.
+
+    Only these are guaranteed to be populated during THIS resume: `captures`
+    starts empty and the tail from `boundary` is all that re-runs."""
+    declared: set[str] = set()
+    for step in steps[boundary:]:
+        if isinstance(step, (CaptureStep, ComputeStep)) and step.capture_name is not None:
+            declared.add(step.capture_name)
+    return frozenset(declared)
+
+
+def _closing_capture_refs(closing_steps: tuple[Step, ...]) -> frozenset[str]:
+    """Capture names a closing step's `SetpointStep.value` reads via `CaptureRef`."""
+    return frozenset(
+        step.value.capture_name
+        for step in closing_steps
+        if isinstance(step, SetpointStep) and isinstance(step.value, CaptureRef)
+    )
 
 
 class Handler(Protocol):
@@ -157,6 +187,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
         if record is None:
             raise ResolvedStepsRecordNotFoundError(command.procedure_id)
         steps = steps_from_payload(record.payload["resolved_steps"])
+        closing_steps = steps_from_payload(record.payload.get("resolved_closing_steps", ()))
 
         # Upper-bound guard: a boundary PAST the pinned step count would replay
         # an empty tail and silently auto-complete with nothing re-driven. The
@@ -167,11 +198,25 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
         if command.re_establishment_boundary > len(steps):
             raise InvalidProcedureReEstablishmentBoundaryError(command.re_establishment_boundary)
 
+        # A closing CaptureRef must resolve against THIS resume's captures,
+        # which start empty and fill only from `boundary` onward -- a name
+        # only a pre-boundary main step declares would otherwise fail deep
+        # inside _run_closing's per-step isolation instead of up front.
+        # See ClosingCaptureBeforeBoundaryError.
+        missing_captures = _closing_capture_refs(closing_steps) - _capture_names_declared_from(
+            steps, command.re_establishment_boundary
+        )
+        if missing_captures:
+            raise ClosingCaptureBeforeBoundaryError(
+                sorted(missing_captures)[0], command.re_establishment_boundary
+            )
+
         result = await conductor.conduct_from(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
             steps=steps,
+            closing_steps=closing_steps,
             boundary=command.re_establishment_boundary,
             # The pre-hold conduct's observed kind (folded onto the Held
             # Procedure) so the terminal event reflects the FULL provenance,
@@ -207,6 +252,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
             artifacts=result.artifacts,
             outputs=result.outputs,
             substrate_writes=result.substrate_writes,
+            closing_failures=result.closing_failures,
         )
 
     return handler

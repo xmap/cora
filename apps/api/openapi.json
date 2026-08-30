@@ -3874,6 +3874,14 @@
             ],
             "title": "Actuation Kind"
           },
+          "closing_failures": {
+            "description": "Every closing step that failed. Always empty on `acquisition_halt=True`. Never flips `succeeded`.",
+            "items": {
+              "$ref": "#/components/schemas/ConductorFailureResponse"
+            },
+            "title": "Closing Failures",
+            "type": "array"
+          },
           "completed_count": {
             "title": "Completed Count",
             "type": "integer"
@@ -3986,6 +3994,14 @@
             ],
             "title": "Actuation Kind"
           },
+          "closing_failures": {
+            "description": "Every closing step that failed. Always empty on `held=True`: closing runs only on a real terminal, never on Held. Never flips `succeeded`.",
+            "items": {
+              "$ref": "#/components/schemas/ConductorFailureResponse"
+            },
+            "title": "Closing Failures",
+            "type": "array"
+          },
           "completed_count": {
             "title": "Completed Count",
             "type": "integer"
@@ -4097,6 +4113,14 @@
             ],
             "title": "Actuation Kind"
           },
+          "closing_failures": {
+            "description": "Every closing step that failed. Isolated from `failure`: a closing failure never flips `succeeded`, and one closing step failing does not stop the rest of the closing walk. Empty when the recipe has no closing steps, or all ran clean.",
+            "items": {
+              "$ref": "#/components/schemas/ConductorFailureResponse"
+            },
+            "title": "Closing Failures",
+            "type": "array"
+          },
           "completed_count": {
             "title": "Completed Count",
             "type": "integer"
@@ -4137,7 +4161,7 @@
                 }
               ]
             },
-            "description": "Every control address this conduct wrote, in first-write order, carrying the last value written to each. CORA does not restore what it sets, and a halt returns at the failing step without running the recipe's remaining steps, so on a failed conduct this is what was left set with nothing having put it back. Reports what was WRITTEN, not what changed: a write whose value already matched the address still appears.",
+            "description": "Every control address this conduct wrote, in first-write order, carrying the last value written to each. Includes the recipe's closing steps, which run on a real terminal (Completed or Aborted). Reports what was WRITTEN, not what changed: a write whose value already matched the address still appears.",
             "title": "Substrate Writes",
             "type": "object"
           },
@@ -40965,7 +40989,7 @@
             "description": "Procedure is not in `Held` status, OR its parent Run is itself `Held` (off-diagonal guard)."
           },
           "422": {
-            "description": "Path parameter or request body failed schema validation."
+            "description": "Path parameter or request body failed schema validation, OR a closing step's CaptureRef names a capture only a pre-boundary main step declares (ClosingCaptureBeforeBoundaryError)."
           },
           "500": {
             "content": {

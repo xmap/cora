@@ -57,3 +57,11 @@ class ConductFromProcedureResult:
     artifacts: tuple[ArtifactRef, ...] = ()
     outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
     substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])
+    closing_failures: tuple[ConductorFailure, ...] = ()
+    """Every closing step that failed, threaded from `ConductorResult.closing_failures`.
+
+    Always empty on `acquisition_halt=True`: closing runs only on a real
+    terminal (complete / abort), never on the halt-for-operator branch that
+    leaves the Procedure Running. Isolated from `failure`: never flips
+    `succeeded`.
+    """

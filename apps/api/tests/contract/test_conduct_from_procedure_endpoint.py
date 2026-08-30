@@ -172,6 +172,74 @@ def test_post_conduct_from_returns_400_for_boundary_past_step_count() -> None:
     assert response.status_code == 400
 
 
+def _register_from_recipe_with_closing_capture(client: TestClient) -> UUID:
+    """Recipe whose closing step reads a capture only its SECOND main step
+    declares. The failing setpoint at index 0 is recoverable (Held); the
+    CaptureStep at index 1 never runs during that pass but is still part of
+    the pinned resolved steps."""
+    cap = client.post(
+        "/capabilities",
+        json={
+            "code": "cora.capability.closing_capture_recipe",
+            "name": "ClosingCaptureCap",
+            "required_affordances": [],
+            "executor_shapes": ["Procedure"],
+        },
+    ).json()
+    recipe = client.post(
+        "/recipes",
+        json={
+            "name": "closing capture recipe",
+            "capability_id": cap["capability_id"],
+            "steps": {
+                "steps": [
+                    {"kind": "setpoint", "address": "2bma:unconnected", "value": 1.0},
+                    {"kind": "capture", "address": "2bma:readback", "capture_name": "a_readback"},
+                ],
+            },
+            "closing_steps": {
+                "steps": [
+                    {
+                        "kind": "setpoint",
+                        "address": "2bma:shutter",
+                        "value": {"__capture__": "a_readback"},
+                    },
+                ],
+            },
+        },
+    ).json()
+    registered = client.post(
+        "/procedures/from-recipe",
+        json={
+            "name": "closing capture procedure",
+            "kind": "bakeout",
+            "target_asset_ids": [],
+            "parent_run_id": None,
+            "recipe_id": recipe["recipe_id"],
+            "bindings": {},
+        },
+    )
+    assert registered.status_code == 201, registered.text
+    return UUID(registered.json()["procedure_id"])
+
+
+@pytest.mark.contract
+def test_post_conduct_from_returns_422_for_closing_capture_before_boundary() -> None:
+    """A closing CaptureRef naming a capture only a pre-boundary main step
+    declares is rejected up front: resume starts captures empty, so a
+    boundary that skips the declaring step would never populate it."""
+    with TestClient(create_app()) as client:
+        pid = _register_from_recipe_with_closing_capture(client)
+        held = client.post(f"/procedures/{pid}/conduct-or-hold", json={"steps": []})
+        assert held.status_code == 200, held.text
+        assert held.json()["held"] is True
+        # boundary == 2 (both main steps done): skips the CaptureStep entirely.
+        response = client.post(
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 2}
+        )
+    assert response.status_code == 422, response.text
+
+
 @pytest.mark.contract
 def test_post_conduct_from_aborts_on_a_genuine_step_failure() -> None:
     """Replaying a tail whose setpoint still fails (unconnected address) aborts:

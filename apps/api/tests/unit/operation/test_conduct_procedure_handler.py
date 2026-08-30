@@ -126,6 +126,7 @@ class _ConductCall:
     causation_id: UUID | None
     surface_id: UUID
     steps: Sequence[Step]
+    closing_steps: Sequence[Step] = ()
 
 
 @dataclass
@@ -142,6 +143,7 @@ class _FakeConductor:
         principal_id: UUID,
         correlation_id: UUID,
         steps: Sequence[Step],
+        closing_steps: Sequence[Step] = (),
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> ConductorResult:
@@ -153,6 +155,7 @@ class _FakeConductor:
                 causation_id=causation_id,
                 surface_id=surface_id,
                 steps=steps,
+                closing_steps=closing_steps,
             )
         )
         return self.result
@@ -891,6 +894,9 @@ async def test_conduct_procedure_recipe_with_closing_steps_pins_them_re_expanded
     assert len(recorded) == 1
     expected_closing = SetpointStep(address="dev:shutter", value=0.0)
     assert recorded[0].resolved_closing_steps == (step_to_payload(expected_closing),)
+    # Pinned is not enough: the Conductor must actually receive them, or
+    # _run_closing never walks them.
+    assert conductor.calls[0].closing_steps == (expected_closing,)
     assert recorded[0].step_count == 2  # 1 main + 1 closing
 
 

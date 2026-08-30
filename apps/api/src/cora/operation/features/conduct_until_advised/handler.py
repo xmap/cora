@@ -42,7 +42,11 @@ from cora.operation.aggregates.procedure import (
     load_procedure_with_events,
 )
 from cora.operation.conductor import Conductor
-from cora.operation.errors import SteeringWireMismatchError, UnauthorizedError
+from cora.operation.errors import (
+    SteeringWireMismatchError,
+    UnauthorizedError,
+    UnsupportedClosingStepsError,
+)
 from cora.operation.features.conduct_until_advised.command import (
     ConductUntilAdvised,
     ConductUntilAdvisedResult,
@@ -134,11 +138,7 @@ def bind(
         if procedure is None:
             raise ProcedureNotFoundError(command.procedure_id)
 
-        # `_closing_steps` is unused here by design: this loop refuses a
-        # closing-bearing Recipe outright (v1 scope; see
-        # [[project_conduct_closing_steps_design]]), so it never reaches a
-        # non-empty value past that guard.
-        steps, _closing_steps = await resolve_and_pin_conduct_steps(
+        steps, closing_steps = await resolve_and_pin_conduct_steps(
             deps,
             command_name=_COMMAND_NAME,
             procedure=procedure,
@@ -149,6 +149,12 @@ def bind(
             correlation_id=correlation_id,
             causation_id=causation_id,
         )
+        # v1 scope: a loop that re-walks one pass block repeatedly has no
+        # defined place to run _run_closing. Refuse outright rather than
+        # silently drop the Recipe's closing steps or guess when to run
+        # them. See [[project_conduct_closing_steps_design]].
+        if closing_steps:
+            raise UnsupportedClosingStepsError(command.procedure_id)
 
         llm_calls: list[SteeringLlmCall] = []
         decide_port = build_decide_port(

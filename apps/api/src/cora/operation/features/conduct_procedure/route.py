@@ -45,6 +45,7 @@ from cora.operation._conduct_wire import (
     STEP_BATCH_MAX,
     ConductorFailureResponse,
     StepRequest,
+    closing_failures_to_wire,
     failure_to_wire,
     step_from_wire,
     substrate_writes_to_wire,
@@ -94,12 +95,20 @@ class ConductProcedureResponse(BaseModel):
         default_factory=dict[str, int | float | bool | str | list[Any]],
         description=(
             "Every control address this conduct wrote, in first-write "
-            "order, carrying the last value written to each. CORA does "
-            "not restore what it sets, and a halt returns at the failing "
-            "step without running the recipe's remaining steps, so on a "
-            "failed conduct this is what was left set with nothing having "
-            "put it back. Reports what was WRITTEN, not what changed: a "
-            "write whose value already matched the address still appears."
+            "order, carrying the last value written to each. Includes the "
+            "recipe's closing steps, which run on a real terminal "
+            "(Completed or Aborted). Reports what was WRITTEN, not what "
+            "changed: a write whose value already matched the address "
+            "still appears."
+        ),
+    )
+    closing_failures: list[ConductorFailureResponse] = Field(
+        default_factory=list[ConductorFailureResponse],
+        description=(
+            "Every closing step that failed. Isolated from `failure`: a "
+            "closing failure never flips `succeeded`, and one closing "
+            "step failing does not stop the rest of the closing walk. "
+            "Empty when the recipe has no closing steps, or all ran clean."
         ),
     )
 
@@ -116,6 +125,7 @@ def result_to_wire(result: ConductProcedureResult) -> ConductProcedureResponse:
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
         substrate_writes=substrate_writes_to_wire(result.substrate_writes),
+        closing_failures=closing_failures_to_wire(result.closing_failures),
     )
 
 

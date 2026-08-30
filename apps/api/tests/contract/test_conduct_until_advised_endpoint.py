@@ -191,6 +191,76 @@ def _register_from_steered_recipe(client: TestClient) -> UUID:
     return UUID(registered.json()["procedure_id"])
 
 
+def _register_from_steered_recipe_with_closing_steps(client: TestClient) -> UUID:
+    """Same as `_register_from_steered_recipe`, plus a non-empty closing_steps
+    on the Recipe -- the shape conduct_until_advised must refuse (v1 scope:
+    a loop that re-walks one pass block has no defined place to run
+    _run_closing)."""
+    cap = client.post(
+        "/capabilities",
+        json={
+            "code": "cora.capability.steered_align_recipe_closing",
+            "name": "SteeredAlignClosingCap",
+            "required_affordances": [],
+            "executor_shapes": ["Method", "Procedure"],
+        },
+    ).json()
+    recipe = client.post(
+        "/recipes",
+        json={
+            "name": "steered align recipe with closing steps",
+            "capability_id": cap["capability_id"],
+            "steps": {
+                "steps": [
+                    {
+                        "kind": "compute",
+                        "command": ["tomopy", "find_center"],
+                        "input_uris": ["file:///data/19bm/align/theta_pair.h5"],
+                        "output_uri": None,
+                        "parameters": {},
+                        "capture_name": _OBJECTIVE_NAME,
+                    },
+                    {
+                        "kind": "setpoint",
+                        "address": "19bm:sample_rotary_theta",
+                        "value": {"__steering__": _AXIS},
+                        "verify": False,
+                    },
+                ],
+            },
+            "closing_steps": {
+                "steps": [
+                    {"kind": "setpoint", "address": "19bm:shutter", "value": 0.0},
+                ],
+            },
+        },
+    ).json()
+    registered = client.post(
+        "/procedures/from-recipe",
+        json={
+            "name": "steered align from recipe with closing",
+            "kind": "rotation_center_characterization",
+            "target_asset_ids": [],
+            "parent_run_id": None,
+            "recipe_id": recipe["recipe_id"],
+            "bindings": {},
+        },
+    )
+    assert registered.status_code == 201, registered.text
+    return UUID(registered.json()["procedure_id"])
+
+
+@pytest.mark.contract
+def test_post_conduct_until_advised_refuses_a_closing_bearing_recipe() -> None:
+    """v1 scope: a loop-driving slice has no defined place to run
+    _run_closing, so it refuses a closing-bearing Recipe outright (422),
+    before any FSM event fires."""
+    with TestClient(create_app()) as client:
+        pid = _register_from_steered_recipe_with_closing_steps(client)
+        run = client.post(_PATH.format(pid=pid), json=_body())
+    assert run.status_code == 422, run.text
+
+
 @pytest.mark.contract
 def test_post_conduct_until_advised_steered_recipe_executes_over_the_wire() -> None:
     """A SteeringRef-authored recipe drives conduct_until_advised over the wire.
