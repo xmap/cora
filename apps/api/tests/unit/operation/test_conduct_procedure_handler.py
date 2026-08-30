@@ -126,6 +126,7 @@ class _ConductCall:
     causation_id: UUID | None
     surface_id: UUID
     steps: Sequence[Step]
+    closing_steps: Sequence[Step] = ()
 
 
 @dataclass
@@ -142,6 +143,7 @@ class _FakeConductor:
         principal_id: UUID,
         correlation_id: UUID,
         steps: Sequence[Step],
+        closing_steps: Sequence[Step] = (),
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> ConductorResult:
@@ -153,6 +155,7 @@ class _FakeConductor:
                 causation_id=causation_id,
                 surface_id=surface_id,
                 steps=steps,
+                closing_steps=closing_steps,
             )
         )
         return self.result
@@ -503,7 +506,7 @@ def test_conduct_procedure_request_default_is_empty_step_list() -> None:
 
 import hashlib  # noqa: E402
 
-from cora.operation._recipe_expansion import steps_to_wire  # noqa: E402
+from cora.operation._recipe_expansion import steps_to_wire_with_closing  # noqa: E402
 from cora.operation.aggregates.procedure import (  # noqa: E402
     ProcedureBoundCapabilityDeprecatedError,
     ProcedureNotFoundError,
@@ -599,6 +602,7 @@ async def _seed_recipe_driven_procedure(
     *,
     bindings: dict[str, object] | None = None,
     recipe_steps: tuple[RecipeSetpointStep, ...] | None = None,
+    recipe_closing_steps: tuple[RecipeSetpointStep, ...] = (),
     expansion_port_version: str = "v2-pseudoaxis-aware",
     bindings_hash_override: str | None = None,
     steps_hash_override: str | None = None,
@@ -625,6 +629,7 @@ async def _seed_recipe_driven_procedure(
         capability_id=capability_id,
         steps=rsteps,
         occurred_at=_NOW,
+        closing_steps=recipe_closing_steps,
     )
     await store.append(
         stream_type="Recipe",
@@ -653,8 +658,14 @@ async def _seed_recipe_driven_procedure(
         SetpointStep(address=s.address, value=s.value)  # type: ignore[arg-type]
         for s in rsteps
     )
+    expanded_closing_for_hash: tuple[Step, ...] = tuple(
+        SetpointStep(address=s.address, value=s.value)  # type: ignore[arg-type]
+        for s in recipe_closing_steps
+    )
     expected_steps_hash = hashlib.sha256(
-        canonical_json_bytes(steps_to_wire(expanded_for_hash))
+        canonical_json_bytes(
+            steps_to_wire_with_closing(expanded_for_hash, expanded_closing_for_hash)
+        )
     ).hexdigest()
     registered = ProcedureRegistered(
         procedure_id=procedure_id,
@@ -678,7 +689,7 @@ async def _seed_recipe_driven_procedure(
             expansion_port_version=expansion_port_version,
             steps_hash=steps_hash_override or expected_steps_hash,
             bindings_hash=bindings_hash_override or expected_bindings_hash,
-            step_count=len(rsteps),
+            step_count=len(rsteps) + len(recipe_closing_steps),
             occurred_at=_NOW,
         )
         procedure_events.append(recorded)  # type: ignore[arg-type]
@@ -839,6 +850,70 @@ async def test_recipe_driven_handler_with_steps_drift_raises_steps_mismatch() ->
     store = InMemoryEventStore()
     await _seed_recipe_driven_procedure(
         store, procedure_id, recipe_id, steps_hash_override="0" * 64
+    )
+    conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=0))
+    handler = _bind_handler(store, conductor)
+    with pytest.raises(RecipeExpansionReplayMismatchError) as exc:
+        await handler(
+            ConductProcedure(procedure_id=procedure_id, steps=()),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+        )
+    assert exc.value.procedure_id == procedure_id
+    assert exc.value.mismatch_field == "steps"
+
+
+@pytest.mark.unit
+async def test_conduct_procedure_recipe_with_closing_steps_pins_them_re_expanded() -> None:
+    """A recipe-driven conduct re-expands recipe.closing_steps too, and pins
+    the result onto ResolvedStepsRecorded.resolved_closing_steps."""
+    procedure_id = uuid4()
+    recipe_id = uuid4()
+    store = InMemoryEventStore()
+    await _seed_recipe_driven_procedure(
+        store,
+        procedure_id,
+        recipe_id,
+        recipe_closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+    )
+    conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=1))
+    handler = _bind_handler(store, conductor)
+
+    await handler(
+        ConductProcedure(procedure_id=procedure_id, steps=()),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+    )
+
+    stored, _ = await store.load(stream_type="Procedure", stream_id=procedure_id)
+    recorded = [
+        event
+        for event in (from_stored(s) for s in stored)
+        if isinstance(event, ResolvedStepsRecorded)
+    ]
+    assert len(recorded) == 1
+    expected_closing = SetpointStep(address="dev:shutter", value=0.0)
+    assert recorded[0].resolved_closing_steps == (step_to_payload(expected_closing),)
+    # Pinned is not enough: the Conductor must actually receive them, or
+    # _run_closing never walks them.
+    assert conductor.calls[0].closing_steps == (expected_closing,)
+    assert recorded[0].step_count == 2  # 1 main + 1 closing
+
+
+@pytest.mark.unit
+async def test_recipe_driven_handler_with_closing_steps_present_still_verifies_the_hash() -> None:
+    """A wrong pinned hash must still be caught when closing_steps is
+    non-empty -- proves threading closing_steps through verify_steps_hash
+    does not accidentally short-circuit verification."""
+    procedure_id = uuid4()
+    recipe_id = uuid4()
+    store = InMemoryEventStore()
+    await _seed_recipe_driven_procedure(
+        store,
+        procedure_id,
+        recipe_id,
+        recipe_closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+        steps_hash_override="0" * 64,
     )
     conductor = _FakeConductor(result=ConductorResult(procedure_id=procedure_id, completed_count=0))
     handler = _bind_handler(store, conductor)

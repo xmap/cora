@@ -75,10 +75,15 @@ class ConductProcedureResult:
     substrate_writes: Mapping[str, WriteValue] = field(default_factory=dict[str, WriteValue])
     """Every address the conduct wrote, in first-write order, last value.
 
-    Threaded from `ConductorResult.substrate_writes`. On a HALT this is
-    what CORA left set: the step loop returns at the failing step, so a
-    recipe's own closing steps never run and nothing restores what
-    earlier steps changed. Surfacing it on the response means an
-    operator reads it in the same breath as the failure, instead of
-    reconstructing it from the step journal.
+    Threaded from `ConductorResult.substrate_writes`. Includes the Recipe's
+    closing steps, which run on a real terminal (Completed or Aborted) and
+    merge their own writes into this ledger.
+    """
+    closing_failures: tuple[ConductorFailure, ...] = ()
+    """Every closing step that failed, threaded from `ConductorResult.closing_failures`.
+
+    Isolated from `failure`: a closing failure never flips `succeeded`, and
+    one closing step failing does not stop the rest of the closing walk.
+    Empty when the bound Recipe has no closing steps, or every closing step
+    ran clean.
     """

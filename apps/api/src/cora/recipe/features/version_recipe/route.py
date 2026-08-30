@@ -42,6 +42,13 @@ class VersionRecipeRequest(BaseModel):
             "are re-validated against the CURRENT Capability.parameters_schema."
         ),
     )
+    closing_steps: dict[str, Any] = Field(
+        default_factory=lambda: {"steps": []},
+        description=(
+            "Replacement closing-step sequence, same shape as `steps` "
+            "(wholesale replace alongside it). Empty by default."
+        ),
+    )
 
 
 def _get_handler(request: Request) -> Handler:
@@ -99,6 +106,7 @@ async def post_recipes_version(
             recipe_id=recipe_id,
             version_tag=body.version_tag,
             steps=steps_from_dict(body.steps),
+            closing_steps=steps_from_dict(body.closing_steps),
         ),
         principal_id=principal_id,
         correlation_id=cid,

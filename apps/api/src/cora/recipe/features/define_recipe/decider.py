@@ -50,6 +50,7 @@ def decide(
         name=name,
         capability_id=command.capability_id,
         steps=command.steps,
+        closing_steps=command.closing_steps,
     )
     return [
         RecipeDefined(
@@ -58,5 +59,6 @@ def decide(
             capability_id=command.capability_id,
             steps=command.steps,
             occurred_at=now,
+            closing_steps=command.closing_steps,
         )
     ]

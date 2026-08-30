@@ -13,6 +13,8 @@ distinguishable from other BCs' 403s in logs / aggregator filters
 (documented in CONTRIBUTING.md "BC-application-layer errors").
 """
 
+from uuid import UUID
+
 
 class UnauthorizedError(Exception):
     """The Authorize port denied the command."""
@@ -149,6 +151,59 @@ class SteeringWireMismatchError(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class ClosingCaptureBeforeBoundaryError(Exception):
+    """A closing step's `CaptureRef` names a capture only the pre-boundary
+    main steps declare.
+
+    `conduct_from` starts the per-conduct `captures` dict EMPTY: only the
+    main steps from `boundary` onward re-run and can deposit into it (the
+    same "fails loud rather than resolving against stale data" contract
+    `execute_from` already holds for a main-step `CaptureRef`). Closing
+    steps always run in full regardless of `boundary`, so a closing
+    `CaptureRef` whose only declaring `CaptureStep` / capturing
+    `ComputeStep` sits before `boundary` would resolve against nothing
+    during THIS resume and fail as `UnresolvedCaptureRef` -- but inside
+    `_run_closing`'s per-step isolation, that failure is recorded and the
+    walk continues, silently converting a should-be-loud gap into a
+    recorded-and-continue one. Checked up front instead, so the operator
+    sees a 422 naming the missing capture and can pick a boundary at or
+    before the declaring step, rather than a closing_failures entry after
+    the fact.
+    """
+
+    def __init__(self, capture_name: str, boundary: int) -> None:
+        super().__init__(
+            f"closing step references capture {capture_name!r}, which only a "
+            f"pre-boundary main step (boundary={boundary}) declares; resume "
+            "starts captures empty, so this closing step would never see it"
+        )
+        self.capture_name = capture_name
+        self.boundary = boundary
+
+
+class UnsupportedClosingStepsError(Exception):
+    """A loop-driving conduct slice refuses a closing-bearing Recipe (v1 scope).
+
+    `conduct_until_converged` / `conduct_until_advised` / `conduct_until_advised_from`
+    each re-walk ONE pass block repeatedly (loop-top abort, per-iteration
+    re-expansion); `_run_closing` runs once, on a real conduct terminal, and
+    has no defined place in a loop that may never terminate the way `conduct`
+    /`conduct_or_hold` do. Rather than silently drop the Recipe's closing
+    steps or guess when to run them, these three slices refuse the request
+    up front: well-formed, but this Recipe cannot be driven by a loop slice
+    until closing-in-a-loop is designed. Mapped to HTTP 422 (operator-
+    correctable: use `conduct` / `conduct_or_hold` for this Recipe, or
+    author a closing-less variant for loop-driven conduct).
+    """
+
+    def __init__(self, procedure_id: UUID) -> None:
+        super().__init__(
+            f"procedure {procedure_id} is bound to a Recipe with closing_steps, "
+            "which loop-driving conduct slices do not support"
+        )
+        self.procedure_id = procedure_id
 
 
 class CheckFailedError(Exception):

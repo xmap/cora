@@ -54,8 +54,13 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 | 1 | setpoint | `S02BM-PSS:SBS:OpenEPICSC` (StationShutter, open command) | `1` (verify) |
 | 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "OFF"` (open, inverted polarity) |
 | 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
-| 4 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify, return to safe state) |
-| 5 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
+
+**Closing steps** (see [glossary](../../reference/glossary.md#recipe-ladder)): walked once `steps` above reaches a real terminal (Completed or Aborted), so the shutter closes even if the capture halts partway through instead of only on a clean run.
+
+| # | Step | Address | Value / params |
+| --- | --- | --- | --- |
+| 1 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify, return to safe state) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
 
 **Precondition:** the sample is out of the beam path. This is an operator assertion, not a CORA setpoint (CORA does not drive the sample out automatically).
 

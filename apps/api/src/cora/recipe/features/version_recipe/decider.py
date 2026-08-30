@@ -61,6 +61,7 @@ def decide(
         name=state.name,
         capability_id=state.capability_id,
         steps=command.steps,
+        closing_steps=command.closing_steps,
     )
     return [
         RecipeVersioned(
@@ -68,5 +69,6 @@ def decide(
             version_tag=trimmed,
             steps=command.steps,
             occurred_at=now,
+            closing_steps=command.closing_steps,
         )
     ]

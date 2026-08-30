@@ -66,6 +66,7 @@ from cora.operation.conductor import (
 from cora.operation.errors import (
     SteeringWireMismatchError,
     UnauthorizedError,
+    UnsupportedClosingStepsError,
 )
 from cora.operation.features.conduct_until_advised_from.command import (
     ConductUntilAdvisedFrom,
@@ -175,6 +176,13 @@ def bind(
         if record is None:
             raise ResolvedStepsRecordNotFoundError(command.procedure_id)
         steps = steps_from_payload(record.payload["resolved_steps"])
+        # v1 scope, mirroring conduct_until_advised's forward-direction refusal:
+        # the original pinned record already carries resolved_closing_steps
+        # when the bound Recipe has any (conduct_until_advised's own
+        # resolve_and_pin_conduct_steps call pinned it), so no fresh Recipe
+        # load is needed here. See [[project_conduct_closing_steps_design]].
+        if record.payload.get("resolved_closing_steps"):
+            raise UnsupportedClosingStepsError(command.procedure_id)
 
         # RECONSTRUCT the brain's history from the self-describing outcome rows
         # (each carries its own point + measurements), so this is a sort-then-map

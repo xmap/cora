@@ -229,4 +229,27 @@ def steps_to_wire(steps: tuple[Step, ...]) -> list[dict[str, Any]]:
     return [_step_to_wire(step) for step in steps]
 
 
-__all__ = ["canonical_json_bytes", "expand", "steps_to_wire"]
+def steps_to_wire_with_closing(
+    steps: tuple[Step, ...], closing_steps: tuple[Step, ...]
+) -> list[dict[str, Any]]:
+    """Canonical hash form for main + closing steps COMBINED, one pin.
+
+    Closing entries are tagged `"closing": true` by THIS composing
+    function, not inside `_step_to_wire` (which receives a bare `Step`
+    with no partition context). An empty `closing_steps` returns
+    EXACTLY `steps_to_wire(steps)` with nothing appended, so every
+    recipe that has never used closing steps keeps its existing
+    `steps_hash` byte-identical -- same precedent as `CheckStep.timeout_s`
+    being emitted only when set (see
+    `test_a_deadlineless_check_hashes_the_same_as_it_always_did`).
+    """
+    main = steps_to_wire(steps)
+    if not closing_steps:
+        return main
+    closing = steps_to_wire(closing_steps)
+    for entry in closing:
+        entry["closing"] = True
+    return main + closing
+
+
+__all__ = ["canonical_json_bytes", "expand", "steps_to_wire", "steps_to_wire_with_closing"]

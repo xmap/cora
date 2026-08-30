@@ -13,6 +13,7 @@ start/complete/abort/hold handlers over an in-memory store:
   - unknown procedure            -> ProcedureNotFoundError
 """
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -24,6 +25,7 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation._recipe_expansion import steps_to_wire_with_closing
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_recipe_expander import InMemoryRecipeExpander
 from cora.operation.aggregates.procedure import (
@@ -32,6 +34,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureRegistered,
     ProcedureStarted,
     ProcedureStatus,
+    RecipeExpansionRecorded,
     event_type_name,
     load_procedure,
     to_payload,
@@ -62,12 +65,120 @@ from cora.operation.features.conduct_or_hold_procedure import (
     Handler as ConductOrHoldHandler,
 )
 from cora.operation.features.hold_procedure.command import HoldProcedure
+from cora.recipe.aggregates.recipe import RecipeDefined, RecipeSetpointStep
+from cora.recipe.aggregates.recipe import event_type_name as recipe_event_type_name
+from cora.recipe.aggregates.recipe import to_payload as recipe_to_payload
+from cora.shared.canonical_json import canonical_json_bytes
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 21, 12, 0, 0, tzinfo=UTC)
 _PROCEDURE_ID = UUID("01900000-0000-7000-8000-0000000d0b01")
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
+
+
+# --- recipe-driven closing_steps wiring ---------------------------------
+#
+# A single test proving `resolve_and_pin_conduct_steps`'s returned
+# `closing_steps` actually reaches `Conductor.conduct_or_hold`, not just
+# `ResolvedStepsRecorded` (a real Conductor + real port catches a dropped
+# kwarg a fake conductor's call-recording would also catch, but this pins
+# the ACTUAL closing walk executing, matching this file's real-Conductor
+# style for everything else).
+
+
+async def _seed_recipe_driven_defined(
+    store: InMemoryEventStore,
+    *,
+    recipe_steps: tuple[RecipeSetpointStep, ...],
+    recipe_closing_steps: tuple[RecipeSetpointStep, ...],
+) -> None:
+    """Seed a recipe-driven, Defined Procedure: a Recipe stream + the
+    ProcedureRegistered + RecipeExpansionRecorded genesis block
+    `register_procedure_from_recipe` emits. No Capability stream needed:
+    `load_capability` returning None (unseeded) is treated as "not
+    deprecated", the same as a real, non-deprecated Capability."""
+    recipe_id = uuid4()
+    capability_id = uuid4()
+    bindings: dict[str, object] = {}
+    recipe_event = RecipeDefined(
+        recipe_id=recipe_id,
+        name="R",
+        capability_id=capability_id,
+        steps=recipe_steps,
+        closing_steps=recipe_closing_steps,
+        occurred_at=_NOW,
+    )
+    await store.append(
+        stream_type="Recipe",
+        stream_id=recipe_id,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=recipe_event_type_name(recipe_event),
+                payload=recipe_to_payload(recipe_event),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="seed",
+                correlation_id=_CORRELATION_ID,
+                principal_id=_PRINCIPAL_ID,
+            ),
+        ],
+    )
+    expanded: tuple[Step, ...] = tuple(
+        SetpointStep(address=s.address, value=s.value)  # type: ignore[arg-type]
+        for s in recipe_steps
+    )
+    expanded_closing: tuple[Step, ...] = tuple(
+        SetpointStep(address=s.address, value=s.value)  # type: ignore[arg-type]
+        for s in recipe_closing_steps
+    )
+    steps_hash = hashlib.sha256(
+        canonical_json_bytes(steps_to_wire_with_closing(expanded, expanded_closing))
+    ).hexdigest()
+    bindings_hash = hashlib.sha256(canonical_json_bytes(bindings)).hexdigest()
+    events = [
+        ProcedureRegistered(
+            procedure_id=_PROCEDURE_ID,
+            name="P",
+            kind="bakeout",
+            target_asset_ids=(),
+            parent_run_id=None,
+            capability_id=capability_id,
+            recipe_id=recipe_id,
+            occurred_at=_NOW,
+        ),
+        RecipeExpansionRecorded(
+            procedure_id=_PROCEDURE_ID,
+            recipe_id=recipe_id,
+            recipe_version=None,
+            capability_id=capability_id,
+            capability_version=None,
+            bindings=bindings,
+            expansion_port_version="v2-pseudoaxis-aware",
+            steps_hash=steps_hash,
+            bindings_hash=bindings_hash,
+            step_count=len(recipe_steps) + len(recipe_closing_steps),
+            occurred_at=_NOW,
+        ),
+    ]
+    await store.append(
+        stream_type="Procedure",
+        stream_id=_PROCEDURE_ID,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=event_type_name(event),  # type: ignore[arg-type]
+                payload=to_payload(event),  # type: ignore[arg-type]
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="seed",
+                correlation_id=_CORRELATION_ID,
+                principal_id=_PRINCIPAL_ID,
+            )
+            for event in events
+        ],
+    )
 
 
 @dataclass
@@ -395,3 +506,48 @@ async def test_complete_rejected_records_lifecycle_failure() -> None:
     assert result.failure is not None
     assert result.failure.source_kind == "lifecycle"
     assert result.failure.target == "complete"
+
+
+@pytest.mark.unit
+async def test_recipe_driven_clean_run_also_runs_pinned_closing_steps() -> None:
+    """resolve_and_pin_conduct_steps's returned closing_steps must reach
+    Conductor.conduct_or_hold, not just ResolvedStepsRecorded -- a dropped
+    kwarg here would leave every recipe's closing steps silently unwalked."""
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:a")
+    port.simulate_connect("2bma:shutter")
+    await _seed_recipe_driven_defined(
+        store,
+        recipe_steps=(RecipeSetpointStep(address="2bma:a", value=1.0),),
+        recipe_closing_steps=(RecipeSetpointStep(address="2bma:shutter", value=0.0),),
+    )
+    result = await _call(_make_conduct_or_hold(_deps(store), port), ())
+
+    assert result.succeeded is True
+    assert result.held is False
+    assert await _status(store) is ProcedureStatus.COMPLETED
+    assert (await port.read("2bma:shutter")).value == 0.0
+    assert result.substrate_writes == {"2bma:a": 1.0, "2bma:shutter": 0.0}
+    assert result.closing_failures == ()
+
+
+@pytest.mark.unit
+async def test_recipe_driven_clean_run_isolates_a_failing_closing_step() -> None:
+    """closing_failures threads onto ConductOrHoldProcedureResult -- a
+    failing closing step (unconnected shutter address) is isolated: it
+    neither flips `succeeded` nor blocks the main walk's own success."""
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.simulate_connect("2bma:a")  # shutter left unconnected: the closing write fails
+    await _seed_recipe_driven_defined(
+        store,
+        recipe_steps=(RecipeSetpointStep(address="2bma:a", value=1.0),),
+        recipe_closing_steps=(RecipeSetpointStep(address="2bma:shutter", value=0.0),),
+    )
+    result = await _call(_make_conduct_or_hold(_deps(store), port), ())
+
+    assert result.succeeded is True
+    assert await _status(store) is ProcedureStatus.COMPLETED
+    assert len(result.closing_failures) == 1
+    assert result.closing_failures[0].error_class == "ControlNotConnectedError"

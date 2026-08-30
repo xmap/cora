@@ -967,17 +967,32 @@ class ConductorResult:
     """Every address this conduct wrote, in first-write order, last value.
 
     Present on the success and the failure construction alike, because a
-    conduct changes the world either way. It earns its place on the
-    FAILURE one: a halt returns from the step loop, so a recipe's own
-    closing steps do not run, and this is then the list of what was left
-    set with nothing having put it back. Without it an operator has to
-    reconstruct that from the step journal at exactly the moment they
-    are least able to.
+    conduct changes the world either way. On a TERMINAL outcome (Completed
+    or Aborted) this INCLUDES whatever the recipe's own closing steps wrote:
+    it is no longer only "what was left set with nothing having put it
+    back" -- a closing-only address now appears here too, since closing
+    steps write through the SAME `_ActuationObserver`. On a Held pause
+    (closing does not run) it is still exactly that: the list of what CORA
+    left set, unrestored, because a later `conduct_from` resumes against
+    this exact state. Without it an operator has to reconstruct that from
+    the step journal at exactly the moment they are least able to.
 
     It reports what CORA WROTE, not what it changed: a write whose value
     already matched the PV still appears. Deciding otherwise would mean
     reading every address back, which is a second round of substrate
     traffic to answer a question the operator did not ask.
+    """
+    closing_failures: tuple[ConductorFailure, ...] = ()
+    """Every closing step that failed, in walked order; empty on success.
+
+    Closing steps are ISOLATED from each other and from `failure`: one
+    failing is recorded and the next still runs, and a closing failure
+    never changes `succeeded` (that bit reports the MAIN steps only,
+    per [[project_conduct_closing_steps_design]]). Empty whenever closing
+    did not run at all (Held, an acquisition halt, cancellation, a
+    Procedure with no `closing_steps`) -- indistinguishable from "closing
+    ran and every step passed"; a caller that needs to tell the two apart
+    reads the recipe's `closing_steps` list length instead.
     """
 
     @property
@@ -1050,10 +1065,16 @@ class _ActuationObserver:
 
         CORA does not restore what it sets (see `acquisitions`' prior /
         applied recording for why a tidy-up write would clobber a
-        concurrent client), so on a HALT this is the list of things left
-        as CORA put them, with the recipe's own closing steps unrun. An
-        operator reading a failed conduct should not have to reconstruct
-        that from the step journal.
+        concurrent client). A wrapper that runs closing steps (`conduct`,
+        `conduct_or_hold`'s terminal arms, `conduct_from`'s terminal arms)
+        merges `_run_closing`'s own observer's writes on top of this map
+        before returning the final result -- on a TERMINAL outcome this is
+        no longer only "what was left with nothing having put it back"; it
+        also includes what closing put back. On a HELD pause (closing does
+        not run) it is still exactly the pre-closing meaning: the list of
+        things left as CORA put them. An operator reading a conduct's
+        result should not have to reconstruct either case from the step
+        journal.
 
         Reads are deliberately absent: reading changes nothing, and
         mixing them in would bury the writes that actually need
@@ -1246,6 +1267,7 @@ class Conductor:
         policy: ResumePolicy = ResumePolicy.RE_ESTABLISH,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        captures: dict[str, Any] | None = None,
     ) -> ConductorResult:
         """Resume a halted conduct by REPLAYING the pinned resolved steps from `boundary`.
 
@@ -1293,7 +1315,11 @@ class Conductor:
         # boundary is not replayed, so a CaptureRef into it fails loud rather
         # than resolving against stale data. Persisting captures across a hold
         # (seed this dict from a ValueCaptured event) is the deferred resume leg.
-        captures: dict[str, Any] = {}
+        # `captures` is caller-owned like `execute()`'s (None creates a fresh
+        # dict): `conduct_from` passes one in so `_run_closing` can share
+        # whatever the replay tail deposits.
+        if captures is None:
+            captures = {}
         # The artifact bus is likewise empty on resume and never filled here: a
         # ComputeStep reached during replay halts for an operator decision (it is
         # never dispatched), so nothing deposits and no OutputRef resolves against
@@ -1375,6 +1401,88 @@ class Conductor:
             outputs=dict(outputs),
         )
 
+    async def _run_closing(
+        self,
+        closing_steps: Sequence[Step],
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None,
+        surface_id: UUID,
+        captures: dict[str, Any],
+    ) -> tuple[tuple[ConductorFailure, ...], Mapping[str, WriteValue]]:
+        """Walk `closing_steps` after a conduct reaches a REAL terminal.
+
+        Called by `conduct`, `conduct_or_hold` (its two terminal arms only:
+        complete-success and abort), and `conduct_from` (its complete and
+        abort arms only) -- never on a Held pause, an acquisition halt, or
+        cancellation. See [[project_conduct_closing_steps_design]] for the
+        full six-row disposition table this enforces.
+
+        ISOLATED per step, unlike the main list: one step failing is
+        recorded and the WALK CONTINUES; this method itself NEVER raises,
+        so it cannot mask whatever the caller does next (return a result,
+        or re-raise an already-in-flight exception). Runs in its own
+        `step_index` space starting at 0 (see `_Envelope.closing`).
+
+        `captures` is the conduct's OWN captures bus, passed in by
+        reference and shared with the main list (a closing step MAY read a
+        value the main list captured; the reverse is never true since
+        closing runs after). Returns `(closing_failures, substrate_writes)`
+        for the caller to fold onto its `ConductorResult`: closing gets its
+        own fresh `_ActuationObserver`, so its writes are NOT already
+        reflected in the main list's `substrate_writes` and the caller
+        must merge them explicitly.
+
+        An empty `closing_steps` is the common case (no Recipe authors
+        one): short-circuits before touching the ControlPort at all.
+        """
+        if not closing_steps:
+            return (), {}
+        envelope = _Envelope(
+            procedure_id=procedure_id,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+            closing=True,
+        )
+        observer = _ActuationObserver(self._control_port)
+        outputs: dict[str, ArtifactRef] = {}
+        compute = _ComputeAccumulator()
+        failures: list[ConductorFailure] = []
+        for index, step in enumerate(closing_steps):
+            try:
+                with with_dispatch_correlation_id(correlation_id):
+                    failure = await self._dispatch(
+                        step,
+                        index=index,
+                        envelope=envelope,
+                        port=observer,
+                        captures=captures,
+                        outputs=outputs,
+                        compute=compute,
+                    )
+            except Exception as exc:
+                # "Never raises" is a GUARANTEE, not an intention: a closing
+                # step can raise for the same reasons a main step's dispatch
+                # can (a buggy action body, an unexpected port error class),
+                # and closing is exactly the walk that must survive one bad
+                # step to still attempt the rest. Convert to a recorded
+                # failure instead of propagating.
+                failure = ConductorFailure(
+                    step_index=index,
+                    source_kind=_closing_step_kind(step),
+                    target=_closing_step_target(step),
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                )
+            if failure is not None:
+                failures.append(failure)
+            # ISOLATED: no halt-on-failure. The next closing step always runs.
+        return tuple(failures), observer.substrate_writes
+
     async def conduct(
         self,
         *,
@@ -1384,6 +1492,7 @@ class Conductor:
         steps: Sequence[Step],
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        closing_steps: Sequence[Step] = (),
     ) -> ConductorResult:
         """Drive the full Procedure lifecycle: start -> execute -> complete | abort.
 
@@ -1403,6 +1512,23 @@ class Conductor:
              original execute failure is what surfaces on the result
              (the Procedure stays Running and the operator must
              reconcile via state inspection).
+
+        `closing_steps` runs via `_run_closing` on a REAL terminal only: once
+        `execute()` reaches Completed-bound success or a step failure, and
+        BEFORE the corresponding `complete_procedure` / `abort_procedure`
+        call -- closing's own journal writes go through `append_activities`,
+        which accepts entries only while the Procedure is `Running`
+        (`_OPEN_STATUSES = {RUNNING}`); attempting them after the FSM has
+        already left Running would reject every one of them. So the terminal
+        FSM write is genuinely LAST here, not first: closing physically runs
+        (and its outcome is durably journaled) regardless of whether the
+        SUBSEQUENT `complete_procedure` call itself is rejected. Also runs
+        before the best-effort abort on an unhandled exception from
+        `execute()` (the literal TomoScan shape this design cites -- see the
+        outer `except Exception` below). NOT run on cancellation
+        (`abort_orphan_on_cancel` already re-raises before any return here).
+        See [[project_conduct_closing_steps_design]] for the full
+        disposition table.
 
         Requires `start_procedure` + `complete_procedure` +
         `abort_procedure` handlers to have been supplied at __init__.
@@ -1454,23 +1580,72 @@ class Conductor:
         # then re-raises so the caller's task still sees the cancellation. No
         # ConductorResult exists on cancellation, so the observed kind is
         # unrecoverable and the abort records None (a Dataset off a cancelled
-        # conduct carries no proven kind).
+        # conduct carries no proven kind). Cancellation does NOT run closing:
+        # a cancellation is typically loop teardown, the worst moment to
+        # start driving hardware, and this re-raises before any return below.
         abort_procedure = self._abort_procedure
-        async with abort_orphan_on_cancel(
-            lambda: abort_procedure(
-                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
-                **envelope_kwargs,
-            )
-        ):
-            result = await self.execute(
+        captures: dict[str, Any] = {}
+        try:
+            async with abort_orphan_on_cancel(
+                lambda: abort_procedure(
+                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                    **envelope_kwargs,
+                )
+            ):
+                result = await self.execute(
+                    procedure_id=procedure_id,
+                    principal_id=principal_id,
+                    correlation_id=correlation_id,
+                    steps=steps,
+                    causation_id=causation_id,
+                    surface_id=surface_id,
+                    captures=captures,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # The literal TomoScan shape: execute() deliberately lets a
+            # non-port exception propagate (a programmer error, not a
+            # ConductorFailure), and closing must still run before it
+            # leaves -- BEFORE the best-effort abort, so closing's own
+            # journal writes land while the Procedure is still Running (see
+            # the docstring). Runs for its RECORDING side-effect alone here,
+            # since there is no ConductorResult to attach closing_failures
+            # to when the caller is about to see this exception, not a
+            # return value.
+            with contextlib.suppress(Exception):
+                await self._run_closing(
+                    closing_steps,
+                    procedure_id=procedure_id,
+                    principal_id=principal_id,
+                    correlation_id=correlation_id,
+                    causation_id=causation_id,
+                    surface_id=surface_id,
+                    captures=captures,
+                )
+            with contextlib.suppress(Exception):
+                await abort_procedure(
+                    AbortProcedure(
+                        procedure_id=procedure_id, reason="unhandled exception during execute"
+                    ),
+                    **envelope_kwargs,
+                )
+            raise
+        if result.succeeded:
+            closing_failures, closing_writes = await self._run_closing(
+                closing_steps,
                 procedure_id=procedure_id,
                 principal_id=principal_id,
                 correlation_id=correlation_id,
-                steps=steps,
                 causation_id=causation_id,
                 surface_id=surface_id,
+                captures=captures,
             )
-        if result.succeeded:
+            result = replace(
+                result,
+                closing_failures=closing_failures,
+                substrate_writes={**result.substrate_writes, **closing_writes},
+            )
             try:
                 await self._complete_procedure(
                     CompleteProcedure(
@@ -1492,8 +1667,10 @@ class Conductor:
             except Exception as exc:
                 # `replace`, not a fresh ConductorResult: a hand-copied
                 # field list silently drops whatever the caller forgets to
-                # list, and `substrate_writes` is exactly the field an
-                # operator needs on a completion that itself failed.
+                # list. Closing already ran (above) and its ledger survives
+                # here even though complete_procedure itself was REJECTED --
+                # closing is what physically happened; the FSM label is a
+                # separate, subsequent fact that failed to record.
                 return replace(
                     result,
                     failure=ConductorFailure(
@@ -1505,11 +1682,26 @@ class Conductor:
                     ),
                 )
             return result
-        # execute failed; attempt abort with a derived reason. Best-effort:
-        # if abort itself fails, surface the original step failure since
-        # that is what the caller needs to triage.
+        # execute failed. Closing runs BEFORE the best-effort abort (its
+        # journal writes need the Procedure still Running); abort itself is
+        # best-effort regardless: if it fails, surface the original step
+        # failure since that is what the caller needs to triage.
         failure = result.failure
         assert failure is not None  # not result.succeeded implies failure
+        closing_failures, closing_writes = await self._run_closing(
+            closing_steps,
+            procedure_id=procedure_id,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+            captures=captures,
+        )
+        result = replace(
+            result,
+            closing_failures=closing_failures,
+            substrate_writes={**result.substrate_writes, **closing_writes},
+        )
         reason = _derive_failure_reason(failure)
         with contextlib.suppress(Exception):
             await self._abort_procedure(
@@ -1535,6 +1727,7 @@ class Conductor:
         steps: Sequence[Step],
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        closing_steps: Sequence[Step] = (),
     ) -> ConductorResult:
         """Drive the lifecycle like `conduct()`, but PAUSE to Held on a recoverable failure.
 
@@ -1554,6 +1747,18 @@ class Conductor:
             that `conduct_from` can only halt-for-operator on.
           - lifecycle failures (start / complete rejected) and a mid-execute
             `CancelledError` keep `conduct()`'s behavior verbatim (no hold).
+
+        `closing_steps` runs on exactly TWO of the arms above: complete-
+        success, and the non-recoverable-failure abort -- and runs BEFORE
+        the corresponding `complete_procedure` / `abort_procedure` call, for
+        the same reason as `conduct()`: closing's own journal writes need
+        the Procedure still Running. It does NOT run on Held (a hold is a
+        pause whose resume replays `steps[boundary:]` against the state the
+        pre-boundary steps established; closing first would tear that
+        down), on a failed hold attempt (the Procedure is left Running, not
+        terminal), or on cancellation. A subsequent complete-rejection does
+        NOT undo a closing walk that already ran. See
+        [[project_conduct_closing_steps_design]].
 
         Requires `start_procedure` + `complete_procedure` + `abort_procedure`
         + `hold_procedure` handlers at __init__; raises `RuntimeError` (a
@@ -1601,23 +1806,67 @@ class Conductor:
         # Mirror conduct(): a mid-execute cancellation best-effort aborts so the
         # FSM is not orphaned in Running, then re-raises. A cancellation is not a
         # recoverable step failure, so it aborts rather than pausing to Held.
+        # Closing does NOT run here either, for the same reason as conduct().
         abort_procedure = self._abort_procedure
-        async with abort_orphan_on_cancel(
-            lambda: abort_procedure(
-                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
-                **envelope_kwargs,
-            )
-        ):
-            result = await self.execute(
+        captures: dict[str, Any] = {}
+        try:
+            async with abort_orphan_on_cancel(
+                lambda: abort_procedure(
+                    AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                    **envelope_kwargs,
+                )
+            ):
+                result = await self.execute(
+                    procedure_id=procedure_id,
+                    principal_id=principal_id,
+                    correlation_id=correlation_id,
+                    steps=steps,
+                    causation_id=causation_id,
+                    surface_id=surface_id,
+                    captures=captures,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Mirror conduct()'s raised-exception handling: closing runs
+            # BEFORE the best-effort abort (its journal writes need the
+            # Procedure still Running), for its recording side-effect alone
+            # (no ConductorResult to attach closing_failures to when
+            # re-raising).
+            with contextlib.suppress(Exception):
+                await self._run_closing(
+                    closing_steps,
+                    procedure_id=procedure_id,
+                    principal_id=principal_id,
+                    correlation_id=correlation_id,
+                    causation_id=causation_id,
+                    surface_id=surface_id,
+                    captures=captures,
+                )
+            with contextlib.suppress(Exception):
+                await abort_procedure(
+                    AbortProcedure(
+                        procedure_id=procedure_id, reason="unhandled exception during execute"
+                    ),
+                    **envelope_kwargs,
+                )
+            raise
+        actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
+        if result.succeeded:
+            closing_failures, closing_writes = await self._run_closing(
+                closing_steps,
                 procedure_id=procedure_id,
                 principal_id=principal_id,
                 correlation_id=correlation_id,
-                steps=steps,
                 causation_id=causation_id,
                 surface_id=surface_id,
+                captures=captures,
             )
-        actuation_kind = result.actuation_kind.value if result.actuation_kind is not None else None
-        if result.succeeded:
+            result = replace(
+                result,
+                closing_failures=closing_failures,
+                substrate_writes={**result.substrate_writes, **closing_writes},
+            )
             try:
                 await self._complete_procedure(
                     CompleteProcedure(procedure_id=procedure_id, actuation_kind=actuation_kind),
@@ -1626,6 +1875,8 @@ class Conductor:
             except _LIFECYCLE_RERAISE:
                 raise
             except Exception as exc:
+                # Closing already ran (above) and survives a SUBSEQUENT
+                # complete_procedure rejection; see conduct()'s twin comment.
                 return replace(
                     result,
                     failure=ConductorFailure(
@@ -1661,13 +1912,31 @@ class Conductor:
             if held_ok:
                 # A Held Procedure is parked mid-flight awaiting an operator
                 # decision, which is exactly when `substrate_writes` has to
-                # survive: it is the list of what CORA left set, and the
-                # recipe's own closing steps did not run.
+                # survive: it is the list of what CORA left set. NO closing:
+                # a hold is a pause, not a terminal; a later conduct_from
+                # resumes against the world the main steps established, and
+                # closing first would tear that down.
                 return replace(result, failure=failure, held=True)
             return result
         # Non-recoverable step failure (action): best-effort abort, exactly
         # like conduct(). Holding would strand a Procedure whose replay tail
-        # starts with an interrupted acquisition.
+        # starts with an interrupted acquisition. Closing runs BEFORE the
+        # abort attempt (its journal writes need the Procedure still
+        # Running), regardless of whether the abort itself then succeeds.
+        closing_failures, closing_writes = await self._run_closing(
+            closing_steps,
+            procedure_id=procedure_id,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+            captures=captures,
+        )
+        result = replace(
+            result,
+            closing_failures=closing_failures,
+            substrate_writes={**result.substrate_writes, **closing_writes},
+        )
         with contextlib.suppress(Exception):
             await self._abort_procedure(
                 AbortProcedure(
@@ -2707,6 +2976,7 @@ class Conductor:
         prior_actuation_kind: str | None = None,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        closing_steps: Sequence[Step] = (),
     ) -> ConductorResult:
         """Resume a Held Procedure and REPLAY its pinned resolved steps from `boundary`.
 
@@ -2744,6 +3014,19 @@ class Conductor:
         Running with partial replay history, the same posture as the
         acquisition-halt branch (the operator reconciles). See
         [[project_resumable_conduct_design]] Tier 1.
+
+        `closing_steps` runs via `_run_closing` on exactly TWO of the three
+        terminals: the clean-tail complete, and the genuine-step-failure
+        abort -- and runs BEFORE the corresponding `complete_procedure` /
+        `abort_procedure` call, same reason as `conduct()`: closing's own
+        journal writes need the Procedure still Running. NOT on the
+        acquisition halt (the Procedure stays Running, not terminal --
+        closing there would foreclose the very redo-fresh-vs-reseed
+        decision being handed back), and NOT on a raised exception that is
+        itself a cancellation (mirrors this method's existing
+        no-abort-on-cancel posture). A subsequent complete-rejection does
+        NOT undo a closing walk that already ran. See
+        [[project_conduct_closing_steps_design]].
         """
         if (
             self._resume_procedure is None
@@ -2768,15 +3051,39 @@ class Conductor:
             ResumeProcedure(procedure_id=procedure_id, re_establishment_boundary=boundary),
             **envelope_kwargs,
         )
-        result = await self.execute_from(
-            procedure_id=procedure_id,
-            principal_id=principal_id,
-            correlation_id=correlation_id,
-            steps=steps,
-            boundary=boundary,
-            causation_id=causation_id,
-            surface_id=surface_id,
-        )
+        captures: dict[str, Any] = {}
+        try:
+            result = await self.execute_from(
+                procedure_id=procedure_id,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                steps=steps,
+                boundary=boundary,
+                causation_id=causation_id,
+                surface_id=surface_id,
+                captures=captures,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Mirror conduct()'s raised-exception handling for the literal
+            # TomoScan shape. Unlike conduct(), no best-effort abort precedes
+            # it here -- this method already leaves a mid-replay cancellation
+            # un-aborted by design (the operator reconciles), and the same
+            # posture applies to any other raised exception: the Procedure
+            # stays Running, closing runs for its recording side-effect
+            # alone, then the exception propagates unchanged.
+            with contextlib.suppress(Exception):
+                await self._run_closing(
+                    closing_steps,
+                    procedure_id=procedure_id,
+                    principal_id=principal_id,
+                    correlation_id=correlation_id,
+                    causation_id=causation_id,
+                    surface_id=surface_id,
+                    captures=captures,
+                )
+            raise
         # Fold the pre-hold conduct's kind (carried on the Held procedure,
         # passed in by the handler) with the replay tail's observed kind, so a
         # boundary>0 resume past a simulated prefix does not complete as
@@ -2793,8 +3100,24 @@ class Conductor:
             actuation_kind=(ActuationKind(actuation_kind) if actuation_kind is not None else None),
         )
         if result.succeeded:
-            # Clean tail (incl. empty tail): auto-complete, threading the
-            # merged observed kind onto ProcedureCompleted (Data BC gate carrier).
+            # Clean tail (incl. empty tail): closing runs BEFORE the
+            # auto-complete attempt (its journal writes need the Procedure
+            # still Running), threading the merged observed kind onto
+            # ProcedureCompleted (Data BC gate carrier).
+            closing_failures, closing_writes = await self._run_closing(
+                closing_steps,
+                procedure_id=procedure_id,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                surface_id=surface_id,
+                captures=captures,
+            )
+            merged_result = replace(
+                merged_result,
+                closing_failures=closing_failures,
+                substrate_writes={**merged_result.substrate_writes, **closing_writes},
+            )
             try:
                 await self._complete_procedure(
                     CompleteProcedure(procedure_id=procedure_id, actuation_kind=actuation_kind),
@@ -2806,7 +3129,8 @@ class Conductor:
                 # `merged_result`, not `result`: the merged kind is what the
                 # terminal event carried, so the response has to agree with it
                 # on the complete-rejected arm exactly as it does on the
-                # success arm below.
+                # success arm below. Closing already ran (above) and survives
+                # this SUBSEQUENT rejection; see conduct()'s twin comment.
                 return replace(
                     merged_result,
                     failure=ConductorFailure(
@@ -2820,6 +3144,9 @@ class Conductor:
             return merged_result
         if is_acquisition_halt(result.failure):
             # Halt-for-operator: leave the Procedure Running; no transition.
+            # NO closing: the Procedure is not terminal, and closing here
+            # would foreclose the redo-fresh-vs-reseed decision being handed
+            # back to the operator.
             # RESIDUAL: the replay tail's observed kind is NOT persisted here
             # (no terminal event), so a later manual complete/abort -- which
             # SETs actuation_kind from the command, not merges -- could stamp
@@ -2827,10 +3154,26 @@ class Conductor:
             # this method closes; the design-memo second-writer hazard, aligned
             # with the Tier-2 acquisition-decomposition deferral.
             return merged_result
-        # Genuine step failure: best-effort abort (if abort itself fails, the
-        # original step failure is what surfaces). Mirrors conduct().
+        # Genuine step failure: closing runs BEFORE the best-effort abort
+        # (its journal writes need the Procedure still Running); abort
+        # itself is best-effort regardless (if it fails, the original step
+        # failure is what surfaces). Mirrors conduct().
         failure = result.failure
         assert failure is not None  # not succeeded + not halt -> failure
+        closing_failures, closing_writes = await self._run_closing(
+            closing_steps,
+            procedure_id=procedure_id,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+            captures=captures,
+        )
+        merged_result = replace(
+            merged_result,
+            closing_failures=closing_failures,
+            substrate_writes={**merged_result.substrate_writes, **closing_writes},
+        )
         with contextlib.suppress(Exception):
             await self._abort_procedure(
                 AbortProcedure(
@@ -4146,13 +4489,18 @@ class Conductor:
         `index` is the step's zero-based position in the conducted step
         list; it rides the payload as `step_index` so a future resume
         can map a recorded outcome back to its position in the pinned
-        resolved step list.
+        resolved step list. `envelope.closing` (`_run_closing`'s walk)
+        adds a `"closing": true` marker: closing runs in its OWN
+        `step_index` space starting at 0, so the index alone would
+        collide with a main step's row.
         """
         payload: dict[str, Any] = {**body, "step_index": index, "result": result}
         if error_class is not None:
             payload["error_class"] = error_class
         if message is not None:
             payload["message"] = message
+        if envelope.closing:
+            payload["closing"] = True
         sampled_at = self._clock.now()
         entry = ActivityInput(
             event_id=self._id_generator.new_id(),
@@ -4176,6 +4524,13 @@ class _Envelope:
 
     Internal helper; avoids passing six args to every helper method.
     Frozen so accidental mutation mid-execute is a type error.
+
+    `closing` marks a `_run_closing` walk: `_record` tags the journal row
+    `"closing": true` when set, disambiguating a closing step's outcome
+    from a main step's in the SAME activity log (closing runs in its own
+    `step_index` space starting at 0, so the index alone does not
+    disambiguate). Threaded via the envelope rather than a `_record`
+    kwarg so none of its other call sites need touching.
     """
 
     procedure_id: UUID
@@ -4183,6 +4538,7 @@ class _Envelope:
     correlation_id: UUID
     causation_id: UUID | None
     surface_id: UUID
+    closing: bool = False
 
 
 @dataclass
@@ -4439,6 +4795,29 @@ def _derive_failure_reason(failure: ConductorFailure) -> str:
         prefix = f"{failure.source_kind}[{failure.step_index}] {failure.target}"
     reason = f"{prefix} failed: {failure.error_class}: {failure.message}"
     return reason[:REASON_MAX_LENGTH]
+
+
+def _closing_step_kind(step: Step) -> str:
+    """`_run_closing`'s defensive fallback: classify a step for a synthetic
+    `ConductorFailure` when `_dispatch` raised instead of returning one."""
+    if isinstance(step, SetpointStep):
+        return _STEP_KIND_SETPOINT
+    if isinstance(step, ActionStep):
+        return _STEP_KIND_ACTION
+    if isinstance(step, CaptureStep):
+        return _STEP_KIND_CAPTURE
+    if isinstance(step, ComputeStep):
+        return _STEP_KIND_COMPUTE
+    return _STEP_KIND_CHECK
+
+
+def _closing_step_target(step: Step) -> str:
+    """Sibling of `_closing_step_kind`: the failure's `target` field."""
+    if isinstance(step, ActionStep):
+        return step.name
+    if isinstance(step, ComputeStep):
+        return " ".join(step.command)
+    return step.address
 
 
 def _measurement_to_dict(reading: Measurement) -> dict[str, Any]:

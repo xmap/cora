@@ -45,6 +45,32 @@ def test_get_recipe_200_returns_full_recipe_response() -> None:
 
 
 @pytest.mark.contract
+def test_get_recipe_surfaces_closing_steps() -> None:
+    with TestClient(create_app()) as client:
+        cap = client.post("/capabilities", json=_capability()).json()
+        body = _recipe_for(cap["capability_id"])
+        body["closing_steps"] = {
+            "steps": [
+                {"kind": "setpoint", "address": "dev:shutter", "value": 0.0, "verify": False},
+            ],
+        }
+        recipe = client.post("/recipes", json=body).json()
+        response = client.get(f"/recipes/{recipe['recipe_id']}")
+    assert response.status_code == 200
+    resp_body = response.json()
+    assert resp_body["closing_steps"]["steps"][0]["address"] == "dev:shutter"
+
+
+@pytest.mark.contract
+def test_get_recipe_defaults_closing_steps_to_empty() -> None:
+    with TestClient(create_app()) as client:
+        cap = client.post("/capabilities", json=_capability()).json()
+        recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
+        response = client.get(f"/recipes/{recipe['recipe_id']}")
+    assert response.json()["closing_steps"]["steps"] == []
+
+
+@pytest.mark.contract
 def test_get_recipe_404_when_recipe_missing() -> None:
     with TestClient(create_app()) as client:
         bogus = "01900000-0000-7000-8000-deadbeefcafe"

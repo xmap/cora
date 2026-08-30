@@ -58,6 +58,8 @@ _WRITER_ARMS_PER_FIELD: dict[str, frozenset[str]] = {
     "capability_id": frozenset(),
     # A new version replaces the step list wholesale; that IS the event.
     "steps": frozenset({"RecipeVersioned"}),
+    # Same rationale: a version can fix a broken closing step too.
+    "closing_steps": frozenset({"RecipeVersioned"}),
     "version": frozenset({"RecipeVersioned"}),
     "replaced_by_recipe_id": frozenset({"RecipeDeprecated"}),
 }

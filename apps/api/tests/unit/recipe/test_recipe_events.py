@@ -86,6 +86,37 @@ def test_to_payload_recipe_versioned_serializes_version_tag_and_steps() -> None:
 
 
 @pytest.mark.unit
+def test_to_payload_recipe_defined_serializes_closing_steps_under_closing_key() -> None:
+    rid, cid = uuid4(), uuid4()
+    defn = RecipeDefined(
+        recipe_id=rid,
+        name="R",
+        capability_id=cid,
+        steps=_steps(),
+        occurred_at=_NOW,
+        closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+    )
+    payload = to_payload(defn)
+    assert payload["closing"] == {
+        "steps": [{"kind": "setpoint", "address": "dev:shutter", "value": 0.0, "verify": False}]
+    }
+
+
+@pytest.mark.unit
+def test_to_payload_recipe_versioned_serializes_closing_steps_under_closing_key() -> None:
+    rid = uuid4()
+    ver = RecipeVersioned(
+        recipe_id=rid,
+        version_tag="v2",
+        steps=_steps(),
+        occurred_at=_NOW,
+        closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+    )
+    payload = to_payload(ver)
+    assert payload["closing"]["steps"]
+
+
+@pytest.mark.unit
 def test_to_payload_recipe_deprecated_serializes_replaced_by_or_none() -> None:
     rid, succ = uuid4(), uuid4()
     dep_none = RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW)
@@ -112,6 +143,40 @@ def test_from_stored_round_trips_recipe_versioned() -> None:
     stored = _stored("RecipeVersioned", to_payload(original))
     rebuilt = from_stored(stored)
     assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_from_stored_round_trips_recipe_defined_with_non_empty_closing_steps() -> None:
+    """Equality alone proves nothing about a field left at its default (`()`);
+    this pins a NON-default closing_steps surviving the round trip."""
+    rid, cid = uuid4(), uuid4()
+    original = RecipeDefined(
+        recipe_id=rid,
+        name="R",
+        capability_id=cid,
+        steps=_steps(),
+        occurred_at=_NOW,
+        closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+    )
+    stored = _stored("RecipeDefined", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert rebuilt == original
+    assert isinstance(rebuilt, RecipeDefined)
+    assert rebuilt.closing_steps == (RecipeSetpointStep(address="dev:shutter", value=0.0),)
+
+
+@pytest.mark.unit
+def test_from_stored_recipe_defined_tolerates_a_pre_feature_payload_missing_closing_key() -> None:
+    """A RecipeDefined stored before closing steps existed has no "closing" key
+    at all; from_stored must default it to empty, not raise KeyError."""
+    rid, cid = uuid4(), uuid4()
+    original = _make_defined(rid, cid)
+    payload = to_payload(original)
+    del payload["closing"]
+    stored = _stored("RecipeDefined", payload)
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, RecipeDefined)
+    assert rebuilt.closing_steps == ()
 
 
 @pytest.mark.unit

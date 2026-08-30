@@ -37,6 +37,7 @@ from cora.operation._conduct_wire import (
     STEP_BATCH_MAX,
     ConductorFailureResponse,
     StepRequest,
+    closing_failures_to_wire,
     failure_to_wire,
     step_from_wire,
     substrate_writes_to_wire,
@@ -92,6 +93,14 @@ class ConductOrHoldProcedureResponse(BaseModel):
             "have not run, so this is what was left set."
         ),
     )
+    closing_failures: list[ConductorFailureResponse] = Field(
+        default_factory=list[ConductorFailureResponse],
+        description=(
+            "Every closing step that failed. Always empty on `held=True`: "
+            "closing runs only on a real terminal, never on Held. Never "
+            "flips `succeeded`."
+        ),
+    )
 
 
 def result_to_wire(result: ConductOrHoldProcedureResult) -> ConductOrHoldProcedureResponse:
@@ -107,6 +116,7 @@ def result_to_wire(result: ConductOrHoldProcedureResult) -> ConductOrHoldProcedu
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
         substrate_writes=substrate_writes_to_wire(result.substrate_writes),
+        closing_failures=closing_failures_to_wire(result.closing_failures),
     )
 
 

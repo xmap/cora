@@ -121,7 +121,7 @@ def bind(
         if procedure is None:
             raise ProcedureNotFoundError(command.procedure_id)
 
-        steps = await resolve_and_pin_conduct_steps(
+        steps, closing_steps = await resolve_and_pin_conduct_steps(
             deps,
             command_name=_COMMAND_NAME,
             procedure=procedure,
@@ -140,6 +140,7 @@ def bind(
             causation_id=causation_id,
             surface_id=surface_id,
             steps=steps,
+            closing_steps=closing_steps,
         )
 
         _log.info(
@@ -165,6 +166,7 @@ def bind(
             artifacts=result.artifacts,
             outputs=result.outputs,
             substrate_writes=result.substrate_writes,
+            closing_failures=result.closing_failures,
         )
 
     return handler

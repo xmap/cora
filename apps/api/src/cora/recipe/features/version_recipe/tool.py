@@ -63,6 +63,17 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 ),
             ),
         ],
+        closing_steps: Annotated[
+            dict[str, Any] | None,
+            Field(
+                default=None,
+                description=(
+                    "Optional replacement closing-step sequence, same shape "
+                    "as `steps` (wholesale replace alongside it). Omit or "
+                    "pass None for no closing steps."
+                ),
+            ),
+        ] = None,
     ) -> VersionRecipeOutput:
         handler = get_handler()
         await handler(
@@ -70,6 +81,9 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 recipe_id=recipe_id,
                 version_tag=version_tag,
                 steps=steps_from_dict(steps),
+                closing_steps=steps_from_dict(
+                    closing_steps if closing_steps is not None else {"steps": []}
+                ),
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

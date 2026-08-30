@@ -78,6 +78,7 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.errors import (
     AssetNotPseudoAxisError,
+    ClosingCaptureBeforeBoundaryError,
     PartitionRuleNotFoundError,
     PseudoAxisCommandOutsideRangeError,
     PseudoAxisConstituentDispatchError,
@@ -87,6 +88,7 @@ from cora.operation.errors import (
     PseudoAxisSingularityExceededError,
     SteeringWireMismatchError,
     UnauthorizedError,
+    UnsupportedClosingStepsError,
 )
 from cora.operation.features import (
     abort_procedure,
@@ -365,6 +367,16 @@ def register_operation_routes(app: FastAPI) -> None:
         # setpoints (the Conductor's pre-FSM wire guard). Well-formed request,
         # unprocessable against the recipe; operator aligns the space + retries.
         SteeringWireMismatchError,
+        # conduct_from: a closing step's CaptureRef names a capture only a
+        # pre-boundary main step declares -- resume starts captures empty, so
+        # this resume would never populate it. Operator picks a boundary at
+        # or before the declaring step, or drops the closing CaptureRef.
+        ClosingCaptureBeforeBoundaryError,
+        # The three loop-driving conduct slices (conduct_until_converged,
+        # conduct_until_advised, conduct_until_advised_from) refuse a
+        # closing-bearing Recipe outright: _run_closing has no defined place
+        # in a loop that re-walks one pass block repeatedly (v1 scope).
+        UnsupportedClosingStepsError,
     ):
         app.add_exception_handler(unprocessable_cls, _handle_unprocessable)
     # Server-side determinism bugs / data corruption: HTTP 500. Distinct

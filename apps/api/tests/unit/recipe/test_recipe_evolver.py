@@ -83,6 +83,51 @@ def test_recipe_versioned_replaces_steps_wholesale_and_preserves_identity() -> N
 
 
 @pytest.mark.unit
+def test_recipe_defined_folds_closing_steps() -> None:
+    event = _defined(closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),))
+    state = evolve(None, event)
+    assert state.closing_steps == (RecipeSetpointStep(address="dev:shutter", value=0.0),)
+
+
+@pytest.mark.unit
+def test_recipe_defined_defaults_closing_steps_to_empty() -> None:
+    state = evolve(None, _defined())
+    assert state.closing_steps == ()
+
+
+@pytest.mark.unit
+def test_recipe_versioned_replaces_closing_steps_wholesale() -> None:
+    rid = uuid4()
+    state = evolve(
+        None,
+        _defined(recipe_id=rid, closing_steps=(RecipeSetpointStep(address="dev:a", value=1.0),)),
+    )
+    new_closing = (RecipeSetpointStep(address="dev:b", value=2.0),)
+    state2 = evolve(
+        state,
+        RecipeVersioned(
+            recipe_id=rid,
+            version_tag="v1",
+            steps=state.steps,
+            occurred_at=_NOW,
+            closing_steps=new_closing,
+        ),
+    )
+    assert state2.closing_steps == new_closing
+
+
+@pytest.mark.unit
+def test_recipe_deprecated_preserves_closing_steps_for_audit() -> None:
+    rid = uuid4()
+    state = evolve(
+        None,
+        _defined(recipe_id=rid, closing_steps=(RecipeSetpointStep(address="dev:a", value=1.0),)),
+    )
+    state2 = evolve(state, RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW))
+    assert state2.closing_steps == state.closing_steps
+
+
+@pytest.mark.unit
 def test_recipe_deprecated_preserves_steps_and_capability_id_for_audit() -> None:
     rid, cid, succ = uuid4(), uuid4(), uuid4()
     state = evolve(None, _defined(recipe_id=rid, capability_id=cid))

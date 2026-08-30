@@ -16,11 +16,12 @@ precedent as `CapabilityVersioned` / `FamilyVersioned`.
 
 ## Replace vs preserve on each arm
 
-- `RecipeVersioned` REPLACES `steps` with the new event's tuple (a
-  new version IS a new declaration). PRESERVES `name`,
+- `RecipeVersioned` REPLACES `steps` AND `closing_steps` with the new
+  event's tuples (a new version IS a new declaration, and a version
+  can fix a broken closing step too). PRESERVES `name`,
   `capability_id`, and `replaced_by_recipe_id`.
 - `RecipeDeprecated` PRESERVES all declarative fields (steps,
-  capability_id, name, version) and ADDS the
+  closing_steps, capability_id, name, version) and ADDS the
   `replaced_by_recipe_id` pointer. Operators reading a deprecated
   Recipe still see what it declared (audit-critical).
 
@@ -54,6 +55,7 @@ def evolve(state: Recipe | None, event: RecipeEvent) -> Recipe:
             name=name,
             capability_id=capability_id,
             steps=steps,
+            closing_steps=closing_steps,
         ):
             _ = state  # genesis event; prior state ignored
             return Recipe(
@@ -62,8 +64,9 @@ def evolve(state: Recipe | None, event: RecipeEvent) -> Recipe:
                 capability_id=capability_id,
                 steps=steps,
                 status=RecipeStatus.DEFINED,
+                closing_steps=closing_steps,
             )
-        case RecipeVersioned(version_tag=version_tag, steps=steps):
+        case RecipeVersioned(version_tag=version_tag, steps=steps, closing_steps=closing_steps):
             prior = require_state(state, "RecipeVersioned")
             return Recipe(
                 id=prior.id,
@@ -73,6 +76,7 @@ def evolve(state: Recipe | None, event: RecipeEvent) -> Recipe:
                 status=RecipeStatus.VERSIONED,
                 version=version_tag,
                 replaced_by_recipe_id=prior.replaced_by_recipe_id,
+                closing_steps=closing_steps,
             )
         case RecipeDeprecated(replaced_by_recipe_id=replaced_by_recipe_id):
             prior = require_state(state, "RecipeDeprecated")
@@ -84,6 +88,7 @@ def evolve(state: Recipe | None, event: RecipeEvent) -> Recipe:
                 status=RecipeStatus.DEPRECATED,
                 version=prior.version,
                 replaced_by_recipe_id=replaced_by_recipe_id,
+                closing_steps=prior.closing_steps,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

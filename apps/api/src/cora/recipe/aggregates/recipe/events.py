@@ -63,6 +63,9 @@ class RecipeDefined:
 
     Status is implicit (`Defined`); the evolver sets it. All
     declarative fields are present in the genesis payload.
+
+    `closing_steps` is additive and optional (default `()`); see
+    `Recipe.closing_steps`.
     """
 
     recipe_id: UUID
@@ -70,6 +73,7 @@ class RecipeDefined:
     capability_id: UUID
     steps: tuple[RecipeStep, ...]
     occurred_at: datetime
+    closing_steps: tuple[RecipeStep, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -80,13 +84,14 @@ class RecipeVersioned:
     full step sequence REPLACES wholesale (a new version IS a new
     declaration). `name` and `capability_id` are PRESERVED across
     versions; re-binding to a different Capability requires a new
-    Recipe.
+    Recipe. `closing_steps` replaces wholesale too, alongside `steps`.
     """
 
     recipe_id: UUID
     version_tag: str
     steps: tuple[RecipeStep, ...]
     occurred_at: datetime
+    closing_steps: tuple[RecipeStep, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -129,6 +134,7 @@ def to_payload(event: RecipeEvent) -> dict[str, Any]:
             capability_id=capability_id,
             steps=steps,
             occurred_at=occurred_at,
+            closing_steps=closing_steps,
         ):
             return {
                 "recipe_id": str(recipe_id),
@@ -136,18 +142,21 @@ def to_payload(event: RecipeEvent) -> dict[str, Any]:
                 "capability_id": str(capability_id),
                 "steps": steps_to_dict(steps),
                 "occurred_at": occurred_at.isoformat(),
+                "closing": steps_to_dict(closing_steps),
             }
         case RecipeVersioned(
             recipe_id=recipe_id,
             version_tag=version_tag,
             steps=steps,
             occurred_at=occurred_at,
+            closing_steps=closing_steps,
         ):
             return {
                 "recipe_id": str(recipe_id),
                 "version_tag": version_tag,
                 "steps": steps_to_dict(steps),
                 "occurred_at": occurred_at.isoformat(),
+                "closing": steps_to_dict(closing_steps),
             }
         case RecipeDeprecated(
             recipe_id=recipe_id,
@@ -189,6 +198,9 @@ def from_stored(stored: StoredEvent) -> RecipeEvent:
                     capability_id=UUID(payload["capability_id"]),
                     steps=steps_from_dict(payload["steps"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # `.get`, not `["closing"]`: a stored event from before
+                    # closing steps existed has no such key.
+                    closing_steps=steps_from_dict(payload.get("closing", {"steps": []})),
                 ),
                 extra=_PAYLOAD_PARSE_EXTRA,
             )
@@ -200,6 +212,7 @@ def from_stored(stored: StoredEvent) -> RecipeEvent:
                     version_tag=payload["version_tag"],
                     steps=steps_from_dict(payload["steps"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    closing_steps=steps_from_dict(payload.get("closing", {"steps": []})),
                 ),
                 extra=_PAYLOAD_PARSE_EXTRA,
             )

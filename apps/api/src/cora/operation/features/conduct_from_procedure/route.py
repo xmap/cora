@@ -28,6 +28,7 @@ from cora.infrastructure.routing import (
 )
 from cora.operation._conduct_wire import (
     ConductorFailureResponse,
+    closing_failures_to_wire,
     failure_to_wire,
     substrate_writes_to_wire,
 )
@@ -79,6 +80,13 @@ class ConductFromProcedureResponse(BaseModel):
             "setpoints re-driven and nothing having put them back."
         ),
     )
+    closing_failures: list[ConductorFailureResponse] = Field(
+        default_factory=list[ConductorFailureResponse],
+        description=(
+            "Every closing step that failed. Always empty on "
+            "`acquisition_halt=True`. Never flips `succeeded`."
+        ),
+    )
 
 
 def result_to_wire(result: ConductFromProcedureResult) -> ConductFromProcedureResponse:
@@ -95,6 +103,7 @@ def result_to_wire(result: ConductFromProcedureResult) -> ConductFromProcedureRe
         failure=failure_to_wire(result.failure) if result.failure is not None else None,
         actuation_kind=result.actuation_kind,
         substrate_writes=substrate_writes_to_wire(result.substrate_writes),
+        closing_failures=closing_failures_to_wire(result.closing_failures),
     )
 
 
@@ -131,7 +140,11 @@ router = APIRouter(tags=["operation"])
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
-            "description": "Path parameter or request body failed schema validation.",
+            "description": (
+                "Path parameter or request body failed schema validation, OR "
+                "a closing step's CaptureRef names a capture only a "
+                "pre-boundary main step declares (ClosingCaptureBeforeBoundaryError)."
+            ),
         },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "model": ErrorResponse,

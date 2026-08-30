@@ -87,6 +87,28 @@ async def test_handler_appends_recipe_versioned_event() -> None:
 
 
 @pytest.mark.unit
+async def test_handler_persists_closing_steps_on_the_new_version() -> None:
+    store, deps = await _build_seeded_deps()
+    handler = version_recipe.bind(deps)
+
+    await handler(
+        VersionRecipe(
+            recipe_id=_RECIPE_ID,
+            version_tag="v1",
+            steps=(RecipeSetpointStep(address="dev:x", value=2.0),),
+            closing_steps=(RecipeSetpointStep(address="dev:shutter", value=0.0),),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    events, _ = await store.load("Recipe", _RECIPE_ID)
+    assert events[1].payload["closing"]["steps"] == [
+        {"kind": "setpoint", "address": "dev:shutter", "value": 0.0, "verify": False}
+    ]
+
+
+@pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     _, deps = await _build_seeded_deps(deny=True)
     handler = version_recipe.bind(deps)
@@ -176,6 +198,22 @@ async def test_handler_re_validates_binding_refs_against_capability_schema() -> 
                 recipe_id=_RECIPE_ID,
                 version_tag="v2",
                 steps=(RecipeSetpointStep(address="dev:x", value=BindingRef("enrgy")),),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    # A bad ref in closing_steps alone (main steps are valid) must ALSO
+    # raise -- proving the handler validates the CONCATENATED walk.
+    with pytest.raises(RecipeBindingReferencesUnknownParameterError):
+        await handler(
+            VersionRecipe(
+                recipe_id=_RECIPE_ID,
+                version_tag="v2",
+                steps=(RecipeSetpointStep(address="dev:x", value=BindingRef("angle")),),
+                closing_steps=(
+                    RecipeSetpointStep(address="dev:shutter", value=BindingRef("enrgy")),
+                ),
             ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,

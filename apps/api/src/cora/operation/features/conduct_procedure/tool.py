@@ -43,6 +43,13 @@ class _ToolResult(BaseModel):
             "it back."
         ),
     )
+    closing_failures: list[dict[str, Any]] = Field(
+        default_factory=list[dict[str, Any]],
+        description=(
+            "Every closing step that failed. Never flips `succeeded`; empty "
+            "when the recipe has no closing steps, or all ran clean."
+        ),
+    )
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -89,4 +96,5 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             failure=wire.failure.model_dump() if wire.failure is not None else None,
             actuation_kind=wire.actuation_kind,
             substrate_writes=wire.substrate_writes,
+            closing_failures=[f.model_dump() for f in wire.closing_failures],
         )
