@@ -57,29 +57,54 @@ _CONDUCTOR_PATH = _REPO_ROOT / "apps" / "api" / "src" / "cora" / "operation" / "
 _REQUIRED_FIELDS = frozenset({"procedure_id", "completed_count"})
 
 #: Pre-`start_procedure` lifecycle rejections: no step has run, so the entire
-#: ledger is correctly empty.
+#: ledger is correctly empty. `closing_failures` too: closing has not run.
 _PRE_START_OMISSIONS = frozenset(
-    {"actuation_kind", "artifacts", "held", "measurements", "outputs", "substrate_writes"}
+    {
+        "actuation_kind",
+        "artifacts",
+        "closing_failures",
+        "held",
+        "measurements",
+        "outputs",
+        "substrate_writes",
+    }
 )
 
 #: Registry of every direct `ConductorResult(...)` site, keyed by
 #: (enclosing function name, 1-indexed occurrence within that function in
 #: source order), mapped to the EXACT set of fields it leaves at their
 #: default. See the module docstring for what this protects.
+#:
+#: `closing_failures` was added to EVERY entry below in one pass when the
+#: field landed: none of these 14 sites runs `_run_closing` (that only
+#: happens in the wrapper methods' terminal RETURN via `replace()`, which
+#: this test never inspects), so every site correctly omits it. This is the
+#: exact forcing function the module docstring describes -- the guard failed
+#: at every registered site the moment the field existed, and the fix at
+#: each site was "yes, still correctly omitted," not a code change.
 _EXPECTED_OMISSIONS: dict[tuple[str, int], frozenset[str]] = {
     # execute(): per-step and final results are built straight from local
     # data (the actuation observer, the compute accumulator, a running
     # count), never copied from a stale prior ConductorResult. `held` is
-    # correctly absent: execute() itself never holds anything.
-    ("execute", 1): frozenset({"held"}),
-    ("execute", 2): frozenset({"failure", "held"}),
+    # correctly absent: execute() itself never holds anything. Closing only
+    # ever runs from a wrapper's terminal branch, never inside execute().
+    ("execute", 1): frozenset({"closing_failures", "held"}),
+    ("execute", 2): frozenset({"closing_failures", "failure", "held"}),
     # execute_from(): an ActionStep/ComputeStep halt-for-operator or a step
     # failure returns before any ComputeStep could run, so measurements /
     # artifacts / outputs are correctly empty; a resume replay never holds.
-    ("execute_from", 1): frozenset({"artifacts", "held", "measurements", "outputs"}),
-    ("execute_from", 2): frozenset({"artifacts", "held", "measurements", "outputs"}),
-    ("execute_from", 3): frozenset({"artifacts", "held", "measurements", "outputs"}),
-    ("execute_from", 4): frozenset({"artifacts", "failure", "held", "measurements"}),
+    ("execute_from", 1): frozenset(
+        {"artifacts", "closing_failures", "held", "measurements", "outputs"}
+    ),
+    ("execute_from", 2): frozenset(
+        {"artifacts", "closing_failures", "held", "measurements", "outputs"}
+    ),
+    ("execute_from", 3): frozenset(
+        {"artifacts", "closing_failures", "held", "measurements", "outputs"}
+    ),
+    ("execute_from", 4): frozenset(
+        {"artifacts", "closing_failures", "failure", "held", "measurements"}
+    ),
     # Pre-start lifecycle failures: start_procedure itself was rejected, so
     # no step ever ran.
     ("conduct", 1): _PRE_START_OMISSIONS,
@@ -88,19 +113,22 @@ _EXPECTED_OMISSIONS: dict[tuple[str, int], frozenset[str]] = {
     ("conduct_until_advised", 1): _PRE_START_OMISSIONS,
     # _abort_unconverged_cap / _abort_absolute_ceiling thread the last pass's
     # ledger through a None-safe ternary (2026-08-29 fix); `held` is the only
-    # remaining gap, correctly: neither loop-top abort ever holds.
-    ("_abort_unconverged_cap", 1): frozenset({"held"}),
-    ("_abort_absolute_ceiling", 1): frozenset({"held"}),
+    # remaining gap, correctly: neither loop-top abort ever holds. Closing
+    # steps are v1-refused for the loop slices, so closing_failures is
+    # correctly always empty here too.
+    ("_abort_unconverged_cap", 1): frozenset({"closing_failures", "held"}),
+    ("_abort_absolute_ceiling", 1): frozenset({"closing_failures", "held"}),
     # conduct_until_advised_from(): a frontier brain fault before any pass ran
     # (no execute() call yet, so no ledger to carry), and a resume-straight-
     # to-Stop synthetic placeholder fed into _complete_advised (same reason).
     ("conduct_until_advised_from", 1): frozenset(
-        {"artifacts", "held", "measurements", "outputs", "substrate_writes"}
+        {"artifacts", "closing_failures", "held", "measurements", "outputs", "substrate_writes"}
     ),
     ("conduct_until_advised_from", 2): frozenset(
         {
             "actuation_kind",
             "artifacts",
+            "closing_failures",
             "failure",
             "held",
             "measurements",
