@@ -772,6 +772,11 @@
 | src/cora/enclosure/features/decommission\_enclosure/handler.py                           |       33 |        2 |        2 |        1 |     91.4% |    98-107 |
 | src/cora/enclosure/features/decommission\_enclosure/route.py                             |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/features/decommission\_enclosure/tool.py                              |       18 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/features/get\_enclosure\_history/\_\_init\_\_.py                      |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/features/get\_enclosure\_history/handler.py                           |       39 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/enclosure/features/get\_enclosure\_history/query.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/features/get\_enclosure\_history/route.py                             |       20 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/enclosure/features/get\_enclosure\_history/tool.py                              |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/enclosure/features/list\_enclosures/\_\_init\_\_.py                             |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/features/list\_enclosures/handler.py                                  |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/features/list\_enclosures/query.py                                    |       11 |        0 |        0 |        0 |    100.0% |           |
@@ -793,8 +798,8 @@
 | src/cora/enclosure/ports/enclosure\_observer.py                                          |       19 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/enclosure/projections/\_\_init\_\_.py                                           |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/projections/enclosure.py                                              |       42 |        0 |       10 |        0 |    100.0% |           |
-| src/cora/enclosure/routes.py                                                             |       36 |        0 |        8 |        0 |    100.0% |           |
-| src/cora/enclosure/tools.py                                                              |       12 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/routes.py                                                             |       37 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/enclosure/tools.py                                                              |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/wire.py                                                               |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/\_\_init\_\_.py                                                       |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/\_asset\_update\_handler.py                                           |        7 |        0 |        0 |        0 |    100.0% |           |
@@ -2712,7 +2717,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **62068** | **1390** | **9440** |  **425** | **97.2%** |           |
+| **TOTAL**                                                                                | **62161** | **1390** | **9448** |  **425** | **97.3%** |           |
 
 
 ## Setup coverage badge
