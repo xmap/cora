@@ -80,7 +80,9 @@ from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.conductor import (
     ActionContext,
     ActionStep,
+    CaptureStep,
     CheckStep,
+    ComputeStep,
     Conductor,
     ConductorFailure,
     ConductorResult,
@@ -2298,6 +2300,137 @@ async def test_conduct_closing_step_that_raises_is_caught_not_propagated() -> No
     assert result.closing_failures[0].target == "buggy"
 
 
+class _RaisingPort:
+    """Every `read`/`write` raises a non-`_CONTROL_ERRORS` exception, so
+    `_run_setpoint`/`_run_check`/`_run_capture`'s own `except _CONTROL_ERRORS`
+    does not catch it -- it propagates to `_run_closing`'s classification
+    fallback (`_closing_step_kind`/`_closing_step_target`)."""
+
+    async def read(self, address: str) -> Measurement:
+        raise RuntimeError("port read bug")
+
+    async def write(self, *_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("port write bug")
+
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:  # pragma: no cover  # unused
+        raise NotImplementedError
+
+
+@pytest.mark.unit
+async def test_conduct_closing_setpoint_that_raises_classifies_as_setpoint() -> None:
+    """`_closing_step_kind`'s SetpointStep branch: a closing SetpointStep
+    whose write raises a non-port exception is still recorded, tagged
+    `source_kind="setpoint"`, `target=<address>`."""
+    appender = _FakeAppendStep()
+    conductor = _conductor_full_lifecycle(
+        _RaisingPort(),
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(),
+        abort=_FakeLifecycleHandler(),
+        ids=[uuid4() for _ in range(6)],
+    )
+
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(),
+        closing_steps=(SetpointStep(address="2bma:closing", value=1.0),),
+    )
+
+    assert result.succeeded is True
+    assert len(result.closing_failures) == 1
+    assert result.closing_failures[0].source_kind == "setpoint"
+    assert result.closing_failures[0].target == "2bma:closing"
+    assert result.closing_failures[0].error_class == "RuntimeError"
+
+
+@pytest.mark.unit
+async def test_conduct_closing_capture_that_raises_classifies_as_capture() -> None:
+    """`_closing_step_kind`'s CaptureStep branch."""
+    appender = _FakeAppendStep()
+    conductor = _conductor_full_lifecycle(
+        _RaisingPort(),
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(),
+        abort=_FakeLifecycleHandler(),
+        ids=[uuid4() for _ in range(6)],
+    )
+
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(),
+        closing_steps=(CaptureStep(address="2bma:closing", capture_name="x"),),
+    )
+
+    assert result.succeeded is True
+    assert len(result.closing_failures) == 1
+    assert result.closing_failures[0].source_kind == "capture"
+    assert result.closing_failures[0].target == "2bma:closing"
+
+
+@pytest.mark.unit
+async def test_conduct_closing_check_that_raises_classifies_as_check() -> None:
+    """`_closing_step_kind`'s default arm (CheckStep, the only Step kind not
+    named by an earlier `isinstance` branch)."""
+    appender = _FakeAppendStep()
+    conductor = _conductor_full_lifecycle(
+        _RaisingPort(),
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(),
+        abort=_FakeLifecycleHandler(),
+        ids=[uuid4() for _ in range(6)],
+    )
+
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(),
+        closing_steps=(CheckStep(address="2bma:closing", criterion=EqualsCriterion(expected=1)),),
+    )
+
+    assert result.succeeded is True
+    assert len(result.closing_failures) == 1
+    assert result.closing_failures[0].source_kind == "check"
+    assert result.closing_failures[0].target == "2bma:closing"
+
+
+@pytest.mark.unit
+async def test_conduct_closing_compute_that_raises_classifies_as_compute() -> None:
+    """`_closing_step_kind`/`_closing_step_target`'s ComputeStep branches.
+    No `compute_port` wired, so `_run_compute` raises immediately -- the
+    loudest, simplest way to exercise this arm without a real substrate."""
+    port = InMemoryControlPort()
+    appender = _FakeAppendStep()
+    conductor = _conductor_full_lifecycle(
+        port,
+        appender,
+        start=_FakeLifecycleHandler(),
+        complete=_FakeLifecycleHandler(),
+        abort=_FakeLifecycleHandler(),
+        ids=[uuid4() for _ in range(6)],
+    )
+
+    result = await conductor.conduct(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=(),
+        closing_steps=(ComputeStep(command=("tomopy", "recon"), input_uris=(), output_uri=None),),
+    )
+
+    assert result.succeeded is True
+    assert len(result.closing_failures) == 1
+    assert result.closing_failures[0].source_kind == "compute"
+    assert result.closing_failures[0].target == "tomopy recon"
+
+
 @pytest.mark.unit
 async def test_conduct_cancellation_does_not_run_closing_steps() -> None:
     """A cancellation re-raises before any closing walk is attempted."""
@@ -2408,6 +2541,46 @@ async def test_conduct_complete_rejected_still_reports_closing_that_already_ran(
     assert result.failure.target == "complete"
     assert result.closing_failures == ()
     assert dict(result.substrate_writes) == {"2bma:shutter": 1, "2bma:closing": 0.0}
+
+
+@pytest.mark.unit
+async def test_conduct_or_hold_raised_exception_still_runs_closing_before_reraising() -> None:
+    """Mirrors conduct()'s twin: an unhandled exception from an action body
+    must not skip closing. Best-effort abort fires after closing (closing's
+    journal writes need the Procedure still Running), then the ORIGINAL
+    exception propagates unchanged."""
+
+    async def buggy(_ctx: ActionContext) -> Mapping[str, Any]:
+        raise RuntimeError("oops")
+
+    registry = InMemoryActionRegistry({"buggy": buggy})
+    port, inner = _routed_port("2bma:closing")
+    appender = _FakeAppendStep()
+    abort = _FakeLifecycleHandler()
+    conductor = Conductor(
+        control_port=port,
+        append_step=appender,
+        clock=FakeClock(_FIXED_NOW),
+        id_generator=_SequenceIdGenerator([uuid4() for _ in range(4)]),
+        action_registry=registry,
+        start_procedure=_FakeLifecycleHandler(),
+        complete_procedure=_FakeLifecycleHandler(),
+        abort_procedure=abort,
+        hold_procedure=_FakeLifecycleHandler(),
+    )
+
+    with pytest.raises(RuntimeError, match="oops"):
+        await conductor.conduct_or_hold(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(ActionStep(name="buggy"),),
+            closing_steps=(SetpointStep(address="2bma:closing", value=0.0),),
+        )
+    assert len(abort.calls) == 1
+    assert "unhandled exception" in abort.calls[0].command.reason
+    landed = await inner.read("2bma:closing")
+    assert landed.value == 0.0
 
 
 @pytest.mark.unit
@@ -2639,6 +2812,65 @@ async def test_conduct_from_complete_rejected_still_reports_closing_that_already
     assert result.failure.target == "complete"
     assert result.closing_failures == ()
     assert dict(result.substrate_writes) == {"2bma:shutter": 1, "2bma:closing": 0.0}
+
+
+@pytest.mark.unit
+async def test_conduct_from_raised_exception_still_runs_closing_before_reraising() -> None:
+    """Mirrors conduct()'s twin for the resume path: an unhandled exception
+    from a replayed step still runs closing (for its recording side-effect),
+    then the ORIGINAL exception propagates. Unlike conduct()/conduct_or_hold,
+    NO best-effort abort precedes it: a mid-replay raised exception leaves
+    the Procedure Running, the same posture as an acquisition halt, for the
+    operator to reconcile. An ActionStep can't trigger this here --
+    execute_from halts-for-operator on one rather than running it -- so the
+    raise comes from the replayed SetpointStep's write instead, on a port
+    that raises for every address except the closing one."""
+
+    class _RaisingExceptForClosing:
+        def __init__(self, safe: InMemoryControlPort, safe_address: str) -> None:
+            self._safe = safe
+            self._safe_address = safe_address
+
+        async def read(self, address: str) -> Measurement:
+            if address == self._safe_address:
+                return await self._safe.read(address)
+            raise RuntimeError("port read bug")
+
+        async def write(self, address: str, value: Any, **kwargs: Any) -> None:
+            if address == self._safe_address:
+                await self._safe.write(address, value, **kwargs)
+                return
+            raise RuntimeError("oops")
+
+        def subscribe(self, address: str) -> AsyncIterator[Measurement]:
+            raise NotImplementedError
+
+    safe = InMemoryControlPort()
+    safe.simulate_connect("2bma:closing")
+    appender = _FakeAppendStep()
+    abort = _FakeLifecycleHandler()
+    conductor = Conductor(
+        control_port=_RaisingExceptForClosing(safe, "2bma:closing"),
+        append_step=appender,
+        clock=FakeClock(_FIXED_NOW),
+        id_generator=_SequenceIdGenerator([uuid4() for _ in range(4)]),
+        resume_procedure=_FakeLifecycleHandler(),
+        complete_procedure=_FakeLifecycleHandler(),
+        abort_procedure=abort,
+    )
+
+    with pytest.raises(RuntimeError, match="oops"):
+        await conductor.conduct_from(
+            procedure_id=uuid4(),
+            principal_id=uuid4(),
+            correlation_id=uuid4(),
+            steps=(SetpointStep(address="2bma:main", value=1.0),),
+            boundary=0,
+            closing_steps=(SetpointStep(address="2bma:closing", value=0.0),),
+        )
+    assert abort.calls == []
+    landed = await safe.read("2bma:closing")
+    assert landed.value == 0.0
 
 
 @pytest.mark.unit
