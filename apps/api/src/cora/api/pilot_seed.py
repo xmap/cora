@@ -1006,15 +1006,38 @@ async def seed_pilot_beamline(
         # seeded above declares no schema. Operator-tunable bindings are a
         # later widening that lands with that schema, not before.
         #
-        # ONLY dark_field. Its flat_field sibling opens the shutter, and
-        # `CheckStep` is a single instantaneous read with no settle, retry
-        # or timeout: a check fired immediately after an open command reads
-        # the shutter mid-travel and halts the conduct on a false negative.
-        # The soft-IOC scenario test never surfaces this because a fake PV
-        # flips instantly. dark_field commands the shutter CLOSED, which at
-        # 2-BM is its resting state, so its check is timing-independent and
-        # is the honest first hardware conduct. flat_field waits on a
-        # settle mechanism plus a measured shutter response time.
+        # `timeout_s` rides the recipe determinism hash used at conduct
+        # time (see `RecipeCheckStep`), so the step tuple below is only
+        # ever written ONCE per `dark_field_recipe_id`: `seed_genesis`
+        # checks `state is not None` and returns the EXISTING state without
+        # comparing content, so a deployment where this stream already
+        # exists (dark_field's genesis already landed against the real
+        # 2-BM database, `docs/deployments/2-bm/first-conduct-runbook.md`)
+        # keeps its old steps forever on re-run; it neither errors nor
+        # updates. Carrying the new `timeout_s` here changes what a FRESH
+        # database seeds, not what an already-seeded one holds. Propagating
+        # it to a deployment that already has this Recipe genesis needs a
+        # deliberate `version_recipe` call, which this ceremony does not
+        # make.
+        #
+        # ONLY dark_field. Its flat_field sibling still needs a recipe
+        # author to opt it into the check-step deadline (see
+        # `docs/deployments/2-bm/recipes.md`) plus the TriggerMode mapping
+        # below before it is conductible.
+        #
+        # The check below is an ARRIVAL check: it follows a setpoint that
+        # moves the station shutter, so it needs a deadline generous enough
+        # to clear the PV's own latency, exactly like flat_field's. It
+        # reads reliably today only because the shutter's resting state at
+        # 2-BM is closed, so the criterion is usually already true before
+        # the check ever runs; that is a fact about the beamline's rest
+        # state, not a property of the check, so `timeout_s` is set here on
+        # the same grounds as every other shutter check rather than relying
+        # on the coincidence. Sizing is the measured one from
+        # `docs/deployments/2-bm/recipes.md`: the status PV scans at 1 Hz
+        # and the command is a 1 s pulse, so 10 s clears that latency with
+        # margin. Because a check with a deadline still returns the instant
+        # the criterion holds, this costs nothing on the happy path.
         dark_field_recipe_name = "2BM_dark_field_recipe"
         dark_field_recipe_id = recipe_seed_id(
             facility_code, beamline, "recipe", dark_field_recipe_name
@@ -1035,13 +1058,23 @@ async def seed_pilot_beamline(
                         # reading back 0 records the reset, it does not fail
                         # the step. The CheckStep below is the actual gate.
                         RecipeSetpointStep(address=shutter_close_address, value=1, verify=True),
-                        # The gate. Status leaf reads INVERTED: 1 means
-                        # blocked, so 1 is the closed state a dark frame
-                        # requires. A shutter that did not close halts the
+                        # The gate. A shutter that did not close halts the
                         # conduct here, before any frame is taken.
+                        #
+                        # Expect the LABEL, not the raw number. The status
+                        # leaf is a two-state enum whose choices are
+                        # [0] OFF and [1] ON, and `EpicsCaControlPort`
+                        # resolves a DBR_ENUM against the labels cached
+                        # from the record, so a read surfaces the string
+                        # "ON". The "1 means blocked" convention describes
+                        # the value the PLC holds, which is not what a
+                        # criterion sees. The 2026-08-27 conduct wrote
+                        # correctly and then failed its own check with
+                        # `value 'ON' did not equal expected 1`.
                         RecipeCheckStep(
                             address=shutter_status_address,
-                            criterion={"kind": "equals", "expected": 1},
+                            criterion={"kind": "equals", "expected": "ON"},
+                            timeout_s=10.0,
                         ),
                         RecipeActionStep(
                             name="collect",
