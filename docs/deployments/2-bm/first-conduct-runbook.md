@@ -59,7 +59,7 @@ Proving the open needs a window with permits granted, which is a beam-on ask.
 
 ## EXECUTED 2026-08-31: camera capture and the first commanded motion
 
-Two commissioning conducts in one window, again with no beam.
+Three commissioning conducts in one window, again with no beam.
 
 **`dark_field` whole, including the capture step: FAILED, and usefully.**
 Procedure `01a05554-b739-76b1-8293-96ac7eb43d7f`, `completed_count: 2`. The
@@ -68,9 +68,23 @@ shutter close and its check passed; `collect` failed with
 connected`. The cause was the `detector` parameter, not the trigger-mode
 mapping this page previously blamed: see the `collect` note in
 [Recipes](recipes.md). The camera was left untouched because the failure
-landed on the first detector write, so no settings needed restoring. The
-`ADSpinnaker` trigger mapping remains UNPROVEN against hardware; this run
-never reached it.
+landed on the first detector write, so no settings needed restoring.
+
+**`dark_field` re-run with the corrected detector prefix: SUCCEEDED.**
+Procedure `01a05598-653f-7f31-8ecb-609b5b189de8`, `completed_count: 3`,
+`closing_failures: []`, five dark frames, and all six substrate writes
+landed including `2bmSP1:cam1:TriggerMode: "Off"`. That last write is what
+proves the `ADSpinnaker` trigger mapping against hardware for the first
+time: `collect` writes the substrate-neutral string `"Internal"` and the
+dialect maps it to `"Off"`, which the camera accepted. Earlier revisions of
+this page blamed that mapping for the capture step's unconductibility; the
+run above never reached it, and once reached it worked.
+
+One residue, recorded because it was mine to avoid: `collect` writes five
+camera settings and restores none, and the baseline captured before the run
+covered only three of them. `ImageMode` was left at `Multiple` where it had
+been `Continuous`. Restoring a baseline means enumerating what the action
+writes, not what a previous run happened to change.
 
 **`SampleTop_X` 0.1 mm move and return: SUCCEEDED.** Procedure
 `01a05554-cd36-7c10-8f5d-a2c1dd4f0327`: `succeeded: true`,
@@ -89,6 +103,63 @@ and the record agreed" as the claim, and nothing stronger.
 
 A survey of `MSTA` across the sample stack and hexapod, and which axes can
 actually witness their own arrival, is in [Inventory](inventory.md).
+
+## EXECUTED 2026-08-31: a conduct paused to Held and resumed
+
+Procedure `01a056eb-df53-79c3-beef-a7efd46e29b2`, no beam. The first time a
+CORA conduct has parked mid-flight on real hardware and then been resumed
+from its pinned step list.
+
+Rehearsed first, deliberately.
+`tests/integration/test_conduct_from_against_softioc_postgres.py` walks the
+same shape against the soft IOC. Before it existed, `conduct_from` appeared
+in unit and contract tests only and in no integration test at all, so the
+resume path had never run against a database and a control port together.
+Finding a resume defect in front of a motor was the avoidable version of
+this, and the rehearsal found one bug before the floor did (a test-fixture
+id collision that surfaced as a bare `held=false`, because
+`conduct_or_hold` suppresses a failed hold).
+
+The pause is not injected. A check whose criterion cannot hold inside its
+deadline is a RECOVERABLE failure, so the Procedure parks itself:
+
+| Phase | Result |
+| --- | --- |
+| `conduct-or-hold` | setpoint `2bmb:m18.VAL = 3.4` landed and verified; check on `.RBV` for 3.5 within 0.01 failed after its 8 s deadline. `held: true`, `failure.step_index: 1`, `actuation_kind: Physical`, `substrate_writes: {2bmb:m18.VAL: 3.4}` |
+| operator | set the axis to 3.5, which is the world the recipe was asking for |
+| `conduct-from` | `re_establishment_boundary: 1`, `succeeded: true`, `completed_count: 1`, `substrate_writes: {}`, Procedure `Completed` |
+
+The two numbers that carry the claim are `completed_count: 1` and the EMPTY
+`substrate_writes` on the resume. A replay that re-drove the whole pinned
+list instead of its tail would report 2 and would have re-written the axis.
+Both are asserted in the soft-IOC rehearsal and both were verified there by
+mutation, so the live run is confirming a property that already had a test
+behind it rather than establishing one by observation.
+
+Axis returned to its 3.3 mm baseline; the write window was closed by a trap
+and the deployment left at `actuation: inert`.
+
+Read the gate narrowly, for the same reason as the motion run above.
+`2bmb:m18` is open-loop, so the check that failed and then passed was
+reading the controller's own step count, which is the same source the
+setpoint wrote to. The hold-and-resume LIFECYCLE is what this establishes.
+It says nothing about where the stage physically was at either moment.
+
+The axis that could say something stronger is the rotation stage.
+`2bmb:m102` reports `MSTA = 2347` with the encoder-present bit set and an
+`ERES` of 3e-05 deg, so its readback is an independent measurement rather
+than a restatement of the command. It has no writable route today. Adding
+one is a deliberate decision and should be scoped to `2bmb:m102.VAL`
+alone: resolution is longest-prefix match, so the bare `2bmb:m102` prefix
+would also make `.VELO`, `.HLM` and every other field of that motor
+writable, and the check step wants `.RBV` to keep falling through to the
+broad read-only `2bmb:` route.
+
+One measurement NOT taken: the check should have consumed its full 8 s
+budget, since the axis was stationary and a subscription only delivers on
+change, but the response body carries no `waited_s`. That figure is in the
+activity journal. Treat the deadline as having been exercised by
+construction, not as measured, until someone reads it out.
 
 ## What this test does and does not do
 
