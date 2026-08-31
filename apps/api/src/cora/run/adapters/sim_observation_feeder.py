@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run import FeedHeartbeat
 from cora.run.features.append_observations import AppendObservations, ObservationInput
 
@@ -111,6 +112,7 @@ class SimObservationFeeder:
                 AppendObservations(run_id=self._run_id, entries=entries),
                 principal_id=self._principal_id,
                 correlation_id=self._id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
             self._emitted += len(due)
         await self._heartbeat_store.append(

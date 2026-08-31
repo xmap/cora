@@ -93,6 +93,7 @@ from typing import TYPE_CHECKING
 
 from cora.api._capture_observer import finite_float
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
     ControlNotConnectedError,
@@ -189,6 +190,7 @@ class CaptureBaselineReader:
                 AppendObservations(run_id=run_id, entries=tuple(entries)),
                 principal_id=self._principal_id,
                 correlation_id=self._deps.id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise

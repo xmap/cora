@@ -62,10 +62,15 @@ def test_surface_name_is_frozen() -> None:
 
 @pytest.mark.unit
 def test_surface_kind_v1_values_are_pinned() -> None:
-    """V1 ships exactly these three kinds. A2A is deferred; gRPC /
+    """V1 ships exactly these four kinds. A2A is deferred; gRPC /
     websocket / batch are reserved by docstring listing only. New
     values require a code release (closed-enum discipline)."""
-    assert {k.value for k in SurfaceKind} == {"http", "mcp_stdio", "mcp_streamable_http"}
+    assert {k.value for k in SurfaceKind} == {
+        "http",
+        "mcp_stdio",
+        "mcp_streamable_http",
+        "in_process",
+    }
 
 
 @pytest.mark.unit
@@ -74,6 +79,7 @@ def test_surface_kind_value_strings_are_stable() -> None:
     assert SurfaceKind.HTTP.value == "http"
     assert SurfaceKind.MCP_STDIO.value == "mcp_stdio"
     assert SurfaceKind.MCP_STREAMABLE_HTTP.value == "mcp_streamable_http"
+    assert SurfaceKind.IN_PROCESS.value == "in_process"
 
 
 @pytest.mark.unit

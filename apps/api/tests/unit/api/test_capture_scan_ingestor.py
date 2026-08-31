@@ -53,7 +53,7 @@ from cora.infrastructure.capture_scan_ingestor_binding import (
 )
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, FixedIdGenerator
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.ports import InMemoryRunChannelLookup
 from tests.unit._helpers import DEFAULT_NOW
 
@@ -121,6 +121,7 @@ class _FakeIngestScan:
         returns: UUID | None = None,
     ) -> None:
         self.calls: list[IngestScan] = []
+        self.surface_ids: list[UUID] = []
         self._raises = raises
         self._returns = returns or uuid4()
 
@@ -135,6 +136,7 @@ class _FakeIngestScan:
         idempotency_key: str | None = None,
     ) -> UUID:
         self.calls.append(command)
+        self.surface_ids.append(surface_id)
         if isinstance(self._raises, dict):
             error = (
                 self._raises.get(command.producing_run_id)
@@ -267,6 +269,10 @@ async def test_tick_with_a_bound_candidate_records_the_right_fields() -> None:
     # the minting/resolution unit tests themselves.
     assert command.locator.startswith(f"cora-capture-path://localhost/local1/2BM/run-{_RUN_ID}/")
     assert _PERSONAL_PATH_FRAGMENT not in command.locator
+    assert ingest_scan.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "CaptureScanIngestor._ingest_one must pass the internal Surface, "
+        "not fall through to NIL_SENTINEL_ID."
+    )
 
 
 @pytest.mark.unit

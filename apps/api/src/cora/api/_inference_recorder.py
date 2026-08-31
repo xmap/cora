@@ -29,6 +29,7 @@ from cora.decision.features.append_inferences.command import (
 from cora.decision.features.append_inferences.handler import Handler
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import AgentInferenceTrace
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 
 _log = get_logger(__name__)
 
@@ -84,6 +85,7 @@ class DelegatingInferenceRecorder:
                 principal_id=principal_id,
                 correlation_id=correlation_id,
                 causation_id=causation_id,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except InferenceAgentMismatchError as exc:
             # Loud like the 403 sibling below: an internal recorder should be

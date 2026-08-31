@@ -145,6 +145,7 @@ from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
 from cora.data.features.ingest_scan.command import IngestScan
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.adapters.postgres_run_channel_lookup import PostgresRunChannelLookup
 from cora.run.ports.run_channel_lookup import InMemoryRunChannelLookup, RunChannelLookup
 from cora.shared.storage_root import normalize_storage_root
@@ -414,6 +415,7 @@ class CaptureScanIngestor:
                 command,
                 principal_id=CAPTURE_SCAN_INGESTOR_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise

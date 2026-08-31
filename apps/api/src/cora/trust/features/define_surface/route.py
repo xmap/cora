@@ -30,7 +30,7 @@ class DefineSurfaceRequest(BaseModel):
         ...,
         description=(
             "Process-level arrival kind. Closed enum; one of "
-            "http / mcp_stdio / mcp_streamable_http."
+            "http / mcp_stdio / mcp_streamable_http / in_process."
         ),
     )
 

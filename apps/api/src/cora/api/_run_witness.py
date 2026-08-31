@@ -371,6 +371,7 @@ from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.data.adapters.capture_path_locator import active_scan_transport
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run.capture_probes import CaptureProbe
 from cora.run.aggregates.run.state import (
     CapturePreconditionBypassSnapshot,
@@ -974,6 +975,7 @@ class RunWitnessRecorder:
                 command,
                 principal_id=RUN_WITNESS_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise
@@ -1128,6 +1130,7 @@ class RunWitnessRecorder:
                 ),
                 principal_id=RUN_WITNESS_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise
@@ -1177,6 +1180,7 @@ class RunWitnessRecorder:
                 command,
                 principal_id=RUN_WITNESS_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise
@@ -1357,6 +1361,7 @@ async def rebuild_open_captures(deps: Kernel, *, list_runs: ListRunsHandler) -> 
             ),
             principal_id=RUN_WITNESS_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         for item in page.items:
             run: Run | None = await load_run(deps.event_store, item.run_id)

@@ -49,6 +49,7 @@ from cora.infrastructure.observability.surface_context import (
 )
 from cora.infrastructure.routing import (
     SYSTEM_HTTP_SURFACE_ID,
+    SYSTEM_IN_PROCESS_SURFACE_ID,
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
 )
@@ -142,11 +143,13 @@ def test_bearer_middleware_dispatch_binds_and_clears_surface_context() -> None:
 @pytest.mark.architecture
 def test_surface_kind_map_covers_all_http_reachable_seeded_surfaces() -> None:
     """`_SURFACE_KIND_BY_UUID` MUST map every HTTP-reachable seeded Surface
-    UUID to a kind string. `SYSTEM_MCP_STDIO_SURFACE_ID` is intentionally
-    excluded (stdio is a subprocess transport, never reachable via the
-    HTTP middleware). A new HTTP-reachable Surface seeded without a kind
-    entry would cause `surface_kind_for` to raise `UnknownSurfaceError`
-    at request time; better to catch the gap at architecture-test time.
+    UUID to a kind string. `SYSTEM_MCP_STDIO_SURFACE_ID` and
+    `SYSTEM_IN_PROCESS_SURFACE_ID` are intentionally excluded: stdio is a
+    subprocess transport, and internal is CORA's own in-process work,
+    neither ever reachable via the HTTP middleware. A new HTTP-reachable
+    Surface seeded without a kind entry would cause `surface_kind_for` to
+    raise `UnknownSurfaceError` at request time; better to catch the gap
+    at architecture-test time.
     """
     http_reachable_surfaces = {
         SYSTEM_HTTP_SURFACE_ID,
@@ -165,6 +168,12 @@ def test_surface_kind_map_covers_all_http_reachable_seeded_surfaces() -> None:
         "the HTTP middleware. If stdio observability binding lands, it "
         "should bind at the FastMCP server entrypoint, not via the "
         "HTTP-middleware-bound map."
+    )
+    assert SYSTEM_IN_PROCESS_SURFACE_ID not in _SURFACE_KIND_BY_UUID, (
+        "SYSTEM_IN_PROCESS_SURFACE_ID is in _SURFACE_KIND_BY_UUID; the "
+        "internal Surface names CORA's own in-process work, which by "
+        "definition never arrives over the HTTP middleware and so has "
+        "no arrival kind to bind for observability."
     )
 
 

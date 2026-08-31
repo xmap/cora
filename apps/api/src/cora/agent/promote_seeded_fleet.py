@@ -50,6 +50,7 @@ from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.features.version_agent import VersionAgent
 from cora.agent.features.version_agent import bind as bind_version_agent
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -121,6 +122,7 @@ async def promote_seeded_fleet(
                     VersionAgent(agent_id=member.agent_id),
                     principal_id=principal_id,
                     correlation_id=correlation_id,
+                    surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
                 )
             outcome = OUTCOME_PROMOTED
         else:
