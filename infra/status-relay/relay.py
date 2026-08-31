@@ -10,14 +10,16 @@ the same category as `infra/backup/`, not an application module; it must
 run with nothing but the standard library plus `websockets` installed,
 independent of the CORA deployment's own environment.
 
-Holds the single most-recent snapshot AND a bounded ring of up to
-`_RUN_HISTORY_CACHE_SIZE` pushed run histories, both in process-local
-memory only. It is not a database and is not meant to be one: nothing
-about the beamline persists to disk here, so a relay restart has no
-retention question, just a smaller blast radius than before -- a
-compromise of this box now exposes the last snapshot (~20 KB) AND up to
-20 cached run histories, still never anything not already pushed to it,
-still never anything on disk.
+Holds the single most-recent snapshot, a bounded ring of up to
+`_RUN_HISTORY_CACHE_SIZE` pushed run histories, every enclosure timeline
+ever received, and the last `_ACTIVITY_BUFFER_SECONDS` of activity
+events, all in process-local memory only. It is not a database and is
+not meant to be one: nothing about the beamline persists to disk here,
+so a relay restart has no retention question, just a smaller blast
+radius than before -- a compromise of this box now exposes the last
+snapshot (~20 KB), up to 20 cached run histories, every enclosure's
+permit/lifecycle history, and a few minutes of event metadata, still
+never anything not already pushed to it, still never anything on disk.
 
 Six endpoints, one port, one library (`websockets`' `process_request`
 hook answers plain HTTP so a WebSocket-only library can still serve the
@@ -55,18 +57,21 @@ the up-to-20 most recently pushed one:
                               not a human viewer)
   - `WS  /watch`              a browser connects here; sent the current
                               snapshot (or a "no producer yet" state), the
-                              run-history index, and every cached enclosure
-                              timeline immediately on connect, then every
-                              subsequent snapshot, run-history index
-                              update, enclosure-timeline update, and
-                              producer connect / disconnect transition,
-                              live. Enclosure timelines are pure
-                              pass-through PLUS a replay cache (unlike
-                              run history's cache-or-ask-the-producer
-                              shape): at pilot scale there are only a
-                              handful of enclosures, so the whole set
-                              fits in memory with no eviction and no
-                              on-demand request path is needed at all
+                              run-history index, every cached enclosure
+                              timeline, and a backfill of the last
+                              `_ACTIVITY_BUFFER_SECONDS` of activity events
+                              immediately on connect, then every subsequent
+                              snapshot, run-history index update,
+                              enclosure-timeline update, and activity
+                              event, live, plus producer connect /
+                              disconnect transitions. Enclosure timelines
+                              and activity are pure pass-through PLUS a
+                              replay cache (unlike run history's
+                              cache-or-ask-the-producer shape): at pilot
+                              scale there are only a handful of enclosures
+                              and a bounded few minutes of activity, so
+                              both fit in memory with no on-demand request
+                              path needed at all
 
 Run: `STATUS_RELAY_TOKEN=<token> STATUS_RELAY_VIEWER_USER=<user>
 STATUS_RELAY_VIEWER_PASSWORD=<password> python relay.py [--host 0.0.0.0]
@@ -82,6 +87,7 @@ import logging
 import os
 import sys
 from collections import OrderedDict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
@@ -125,6 +131,17 @@ round-trip on a `/run-history/<id>` cache miss -- never exceeds it.
 Exceeding `open_timeout` aborts the TCP handshake with no HTTP response
 at all, turning a legitimate 504 into an unexplained `Failed to fetch`."""
 
+_ACTIVITY_BUFFER_SECONDS = 15 * 60
+"""How long this relay backfills a freshly-connecting watcher with recent
+`"activity"` events, mirroring `page.html`'s own `FLOWING_WINDOW_MS`: a
+separate literal, not a shared constant, since this relay imports nothing
+from `cora` and `page.html` is served verbatim with no build step either
+(see the module docstring). Keeping the two in sync matters only in the
+direction that this value should be >= the browser's own window --
+buffering less would leave a visible gap on reconnect, buffering more is
+harmless since the browser prunes anything older than its own window on
+receipt (`pruneFlowingBuffer`)."""
+
 _PAGE_PATH = Path(__file__).parent / "page.html"
 _SCRUBBER_JS_PATH = Path(__file__).parent / "scrubber.js"
 
@@ -160,6 +177,16 @@ so the whole subject set fits in memory with no eviction, and REWIND
 reaching any of them needs no producer round trip the way reaching any
 RUN does -- see `cora.api._status_push._EnclosureTimelineTail`'s own
 docstring for why."""
+_activity_buffer: list[dict[str, Any]] = []
+"""Individual events (not whole `"activity"` messages) from the last
+`_ACTIVITY_BUFFER_SECONDS`, flattened across however many producer
+messages they arrived in, pruned by `occurred_at` on every new arrival
+and again right before a replay. Exists purely so a watcher that connects
+mid-quiet-period still gets caught up: before this, flowing mode was a
+pure pass-through with no way for a fresh connection (or a browser
+refresh, or a resumed SSH tunnel) to see anything that happened before it
+attached, unlike the snapshot and enclosure-timeline rings which already
+replay on connect."""
 
 
 def _require_token() -> str:
@@ -239,6 +266,52 @@ def _store_enclosure_timeline(message: dict[str, Any]) -> None:
     _enclosure_timelines[enclosure_id] = message
 
 
+def _prune_activity_buffer() -> None:
+    cutoff = datetime.now(UTC).timestamp() - _ACTIVITY_BUFFER_SECONDS
+    global _activity_buffer  # noqa: PLW0603
+    _activity_buffer = [event for event in _activity_buffer if _event_epoch(event) >= cutoff]
+
+
+def _event_epoch(event: dict[str, Any]) -> float:
+    """`occurred_at` as a Unix timestamp, or `-inf` for a malformed/missing
+    one so it prunes out on the next pass rather than wedging the buffer
+    open forever."""
+    occurred_at = event.get("occurred_at")
+    if not isinstance(occurred_at, str):
+        return float("-inf")
+    try:
+        return datetime.fromisoformat(occurred_at).timestamp()
+    except ValueError:
+        return float("-inf")
+
+
+def _store_activity_events(message: dict[str, Any]) -> None:
+    events = message.get("events")
+    if not isinstance(events, list):
+        _log.warning("producer.malformed_activity")
+        return
+    _activity_buffer.extend(events)
+    _prune_activity_buffer()
+
+
+def _activity_replay_message() -> dict[str, Any] | None:
+    """One synthetic `"activity"` message backfilling a freshly-connecting
+    watcher, in the exact shape `build_activity_message` already produces
+    (`page.html`'s `handleActivity` just concatenates `events`, so it needs
+    no replay-specific handling). `None` when the buffer is empty, mirroring
+    the producer's own "never sent when rows is empty" convention."""
+    _prune_activity_buffer()
+    if not _activity_buffer:
+        return None
+    return {
+        "kind": "activity",
+        "schema_version": 1,
+        "producer_id": _producer_id,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "events": list(_activity_buffer),
+    }
+
+
 def _fail_all_pending(reason: str) -> None:
     """Resolve every in-flight `run_history_request` with an exception
     immediately, rather than letting each one sit until its own
@@ -300,11 +373,12 @@ async def _handle_producer(ws: ServerConnection) -> None:
                 if _watchers:
                     websockets.broadcast(_watchers, message)
             elif kind == "activity":
-                # No relay-side cache, unlike snapshot/run_history: flowing
-                # mode's rolling window lives in each browser, not here, so
-                # this is a pure pass-through. A watcher that connects mid-
-                # flow simply starts receiving from that point on, same as
-                # it already does for the live tables.
+                # Buffered (`_store_activity_events`) AND passed through
+                # live: a watcher connecting mid-flow gets the buffer as a
+                # replay in `_handle_watcher`, then this same broadcast
+                # keeps it current, same as it already does for the live
+                # tables.
+                _store_activity_events(payload)
                 if _watchers:
                     websockets.broadcast(_watchers, message)
             elif kind == "run_history_response":
@@ -344,6 +418,9 @@ async def _handle_watcher(ws: ServerConnection) -> None:
         await ws.send(json.dumps(_run_history_index()))
         for message in _enclosure_timelines.values():
             await ws.send(json.dumps(message))
+        activity_replay = _activity_replay_message()
+        if activity_replay is not None:
+            await ws.send(json.dumps(activity_replay))
         async for _ in ws:
             pass  # watchers never send anything meaningful; drain and ignore
     finally:
