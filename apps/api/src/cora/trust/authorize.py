@@ -289,31 +289,19 @@ class TrustAuthorize:
                 ),
                 ResolvedContext(policy=policy, liveness=liveness),
             )
-            if isinstance(result, Allow):
-                _log.info(
-                    "trust_authorize.allow",
-                    policy_id=str(self._policy_id),
-                    principal_id=str(principal_id),
-                    command_name=command_name,
-                    surface_id=str(surface_id),
-                    correlation_id=str(current_correlation_id()),
-                )
-            else:
-                _log.info(
-                    "trust_authorize.deny",
-                    policy_id=str(self._policy_id),
-                    principal_id=str(principal_id),
-                    command_name=command_name,
-                    surface_id=str(surface_id),
-                    reason=result.reason,
-                    correlation_id=str(current_correlation_id()),
-                )
 
         result, shadow_reason = self._apply_policy_posture(
             result,
             principal_id=principal_id,
             command_name=command_name,
             surface_id=surface_id,
+        )
+        self._log_decision(
+            result,
+            principal_id=principal_id,
+            command_name=command_name,
+            surface_id=surface_id,
+            shadow_reason=shadow_reason,
         )
 
         if self._verdict_store is not None:
@@ -326,6 +314,51 @@ class TrustAuthorize:
             )
 
         return result
+
+    def _log_decision(
+        self,
+        result: AuthzResult,
+        *,
+        principal_id: UUID,
+        command_name: str,
+        surface_id: UUID,
+        shadow_reason: str | None,
+    ) -> None:
+        """One line per call, naming what the gate DID.
+
+        Runs AFTER `_apply_policy_posture`, for the same reason the verdict
+        row is written after it. A `trust_authorize.deny` line beside a
+        command that went on to succeed makes every refusal count taken from
+        the log wrong, and taking a refusal count is the entire job of a
+        shadow period. The first live shadow window emitted both lines for
+        each near-miss and was exactly that misleading.
+
+        The counterfactual is not lost by moving the line: it rides on the
+        allow as `shadowed_reason`, beside the `policy_shadow_near_miss`
+        warning the posture already emits. Both fields are chosen the same
+        way `_emit_verdict` chooses the row's decision and reason, so a
+        reader cannot find the log and the record disagreeing about a call.
+        """
+        if isinstance(result, Deny):
+            _log.info(
+                "trust_authorize.deny",
+                policy_id=str(self._policy_id),
+                principal_id=str(principal_id),
+                command_name=command_name,
+                surface_id=str(surface_id),
+                reason=result.reason,
+                correlation_id=str(current_correlation_id()),
+            )
+            return
+        _log.info(
+            "trust_authorize.allow",
+            policy_id=str(self._policy_id),
+            principal_id=str(principal_id),
+            command_name=command_name,
+            surface_id=str(surface_id),
+            shadowed_reason=shadow_reason,
+            correlation_id=str(current_correlation_id()),
+        )
 
     def _apply_policy_posture(
         self,

@@ -10,10 +10,12 @@ Verdict observation row scoped to the target Conduit's
 verdict logbook.
 """
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+import structlog.testing
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
@@ -691,3 +693,90 @@ async def test_an_allow_carries_no_shadow_reason() -> None:
     await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
 
     assert verdicts.all()[0].reason is None
+
+
+# --- what the log says a shadowed call did -----------------------------------
+#
+# The first live shadow window on the 2-BM deployment logged BOTH
+# `trust_authorize.deny` and `policy_shadow_near_miss` for every near-miss,
+# because the decision was logged before the posture was applied. Counting
+# refusals out of the log therefore counted refusals that never happened, which
+# is the one number a shadow period exists to produce. These pin the ordering
+# rather than the wording.
+
+
+def _log_events(captured: Sequence[Mapping[str, object]]) -> list[object]:
+    return [entry.get("event") for entry in captured]
+
+
+def _entry(captured: Sequence[Mapping[str, object]], event: str) -> Mapping[str, object]:
+    return next(e for e in captured if e.get("event") == event)
+
+
+@pytest.mark.unit
+async def test_a_shadowed_refusal_is_never_logged_as_a_deny() -> None:
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    with structlog.testing.capture_logs() as captured:
+        result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    assert isinstance(result, Allow)
+    events = _log_events(captured)
+    assert "trust_authorize.deny" not in events
+    assert "trust_authorize.allow" in events
+    assert "trust_authorize.policy_shadow_near_miss" in events
+
+
+@pytest.mark.unit
+async def test_the_allow_line_for_a_shadowed_refusal_carries_the_counterfactual() -> None:
+    """Moving the line must not cost the reason it was carrying.
+
+    An operator reading only the allow stream still has to be able to tell a
+    genuine permit from a refusal that was observed and dropped.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    with structlog.testing.capture_logs() as captured:
+        await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    allow = _entry(captured, "trust_authorize.allow")
+    reason = allow["shadowed_reason"]
+    assert isinstance(reason, str)
+    assert reason.startswith("shadow, not enforced: ")
+    assert "permitted set" in reason
+
+
+@pytest.mark.unit
+async def test_a_genuine_allow_is_not_annotated_as_shadowed() -> None:
+    """The discriminator has to separate the two, not mark everything."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    with structlog.testing.capture_logs() as captured:
+        await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    allow = _entry(captured, "trust_authorize.allow")
+    assert allow["shadowed_reason"] is None
+    assert "trust_authorize.policy_shadow_near_miss" not in _log_events(captured)
+
+
+@pytest.mark.unit
+async def test_an_enforced_refusal_is_still_logged_as_a_deny() -> None:
+    """The move must not silence the posture that does refuse."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID)
+
+    with structlog.testing.capture_logs() as captured:
+        result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    assert isinstance(result, Deny)
+    events = _log_events(captured)
+    assert "trust_authorize.deny" in events
+    assert "trust_authorize.allow" not in events
+    assert "trust_authorize.policy_shadow_near_miss" not in events
