@@ -55,13 +55,21 @@
   const LANE_HEIGHT = 40;
   const MAX_SERIES_LANES = 6;
   const AXIS_MARGIN = 44;
-  // One mark shape, one height. A single event is a circle of this diameter
-  // and a group is a pill of the same height stretched across the time its
-  // members actually span, so size means duration and nothing else. The
-  // earlier pair -- an 8-unit square for one event, a 12-unit rounded badge
-  // for many -- differed in shape AND height, so a group read as a different
-  // kind of thing rather than as more of the same thing.
-  const MARK_H = 12;
+  // One event is one square. A group is those squares PACKED side by side, so
+  // a burst adds up into a bar whose length is how many happened rather than a
+  // badge carrying a number, and every member stays its own shape with its own
+  // severity colour and its own hit target. That is what makes an individual
+  // event inside a burst pickable at all: there is no merged mark to drill
+  // into, only neighbours that stopped overlapping.
+  const MARK_S = 9;
+  const MARK_GAP = 2;
+  const MARK_STEP = MARK_S + MARK_GAP;
+  // Past this many, packing would run a single burst across a third of the
+  // plot and shove its neighbours out of true. Beyond it the group draws as
+  // one bar of that width and takes a count back, which is the one case a
+  // number is worth more than the shape.
+  const PACK_MAX = 8;
+  const MARK_H = MARK_S;
   // Two marks closer than this many user units cannot be drawn apart. Derived
   // from the mark, not chosen: at exactly MARK_H two circles touch, so the
   // extra 2 is the surface gap that keeps neighbours legible as two. At a
@@ -69,12 +77,10 @@
   // lands near 15s -- but it is deliberately a WIDTH, not a duration. What can
   // be separated is a property of the canvas, and a duration constant would
   // silently lie at every other window size.
-  const COLLAPSE_GAP = MARK_H + 2;
+  const COLLAPSE_GAP = MARK_STEP;
   const LABEL_CH = 5.6;
   const LABEL_PAD = 5;
   const LANE_LABEL_CH = 6.2;
-  // Wide enough for a two-digit count at the badge's 9px mono.
-  const CLUSTER_MIN_W = 18;
   // Extra time rendered either side of the view, as a multiple of its span.
   // A drag TRANSLATES the rendered content instead of rebuilding it, and this
   // buffer is what gives the translation something to reveal. Rebuilding per
@@ -299,22 +305,56 @@
   // caused the whole badge when it caused one event inside it, so a focused
   // chain un-collapses and every edge lands on a real event. Everything not in
   // the chain stays merged, so focusing does not explode the whole chart.
-  function clusterPoints(points, X, separate) {
+  function clusterPoints(points, X) {
     const out = [];
     let cur = null;
     for (const p of points) {
       const x = X(p.secs);
-      const solo = !!separate && separate.has(p);
-      if (!solo && cur && !cur.solo && x - cur.xEnd < COLLAPSE_GAP) {
+      if (cur && x - cur.xEnd < COLLAPSE_GAP) {
         cur.items.push(p);
         cur.xEnd = x;
       } else {
         if (cur) out.push(cur);
-        cur = { xStart: x, xEnd: x, items: [p], solo };
+        cur = { xStart: x, xEnd: x, items: [p] };
       }
     }
     if (cur) out.push(cur);
     return out;
+  }
+
+  // How wide a group draws once its members are packed, and where it starts.
+  // Centred on the time the group occupies, so the bar sits over its events
+  // rather than growing off one end of them.
+  function packWidth(count) {
+    return Math.min(count, PACK_MAX) * MARK_STEP - MARK_GAP;
+  }
+  function packStart(cluster) {
+    return (cluster.xStart + cluster.xEnd) / 2 - packWidth(cluster.items.length) / 2;
+  }
+
+  // Packing makes a group WIDER than the span that formed it, so two groups
+  // that did not overlap as points can overlap as bars. Merge until they do
+  // not: without this the packed bars collide and the thing this whole
+  // rendering exists to prevent comes back in a new shape.
+  function packClusters(points, X) {
+    let groups = clusterPoints(points, X);
+    for (let pass = 0; pass < 8; pass++) {
+      const merged = [];
+      let changed = false;
+      for (const g of groups) {
+        const prev = merged[merged.length - 1];
+        if (prev && packStart(prev) + packWidth(prev.items.length) + MARK_GAP > packStart(g)) {
+          prev.items = prev.items.concat(g.items);
+          prev.xEnd = g.xEnd;
+          changed = true;
+        } else {
+          merged.push({ xStart: g.xStart, xEnd: g.xEnd, items: g.items.slice() });
+        }
+      }
+      groups = merged;
+      if (!changed) break;
+    }
+    return groups;
   }
 
   // The point a cluster is named after: highest tier first, then the rarest
@@ -553,6 +593,10 @@
     const axisWindow = svg("g", { "clip-path": axisClip });
     const plot = svg("g", { class: "cs-pan cs-plot" });
     const axisRow = svg("g", { class: "cs-pan cs-axis-row" });
+    // Filled later, appended first: an arrow leaving a solid mark has to pass
+    // BEHIND it, or its tail sits on top of the very thing it starts from.
+    const edgeLayer = svg("g", { class: "cs-edge-layer" });
+    plot.appendChild(edgeLayer);
     plotWindow.appendChild(plot);
     axisWindow.appendChild(axisRow);
     g.appendChild(plotWindow);
@@ -584,7 +628,7 @@
         // view edge must merge the same way it would mid-view rather than
         // splitting into a different shape at the boundary.
         const visible = lane.points.filter((p) => p.secs >= scale.bmin && p.secs <= scale.bmax);
-        const clusters = clusterPoints(visible, X, chain);
+        const clusters = packClusters(visible, X);
         const candidates = [];
         let prevBase = null;
 
@@ -626,20 +670,59 @@
           // The pair this replaces differed in shape AND height -- an 8-unit
           // square against a 12-unit rounded badge -- so a group read as a
           // different kind of thing rather than as more of the same thing.
-          const w = n > 1 ? Math.max(CLUSTER_MIN_W, c.xEnd - c.xStart + MARK_H) : MARK_H;
-          const markEl = svg("rect", {
-            x: c.xStart - MARK_H / 2,
-            y: y - MARK_H / 2,
-            width: w,
-            height: MARK_H,
-            rx: MARK_H / 2,
-            class: `cs-mark cs-mark--${n > 1 ? "cluster" : "single"} cs-tier--${head.tier}`,
+          const x0 = packStart(c);
+          const wide = n > PACK_MAX;
+          // Under the cap, one square per event: the bar IS the events, so
+          // each carries its own severity colour and its own hit target and
+          // any one of them can be picked out of a burst. Over it, a single
+          // bar takes the count back as a number, because a hundred squares
+          // is a smear and a smear that cannot say how many is worse than a
+          // number.
+          const cells = wide ? [{ point: c.items[0], span: c.items }] : c.items.map((q) => ({ point: q }));
+          cells.forEach((cell, i) => {
+            const q = cell.point;
+            const cw = wide ? packWidth(n) : MARK_S;
+            const cx = wide ? x0 : x0 + i * MARK_STEP;
+            const tier = wide ? head.tier : q.tier || 0;
+            const markEl = svg("rect", {
+              x: cx,
+              y: y - MARK_S / 2,
+              width: cw,
+              height: MARK_S,
+              rx: 1.5,
+              class: `cs-mark cs-mark--${wide ? "many" : n > 1 ? "packed" : "single"} cs-tier--${tier}`,
+            });
+            const title = svg("title");
+            title.textContent = wide
+              ? c.items.map((z) => `${z.label} @ ${fmtClock(model.t0, z.secs)}`).join("\n")
+              : `${q.label} @ ${fmtClock(model.t0, q.secs)}`;
+            markEl.appendChild(title);
+            markEl.classList.add("cs-mark--hit");
+            plot.appendChild(markEl);
+            timed.push({ el: markEl, t: q.secs });
+
+            // One cluster object per CELL, so hovering or pinning resolves to
+            // the one event under the pointer rather than to whatever the
+            // group is named after. `group` keeps the neighbours reachable so
+            // the card can still say which of how many this is.
+            const cell_c = { xStart: cx, xEnd: cx + cw, items: [q], group: c.items, index: i };
+            markEl._csCluster = cell_c;
+            const hit = svg("rect", {
+              x: cx - MARK_GAP,
+              y: y - 11,
+              width: cw + MARK_GAP * 2,
+              height: 22,
+              class: "cs-hit",
+            });
+            hit._csCluster = cell_c;
+            plot.appendChild(hit);
+            selectable.push({ el: markEl, point: q });
+            if (focus && dim) markEl.classList.add("cs-dim");
           });
-          plot.appendChild(markEl);
-          timed.push({ el: markEl, t: c.items[0].secs });
-          if (n > 1) {
+
+          if (wide) {
             const ct = svg("text", {
-              x: c.xStart - MARK_H / 2 + w / 2,
+              x: x0 + packWidth(n) / 2,
               y: y + 3.2,
               class: "cs-cluster-count",
               "text-anchor": "middle",
@@ -649,39 +732,24 @@
             timed.push({ el: ct, t: c.items[0].secs });
           }
 
-          // A count is only honest if its contents are recoverable. The folded
-          // readout answers at the cursor; this answers on hover, and is the
-          // only route for a viewer who never moves the cursor at all.
-          const title = svg("title");
-          title.textContent = c.items
-            .map((p) => `${p.label} @ ${fmtClock(model.t0, p.secs)}`)
-            .join("\n");
-          markEl.appendChild(title);
-          // A press on a mark selects it rather than starting a pan, so the
-          // whole chart is not one big drag surface. The hit area is wider
-          // than the mark because an 8-unit square is a hard pointer target.
-          markEl.classList.add("cs-mark--hit");
-          markEl._csCluster = c;
-          const hit = svg("rect", {
-            x: c.xStart - MARK_H,
-            y: y - 11,
-            width: w + MARK_H,
-            height: 22,
-            class: "cs-hit",
-          });
-          hit._csCluster = c;
-          plot.appendChild(hit);
-          selectable.push({ el: markEl, point: c.items[0] });
-
           if (focus) {
-            if (dim) markEl.classList.add("cs-dim");
-            for (const p of c.items) {
-              if (chain.has(p)) pointPos.set(p, { x: X(p.secs), y });
-            }
+            // Edges land on the SQUARE, not on the event's true x: the pack
+            // moved it, and an arrow pointing at empty chart beside the mark
+            // it means would be worse than one pointing slightly off-time.
+            c.items.forEach((q, i) => {
+              if (!chain.has(q)) return;
+              const cx = wide ? x0 + packWidth(n) / 2 : x0 + i * MARK_STEP + MARK_S / 2;
+              pointPos.set(q, { x: cx, y });
+            });
           }
 
           candidates.push({
-            cx: (c.xStart + c.xEnd) / 2,
+            // Over the BAR, not over the span that formed it. Packing widens
+            // a group and shifts its centre, and a label anchored to the old
+            // centre sits off its own mark -- and near the plot edge is left
+            // unclamped and clipped, because the clamp only fires for a
+            // centre that is itself on screen.
+            cx: x0 + packWidth(n) / 2,
             tier: head.tier,
             text,
             skip: repeat,
@@ -743,7 +811,7 @@
       axisRow.appendChild(lab);
     }
 
-    if (focus) renderChainEdges(plot, model, focus, pointPos, scale);
+    if (focus) renderChainEdges(edgeLayer, model, focus, pointPos, scale);
 
     // Both mark an INSTANT, so both belong to the pannable group and travel
     // with the events they sit between. Only one is ever drawn.
@@ -799,9 +867,11 @@
 
   // The card that follows the pointer. Hovering an event is the whole
   // interaction now, so this has to answer on its own: what it is, when, what
-  // it belongs to, what caused it and what it set off. A collapsed group lists
-  // its members, because the count on the pill is a promise that they are
-  // recoverable and hover is the fastest place to keep it.
+  // caused it and what it set off. Where the pointer is over one square of a
+  // packed burst the card names that square's own event and says which of how
+  // many it is; where the burst was too big to pack and drew as one bar, it
+  // lists the contents, because the number on that bar is a promise that they
+  // are recoverable.
   function tipHtml(model, cluster, focus) {
     const esc = (v) =>
       String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -809,14 +879,17 @@
       `<div class="cs-tip-row${cls ? ` ${cls}` : ""}"><span class="cs-tip-k">${esc(k)}</span>` +
       `<span class="cs-tip-v">${esc(v)}</span></div>`;
 
-    const items = cluster.items;
     const head = focus.point;
+    const group = cluster.group || cluster.items;
+    const listed = cluster.items.length > 1 ? cluster.items : null;
     const out = [];
-    if (items.length > 1) {
-      out.push(`<div class="cs-tip-head">${esc(items.length)} events</div>`);
+    out.push(`<div class="cs-tip-head">${esc(head.label)}</div>`);
+    out.push(row("occurred", fmtClock(model.t0, head.secs)));
+    if (listed) {
+      out.push(row("in a burst of", `${listed.length}, too many to separate`));
       out.push(
         '<div class="cs-tip-list">' +
-          items
+          listed
             .map(
               (p) =>
                 `<div class="cs-tip-item${p === head ? " cs-tip-item--head" : ""}">` +
@@ -826,10 +899,8 @@
             .join("") +
           "</div>"
       );
-      out.push(row("relations for", head.label));
-    } else {
-      out.push(`<div class="cs-tip-head">${esc(head.label)}</div>`);
-      out.push(row("occurred", fmtClock(model.t0, head.secs)));
+    } else if (group.length > 1) {
+      out.push(row("in a burst of", `${group.length}, this is #${(cluster.index || 0) + 1}`));
     }
 
     // Silent where the document records no relations at all, rather than
@@ -1049,6 +1120,7 @@
       // that survived a pan, and then every visible mark dims with nothing lit
       // to show for it. Bring the pinned event in either way.
       state.reveal(cluster.items[0].secs);
+      state.anchorTip();
       // Where the cursor answers for the pointer, a pin fixes it at its own
       // instant so the panel and the highlight cannot disagree. Where the
       // cursor is parked (a flowing window), it stays parked: dropping a
@@ -1675,10 +1747,14 @@
         return;
       }
       rerender();
-      // Re-anchor the card to the pinned MARK, not to wherever the pointer
-      // happened to be. A pin outlives the pointer, so a card left at the last
-      // hover position drifts away from the thing it describes, and panning
-      // afterwards strands it completely.
+    };
+
+    // Re-anchor the card to the pinned MARK, not to wherever the pointer
+    // happened to be: a pin outlives the pointer. Separate from refocus and
+    // called LAST, because pinning can also pan (`reveal`) and a card placed
+    // before that pan is left pointing at where the mark used to be.
+    state.anchorTip = () => {
+      if (!anchor || !state.selected) return;
       const seat = scene.selectable.find((x) => x.point === anchor);
       if (!seat) return;
       const r = seat.el.getBoundingClientRect();

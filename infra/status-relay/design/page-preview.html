@@ -53,7 +53,11 @@
       event_type: types[Math.floor(rnd() * types.length)],
       occurred_at: new Date(ms).toISOString(),
       recorded_at: new Date(ms).toISOString(),
-      correlation_id: uuid(Math.floor(rnd() * 40)),
+      // One per command, near enough: a correlation group is the handful of
+      // events one operator action produced, not a bucket a whole day falls
+      // into. Forty ids over a day put 200 events in each and made the card's
+      // "correlated with" row read as noise.
+      correlation_id: uuid(500000 + evSeq),
       causation_id: null,
       cause_occurred_at: null,
     };

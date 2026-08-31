@@ -161,8 +161,13 @@
     display: flex; justify-content: space-between; gap: 0.8rem;
     padding: 0.1rem 0; font-size: 0.7rem;
   }
-  .cs-tip-k { color: var(--cs-sub); }
-  .cs-tip-v { font-family: var(--cs-mono); color: var(--cs-ink); text-align: right; }
+  /* The key never wraps: a long value pushing "caused by" onto two lines
+     turns the card into a paragraph. The value wraps instead. */
+  .cs-tip-k { color: var(--cs-sub); white-space: nowrap; }
+  .cs-tip-v {
+    font-family: var(--cs-mono); color: var(--cs-ink); text-align: right;
+    overflow-wrap: anywhere;
+  }
   .cs-tip-row--up .cs-tip-v { color: var(--cs-alarm); }
   .cs-tip-row--down .cs-tip-v { color: var(--cs-warn); }
   .cs-tip-list {
@@ -225,14 +230,12 @@
   .cs-tick-label { fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 10px; }
   .cs-run-line { stroke: var(--cs-sub); stroke-width: 1.6; fill: none; }
   .cs-life-label { font-size: 9.5px; font-weight: 500; fill: var(--cs-sub); }
-  /* One mark family: single and cluster are the same pill at the same
-     height and the same fill, so a group reads as more of the same thing
-     rather than as a different thing. Only WIDTH and the count inside
-     separate them, and both of those mean the same thing. The surface-
-     coloured stroke is the 2-unit gap COLLAPSE_GAP leaves between
-     neighbours, which is what keeps two touching pills legible as two. */
-  .cs-mark { stroke: var(--cs-surface); stroke-width: 1; transition: opacity 0.12s ease; }
-  .cs-mark--single, .cs-mark--cluster { fill: var(--cs-ink); }
+  /* One mark family: every event is the same small square, and a burst is
+     those squares packed side by side into a bar whose length is how many
+     happened. No stroke -- the MARK_GAP between them is real space, so the
+     squares read as separate without a ring thickening each one. */
+  .cs-mark { transition: opacity 0.12s ease; }
+  .cs-mark--single, .cs-mark--packed, .cs-mark--many { fill: var(--cs-ink); }
   .cs-mark--acquire { fill: var(--cs-sub); }
   .cs-mark--check { fill: var(--cs-warn); }
   /* Severity, reusing the page's existing status hues rather than a new set.
