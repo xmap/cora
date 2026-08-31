@@ -13,6 +13,7 @@
     --stale: #d29922;
     --dead: #da3633;
     --row-border: #262b33;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   body {
     margin: 0;
@@ -132,10 +133,48 @@
   .cs-btn:hover { color: var(--cs-ink); border-color: color-mix(in srgb, var(--cs-warn) 60%, var(--cs-line)); }
   .cs-play[aria-pressed="true"] { color: #1a130a; background: var(--cs-warn); border-color: var(--cs-warn); }
   .cs-btn:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
-  .cs-slider:focus-visible { outline: none; }
-  .cs-slider:focus-visible .cs-slider-thumb { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
   .cs-stage { overflow-x: auto; margin-top: 0.7rem; }
-  .cora-scrubber__svg { display: block; width: 100%; min-width: 640px; height: auto; touch-action: none; cursor: ew-resize; }
+  /* `grab` announces the one gesture that is not discoverable: that the chart
+     body can be dragged. Marks override it back to a pointer so a clickable
+     thing still looks clickable. */
+  .cora-scrubber__svg { display: block; width: 100%; min-width: 640px; height: auto; touch-action: none; cursor: grab; }
+  .cora-scrubber__svg.cs-grabbing { cursor: grabbing; }
+  .cora-scrubber__svg:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
+  .cs-hit { fill: transparent; cursor: pointer; }
+  .cs-mark--hit { cursor: pointer; }
+  .cs-selected { stroke: var(--cs-ink); stroke-width: 2; }
+  /* Page scope, so only the :root tokens are in reach: the --cs-* set is
+     declared on .cora-scrubber and does not resolve out here. */
+  #flowing-controls {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+  }
+  .flowing-controls__label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  #flowing-controls .seg {
+    display: flex; border: 1px solid var(--row-border); border-radius: 5px; overflow: hidden;
+  }
+  #flowing-controls .seg button {
+    font-family: var(--mono); font-size: 0.72rem; padding: 0.25rem 0.6rem;
+    border: 0; border-right: 1px solid var(--row-border); background: transparent;
+    color: var(--muted); cursor: pointer;
+  }
+  #flowing-controls .seg button:last-child { border-right: 0; }
+  #flowing-controls .seg button:hover { color: var(--fg); }
+  #flowing-controls .seg button[aria-pressed="true"] {
+    background: var(--stale); color: #1a130a; font-weight: 600;
+  }
+  #flowing-controls .seg button:focus-visible { outline: 2px solid var(--stale); outline-offset: -2px; }
+  .cs-hint {
+    font-family: var(--cs-mono); font-size: 0.62rem; color: var(--cs-mute);
+    margin-top: 0.6rem; letter-spacing: 0.02em;
+  }
+  .cs-hint kbd {
+    font-family: var(--cs-mono); background: var(--cs-panel-2);
+    border: 1px solid var(--cs-line); border-radius: 3px; padding: 0 3px;
+  }
   .cs-baseline, .cs-axis, .cs-tick { stroke: var(--cs-line); stroke-width: 1; }
   .cs-lane-label { fill: var(--cs-sub); font-size: 11px; }
   .cs-tick-label { fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 10px; }
@@ -165,24 +204,6 @@
   .cs-future { opacity: 0.25; }
   .cs-cursor { stroke: var(--cs-alarm); stroke-width: 1.4; stroke-dasharray: 4 3; }
   .cs-cursor-handle { fill: var(--cs-alarm); stroke: var(--cs-surface); stroke-width: 1.2; }
-  .cs-slider {
-    position: relative; height: 22px; margin: 0.4rem 0 0.2rem; display: flex;
-    align-items: center; cursor: pointer; touch-action: none;
-  }
-  .cs-slider-track {
-    position: relative; flex: 1; margin: 0 2.61% 0 9.13%; height: 5px; border-radius: 3px;
-    background: var(--cs-panel-2); border: 1px solid var(--cs-line);
-  }
-  .cs-slider-fill {
-    position: absolute; inset: 0 auto 0 0; width: 0;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--cs-alarm) 55%, var(--cs-warn)), var(--cs-alarm));
-  }
-  .cs-slider-thumb {
-    position: absolute; top: 50%; left: 0; width: 16px; height: 16px; border-radius: 50%;
-    background: var(--cs-alarm); border: 2px solid var(--cs-surface);
-    transform: translate(-50%, -50%); transition: transform 0.1s ease; pointer-events: none;
-  }
-  .cs-slider:hover .cs-slider-thumb, .cs-slider:focus-visible .cs-slider-thumb { transform: translate(-50%, -50%) scale(1.18); }
   .cs-panels { display: grid; grid-template-columns: 1fr; gap: 0.7rem; margin-top: 0.6rem; }
   .cs-readout { background: var(--cs-panel); border: 1px solid var(--cs-line); border-radius: 10px; padding: 0.7rem 0.85rem; }
   .cs-readout-head { font-family: var(--cs-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--cs-mute); margin-bottom: 0.55rem; }
@@ -218,8 +239,12 @@
 
   <div id="content">
     <h2>Live activity</h2>
-    <div id="flowing-status"></div>
-    <button type="button" id="flowing-resume">Resume following</button>
+    <div id="flowing-controls">
+      <span class="flowing-controls__label">Window</span>
+      <div class="seg" id="flowing-window" role="group" aria-label="Visible time window"></div>
+      <span id="flowing-status"></span>
+      <button type="button" id="flowing-resume">Resume following</button>
+    </div>
     <div id="flowing-stage"></div>
 
     <h2>Runs</h2>
@@ -584,7 +609,19 @@
     DecisionDebriefRequested: 1,
   };
 
-  var flowing = { buffer: [], following: true, pausedAtMs: 0 };
+  // How much of the buffer is on screen at once. The default is the whole
+  // buffer, which is exactly the behaviour before panning existed; anything
+  // narrower makes the chart a window you can drag through the retained 15
+  // minutes. Also sets how far a drag travels per pixel, so a narrow window
+  // pans slowly and precisely and a wide one covers ground.
+  var FLOWING_WINDOWS = [["2m", 120], ["5m", 300], ["15m", FLOWING_WINDOW_MS / 1000]];
+
+  var flowing = {
+    buffer: [],
+    following: true,
+    pausedAtMs: 0,
+    viewSpanSecs: FLOWING_WINDOW_MS / 1000,
+  };
   var flowingStageEl = document.getElementById("flowing-stage");
   var flowingResumeEl = document.getElementById("flowing-resume");
   var flowingStatusEl = document.getElementById("flowing-status");
@@ -675,6 +712,27 @@
   }
   flowingResumeEl.addEventListener("click", resumeFollowing);
 
+  // Narrowing the window is a deliberate move to look closely, so it snaps
+  // back to the live edge rather than leaving the viewer somewhere arbitrary
+  // in the middle of the buffer.
+  var flowingWindowEl = document.getElementById("flowing-window");
+  function renderFlowingWindowPicker() {
+    flowingWindowEl.innerHTML = "";
+    FLOWING_WINDOWS.forEach(function (opt) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = opt[0];
+      b.setAttribute("aria-pressed", String(flowing.viewSpanSecs === opt[1]));
+      b.addEventListener("click", function () {
+        flowing.viewSpanSecs = opt[1];
+        renderFlowingWindowPicker();
+        resumeFollowing();
+      });
+      flowingWindowEl.appendChild(b);
+    });
+  }
+  renderFlowingWindowPicker();
+
   function renderFlowing() {
     var nowMs = Date.now();
     pruneFlowingBuffer(nowMs);
@@ -686,7 +744,7 @@
     window.CoraScrubber.mount(flowingStageEl, doc, {
       chromeTitle: "Live activity",
       subtitle: doc.subtitle,
-      sliderLabel: "Fold cursor: time within the last 15 minutes",
+      viewSpanSecs: flowing.viewSpanSecs,
       follow: true,
       showPlay: false,
       showJumpLast: false,
@@ -908,7 +966,6 @@
       .then(function (history) {
         mountTimelineInStage(runHistoryToTimelineDocument(history), {
           chromeTitle: "Rewind",
-          sliderLabel: "Fold cursor: time within the run",
         });
       })
       .catch(function (err) {
@@ -939,7 +996,6 @@
     }
     mountTimelineInStage(doc, {
       chromeTitle: "Rewind",
-      sliderLabel: "Fold cursor: time within the enclosure's history",
     });
   }
 

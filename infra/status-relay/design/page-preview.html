@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>page preview</title>
+<!--
+  Loads the REAL page.html in an iframe with the WebSocket stubbed, so the
+  whole page can be exercised without a relay, a producer or a database.
+  The harness beside this one covers the renderer in isolation; this one
+  covers the page's own wiring: the window picker, follow/pause, the domain
+  tables, and that page.html and scrubber.js still agree with each other.
+
+  Serve the parent directory and open /design/page-preview.html.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #0e1117; }
+  iframe { border: 0; width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+<script>
+  // Feed the page a synthetic producer before its own script runs.
+  const SRC = "../page.html";
+  const NOW = Date.now();
+  const LANES = [
+    ["Run", ["RunStarted", "RunAdjusted", "RunAborted", "RunCompleted", "RunResumed"]],
+    ["Decision", ["DecisionRegistered", "DecisionRated", "DecisionDebriefRequested"]],
+    ["Procedure", ["ProcedureStarted", "ProcedureIterationStarted", "ProcedureCompleted"]],
+    ["Caution", ["CautionRegistered"]],
+    ["Enclosure", ["EnclosurePermitObserved"]],
+    ["Dataset", ["DatasetRegistered", "DatasetPromoted"]],
+  ];
+
+  let seed = 11;
+  function rnd() {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  }
+
+  function burst(atMs) {
+    const [stream, types] = LANES[Math.floor(rnd() * LANES.length)];
+    const n = rnd() < 0.45 ? 1 + Math.floor(rnd() * 5) : 1;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push({
+        stream_type: stream,
+        stream_id: "00000000-0000-4000-8000-" + String(100 + Math.floor(rnd() * 3)).padStart(12, "0"),
+        event_type: types[Math.floor(rnd() * types.length)],
+        occurred_at: new Date(atMs + i * 400).toISOString(),
+        recorded_at: new Date(atMs + i * 400).toISOString(),
+        correlation_id: "00000000-0000-4000-8000-" + String(Math.floor(rnd() * 40)).padStart(12, "0"),
+        causation_id: null,
+        cause_occurred_at: null,
+      });
+    }
+    return out;
+  }
+
+  function backlog() {
+    const events = [];
+    for (let t = NOW - 14 * 60 * 1000; t < NOW; t += 8000 + rnd() * 25000) {
+      events.push(...burst(t));
+    }
+    return events;
+  }
+
+  function snapshot() {
+    return {
+      kind: "snapshot",
+      generated_at: new Date().toISOString(),
+      runs: [{ run_id: "r1", name: "R-4471", status: "Running",
+               progress: { detector: { value: 812, commanded_total: 1500 } } }],
+      subjects: [{ subject_id: "s1", name: "SMP-115", status: "Mounted" }],
+      campaigns: [{ name: "CMP-2211", intent: "Tomography", status: "Active", run_count: 3 }],
+      datasets: [], clearances: [], enclosures: [], decisions: [],
+    };
+  }
+
+  class StubSocket {
+    constructor() {
+      this.readyState = 1;
+      setTimeout(() => {
+        this.onopen && this.onopen();
+        this._send({ producer_connected: true });
+        this._send(snapshot());
+        this._send({ kind: "activity", events: backlog() });
+        this._tick = setInterval(() => {
+          this._send(snapshot());
+          if (rnd() < 0.7) this._send({ kind: "activity", events: burst(Date.now()) });
+        }, 2000);
+      }, 80);
+    }
+    _send(obj) { this.onmessage && this.onmessage({ data: JSON.stringify(obj) }); }
+    close() { clearInterval(this._tick); }
+    send() {}
+  }
+
+  const frame = document.createElement("iframe");
+  document.body.appendChild(frame);
+  fetch(SRC)
+    .then((r) => r.text())
+    .then((html) => {
+      const doc = frame.contentDocument;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      // Replace before page.html's own connect() runs on DOMContentLoaded-ish
+      // timing; its script is inline at the end of body, so patching the
+      // iframe's global here beats it to the first connect attempt.
+      frame.contentWindow.WebSocket = StubSocket;
+      frame.contentWindow.fetch = () =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve({ runs: [] }) });
+    });
+</script>
+</body>
+</html>

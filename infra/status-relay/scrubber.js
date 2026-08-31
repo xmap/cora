@@ -101,11 +101,23 @@
     return TICK_STEPS[TICK_STEPS.length - 1];
   }
 
-  function buildScale(xmax) {
-    const dmin = 0;
-    const dmax = xmax > 0 ? xmax : 1;
+  // The scale now maps a VIEW onto the plot, not the whole domain. When the
+  // view equals the domain (REWIND's default) this is the old behaviour
+  // exactly; when it is narrower, the chart becomes a window that pans.
+  function buildScale(from, to) {
+    const dmin = from;
+    const dmax = to > from ? to : from + 1;
     const k = (VW - PAD_L - PAD_R) / (dmax - dmin);
     return { dmin, dmax, k };
+  }
+
+  // Keep the view inside the domain, and never let it grow past it: panning
+  // should run out at the ends rather than drift into blank space that reads
+  // like a quiet period.
+  function clampView(from, span, domainMax) {
+    const width = Math.min(span, domainMax);
+    const start = Math.max(0, Math.min(from, domainMax - width));
+    return { from: start, to: start + width };
   }
 
   // Fold every lane forward to time t: for the primary markers lane (if
@@ -278,11 +290,20 @@
     const vh = axisY + AXIS_MARGIN;
     const X = (secs) => xFor(scale, secs);
 
+    // Focusable and slider-shaped: the value it announces is the fold cursor's
+    // clock time, which `setCursor` keeps in `aria-valuetext`. This replaces
+    // the separate slider element that used to be the only keyboard route.
     const g = svg("svg", {
       viewBox: `0 0 ${VW} ${vh}`,
       class: "cora-scrubber__svg",
-      role: "img",
-      "aria-label": "Timeline. Drag the cursor to fold it to any instant.",
+      tabindex: "0",
+      role: "slider",
+      "aria-label":
+        "Timeline. Arrows move the fold cursor, comma and period step between events, " +
+        "shift with arrows pans, Enter pins the nearest event.",
+      "aria-valuemin": "0",
+      "aria-valuemax": String(Math.round(model.xmax)),
+      "aria-valuenow": "0",
     });
 
     const laneY = new Map();
@@ -307,6 +328,7 @@
     });
 
     const timed = [];
+    const selectable = [];
 
     for (const lane of model.lanes) {
       const y = laneY.get(lane.lane_id);
@@ -317,11 +339,22 @@
         // burst overprint into a smear, and both took the same branch: every
         // label drawn on top of its neighbours, or past twelve no labels at
         // all and a row of anonymous squares saying only "something happened".
-        const clusters = clusterPoints(lane.points, X);
+        // Only what the view covers, plus a margin so a cluster straddling an
+        // edge still merges with the neighbours that pushed it there instead
+        // of splitting into a different shape at the boundary.
+        const margin = (scale.dmax - scale.dmin) * 0.05;
+        const visible = lane.points.filter(
+          (p) => p.secs >= scale.dmin - margin && p.secs <= scale.dmax + margin
+        );
+        const clusters = clusterPoints(visible, X);
         const candidates = [];
         let prevBase = null;
 
         clusters.forEach((c) => {
+          // The margin above exists so a cluster straddling an edge merges the
+          // same way it would mid-view. Its marks must still not be DRAWN
+          // outside the plot, or they land on top of the lane labels.
+          if (c.xEnd < PAD_L - MARK_W || c.xStart > VW - PAD_R + MARK_W) return;
           const head = clusterHead(c);
           const n = c.items.length;
           const base = stripLanePrefix(head.point.label, lane.label);
@@ -378,12 +411,27 @@
 
           // A count is only honest if its contents are recoverable. The folded
           // readout answers at the cursor; this answers on hover, and is the
-          // only route for a viewer who never drags the cursor at all.
+          // only route for a viewer who never moves the cursor at all.
           const title = svg("title");
           title.textContent = c.items
             .map((p) => `${p.label} @ ${fmtClock(model.t0, p.secs)}`)
             .join("\n");
           markEl.appendChild(title);
+          // A press on a mark selects it rather than starting a pan, so the
+          // whole chart is not one big drag surface. The hit area is wider
+          // than the mark because an 8-unit square is a hard pointer target.
+          markEl.classList.add("cs-mark--hit");
+          markEl._csCluster = c;
+          const hit = svg("rect", {
+            x: c.xStart - MARK_W,
+            y: y - 11,
+            width: Math.max(MARK_W * 2, c.xEnd - c.xStart + MARK_W * 2),
+            height: 22,
+            class: "cs-hit",
+          });
+          hit._csCluster = c;
+          g.appendChild(hit);
+          selectable.push({ el: markEl, point: c.items[0] });
 
           candidates.push({
             cx: (c.xStart + c.xEnd) / 2,
@@ -432,10 +480,11 @@
     g.appendChild(svg("line", { x1: PAD_L, y1: axisY, x2: VW - PAD_R, y2: axisY, class: "cs-axis" }));
     // Wall clock, not `0s..900s`. In a flowing window `t0` slides on every
     // re-render, so a relative label renames the same physical event every
-    // time and the eye has nothing fixed to measure motion against.
-    const tickStep = pickTickStep(model.xmax);
-    const firstTick = Math.ceil(model.t0 / tickStep) * tickStep - model.t0;
-    for (let secs = firstTick; secs <= model.xmax; secs += tickStep) {
+    // time and the eye has nothing fixed to measure motion against. Ticks
+    // span the VIEW, so they stay put under the pointer while panning.
+    const tickStep = pickTickStep(scale.dmax - scale.dmin);
+    const firstTick = Math.ceil((model.t0 + scale.dmin) / tickStep) * tickStep - model.t0;
+    for (let secs = firstTick; secs <= scale.dmax; secs += tickStep) {
       const x = X(secs);
       g.appendChild(svg("line", { x1: x, y1: axisY, x2: x, y2: axisY + 5, class: "cs-tick" }));
       const lab = svg("text", { x, y: axisY + 17, class: "cs-tick-label", "text-anchor": "middle" });
@@ -443,9 +492,10 @@
       g.appendChild(lab);
     }
 
-    // Only a flowing window has a live edge. On a closed REWIND timeline the
-    // right edge is the last event, and calling that LIVE would be a lie.
-    if (model.live) {
+    // Only a flowing window has a live edge, and only when the view actually
+    // reaches it: panned into the past, the right edge of the plot is just
+    // wherever you stopped, and labelling that LIVE would be a lie.
+    if (model.live && model.xmax <= scale.dmax + 1e-6) {
       const liveX = X(model.xmax);
       g.appendChild(
         svg("line", { x1: liveX, y1: LANE_START - 18, x2: liveX, y2: axisY, class: "cs-live" })
@@ -472,7 +522,7 @@
     handle.setAttribute("transform", `translate(${X(0)} ${axisY})`);
     g.appendChild(handle);
 
-    return { g, X, axisY, timed, cursorLine, handle };
+    return { g, X, axisY, timed, cursorLine, handle, selectable };
   }
 
   function applyFold(model, scene, cursor) {
@@ -534,7 +584,6 @@
 
   function wireDrag(root, model, scene, state, opts) {
     const svgEl = scene.g;
-    const slider = root.querySelector(".cs-slider");
     const onScrub = opts && opts.onScrub;
     // Fired once per user-initiated move, never from a programmatic
     // setCursor (mount()'s own initial positioning, or a caller re-
@@ -556,12 +605,8 @@
       applyFold(model, scene, state.cursor);
       const folded = foldTo(model, state.cursor);
       renderReadout(root, model, folded, model.t0, state.cursor);
-      slider.setAttribute("aria-valuenow", String(Math.round(state.cursor)));
-      const pct = model.xmax > 0 ? (state.cursor / model.xmax) * 100 : 0;
-      const fill = root.querySelector(".cs-slider-fill");
-      const thumb = root.querySelector(".cs-slider-thumb");
-      if (fill) fill.style.width = `${pct}%`;
-      if (thumb) thumb.style.left = `${pct}%`;
+      svgEl.setAttribute("aria-valuenow", String(Math.round(state.cursor)));
+      svgEl.setAttribute("aria-valuetext", fmtClock(model.t0, state.cursor));
     };
     state.setCursor = setCursor;
 
@@ -605,14 +650,71 @@
     };
     state.startPlay = startPlay;
 
+    // ---- Three gestures, no overlap.
+    //
+    // Press on a MARK selects it. Press on EMPTY CHART pans the view. Hover
+    // moves the fold cursor. Previously a press anywhere started a scrub,
+    // which meant a mark could never receive one, so nothing on the chart was
+    // clickable and the only way to read a cluster's contents was the native
+    // tooltip. Selection is the prerequisite for pinning a causal chain.
+    const CLICK_SLOP = 4;
+
+    const setSelection = (cluster) => {
+      state.selected = cluster || null;
+      const ids = new Set();
+      if (cluster) for (const p of cluster.items) ids.add(p);
+      for (const { el, point } of scene.selectable) {
+        el.classList.toggle("cs-selected", !!point && ids.has(point));
+      }
+      if (opts && opts.onSelect) opts.onSelect(cluster);
+      // A selected cluster fixes the readout at its own instant, so what the
+      // panel says and what is highlighted cannot disagree.
+      if (cluster) setCursor(cluster.items[0].secs);
+    };
+    state.setSelection = setSelection;
+
+    const clusterFor = (target) => {
+      let node = target;
+      while (node && node !== svgEl) {
+        if (node._csCluster) return node._csCluster;
+        node = node.parentNode;
+      }
+      return null;
+    };
+
+    let pan = null;
     const onDown = (e) => {
+      const cluster = clusterFor(e.target);
+      if (cluster) {
+        e.preventDefault();
+        stopPlay();
+        notifyScrub();
+        setSelection(cluster);
+        return;
+      }
+      if (!state.canPan) return;
       e.preventDefault();
-      slider.focus();
+      svgEl.focus();
       stopPlay();
+      // Panning is leaving the live edge, so the caller has to stop following.
+      // Without this the next re-slide snaps the view forward again and the
+      // drag fights the clock.
       notifyScrub();
-      setCursor(secsFromEvent(e.clientX));
-      const onMove = (ev) => setCursor(secsFromEvent(ev.clientX));
+      pan = { x0: e.clientX, from0: state.view.from, moved: false };
+      svgEl.classList.add("cs-grabbing");
+      const onMove = (ev) => {
+        if (!pan) return;
+        if (Math.abs(ev.clientX - pan.x0) > CLICK_SLOP) pan.moved = true;
+        const rect = svgEl.getBoundingClientRect();
+        const perPx = (state.view.to - state.view.from) / ((rect.width * (VW - PAD_L - PAD_R)) / VW);
+        state.panTo(pan.from0 - (ev.clientX - pan.x0) * perPx);
+      };
       const onUp = () => {
+        // A press that never moved is a click on empty space: clear any pinned
+        // selection rather than leaving it stranded with nothing highlighted.
+        if (pan && !pan.moved) setSelection(null);
+        pan = null;
+        svgEl.classList.remove("cs-grabbing");
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
       };
@@ -621,64 +723,117 @@
     };
     svgEl.addEventListener("pointerdown", onDown);
 
-    const track = slider.querySelector(".cs-slider-track");
-    const secsFromSlider = (clientX) => {
-      const rect = track.getBoundingClientRect();
-      const f = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      return f * model.xmax;
-    };
-    let sliderDragging = false;
-    slider.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      slider.focus();
-      stopPlay();
-      notifyScrub();
-      sliderDragging = true;
-      try {
-        slider.setPointerCapture(e.pointerId);
-      } catch (err) {
-        /* capture is best-effort; the dragging flag drives the move */
-      }
-      setCursor(secsFromSlider(e.clientX));
-    });
-    slider.addEventListener("pointermove", (e) => {
-      if (sliderDragging) setCursor(secsFromSlider(e.clientX));
-    });
-    slider.addEventListener("pointerup", () => {
-      sliderDragging = false;
-    });
-    slider.addEventListener("pointercancel", () => {
-      sliderDragging = false;
+    // Hover drives the fold cursor. It needs no press, so it never competes
+    // with pan or select, and a viewer reads the folded state just by moving
+    // across the chart. A pinned selection wins: the cursor stays put.
+    svgEl.addEventListener("pointermove", (e) => {
+      if (pan || state.selected) return;
+      setCursor(secsFromEvent(e.clientX));
     });
 
-    slider.addEventListener("keydown", (e) => {
-      const big = model.xmax / 12;
-      const map = {
-        ArrowLeft: -2,
-        ArrowRight: 2,
-        ArrowDown: -2,
-        ArrowUp: 2,
-        PageDown: -big,
-        PageUp: big,
-        Home: -1e9,
-        End: 1e9,
-      };
+    // Keyboard parity. The slider used to be the only focusable control and
+    // the only keyboard route; the chart itself now carries both, so removing
+    // the slider does not remove keyboard access.
+    svgEl.addEventListener("keydown", (e) => {
+      const span = state.view.to - state.view.from;
       if (e.key === " " || e.key === "Spacebar") {
         if (opts && opts.showPlay === false) return;
         e.preventDefault();
         state.playing ? stopPlay() : startPlay();
         return;
       }
-      if (!(e.key in map)) return;
+      // Arrows move the VALUE, because the element carries slider semantics
+      // and announces the cursor's clock time; panning the viewport is a
+      // different act and takes Shift or the Page keys. `,` and `.` walk real
+      // events, which is the only way to reach a mark without hunting.
+      if (e.key === "," || e.key === ".") {
+        e.preventDefault();
+        const step = stepToAdjacentPoint(model, state.cursor, e.key === "." ? 1 : -1);
+        if (step !== null) {
+          notifyScrub();
+          setSelection(null);
+          setCursor(step);
+          state.revealCursor();
+        }
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const near = nearestCluster(scene, state.cursor);
+        if (near) setSelection(near);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (!state.selected) return;
+        e.preventDefault();
+        setSelection(null);
+        return;
+      }
+      const panBy = { PageDown: -span, PageUp: span };
+      if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        if (!state.canPan) return;
+        notifyScrub();
+        state.panTo(state.view.from + (e.key === "ArrowRight" ? span / 4 : -span / 4));
+        return;
+      }
+      if (e.key in panBy) {
+        e.preventDefault();
+        if (!state.canPan) return;
+        notifyScrub();
+        state.panTo(state.view.from + panBy[e.key]);
+        return;
+      }
+      const nudge = { ArrowLeft: -1, ArrowRight: 1, ArrowDown: -1, ArrowUp: 1 };
+      if (e.key === "Home" || e.key === "End") {
+        e.preventDefault();
+        notifyScrub();
+        setSelection(null);
+        setCursor(e.key === "Home" ? 0 : model.xmax);
+        state.revealCursor();
+        return;
+      }
+      if (!(e.key in nudge)) return;
       e.preventDefault();
       stopPlay();
       notifyScrub();
-      if (e.key === "Home") setCursor(0);
-      else if (e.key === "End") setCursor(model.xmax);
-      else setCursor(state.cursor + map[e.key]);
+      setSelection(null);
+      setCursor(state.cursor + nudge[e.key] * ((state.view.to - state.view.from) / 100));
+      state.revealCursor();
     });
 
-    return { setCursor, stopPlay, startPlay };
+    return { setCursor, stopPlay, startPlay, setSelection };
+  }
+
+  // The rendered cluster closest to the cursor, so Enter can pin what the
+  // readout is already describing without a pointer.
+  function nearestCluster(scene, cursor) {
+    let best = null;
+    let bestGap = Infinity;
+    for (const { el } of scene.selectable) {
+      const c = el._csCluster;
+      if (!c) continue;
+      const gap = Math.abs(c.items[0].secs - cursor);
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  // Nearest point in any lane strictly before or after `from`, so `,` and `.`
+  // walk real events rather than arbitrary time steps.
+  function stepToAdjacentPoint(model, from, dir) {
+    let best = null;
+    for (const lane of model.lanes) {
+      for (const p of lane.points) {
+        if (dir > 0 ? p.secs > from + 1e-6 : p.secs < from - 1e-6) {
+          if (best === null || (dir > 0 ? p.secs < best : p.secs > best)) best = p.secs;
+        }
+      }
+    }
+    return best;
   }
 
   function scaffold(root, model, opts) {
@@ -710,13 +865,11 @@
           <div class="cs-controls">${controlsHtml}</div>
         </div>
         <div class="cs-stage"></div>
-        <div class="cs-slider" tabindex="0" role="slider"
-             aria-label="${opts.sliderLabel}"
-             aria-valuemin="0" aria-valuenow="0" aria-valuemax="${Math.round(model.xmax)}">
-          <div class="cs-slider-track">
-            <div class="cs-slider-fill"></div>
-            <div class="cs-slider-thumb"></div>
-          </div>
+        <div class="cs-hint">
+          Drag to pan &middot; click an event to pin it &middot; hover to fold &middot;
+          <kbd>&larr;</kbd><kbd>&rarr;</kbd> cursor,
+          <kbd>shift</kbd> to pan, <kbd>,</kbd><kbd>.</kbd> step events,
+          <kbd>enter</kbd> pin
         </div>
         ${note}
         <div class="cs-panels">
@@ -740,7 +893,14 @@
     opts = opts || {};
 
     const model = buildModel(doc);
-    const scale = buildScale(model.xmax);
+    // `opts.viewSpanSecs` narrower than the domain turns the chart into a
+    // window that pans. Absent, the view is the whole domain and panning is a
+    // no-op, which is REWIND's behaviour unchanged.
+    const domainMax = model.xmax > 0 ? model.xmax : 1;
+    const span = opts.viewSpanSecs && opts.viewSpanSecs > 0 ? opts.viewSpanSecs : domainMax;
+    const initialFrom = opts.follow ? domainMax - span : 0;
+    let view = clampView(initialFrom, span, domainMax);
+    const scale = buildScale(view.from, view.to);
     // Generic over WHAT truncated (`observations` for a run, `events` for
     // an enclosure, ...): report every truthy key by name rather than
     // hardcoding one domain's vocabulary.
@@ -755,16 +915,70 @@
     scaffold(root, model, {
       chromeTitle: opts.chromeTitle || "Timeline",
       subtitle,
-      sliderLabel: opts.sliderLabel || "Fold cursor: time within the window",
       showPlay: opts.showPlay,
       showJumpLast: opts.showJumpLast,
       jumpLabel: opts.jumpLabel,
     });
-    const scene = renderTimeline(model, scale);
-    root.querySelector(".cs-stage").appendChild(scene.g);
+    const stage = root.querySelector(".cs-stage");
+    let scene = renderTimeline(model, scale);
+    stage.appendChild(scene.g);
 
-    const state = { scale, cursor: 0, playing: false, rafId: 0 };
-    const controls = wireDrag(root, model, scene, state, opts);
+    const state = {
+      scale,
+      view,
+      cursor: 0,
+      playing: false,
+      rafId: 0,
+      selected: null,
+      canPan: span < domainMax - 1e-6,
+    };
+
+    // Panning changes which events are visible, so the clusters and the axis
+    // both have to be rebuilt: a plain transform would slide stale tick labels
+    // along with the marks. Coalesced onto a frame so a drag rebuilds once per
+    // paint rather than once per pointermove.
+    let panFrame = 0;
+    state.panTo = (from) => {
+      const next = clampView(from, span, domainMax);
+      if (Math.abs(next.from - state.view.from) < 1e-9) return;
+      state.view = next;
+      if (panFrame) return;
+      panFrame = requestAnimationFrame(() => {
+        panFrame = 0;
+        rerender();
+      });
+    };
+    // Bring the cursor back into view after a keyboard step walked it past an
+    // edge, so `,` and `.` can cross the whole domain without a manual pan.
+    state.revealCursor = () => {
+      if (!state.canPan) return;
+      const margin = (state.view.to - state.view.from) * 0.1;
+      if (state.cursor < state.view.from + margin) state.panTo(state.cursor - margin);
+      else if (state.cursor > state.view.to - margin) {
+        state.panTo(state.cursor - (state.view.to - state.view.from) + margin);
+      }
+    };
+
+    let controls;
+    function rerender() {
+      const wasSelected = state.selected;
+      state.scale = buildScale(state.view.from, state.view.to);
+      const next = renderTimeline(model, state.scale);
+      stage.replaceChildren(next.g);
+      scene = next;
+      controls = wireDrag(root, model, scene, state, opts);
+      // A selection survives a pan: re-resolve it against the freshly built
+      // clusters by first point, since the cluster objects are new each render.
+      if (wasSelected) {
+        const head = wasSelected.items[0];
+        const match = scene.selectable.find((s) => s.point === head);
+        state.selected = match ? wasSelected : null;
+        if (match) match.el.classList.add("cs-selected");
+      }
+      controls.setCursor(state.cursor);
+    }
+
+    controls = wireDrag(root, model, scene, state, opts);
 
     const playBtn = root.querySelector(".cs-play");
     if (playBtn) {

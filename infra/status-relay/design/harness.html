@@ -55,7 +55,8 @@
 <body>
   <h1>scrubber.js renderer harness</h1>
   <div class="bar">
-    <div class="grp"><span>Window</span><div class="seg" id="seg-window"></div></div>
+    <div class="grp"><span>Data extent</span><div class="seg" id="seg-extent"></div></div>
+    <div class="grp"><span>View window</span><div class="seg" id="seg-window"></div></div>
     <div class="grp"><span>Traffic</span><div class="seg" id="seg-traffic"></div></div>
     <div class="grp"><span>Shape</span><div class="seg" id="seg-shape"></div></div>
   </div>
@@ -79,11 +80,17 @@
     })
     .catch(draw);
 
+  // Extent is how much data exists; window is how much of it you can see at
+  // once. Panning only means anything when the second is smaller than the
+  // first, which is exactly the case the live page cannot reach today: the
+  // relay retains 15 minutes, so a 24h extent here is a preview of what the
+  // range-fetch slice would make real.
+  var EXTENTS = [["15 min", 900], ["1 hr", 3600], ["6 hr", 21600], ["24 hr", 86400]];
   var WINDOWS = [["2 min", 120], ["5 min", 300], ["15 min", 900], ["60 min", 3600]];
   var TRAFFIC = [["Quiet", 40], ["Typical", 110], ["Peak", 228]];
   var SHAPES = [["Bursty", "bursty"], ["Uniform", "uniform"], ["One instant", "pileup"],
                 ["Single event", "single"], ["Empty", "empty"]];
-  var state = { win: 900, per: 228, shape: "bursty" };
+  var state = { extent: 3600, win: 900, per: 228, shape: "bursty" };
 
   function seg(id, opts, get, set) {
     var host = document.getElementById(id);
@@ -99,14 +106,19 @@
   }
 
   function draw() {
+    seg("seg-extent", EXTENTS, function () { return state.extent; }, function (v) {
+      state.extent = v;
+      if (state.win > v) state.win = v;
+    });
     seg("seg-window", WINDOWS, function () { return state.win; }, function (v) { state.win = v; });
     seg("seg-traffic", TRAFFIC, function () { return state.per; }, function (v) { state.per = v; });
     seg("seg-shape", SHAPES, function () { return state.shape; }, function (v) { state.shape = v; });
 
-    var doc = window.ScrubberFixtures.activityDocument(state.win, state.per, state.shape, 7);
+    var win = Math.min(state.win, state.extent);
+    var doc = window.ScrubberFixtures.activityDocument(state.extent, state.per, state.shape, 7);
     window.CoraScrubber.mount(document.getElementById("stage"), doc, {
       chromeTitle: "Live activity",
-      sliderLabel: "Fold cursor: time within the window",
+      viewSpanSecs: win,
       follow: true,
       showPlay: false,
       showJumpLast: false,
@@ -115,11 +127,12 @@
     var stats = window.ScrubberFixtures.measure(document.getElementById("stage"), doc);
     var plot = 920 - 84 - 24;
     document.getElementById("readout").innerHTML =
-      "<b>" + stats.events + "</b> events &middot; <b>" +
-      (state.win / plot).toFixed(2) + "s</b> per unit &middot; marks <b>" + stats.marks +
-      "</b> (<b>" + stats.clusters + "</b> collapsed) &middot; labels <b>" + stats.labels +
-      "</b>, overlapping <b>" + stats.overlaps + "</b> &middot; tier-2 events <b>" +
-      stats.tier2 + "</b>, of those labelled <b>" + stats.tier2Labelled + "</b>";
+      "<b>" + stats.events + "</b> events over " + (state.extent / 60) + "m &middot; viewing <b>" +
+      (win / 60) + "m</b> &middot; <b>" + (win / plot).toFixed(2) +
+      "s</b> per unit &middot; drawn <b>" + stats.marks + "</b> marks (<b>" +
+      stats.clusters + "</b> collapsed) &middot; labels <b>" + stats.labels +
+      "</b>, overlapping <b>" + stats.overlaps + "</b> &middot; pannable <b>" +
+      (win < state.extent ? "yes" : "no, view is the whole extent") + "</b>";
   }
 })();
 </script>
