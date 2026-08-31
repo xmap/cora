@@ -24,7 +24,7 @@ LIMIT 1
 """
 
 _READ_SINCE_SQL = """
-SELECT e.stream_type, e.stream_id, e.event_type, e.occurred_at, e.recorded_at,
+SELECT e.event_id, e.stream_type, e.stream_id, e.event_type, e.occurred_at, e.recorded_at,
        e.correlation_id, e.causation_id, cause.occurred_at AS cause_occurred_at,
        e.transaction_id::text AS transaction_id_text, e.position
 FROM events e
@@ -72,6 +72,7 @@ class PostgresEventActivityTrail:
             return [], cursor
         activity = [
             EventActivityRow(
+                event_id=row["event_id"],
                 stream_type=row["stream_type"],
                 stream_id=row["stream_id"],
                 event_type=row["event_type"],

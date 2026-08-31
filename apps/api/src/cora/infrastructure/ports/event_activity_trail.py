@@ -9,9 +9,9 @@ directly inside `cora.api._status_push`), so it is not a `Kernel` field:
 promoting a single-consumer port to the shared kernel would be the reverse
 of the rule-of-three this codebase applies to new cross-cutting primitives.
 
-Ships `stream_type`, `stream_id`, `event_type`, `occurred_at`, `recorded_at`,
-`correlation_id`, `causation_id` and `cause_occurred_at` only. NEVER
-`payload`. `test_run_events_carry_no_pii.py` (and its Access-BC sibling) are
+Ships `event_id`, `stream_type`, `stream_id`, `event_type`, `occurred_at`,
+`recorded_at`, `correlation_id`, `causation_id` and `cause_occurred_at` only.
+NEVER `payload`. `test_run_events_carry_no_pii.py` (and its Access-BC sibling) are
 the only two fitness tests that guard event field names against personal
 data, and they cover exactly two of the twenty-five stream types this port's
 data spans; shipping raw payloads across every BC would carry that guarantee
@@ -60,6 +60,11 @@ class EventActivityCursor:
 
 @dataclass(frozen=True)
 class EventActivityRow:
+    event_id: UUID
+    """This event's own identity, and the thing a `causation_id` points AT.
+    Without it a consumer holds a cause it can never resolve: it can tell that
+    an event was caused, but not by which of the events it already has."""
+
     stream_type: str
     stream_id: UUID
     event_type: str

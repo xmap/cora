@@ -1398,7 +1398,9 @@ async def test_run_history_tail_on_reconnect_repushes_a_still_open_run_promptly(
 def test_build_activity_message_shape_for_an_operator_originated_event() -> None:
     stream_id = uuid4()
     correlation_id = uuid4()
+    event_id = uuid4()
     row = EventActivityRow(
+        event_id=event_id,
         stream_type="Run",
         stream_id=stream_id,
         event_type="RunStarted",
@@ -1418,6 +1420,7 @@ def test_build_activity_message_shape_for_an_operator_originated_event() -> None
         "generated_at": "t0",
         "events": [
             {
+                "event_id": str(event_id),
                 "stream_type": "Run",
                 "stream_id": str(stream_id),
                 "event_type": "RunStarted",
@@ -1432,6 +1435,45 @@ def test_build_activity_message_shape_for_an_operator_originated_event() -> None
 
 
 @pytest.mark.unit
+def test_build_activity_message_lets_a_receiver_match_a_cause_to_the_event_that_caused_it() -> None:
+    """A `causation_id` names an event's `event_id`. Shipping the first without
+    the second hands a receiver a pointer with nothing to point at: it can tell
+    an event was caused, but not by which of the events it already holds. This
+    asserts the two are resolvable against each other, which the shape test
+    above cannot, since it only ever looks at one row."""
+    cause = EventActivityRow(
+        event_id=uuid4(),
+        stream_type="Enclosure",
+        stream_id=uuid4(),
+        event_type="EnclosurePermitObserved",
+        occurred_at=_NOW - timedelta(seconds=2),
+        recorded_at=_NOW,
+        correlation_id=uuid4(),
+        causation_id=None,
+        cause_occurred_at=None,
+    )
+    effect = EventActivityRow(
+        event_id=uuid4(),
+        stream_type="Run",
+        stream_id=uuid4(),
+        event_type="RunAborted",
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        correlation_id=cause.correlation_id,
+        causation_id=cause.event_id,
+        cause_occurred_at=cause.occurred_at,
+    )
+
+    events = build_activity_message(rows=[cause, effect], generated_at="t0", producer_id="p1")[
+        "events"
+    ]
+
+    by_id = {e["event_id"]: e for e in events}
+    caused = next(e for e in events if e["event_type"] == "RunAborted")
+    assert by_id[caused["causation_id"]]["event_type"] == "EnclosurePermitObserved"
+
+
+@pytest.mark.unit
 def test_build_activity_message_carries_a_reacted_event_s_cause_and_its_time() -> None:
     """A subscriber reacting to an event sets `causation_id`, and the cause is
     usually older than the receiver's own window. Both the id and the cause's
@@ -1440,6 +1482,7 @@ def test_build_activity_message_carries_a_reacted_event_s_cause_and_its_time() -
     causation_id = uuid4()
     cause_at = _NOW - timedelta(minutes=40)
     row = EventActivityRow(
+        event_id=uuid4(),
         stream_type="Caution",
         stream_id=uuid4(),
         event_type="CautionRegistered",

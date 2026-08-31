@@ -143,6 +143,22 @@
   .cs-hit { fill: transparent; cursor: pointer; }
   .cs-mark--hit { cursor: pointer; }
   .cs-selected { stroke: var(--cs-ink); stroke-width: 2; }
+  /* Everything outside the pinned event's chain and correlation group recedes
+     rather than disappearing: the shape of the surrounding traffic is still
+     context, it just stops competing. */
+  .cs-dim { opacity: 0.14; }
+  /* Direction is never in doubt, the head always sits at the effect. Hue
+     separates "why this happened" from "what it set off". */
+  .cs-edge { fill: none; }
+  .cs-edge--up { stroke: var(--cs-alarm); }
+  .cs-edge--down { stroke: var(--cs-warn); opacity: 0.85; }
+  .cs-edge--stub { stroke-dasharray: 3 3; }
+  .cs-edge-note {
+    fill: var(--cs-alarm); font-family: var(--cs-mono); font-size: 8.5px;
+  }
+  .cs-root-ring { fill: none; stroke: var(--cs-ink); stroke-width: 1.3; }
+  .cs-row-val.cs-tone--tier2 { color: var(--cs-alarm); }
+  .cs-row-val.cs-tone--tier1 { color: var(--cs-warn); }
   /* Page scope, so only the :root tokens are in reach: the --cs-* set is
      declared on .cora-scrubber and does not resolve out here. */
   #flowing-controls {
@@ -651,6 +667,14 @@
         t: e.occurred_at,
         label: e.event_type,
         tier: EVENT_TIER[e.event_type] || 0,
+        // Relationship fields ride through untouched. A producer older than
+        // this page simply omits them and every one reads undefined, which is
+        // the same state as an event that genuinely has no cause: the chart
+        // then behaves exactly as it did before they existed.
+        id: e.event_id,
+        corr: e.correlation_id,
+        cause: e.causation_id,
+        cause_at: e.cause_occurred_at,
       });
     });
     var subtitle =

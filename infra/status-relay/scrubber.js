@@ -179,6 +179,12 @@
           // whoever built the document: which event types matter is domain
           // vocabulary, and this module deliberately knows none.
           tier: p.tier || 0,
+          // Relationships, all optional. A document that carries none renders
+          // exactly as it did before they existed.
+          id: p.id || null,
+          corr: p.corr || null,
+          cause: p.cause || null,
+          cause_at: p.cause_at || null,
           value: p.value,
           text: p.text != null ? p.text : null,
         }))
@@ -206,7 +212,41 @@
       for (const p of lane.points) xmax = Math.max(xmax, p.secs);
     }
 
-    return { t0, xmax, lanes, primaryLane, omittedSeries, live: !!doc.live };
+    // Indexed once per mount, not per selection: a hover that traced the chain
+    // by scanning every lane would do it at pointer rate.
+    const byId = new Map();
+    const childrenOf = new Map();
+    let hasCausation = false;
+    for (const lane of lanes) {
+      for (const p of lane.points) {
+        if (p.id) byId.set(p.id, p);
+        if (p.id || p.cause) hasCausation = true;
+      }
+    }
+    for (const lane of lanes) {
+      for (const p of lane.points) {
+        if (!p.cause) continue;
+        const kids = childrenOf.get(p.cause);
+        if (kids) kids.push(p);
+        else childrenOf.set(p.cause, [p]);
+      }
+    }
+
+    return {
+      t0,
+      xmax,
+      lanes,
+      primaryLane,
+      omittedSeries,
+      live: !!doc.live,
+      byId,
+      childrenOf,
+      // Whether this document carries causation AT ALL. A REWIND run history
+      // has none, so every point there looks causeless -- and calling that "an
+      // operator acted directly" would state a fact the document never
+      // supplied. Absent data must not read as a positive finding.
+      hasCausation,
+    };
   }
 
   // The lane already names the aggregate, so repeating it in every label costs
@@ -226,17 +266,23 @@
   // Collapse is a RENDERING concern only: `lane.points` keeps every point,
   // because `foldTo` walks the primary lane for the last point carrying a
   // `state` and a merged point would break REWIND's folded readout.
-  function clusterPoints(points, X) {
+  // `separate` holds points that must not be merged into a neighbour: the
+  // members of a traced chain. An arrow pointing at a badge would claim it
+  // caused the whole badge when it caused one event inside it, so a focused
+  // chain un-collapses and every edge lands on a real event. Everything not in
+  // the chain stays merged, so focusing does not explode the whole chart.
+  function clusterPoints(points, X, separate) {
     const out = [];
     let cur = null;
     for (const p of points) {
       const x = X(p.secs);
-      if (cur && x - cur.xEnd < COLLAPSE_GAP) {
+      const solo = !!separate && separate.has(p);
+      if (!solo && cur && !cur.solo && x - cur.xEnd < COLLAPSE_GAP) {
         cur.items.push(p);
         cur.xEnd = x;
       } else {
         if (cur) out.push(cur);
-        cur = { xStart: x, xEnd: x, items: [p] };
+        cur = { xStart: x, xEnd: x, items: [p], solo };
       }
     }
     if (cur) out.push(cur);
@@ -284,7 +330,100 @@
     return placed;
   }
 
-  function renderTimeline(model, scale) {
+  function renderChainEdges(g, model, focus, pointPos, scale) {
+    const layer = svg("g", { class: "cs-edges" });
+
+    // One marker per direction. Causation is a strict parent pointer in an
+    // append-only log, so the head always sits at the EFFECT and the arrow is
+    // always single: a double head would assert mutual causation, which cannot
+    // happen. Upstream and downstream answer different questions ("why did
+    // this happen" against "what did it set off") and differ in hue, never in
+    // direction.
+    const defs = svg("defs");
+    for (const [id, fill] of [["cs-arrow-up", "#f0644b"], ["cs-arrow-down", "#e6b24a"]]) {
+      const marker = svg("marker", {
+        id,
+        viewBox: "0 0 8 8",
+        refX: "6.5",
+        refY: "4",
+        markerWidth: "4.5",
+        markerHeight: "4.5",
+        orient: "auto",
+      });
+      marker.appendChild(svg("path", { d: "M0,4 L0,4 M0,0 L8,4 L0,8 z", fill }));
+      defs.appendChild(marker);
+    }
+    layer.appendChild(defs);
+
+    const edges = [];
+    for (const [point, hop] of focus.dist) {
+      if (!point.cause) continue;
+      const parent = model.byId.get(point.cause);
+      if (!parent || !focus.dist.has(parent)) continue;
+      edges.push({ from: parent, to: point, up: hop <= 0 });
+    }
+    fanEdges(edges, (p) => pointPos.get(p));
+
+    for (const e of edges) {
+      const a = pointPos.get(e.from);
+      const b = pointPos.get(e.to);
+      if (!a || !b) continue;
+      const hop = Math.abs(focus.dist.get(e.to));
+      const path = svg("path", {
+        d: edgePath(a, b, e.fan || 0),
+        class: `cs-edge cs-edge--${e.up ? "up" : "down"}`,
+        "marker-end": `url(#cs-arrow-${e.up ? "up" : "down"})`,
+      });
+      // Thickness carries distance: the immediate cause is heaviest and each
+      // further hop thinner, so the near story reads before the far one.
+      path.style.strokeWidth = String(Math.max(0.7, 2.1 - 0.42 * Math.max(0, hop - 1)));
+      layer.appendChild(path);
+    }
+
+    // A null causation_id means an operator acted directly. Ring it, so a root
+    // never reads as an orphan the trace merely failed to reach. Only where the
+    // document actually carries causation: in one that does not, everything is
+    // causeless and every mark would be ringed as an operator action.
+    if (model.hasCausation) {
+      for (const point of focus.dist.keys()) {
+        if (point.cause) continue;
+        const pt = pointPos.get(point);
+        if (pt) {
+          layer.appendChild(svg("circle", { cx: pt.x, cy: pt.y, r: 6.5, class: "cs-root-ring" }));
+        }
+      }
+    }
+
+    // The cause fell out of the retained window. Drawing nothing would claim
+    // the event was uncaused; the stub says a cause exists and when it was,
+    // which is why `cause_occurred_at` rides the wire beside the id.
+    if (focus.unresolved) {
+      const pt = pointPos.get(focus.unresolved);
+      if (pt) {
+        layer.appendChild(
+          svg("path", {
+            d: `M${PAD_L - 30},${pt.y} L${pt.x - 7},${pt.y}`,
+            class: "cs-edge cs-edge--up cs-edge--stub",
+            "marker-end": "url(#cs-arrow-up)",
+          })
+        );
+        const note = svg("text", {
+          x: PAD_L - 32,
+          y: pt.y - 6,
+          class: "cs-edge-note",
+          "text-anchor": "end",
+        });
+        note.textContent = focus.unresolved.cause_at
+          ? fmtClock(model.t0, parseT(focus.unresolved.cause_at) - model.t0)
+          : "before this window";
+        layer.appendChild(note);
+      }
+    }
+
+    g.appendChild(layer);
+  }
+
+  function renderTimeline(model, scale, focus) {
     const laneCount = Math.max(1, model.lanes.length);
     const axisY = LANE_START + laneCount * LANE_HEIGHT + 10;
     const vh = axisY + AXIS_MARGIN;
@@ -329,6 +468,8 @@
 
     const timed = [];
     const selectable = [];
+    const pointPos = new Map();
+    const chain = focus ? focus.dist : null;
 
     for (const lane of model.lanes) {
       const y = laneY.get(lane.lane_id);
@@ -346,7 +487,7 @@
         const visible = lane.points.filter(
           (p) => p.secs >= scale.dmin - margin && p.secs <= scale.dmax + margin
         );
-        const clusters = clusterPoints(visible, X);
+        const clusters = clusterPoints(visible, X, chain);
         const candidates = [];
         let prevBase = null;
 
@@ -362,10 +503,22 @@
           // Adjusted plus one Resumed is not six resumes, so a mixed cluster
           // names the one it is titled after and counts the rest as `+N`.
           const text = n === 1 ? base : base + (head.uniform ? ` ×${n}` : ` +${n - 1}`);
+
+          // Lit if it is in the traced chain, or shares the pinned event's
+          // correlation. Correlation is a SET, not a sequence, so its members
+          // are highlighted and never joined by a line: N-1 edges would assert
+          // an order the record does not claim.
+          const inChain = !!focus && c.items.some((p) => chain.has(p));
+          const inCorr =
+            !!focus && !!focus.corr && c.items.some((p) => p.corr === focus.corr);
+          const dim = !!focus && !inChain && !inCorr;
+
           // A lane that is overwhelmingly one event type repeats that label
           // forever and says nothing after the first. Only a real burst, or
-          // anything above routine tier, re-earns it.
-          const repeat = head.tier === 0 && n < 3 && base === prevBase;
+          // anything above routine tier, re-earns it -- and never a member of
+          // the chain being traced, which would otherwise strip the label off
+          // the very event the viewer just pinned.
+          const repeat = !inChain && head.tier === 0 && n < 3 && base === prevBase;
           if (head.tier === 0) prevBase = base;
 
           let markEl;
@@ -433,11 +586,19 @@
           g.appendChild(hit);
           selectable.push({ el: markEl, point: c.items[0] });
 
+          if (focus) {
+            if (dim) markEl.classList.add("cs-dim");
+            for (const p of c.items) {
+              if (chain.has(p)) pointPos.set(p, { x: X(p.secs), y });
+            }
+          }
+
           candidates.push({
             cx: (c.xStart + c.xEnd) / 2,
             tier: head.tier,
             text,
             skip: repeat,
+            dim,
             w: text.length * LABEL_CH + 4,
             t: c.items[0].secs,
           });
@@ -447,7 +608,10 @@
           const lab = svg("text", {
             x: (slot.l + slot.r) / 2,
             y: y - 11,
-            class: `cs-life-label cs-tier--${slot.c.tier}`,
+            // A label must recede with its own mark. Dimming one and not the
+            // other leaves the loudest thing on screen belonging to the part
+            // that is not the story.
+            class: `cs-life-label cs-tier--${slot.c.tier}${slot.c.dim ? " cs-dim" : ""}`,
             "text-anchor": "middle",
           });
           lab.textContent = slot.c.text;
@@ -510,6 +674,8 @@
       g.appendChild(liveLab);
     }
 
+    if (focus) renderChainEdges(g, model, focus, pointPos, scale);
+
     const cursorLine = svg("line", {
       x1: X(0),
       y1: LANE_START - 14,
@@ -535,10 +701,51 @@
     }
   }
 
-  function renderReadout(root, model, folded, t0, cursor) {
+  // What the trace found, in words, for the panel that has room for them.
+  function chainRows(model, focus) {
+    const rows = [];
+    const point = focus.point;
+    rows.push(["pinned", point.label, `tier${point.tier || 0}`]);
+
+    // Say nothing about causation where the document records none, rather than
+    // reporting its absence as an operator action.
+    if (!model.hasCausation) return rows;
+
+    let causeText;
+    if (!point.cause) {
+      causeText = "nothing, an operator acted directly";
+    } else {
+      const parent = model.byId.get(point.cause);
+      if (parent) {
+        causeText = `${parent.label} @ ${fmtClock(model.t0, parent.secs)}`;
+      } else if (point.cause_at) {
+        causeText = `outside this window, @ ${fmtClock(model.t0, parseT(point.cause_at) - model.t0)}`;
+      } else {
+        causeText = "outside this window";
+      }
+    }
+    rows.push(["caused by", causeText, point.cause ? "warn" : null]);
+
+    let effects = 0;
+    for (const hop of focus.dist.values()) if (hop > 0) effects += 1;
+    rows.push(["set off", effects ? `${effects} event${effects === 1 ? "" : "s"}` : "nothing", null]);
+
+    // The chain is walked a bounded number of hops. Say when it was cut, or a
+    // trimmed story reads as a complete one.
+    if (focus.truncatedUp || focus.truncatedDown) {
+      const cut = [];
+      if (focus.truncatedUp) cut.push("earlier causes");
+      if (focus.truncatedDown) cut.push("later effects");
+      rows.push(["not shown", `${cut.join(" and ")} beyond ${MAX_CHAIN_HOPS} steps`, "warn"]);
+    }
+    return rows;
+  }
+
+  function renderReadout(root, model, folded, t0, cursor, focus) {
     const r = root.querySelector(".cs-readout-body");
     r.innerHTML = "";
     const rows = [["clock", fmtClock(t0, cursor), null]];
+    if (focus) rows.push(...chainRows(model, focus));
     if (folded.primary) {
       const state = folded.primary.state || "not started";
       // A point-supplied `tone` (e.g. an enclosure's NotPermitted) wins;
@@ -604,7 +811,7 @@
       state.cursor = Math.max(0, Math.min(model.xmax, secs));
       applyFold(model, scene, state.cursor);
       const folded = foldTo(model, state.cursor);
-      renderReadout(root, model, folded, model.t0, state.cursor);
+      renderReadout(root, model, folded, model.t0, state.cursor, state.focus);
       svgEl.setAttribute("aria-valuenow", String(Math.round(state.cursor)));
       svgEl.setAttribute("aria-valuetext", fmtClock(model.t0, state.cursor));
     };
@@ -661,12 +868,11 @@
 
     const setSelection = (cluster) => {
       state.selected = cluster || null;
-      const ids = new Set();
-      if (cluster) for (const p of cluster.items) ids.add(p);
-      for (const { el, point } of scene.selectable) {
-        el.classList.toggle("cs-selected", !!point && ids.has(point));
-      }
       if (opts && opts.onSelect) opts.onSelect(cluster);
+      // Selecting rebuilds, because tracing a chain un-collapses its members
+      // and that changes what the clusters are. `state.refocus` is owned by
+      // mount(), which holds the view and the render loop.
+      state.refocus();
       // A selected cluster fixes the readout at its own instant, so what the
       // panel says and what is highlighted cannot disagree.
       if (cluster) setCursor(cluster.items[0].secs);
@@ -803,6 +1009,111 @@
     });
 
     return { setCursor, stopPlay, startPlay, setSelection };
+  }
+
+  // A quadratic with one far-offset control leaves the source at a sharp angle
+  // and whips back, which reads as a 90-degree kink rather than a curve. A
+  // cubic whose controls extend along the dominant axis leaves and enters
+  // smoothly, and the lateral offset rides on BOTH controls so the whole curve
+  // bows instead of bending.
+  function edgePath(a, b, fan) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const shrink = 7;
+    if (Math.abs(dy) < 5) {
+      const dir = dx >= 0 ? 1 : -1;
+      const bx = b.x - dir * shrink;
+      const lift = 13 + Math.abs(fan) * 0.5;
+      return `M${a.x},${a.y} C${a.x + dx * 0.28},${a.y - lift} ${bx - dx * 0.28},${b.y - lift} ${bx},${b.y}`;
+    }
+    const by = b.y - (dy > 0 ? shrink : -shrink);
+    const k = (by - a.y) * 0.45;
+    return `M${a.x},${a.y} C${a.x + fan},${a.y + k} ${b.x + fan},${by - k} ${b.x},${by}`;
+  }
+
+  // Separate edges that share an x corridor.
+  //
+  // Fanning per SOURCE is not enough: a reacting subscriber fires within the
+  // same second as its cause, so two edges with DIFFERENT causes routinely
+  // occupy the same corridor and were each centred independently on it. Every
+  // offset is also stepped away from zero, because an offset of exactly zero
+  // draws a dead-straight vertical that collides with any other zero-offset
+  // edge and reads as a grid rule rather than an arrow.
+  function fanEdges(edges, posOf) {
+    const corridors = new Map();
+    for (const e of edges) {
+      const a = posOf(e.from);
+      const b = posOf(e.to);
+      if (!a || !b) continue;
+      const key = Math.round((a.x + b.x) / 2 / 14);
+      const bucket = corridors.get(key);
+      if (bucket) bucket.push(e);
+      else corridors.set(key, [e]);
+    }
+    for (const bucket of corridors.values()) {
+      bucket.sort((x, z) => posOf(x.to).y - posOf(z.to).y);
+      bucket.forEach((e, i) => {
+        let step = i - (bucket.length - 1) / 2;
+        step = step >= 0 ? step + 0.5 : step - 0.5;
+        const a = posOf(e.from);
+        const b = posOf(e.to);
+        e.fan = step * Math.max(13, Math.abs(b.y - a.y) * 0.07);
+      });
+    }
+  }
+
+  // How far a chain is walked in each direction before it is cut. A long chain
+  // drawn in full is a hairball, and the cut is reported in the readout rather
+  // than silently trimming the story.
+  const MAX_CHAIN_HOPS = 4;
+
+  // Ancestors and descendants of `point`, with hop distance from it.
+  //
+  // Both walks are bounded and both carry a seen-set. An append-only log cannot
+  // contain a causal cycle, but nothing in this module enforces that: the ids
+  // arrive over a socket, and a malformed or self-referencing causation_id
+  // would spin `while (cur.cause)` forever and hang the page. Trusting the
+  // shape of remote data is not a guarantee, it is a hope.
+  function traceChain(model, point) {
+    const dist = new Map([[point, 0]]);
+    let truncatedUp = false;
+    let truncatedDown = false;
+    let unresolved = null;
+
+    let cur = point;
+    let hops = 0;
+    while (cur && cur.cause) {
+      const parent = model.byId.get(cur.cause);
+      if (!parent) {
+        unresolved = cur;
+        break;
+      }
+      if (dist.has(parent)) break;
+      hops += 1;
+      if (hops > MAX_CHAIN_HOPS) {
+        truncatedUp = true;
+        break;
+      }
+      dist.set(parent, -hops);
+      cur = parent;
+    }
+
+    let frontier = [point];
+    for (let depth = 1; depth <= MAX_CHAIN_HOPS && frontier.length; depth += 1) {
+      const next = [];
+      for (const node of frontier) {
+        if (!node.id) continue;
+        for (const kid of model.childrenOf.get(node.id) || []) {
+          if (dist.has(kid)) continue;
+          dist.set(kid, depth);
+          next.push(kid);
+        }
+      }
+      frontier = next;
+      if (depth === MAX_CHAIN_HOPS && next.length) truncatedDown = true;
+    }
+
+    return { dist, unresolved, truncatedUp, truncatedDown };
   }
 
   // The rendered cluster closest to the cursor, so Enter can pin what the
@@ -959,24 +1270,44 @@
       }
     };
 
+    // The selection anchors on a POINT, not a cluster: clusters are rebuilt on
+    // every render and tracing a chain changes which ones exist at all, so a
+    // cluster object cannot survive its own selection.
+    let anchor = null;
+
+    function focusFor() {
+      if (!anchor) return null;
+      const traced = traceChain(model, anchor);
+      return {
+        point: anchor,
+        corr: anchor.corr || null,
+        dist: traced.dist,
+        unresolved: traced.unresolved,
+        truncatedUp: traced.truncatedUp,
+        truncatedDown: traced.truncatedDown,
+      };
+    }
+
     let controls;
     function rerender() {
-      const wasSelected = state.selected;
       state.scale = buildScale(state.view.from, state.view.to);
-      const next = renderTimeline(model, state.scale);
+      const focus = focusFor();
+      const next = renderTimeline(model, state.scale, focus);
       stage.replaceChildren(next.g);
       scene = next;
+      state.focus = focus;
       controls = wireDrag(root, model, scene, state, opts);
-      // A selection survives a pan: re-resolve it against the freshly built
-      // clusters by first point, since the cluster objects are new each render.
-      if (wasSelected) {
-        const head = wasSelected.items[0];
-        const match = scene.selectable.find((s) => s.point === head);
-        state.selected = match ? wasSelected : null;
+      if (anchor) {
+        const match = scene.selectable.find((s) => s.point === anchor);
         if (match) match.el.classList.add("cs-selected");
       }
       controls.setCursor(state.cursor);
     }
+
+    state.refocus = () => {
+      anchor = state.selected ? state.selected.items[0] : null;
+      rerender();
+    };
 
     controls = wireDrag(root, model, scene, state, opts);
 

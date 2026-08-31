@@ -101,6 +101,71 @@
     var base = Date.UTC(2026, 7, 31, 14, 47, 0) - windowSec * 1000;
     var iso = function (secs) { return new Date(base + secs * 1000).toISOString(); };
 
+    // Identity and relationships. Causation is attached only where a subscriber
+    // would react, matching the production paths: an event fired within a few
+    // seconds of an earlier one, in a DIFFERENT lane, is treated as a reaction
+    // to it. Everything else is an operator action and stays a root, which is
+    // roughly the mix the real record has.
+    all.sort(function (a, b) { return a.t - b.t; });
+    all.forEach(function (e, i) {
+      e.id = "ev-" + i;
+      e.corr = null;
+      e.cause = null;
+      e.cause_at = null;
+    });
+    var corrN = 0;
+    all.forEach(function (e, i) {
+      if (e.corr === null) {
+        e.corr = "c" + corrN++;
+      }
+      for (var j = i + 1; j < all.length && all[j].t - e.t < 2.5; j++) {
+        var other = all[j];
+        if (other.cause || other.lane === e.lane) continue;
+        other.cause = e.id;
+        other.cause_at = iso(e.t);
+        other.corr = e.corr;
+      }
+    });
+    // One event whose cause is deliberately unresolvable, so the off-window
+    // stub has something to draw. Its cause_at is real; the id is not in the
+    // buffer, exactly as it would be for a cause that scrolled away.
+    var orphan = all.find(function (e) { return e.cause === null && e.t > windowSec * 0.3; });
+    if (orphan) {
+      orphan.cause = "ev-before-window";
+      orphan.cause_at = iso(-90);
+    }
+
+    // A deliberate cascade, longer than MAX_CHAIN_HOPS. The generated traffic
+    // above only ever produces one-hop stars, which would leave upstream
+    // edges, hop-scaled thickness and the truncation notice unexercised: every
+    // failure in those paths would look like a pass. This is the shape the
+    // real record makes when a permit drop takes a run down with it.
+    if (shape === "bursty" && windowSec >= 300) {
+      var CASCADE = [
+        ["Enclosures", "EnclosurePermitObserved", 2],
+        ["Runs", "RunAborted", 2],
+        ["Procedures", "ProcedureAborted", 2],
+        ["Cautions", "CautionRegistered", 2],
+        ["Decisions", "DecisionRegistered", 0],
+        ["Decisions", "DecisionDebriefRequested", 1],
+        ["Datasets", "DatasetDiscarded", 2],
+      ];
+      var at = windowSec * 0.62;
+      var corr = "c-cascade";
+      var prev = null;
+      CASCADE.forEach(function (spec, i) {
+        var e = {
+          lane: spec[0], name: spec[1], t: at + i * 6, tier: spec[2],
+          id: "casc-" + i, corr: corr,
+          cause: prev ? prev.id : null,
+          cause_at: prev ? iso(prev.t) : null,
+        };
+        prev = e;
+        byLane[spec[0]].push(e);
+        all.push(e);
+      });
+    }
+
     return {
       subject_lane_id: "__no_subject__",
       title: "Live activity",
@@ -115,7 +180,10 @@
           label: k,
           render: "markers",
           points: byLane[k].map(function (e) {
-            return { t: iso(e.t), label: e.name, tier: e.tier };
+            return {
+              t: iso(e.t), label: e.name, tier: e.tier,
+              id: e.id, corr: e.corr, cause: e.cause, cause_at: e.cause_at,
+            };
           }),
         };
       }),

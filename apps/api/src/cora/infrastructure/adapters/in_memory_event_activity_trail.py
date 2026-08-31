@@ -47,6 +47,7 @@ class InMemoryEventActivityTrail:
         occurred_by_event_id = {e.event_id: e.occurred_at for e in all_events}
         rows = [
             EventActivityRow(
+                event_id=event.event_id,
                 stream_type=event.stream_type,
                 stream_id=event.stream_id,
                 event_type=event.event_type,

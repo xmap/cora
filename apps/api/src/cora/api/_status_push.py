@@ -1305,6 +1305,7 @@ def build_activity_message(
         "generated_at": generated_at,
         "events": [
             {
+                "event_id": render_value(row.event_id),
                 "stream_type": row.stream_type,
                 "stream_id": render_value(row.stream_id),
                 "event_type": row.event_type,
