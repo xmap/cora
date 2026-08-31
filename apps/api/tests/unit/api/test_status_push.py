@@ -70,6 +70,11 @@ from cora.infrastructure.ports.event_activity_trail import EventActivityRow
 from cora.infrastructure.ports.event_store import NewEvent
 from cora.infrastructure.projection import decode_cursor, encode_cursor
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation.features.list_procedures import ListProcedures
+from cora.operation.features.list_procedures.handler import (
+    ProcedureListPage,
+    ProcedureSummaryItem,
+)
 from cora.run.errors import UnauthorizedError as RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.get_run_history.handler import RunHistoryEvent, RunHistoryView
@@ -96,6 +101,7 @@ def test_build_snapshot_shape() -> None:
         subjects=[],
         campaigns=[],
         datasets=[],
+        procedures=[],
         clearances=[],
         enclosures=[],
         decisions=[],
@@ -113,6 +119,7 @@ def test_build_snapshot_shape() -> None:
         "subjects": [],
         "campaigns": [],
         "datasets": [],
+        "procedures": [],
         "clearances": [],
         "enclosures": [],
         "decisions": [],
@@ -367,6 +374,24 @@ def _make_list_datasets(items: list[DatasetSummaryItem]):
     return list_datasets
 
 
+def _make_list_procedures(items: list[ProcedureSummaryItem]):
+    async def list_procedures(
+        query: ListProcedures,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ProcedureListPage:
+        matching = [
+            i
+            for i in items
+            if query.parent_run_id is None or i.parent_run_id == query.parent_run_id
+        ]
+        return ProcedureListPage(items=matching, next_cursor=None)
+
+    return list_procedures
+
+
 def _make_list_clearances(items: list[ClearanceSummaryItem]):
     async def list_clearances(
         query: ListClearances,
@@ -460,6 +485,7 @@ def _default_handlers(**overrides: Any) -> dict[str, Any]:
         "list_subjects": _make_list_subjects([]),
         "list_campaigns": _make_list_campaigns([]),
         "list_datasets": _make_list_datasets([]),
+        "list_procedures": _make_list_procedures([]),
         "list_clearances": _make_list_clearances([]),
         "list_enclosures": _make_list_enclosures([]),
         "list_decisions": _make_list_decisions([]),
@@ -1595,20 +1621,49 @@ async def test_activity_tail_never_ships_the_event_payload() -> None:
 # ---------- real socket: push against a local WebSocket server ----------
 
 
+def _procedure_item(
+    procedure_id: UUID,
+    *,
+    parent_run_id: UUID | None,
+    name: str = "center_alignment",
+    kind: str = "alignment",
+) -> ProcedureSummaryItem:
+    return ProcedureSummaryItem(
+        procedure_id=procedure_id,
+        name=name,
+        kind=kind,
+        target_asset_ids=[],
+        parent_run_id=parent_run_id,
+        status="Running",
+        activity_logbook_id=None,
+        registered_at=_NOW,
+        last_status_changed_at=None,
+        last_status_reason="operator said something private",
+        interrupted_at=None,
+        iteration_count=3,
+    )
+
+
 def _run_item(
-    run_id: UUID, *, name: str = "smoke-run", status: RunStatusFilter = "Running"
+    run_id: UUID,
+    *,
+    name: str = "smoke-run",
+    status: RunStatusFilter = "Running",
+    campaign_id: UUID | None = None,
+    subject_id: UUID | None = None,
+    running_since: datetime | None = _NOW,
 ) -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
         name=name,
         plan_id=uuid4(),
-        subject_id=None,
+        subject_id=subject_id,
         raid=None,
         status=status,
         created_at=_NOW,
-        running_since=_NOW,
+        running_since=running_since,
         override_parameters_present=False,
-        campaign_id=None,
+        campaign_id=campaign_id,
         snr_limit=None,
         expected_observation_interval_seconds=None,
         conduct_mode="Witnessed",
@@ -1649,6 +1704,9 @@ async def test_lifespan_pushes_a_snapshot_to_a_real_relay() -> None:
                 "run_id": str(run_id),
                 "name": "smoke-run",
                 "status": "Running",
+                "campaign_id": None,
+                "subject_id": None,
+                "started_at": _NOW.isoformat(),
                 "progress": {},
                 "progress_trail": {},
             }
@@ -1854,6 +1912,133 @@ async def test_lifespan_pushes_datasets_only_for_onscreen_runs() -> None:
 
         snapshot = json.loads(raw)
         assert [d["name"] for d in snapshot["datasets"]] == ["onscreen-ds"]
+
+
+async def _first_snapshot(**handlers: Any) -> dict[str, Any]:
+    """Boot the push loop against a throwaway relay and return the first
+    snapshot it sends, so a test asserting on payload SHAPE does not have to
+    restate the socket plumbing."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=f"ws://127.0.0.1:{port}/ingest",
+            status_push_tick_seconds=0.1,
+        )
+        async with status_push_lifespan(kernel, **_default_handlers(**handlers)):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+    result: dict[str, Any] = json.loads(raw)
+    return result
+
+
+@pytest.mark.unit
+async def test_run_rows_carry_what_places_a_run_among_the_others() -> None:
+    """A Run row without `campaign_id` and `subject_id` can be listed but not
+    PLACED: nothing else on the wire says what it belongs to or what it is
+    measuring. Both are already on the projection; this asserts they reach
+    the payload."""
+    run_id, campaign_id, subject_id = uuid4(), uuid4(), uuid4()
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs(
+            [_run_item(run_id, campaign_id=campaign_id, subject_id=subject_id)]
+        )
+    )
+    (row,) = snapshot["runs"]
+    assert row["campaign_id"] == str(campaign_id)
+    assert row["subject_id"] == str(subject_id)
+    assert row["started_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_run_row_membership_is_null_for_a_standalone_run() -> None:
+    """The absence has to arrive as an explicit null rather than a missing
+    key: a consumer that saw no `campaign_id` could not tell "standalone"
+    from "this producer is too old to send it"."""
+    snapshot = await _first_snapshot(list_runs=_make_list_runs([_run_item(uuid4())]))
+    (row,) = snapshot["runs"]
+    assert row["campaign_id"] is None
+    assert row["subject_id"] is None
+
+
+@pytest.mark.unit
+async def test_run_started_at_falls_back_to_created_at_before_it_runs() -> None:
+    """A Held-from-genesis Run has no `running_since`. A span still needs a
+    left edge, and a missing one would draw as a track starting at the window
+    edge, which reads as "started when you opened the page"."""
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs([_run_item(uuid4(), status="Held", running_since=None)])
+    )
+    (row,) = snapshot["runs"]
+    assert row["started_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_procedures_are_pushed_for_onscreen_runs_only() -> None:
+    """Bounded by the open-run count, exactly as datasets are: a live page
+    needs the phases of the runs on screen, never every Procedure the
+    facility has registered."""
+    onscreen, offscreen = uuid4(), uuid4()
+    mine, theirs = uuid4(), uuid4()
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs([_run_item(onscreen)]),
+        list_procedures=_make_list_procedures(
+            [
+                _procedure_item(mine, parent_run_id=onscreen, name="center_alignment"),
+                _procedure_item(theirs, parent_run_id=offscreen, name="dark_field"),
+            ]
+        ),
+    )
+    assert [p["name"] for p in snapshot["procedures"]] == ["center_alignment"]
+    (row,) = snapshot["procedures"]
+    assert row["parent_run_id"] == str(onscreen)
+    assert row["kind"] == "alignment"
+    assert row["iteration_count"] == 3
+    assert row["registered_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_procedure_rows_never_carry_operator_reason_text() -> None:
+    """`last_status_reason` is operator free text, which is the shape that
+    carries incidental personal data. Nothing on a status page needs it, so
+    it must not be on the wire -- and the fixture sets it to a recognisable
+    string so this cannot pass by the field merely being empty."""
+    run_id = uuid4()
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs([_run_item(run_id)]),
+        list_procedures=_make_list_procedures([_procedure_item(uuid4(), parent_run_id=run_id)]),
+    )
+    (row,) = snapshot["procedures"]
+    assert "last_status_reason" not in row
+    assert "private" not in json.dumps(snapshot)
+
+
+@pytest.mark.unit
+async def test_subject_rows_carry_their_own_left_edge() -> None:
+    snapshot = await _first_snapshot(
+        list_subjects=_make_list_subjects(
+            [
+                SubjectSummaryItem(
+                    subject_id=uuid4(), name="SMP-115", status="Mounted", created_at=_NOW
+                )
+            ]
+        )
+    )
+    (row,) = snapshot["subjects"]
+    assert row["created_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_procedures_section_is_present_and_empty_with_no_runs() -> None:
+    """An empty list, not a missing key. A consumer branching on presence
+    would read "no open runs" as "this producer does not send procedures"."""
+    snapshot = await _first_snapshot()
+    assert snapshot["procedures"] == []
 
 
 @pytest.mark.unit

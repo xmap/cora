@@ -200,6 +200,8 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.projection import encode_cursor
 from cora.infrastructure.record_export import render_value
 from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_PRINCIPAL_ID
+from cora.operation.errors import UnauthorizedError as _OperationUnauthorizedError
+from cora.operation.features.list_procedures import ListProcedures
 from cora.run.errors import UnauthorizedError as _RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.list_runs import ListRuns
@@ -228,6 +230,9 @@ if TYPE_CHECKING:
         EventActivityCursor,
         EventActivityRow,
         EventActivityTrail,
+    )
+    from cora.operation.features.list_procedures.handler import (
+        Handler as ListProceduresHandler,
     )
     from cora.run.features.get_run_history.handler import Handler as GetRunHistoryHandler
     from cora.run.features.get_run_history.handler import RunHistoryView
@@ -312,6 +317,7 @@ _UNAUTHORIZED_ERRORS = (
     _DecisionUnauthorizedError,
     _SafetyUnauthorizedError,
     _EnclosureUnauthorizedError,
+    _OperationUnauthorizedError,
 )
 
 
@@ -409,6 +415,16 @@ async def _drain_open_runs(
                     "run_id": render_value(item.run_id),
                     "name": item.name,
                     "status": item.status,
+                    # Structure, not decoration. `campaign_id` is what a Run
+                    # belongs to and `subject_id` is what it is measuring, both
+                    # already on the projection (they back `list_runs`'s own
+                    # `?campaign_id=` filter); a consumer without them can show
+                    # a Run but cannot place it among the others. `started_at`
+                    # is `running_since` where the Run has actually started and
+                    # `created_at` otherwise, so a span always has a left edge.
+                    "campaign_id": render_value(item.campaign_id),
+                    "subject_id": render_value(item.subject_id),
+                    "started_at": render_value(item.running_since or item.created_at),
                     "progress": _render_progress(item.run_id, witness_recorder),
                     "progress_trail": _render_progress_trail(item.run_id, witness_recorder),
                 }
@@ -431,7 +447,12 @@ async def _drain_open_subjects(
             )
         )
         rows.extend(
-            {"subject_id": render_value(item.subject_id), "name": item.name, "status": item.status}
+            {
+                "subject_id": render_value(item.subject_id),
+                "name": item.name,
+                "status": item.status,
+                "created_at": render_value(item.created_at),
+            }
             for item in items
         )
     return rows
@@ -486,6 +507,54 @@ async def _drain_datasets_for_runs(
                 "name": item.name,
                 "status": item.status,
                 "producing_run_id": render_value(item.producing_run_id),
+            }
+            for item in items
+        )
+    return rows
+
+
+async def _drain_procedures_for_runs(
+    list_procedures: ListProceduresHandler, deps: Kernel, *, run_ids: list[UUID]
+) -> list[dict[str, Any]]:
+    """Procedures belonging to an on-screen Run, one query per run_id.
+
+    Bounded by the open-run count exactly as `_drain_datasets_for_runs` is,
+    and for the same reason: what a live page needs is the phases of the runs
+    on screen, never every Procedure the facility has ever registered.
+
+    This is the third level of the containment tree -- campaign holds runs
+    hold procedures -- and it is the level a consumer cannot reconstruct from
+    the activity stream alone. That stream carries a Procedure's `stream_id`
+    and so can tell one Procedure from another, but nothing in it says which
+    Run a Procedure is a phase OF: `parent_run_id` lives on the projection and
+    only here.
+
+    `last_status_reason` is deliberately NOT sent. It is operator free text
+    (see `cora.shared.text_bounds`), which is exactly the shape that carries
+    incidental personal data, and nothing on a status page needs it. `kind`
+    is a deployment-declared discriminator and `name` is the same class of
+    value as the Run `name` already on this payload.
+    """
+    rows: list[dict[str, Any]] = []
+    for run_id in run_ids:
+        items = await _drain_all(
+            lambda cursor, run_id=run_id: list_procedures(
+                ListProcedures(parent_run_id=run_id, cursor=cursor, limit=_PAGE_LIMIT),
+                principal_id=SYSTEM_PRINCIPAL_ID,
+                correlation_id=deps.id_generator.new_id(),
+                surface_id=NIL_SENTINEL_ID,
+            )
+        )
+        rows.extend(
+            {
+                "procedure_id": render_value(item.procedure_id),
+                "name": item.name,
+                "kind": item.kind,
+                "parent_run_id": render_value(item.parent_run_id),
+                "status": item.status,
+                "registered_at": render_value(item.registered_at),
+                "last_status_changed_at": render_value(item.last_status_changed_at),
+                "iteration_count": item.iteration_count,
             }
             for item in items
         )
@@ -1075,6 +1144,7 @@ def build_snapshot(
     subjects: list[dict[str, Any]],
     campaigns: list[dict[str, Any]],
     datasets: list[dict[str, Any]],
+    procedures: list[dict[str, Any]],
     clearances: list[dict[str, Any]],
     enclosures: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
@@ -1094,6 +1164,7 @@ def build_snapshot(
         "subjects": subjects,
         "campaigns": campaigns,
         "datasets": datasets,
+        "procedures": procedures,
         "clearances": clearances,
         "enclosures": enclosures,
         "decisions": decisions,
@@ -1333,6 +1404,7 @@ async def _build_payload_fields(
     list_subjects: ListSubjectsHandler,
     list_campaigns: ListCampaignsHandler,
     list_datasets: ListDatasetsHandler,
+    list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
     list_enclosures: ListEnclosuresHandler,
     decision_tail: _DecisionTail,
@@ -1366,6 +1438,7 @@ async def _build_payload_fields(
         "subjects": await _drain_open_subjects(list_subjects, deps),
         "campaigns": await _drain_open_campaigns(list_campaigns, deps),
         "datasets": await _drain_datasets_for_runs(list_datasets, deps, run_ids=raw_run_ids),
+        "procedures": await _drain_procedures_for_runs(list_procedures, deps, run_ids=raw_run_ids),
         "clearances": await _drain_active_clearances(list_clearances, deps),
         "enclosures": enclosures,
         "decisions": await decision_tail.poll(list_decisions, deps),
@@ -1403,6 +1476,7 @@ async def _push_loop(
     list_subjects: ListSubjectsHandler,
     list_campaigns: ListCampaignsHandler,
     list_datasets: ListDatasetsHandler,
+    list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
@@ -1475,6 +1549,7 @@ async def _push_loop(
                             list_subjects=list_subjects,
                             list_campaigns=list_campaigns,
                             list_datasets=list_datasets,
+                            list_procedures=list_procedures,
                             list_clearances=list_clearances,
                             list_enclosures=list_enclosures,
                             decision_tail=decision_tail,
@@ -1550,6 +1625,7 @@ async def status_push_lifespan(
     list_subjects: ListSubjectsHandler,
     list_campaigns: ListCampaignsHandler,
     list_datasets: ListDatasetsHandler,
+    list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
@@ -1613,6 +1689,7 @@ async def status_push_lifespan(
             list_subjects=list_subjects,
             list_campaigns=list_campaigns,
             list_datasets=list_datasets,
+            list_procedures=list_procedures,
             list_clearances=list_clearances,
             list_enclosures=list_enclosures,
             list_decisions=list_decisions,

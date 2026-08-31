@@ -1507,6 +1507,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_subjects=app.state.subject.list_subjects,
                         list_campaigns=app.state.campaign.list_campaigns,
                         list_datasets=app.state.data.list_datasets,
+                        list_procedures=app.state.operation.list_procedures,
                         list_clearances=app.state.safety.list_clearances,
                         list_enclosures=app.state.enclosure.list_enclosures,
                         list_decisions=app.state.decision.list_decisions,
