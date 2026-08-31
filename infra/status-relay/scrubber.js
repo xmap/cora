@@ -54,8 +54,19 @@
   const LANE_START = 34;
   const LANE_HEIGHT = 40;
   const MAX_SERIES_LANES = 6;
-  const MAX_MARKER_LABELS = 12;
   const AXIS_MARGIN = 44;
+  const MARK_W = 8;
+  // Two marks closer than this many user units cannot be drawn apart. At a
+  // 15-minute window over the 812-unit plot one unit is about 1.1s, so this is
+  // roughly 11s -- but it is deliberately a WIDTH, not a duration. What can be
+  // separated is a property of the canvas, and a duration constant would
+  // silently lie at every other window size.
+  const COLLAPSE_GAP = 10;
+  const LABEL_CH = 5.6;
+  const LABEL_PAD = 5;
+  const LANE_LABEL_CH = 6.2;
+  // Wide enough for a two-digit count at the badge's 9px mono.
+  const CLUSTER_MIN_W = 16;
 
   function parseT(iso) {
     return Date.parse(iso) / 1000;
@@ -77,6 +88,17 @@
 
   function xFor(scale, secs) {
     return PAD_L + (secs - scale.dmin) * scale.k;
+  }
+
+  // Ticks land on round wall-clock boundaries, so they stay put as the window
+  // slides instead of renumbering under a moving origin.
+  const TICK_STEPS = [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+  function pickTickStep(span) {
+    const target = span / 9;
+    for (const s of TICK_STEPS) {
+      if (s >= target) return s;
+    }
+    return TICK_STEPS[TICK_STEPS.length - 1];
   }
 
   function buildScale(xmax) {
@@ -141,6 +163,10 @@
           label: p.label,
           state: p.state || null,
           tone: p.tone || null,
+          // Severity rank, 0 routine / 1 notable / 2 critical. Supplied by
+          // whoever built the document: which event types matter is domain
+          // vocabulary, and this module deliberately knows none.
+          tier: p.tier || 0,
           value: p.value,
           text: p.text != null ? p.text : null,
         }))
@@ -168,7 +194,82 @@
       for (const p of lane.points) xmax = Math.max(xmax, p.secs);
     }
 
-    return { t0, xmax, lanes, primaryLane, omittedSeries };
+    return { t0, xmax, lanes, primaryLane, omittedSeries, live: !!doc.live };
+  }
+
+  // The lane already names the aggregate, so repeating it in every label costs
+  // a third of the axis for nothing: on a lane called "Procedures",
+  // `ProcedureIterationStarted` says no more than `IterationStarted`. Derived
+  // from the lane's own label rather than a table of domain nouns, so this
+  // module stays subject-neutral the way its header promises.
+  function stripLanePrefix(label, laneLabel) {
+    if (!laneLabel) return label;
+    const noun = laneLabel.replace(/s$/, "");
+    if (noun.length > 2 && label.length > noun.length && label.indexOf(noun) === 0) {
+      return label.slice(noun.length);
+    }
+    return label;
+  }
+
+  // Collapse is a RENDERING concern only: `lane.points` keeps every point,
+  // because `foldTo` walks the primary lane for the last point carrying a
+  // `state` and a merged point would break REWIND's folded readout.
+  function clusterPoints(points, X) {
+    const out = [];
+    let cur = null;
+    for (const p of points) {
+      const x = X(p.secs);
+      if (cur && x - cur.xEnd < COLLAPSE_GAP) {
+        cur.items.push(p);
+        cur.xEnd = x;
+      } else {
+        if (cur) out.push(cur);
+        cur = { xStart: x, xEnd: x, items: [p] };
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
+  // The point a cluster is named after: highest tier first, then the rarest
+  // name in it, so a lone RunAborted is never spoken for by the six routine
+  // events it happens to sit beside.
+  function clusterHead(cluster) {
+    const counts = {};
+    for (const p of cluster.items) counts[p.label] = (counts[p.label] || 0) + 1;
+    let best = cluster.items[0];
+    let tier = 0;
+    for (const p of cluster.items) {
+      const t = p.tier || 0;
+      if (t > tier) tier = t;
+      const bt = best.tier || 0;
+      if (t > bt || (t === bt && counts[p.label] < counts[best.label])) best = p;
+    }
+    return { point: best, tier, uniform: cluster.items.every((p) => p.label === best.label) };
+  }
+
+  // Seat labels by severity first, then left to right. A purely left-to-right
+  // greedy pass lets a flood of routine traffic take the slot a critical event
+  // needed, and that is the one label that must never be the one dropped.
+  function seatLabels(candidates) {
+    const order = candidates.slice().sort((a, b) => b.tier - a.tier || a.cx - b.cx);
+    const placed = [];
+    for (const c of order) {
+      if (c.skip) continue;
+      let l = c.cx - c.w / 2;
+      let r = c.cx + c.w / 2;
+      if (l < PAD_L) {
+        l = PAD_L;
+        r = l + c.w;
+      }
+      if (r > VW - PAD_R) {
+        r = VW - PAD_R;
+        l = r - c.w;
+      }
+      if (placed.some((q) => !(r <= q.l - LABEL_PAD || l >= q.r + LABEL_PAD))) continue;
+      placed.push({ l, r, c });
+    }
+    return placed;
   }
 
   function renderTimeline(model, scale) {
@@ -190,7 +291,18 @@
       laneY.set(lane.lane_id, y);
       g.appendChild(svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-baseline" }));
       const t = svg("text", { x: PAD_L - 12, y: y + 4, class: "cs-lane-label", "text-anchor": "end" });
-      t.textContent = lane.label;
+      // SVG has no text-overflow, so a long lane label silently runs under the
+      // plot instead of being clipped. Measure in the label's own advance
+      // width and keep the full text on hover.
+      const room = PAD_L - 12 - 4;
+      const maxChars = Math.floor(room / LANE_LABEL_CH);
+      t.textContent =
+        lane.label.length > maxChars ? `${lane.label.slice(0, Math.max(1, maxChars - 1))}…` : lane.label;
+      if (t.textContent !== lane.label) {
+        const full = svg("title");
+        full.textContent = lane.label;
+        t.appendChild(full);
+      }
       g.appendChild(t);
     });
 
@@ -199,30 +311,100 @@
     for (const lane of model.lanes) {
       const y = laneY.get(lane.lane_id);
       if (lane.render === "markers") {
-        // A REWIND run has a handful of lifecycle events at most, so a
-        // text label above every marker reads fine. A flowing window's
-        // domain lane can hold far more (a busy hour of Decisions,
-        // say), where the same labels would overlap into noise; past
-        // this count, keep the marks (still hoverable via the readout at
-        // any folded instant) and drop only the always-on labels.
-        const showLabels = lane.points.length <= MAX_MARKER_LABELS;
-        lane.points.forEach((p) => {
-          const x = X(p.secs);
-          const m = svg("rect", {
-            x: x - 4,
-            y: y - 4,
-            width: 8,
-            height: 8,
-            class: "cs-mark cs-mark--setpoint",
-          });
-          g.appendChild(m);
-          timed.push({ el: m, t: p.secs });
-          if (showLabels) {
-            const lab = svg("text", { x, y: y - 10, class: "cs-life-label", "text-anchor": "middle" });
-            lab.textContent = p.label;
-            g.appendChild(lab);
-            timed.push({ el: lab, t: p.secs });
+        // The gate here used to be `points.length <= MAX_MARKER_LABELS`, which
+        // tests COUNT while the thing that ruins a lane is DENSITY. Twelve
+        // events spread over fifteen minutes read perfectly; twelve inside one
+        // burst overprint into a smear, and both took the same branch: every
+        // label drawn on top of its neighbours, or past twelve no labels at
+        // all and a row of anonymous squares saying only "something happened".
+        const clusters = clusterPoints(lane.points, X);
+        const candidates = [];
+        let prevBase = null;
+
+        clusters.forEach((c) => {
+          const head = clusterHead(c);
+          const n = c.items.length;
+          const base = stripLanePrefix(head.point.label, lane.label);
+          // `xN` only when every member really is that event: a burst of five
+          // Adjusted plus one Resumed is not six resumes, so a mixed cluster
+          // names the one it is titled after and counts the rest as `+N`.
+          const text = n === 1 ? base : base + (head.uniform ? ` ×${n}` : ` +${n - 1}`);
+          // A lane that is overwhelmingly one event type repeats that label
+          // forever and says nothing after the first. Only a real burst, or
+          // anything above routine tier, re-earns it.
+          const repeat = head.tier === 0 && n < 3 && base === prevBase;
+          if (head.tier === 0) prevBase = base;
+
+          let markEl;
+          if (n > 1) {
+            // The floor is whatever fits the count digit. A badge too narrow
+            // to carry its own number is worse than a plain mark: it is
+            // visibly a merged thing that will not say how much it merged.
+            const w = Math.max(CLUSTER_MIN_W, c.xEnd - c.xStart + MARK_W + 2);
+            markEl = svg("rect", {
+              x: c.xStart - MARK_W / 2 - 1,
+              y: y - 6,
+              width: w,
+              height: 12,
+              rx: 6,
+              class: `cs-mark cs-mark--cluster cs-tier--${head.tier}`,
+            });
+            g.appendChild(markEl);
+            timed.push({ el: markEl, t: c.items[0].secs });
+            // Unreachable given CLUSTER_MIN_W, kept so a future change to the
+            // floor degrades to a bare badge rather than clipped digits.
+            if (w >= CLUSTER_MIN_W) {
+              const ct = svg("text", {
+                x: c.xStart - MARK_W / 2 - 1 + w / 2,
+                y: y + 3.2,
+                class: "cs-cluster-count",
+                "text-anchor": "middle",
+              });
+              ct.textContent = String(n);
+              g.appendChild(ct);
+              timed.push({ el: ct, t: c.items[0].secs });
+            }
+          } else {
+            markEl = svg("rect", {
+              x: c.xStart - MARK_W / 2,
+              y: y - MARK_W / 2,
+              width: MARK_W,
+              height: MARK_W,
+              class: `cs-mark cs-mark--setpoint cs-tier--${head.tier}`,
+            });
+            g.appendChild(markEl);
+            timed.push({ el: markEl, t: c.items[0].secs });
           }
+
+          // A count is only honest if its contents are recoverable. The folded
+          // readout answers at the cursor; this answers on hover, and is the
+          // only route for a viewer who never drags the cursor at all.
+          const title = svg("title");
+          title.textContent = c.items
+            .map((p) => `${p.label} @ ${fmtClock(model.t0, p.secs)}`)
+            .join("\n");
+          markEl.appendChild(title);
+
+          candidates.push({
+            cx: (c.xStart + c.xEnd) / 2,
+            tier: head.tier,
+            text,
+            skip: repeat,
+            w: text.length * LABEL_CH + 4,
+            t: c.items[0].secs,
+          });
+        });
+
+        seatLabels(candidates).forEach((slot) => {
+          const lab = svg("text", {
+            x: (slot.l + slot.r) / 2,
+            y: y - 11,
+            class: `cs-life-label cs-tier--${slot.c.tier}`,
+            "text-anchor": "middle",
+          });
+          lab.textContent = slot.c.text;
+          g.appendChild(lab);
+          timed.push({ el: lab, t: slot.c.t });
         });
       } else {
         const numeric = lane.points.filter((p) => p.value !== null && p.value !== undefined);
@@ -248,13 +430,34 @@
     }
 
     g.appendChild(svg("line", { x1: PAD_L, y1: axisY, x2: VW - PAD_R, y2: axisY, class: "cs-axis" }));
-    const tickStep = model.xmax > 0 ? Math.max(1, Math.round(model.xmax / 12 / 5) * 5) : 1;
-    for (let secs = 0; secs <= model.xmax; secs += tickStep) {
+    // Wall clock, not `0s..900s`. In a flowing window `t0` slides on every
+    // re-render, so a relative label renames the same physical event every
+    // time and the eye has nothing fixed to measure motion against.
+    const tickStep = pickTickStep(model.xmax);
+    const firstTick = Math.ceil(model.t0 / tickStep) * tickStep - model.t0;
+    for (let secs = firstTick; secs <= model.xmax; secs += tickStep) {
       const x = X(secs);
       g.appendChild(svg("line", { x1: x, y1: axisY, x2: x, y2: axisY + 5, class: "cs-tick" }));
       const lab = svg("text", { x, y: axisY + 17, class: "cs-tick-label", "text-anchor": "middle" });
-      lab.textContent = `${secs}s`;
+      lab.textContent = fmtClock(model.t0, secs).slice(0, tickStep < 60 ? 8 : 5);
       g.appendChild(lab);
+    }
+
+    // Only a flowing window has a live edge. On a closed REWIND timeline the
+    // right edge is the last event, and calling that LIVE would be a lie.
+    if (model.live) {
+      const liveX = X(model.xmax);
+      g.appendChild(
+        svg("line", { x1: liveX, y1: LANE_START - 18, x2: liveX, y2: axisY, class: "cs-live" })
+      );
+      const liveLab = svg("text", {
+        x: liveX - 4,
+        y: LANE_START - 22,
+        class: "cs-live-label",
+        "text-anchor": "end",
+      });
+      liveLab.textContent = `LIVE ${fmtClock(model.t0, model.xmax).slice(0, 5)}`;
+      g.appendChild(liveLab);
     }
 
     const cursorLine = svg("line", {

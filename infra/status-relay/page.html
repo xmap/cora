@@ -145,6 +145,23 @@
   .cs-mark--setpoint { fill: var(--cs-ink); }
   .cs-mark--acquire { fill: var(--cs-sub); }
   .cs-mark--check { fill: var(--cs-warn); }
+  /* Severity, reusing the page's existing status hues rather than a new set.
+     Tier 0 is deliberately the neutral ink: colour here means "this is worth
+     your attention", so routine traffic must not spend any. */
+  .cs-tier--1 { fill: var(--cs-warn); }
+  .cs-tier--2 { fill: var(--cs-alarm); }
+  text.cs-tier--1 { fill: var(--cs-warn); font-weight: 600; }
+  text.cs-tier--2 { fill: var(--cs-alarm); font-weight: 700; }
+  .cs-mark--cluster { fill: var(--cs-sub); }
+  .cs-cluster-count {
+    font-family: var(--cs-mono); font-size: 9px; font-weight: 700;
+    fill: var(--cs-surface); pointer-events: none;
+  }
+  .cs-live { stroke: var(--cs-sub); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.6; }
+  .cs-live-label {
+    fill: var(--cs-sub); font-family: var(--cs-mono); font-size: 9px;
+    letter-spacing: 0.1em; opacity: 0.85;
+  }
   .cs-future { opacity: 0.25; }
   .cs-cursor { stroke: var(--cs-alarm); stroke-width: 1.4; stroke-dasharray: 4 3; }
   .cs-cursor-handle { fill: var(--cs-alarm); stroke: var(--cs-surface); stroke-width: 1.2; }
@@ -485,7 +502,9 @@
   // busy hour touches many Runs, many Decisions -- so every lane here is
   // read the same generic "last event" way, none of them primary.
   var FLOWING_WINDOW_MS = 15 * 60 * 1000;
-  var FLOWING_RESLIDE_MS = 60 * 1000;
+  // Sub-pixel per step at a 15-minute window (0.45 of a user unit), so the
+  // right edge creeps rather than ticking, at half the rebuild cost of 250ms.
+  var FLOWING_RESLIDE_MS = 500;
 
   // Many-to-one by design, not one lane per stream_type: the measured
   // 2-BM record has 25 distinct stream types, but `Run` and `Decision`
@@ -531,6 +550,40 @@
     other: "Other",
   };
 
+  // Severity rank per event type: 1 notable, 2 critical, absent means routine.
+  // It lives here and not in scrubber.js because which events matter is domain
+  // vocabulary, and that module is deliberately subject-neutral. An event type
+  // missing from this table renders as routine, which is the safe default for
+  // a vocabulary that grows: a new event is quiet, never falsely loud.
+  //
+  // Tier 2 is reserved for "an operator would want to know within seconds".
+  // Keep it small. Everything promoted here competes for the same label slots
+  // as a real alarm, so a generous tier 2 is the same as no tier 2 at all.
+  var EVENT_TIER = {
+    RunAborted: 2,
+    ProcedureAborted: 2,
+    CautionRegistered: 2,
+    ClearanceExpired: 2,
+    ClearanceRejected: 2,
+    DatasetDiscarded: 2,
+    EnclosureDecommissioned: 2,
+    RunHeld: 1,
+    RunStopped: 1,
+    RunTruncated: 1,
+    RunResumed: 1,
+    ProcedureTruncated: 1,
+    ProcedureResumed: 1,
+    CampaignHeld: 1,
+    CampaignAbandoned: 1,
+    ClearanceSuperseded: 1,
+    SubjectDiscarded: 1,
+    DatasetDemoted: 1,
+    DistributionDiscarded: 1,
+    CautionRetired: 1,
+    CautionDraftConflicted: 1,
+    DecisionDebriefRequested: 1,
+  };
+
   var flowing = { buffer: [], following: true, pausedAtMs: 0 };
   var flowingStageEl = document.getElementById("flowing-stage");
   var flowingResumeEl = document.getElementById("flowing-resume");
@@ -553,10 +606,25 @@
         points: [],
       };
     });
+    var runStarts = 0;
     buffer.forEach(function (e) {
       var domain = STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other";
-      lanesByDomain[domain].points.push({ t: e.occurred_at, label: e.event_type });
+      if (e.event_type === "RunStarted") runStarts++;
+      lanesByDomain[domain].points.push({
+        t: e.occurred_at,
+        label: e.event_type,
+        tier: EVENT_TIER[e.event_type] || 0,
+      });
     });
+    var subtitle =
+      buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 15m";
+    // A "run started here" cue without the cost of a track per run. It counts
+    // only starts INSIDE the window: a run already under way when the window
+    // opened emitted its RunStarted before the buffer began and is invisible
+    // here, the same blind spot the flowing view has for anything older.
+    if (runStarts > 0) {
+      subtitle += " · " + runStarts + " run" + (runStarts === 1 ? "" : "s") + " started";
+    }
     return {
       // No lane here represents one subject's current status the way
       // REWIND's Run lifecycle lane does, so this deliberately names a
@@ -565,7 +633,11 @@
       // through the generic "last event" path in renderReadout.
       subject_lane_id: "__no_subject__",
       title: "Live activity",
-      subtitle: buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 15m",
+      subtitle: subtitle,
+      // The right edge of a flowing window is now, not the last event. Without
+      // this the scrubber cannot tell the two apart and would label a closed
+      // REWIND timeline LIVE as well.
+      live: true,
       domain: { from: domainFromIso, to: domainToIso },
       lanes: DOMAIN_ORDER.map(function (key) {
         return lanesByDomain[key];
@@ -636,12 +708,36 @@
   }
 
   // The window keeps sliding even with no NEW activity: an event that
-  // scrolled out the left edge an hour ago should disappear from view on
-  // its own, not wait for a fresh event to trigger the re-render that
-  // would notice it.
+  // scrolled out the left edge should disappear from view on its own, not
+  // wait for a fresh event to trigger the re-render that would notice it.
+  //
+  // This used to re-slide once a MINUTE, and since every re-slide is a full
+  // mount() teardown and rebuild, a quiet page sat perfectly still and then
+  // jumped a sixtieth of its width in one frame. That is what made a feed
+  // arriving every 2s read as a page that updates once a minute. Data rate was
+  // never the problem; the absence of visible motion was. Re-sliding several
+  // times a second costs one rebuild of a few hundred SVG nodes and makes the
+  // right edge visibly creep, which is the whole signal that says "running".
+  // Re-sliding is a full mount() teardown, so anything the viewer is currently
+  // touching would be destroyed under them: a native <title> tooltip needs its
+  // element to survive about a second before it ever appears, and keyboard
+  // focus on the slider would be thrown away twice a second. The rule is that
+  // the window slides only while nobody is interacting with it. A held pointer
+  // costs at most a few seconds of staleness, and the moment it leaves, the
+  // next tick catches the window up in one step.
+  var flowingHovered = false;
+  flowingStageEl.addEventListener("pointerenter", function () { flowingHovered = true; });
+  flowingStageEl.addEventListener("pointerleave", function () { flowingHovered = false; });
+
+  function flowingIsBusy() {
+    if (flowingHovered || document.hidden) return true;
+    var active = document.activeElement;
+    return !!active && active !== document.body && flowingStageEl.contains(active);
+  }
+
   renderFlowing();
   setInterval(function () {
-    if (flowing.following) renderFlowing();
+    if (flowing.following && !flowingIsBusy()) renderFlowing();
   }, FLOWING_RESLIDE_MS);
 
   function handleSnapshot(msg) {
