@@ -351,6 +351,77 @@ def test_create_app_boots_with_no_trust_policy_id(
     assert app is not None
 
 
+# ---------- the shadow carve-out on F1 ----------
+#
+# Discovered on the 2-BM deployment, by the guard above stopping the boot
+# that was meant to START measuring. F1 refuses TRUST_POLICY_ID without the
+# header check because a spoofed principal would win standing admin "under
+# the configured Policy". Under POLICY_POSTURE=shadow there is no such win:
+# nothing is refused, so the deployment is behaviourally what it already was
+# on AllowAll, and the same caller could already have issued the same command
+# as the same spoofed principal.
+#
+# The carve-out is load-bearing rather than cosmetic. Turning the header check
+# on 401s every header-less caller at the boundary, ABOVE the gate, where no
+# posture softens it. Without this exemption the only path to a safe rollout
+# ran through an unsafe one, and shadow could never be used to derive the
+# policy it exists to derive.
+
+
+@pytest.mark.contract
+def test_a_shadowed_policy_may_boot_without_the_principal_header_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "local")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
+    monkeypatch.setenv("POLICY_POSTURE", "shadow")
+    monkeypatch.delenv("LIVENESS_POSTURE", raising=False)
+    monkeypatch.delenv("REQUIRE_AUTHENTICATED_PRINCIPAL", raising=False)
+
+    assert create_app() is not None
+
+
+@pytest.mark.contract
+def test_the_flip_to_enforce_is_where_the_header_check_is_demanded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deferred, not dropped.
+
+    Posture is read at boot, so leaving shadow is a restart, and this is
+    the boot the guard fires on. Pinning it here is what makes the
+    exemption above safe to grant.
+    """
+    monkeypatch.setenv("APP_ENV", "local")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
+    monkeypatch.setenv("POLICY_POSTURE", "enforce")
+    monkeypatch.delenv("REQUIRE_AUTHENTICATED_PRINCIPAL", raising=False)
+
+    with pytest.raises(RuntimeError, match="require_authenticated_principal"):
+        create_app()
+
+
+@pytest.mark.contract
+def test_a_shadowed_policy_beside_an_enforcing_liveness_is_still_a_gate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The combination the carve-out must not swallow.
+
+    The two postures are independent knobs. Shadowing the Policy conjunct
+    says nothing about Liveness, which refuses on its own, so this
+    deployment really does turn callers away and the spoofing argument
+    applies to it in full. A carve-out written against `policy_posture`
+    alone would read this as shadowed and wave it through.
+    """
+    monkeypatch.setenv("APP_ENV", "local")
+    monkeypatch.setenv("TRUST_POLICY_ID", "00000000-0000-0000-0000-000000000002")
+    monkeypatch.setenv("POLICY_POSTURE", "shadow")
+    monkeypatch.setenv("LIVENESS_POSTURE", "enforce")
+    monkeypatch.delenv("REQUIRE_AUTHENTICATED_PRINCIPAL", raising=False)
+
+    with pytest.raises(RuntimeError, match="require_authenticated_principal"):
+        create_app()
+
+
 # ---------- gate-review HIGH F11 ----------
 
 
