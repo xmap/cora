@@ -55,18 +55,33 @@
   const LANE_HEIGHT = 40;
   const MAX_SERIES_LANES = 6;
   const AXIS_MARGIN = 44;
-  const MARK_W = 8;
-  // Two marks closer than this many user units cannot be drawn apart. At a
-  // 15-minute window over the 812-unit plot one unit is about 1.1s, so this is
-  // roughly 11s -- but it is deliberately a WIDTH, not a duration. What can be
-  // separated is a property of the canvas, and a duration constant would
+  // One mark shape, one height. A single event is a circle of this diameter
+  // and a group is a pill of the same height stretched across the time its
+  // members actually span, so size means duration and nothing else. The
+  // earlier pair -- an 8-unit square for one event, a 12-unit rounded badge
+  // for many -- differed in shape AND height, so a group read as a different
+  // kind of thing rather than as more of the same thing.
+  const MARK_H = 12;
+  // Two marks closer than this many user units cannot be drawn apart. Derived
+  // from the mark, not chosen: at exactly MARK_H two circles touch, so the
+  // extra 2 is the surface gap that keeps neighbours legible as two. At a
+  // 15-minute window over the 812-unit plot one unit is about 1.1s, so this
+  // lands near 15s -- but it is deliberately a WIDTH, not a duration. What can
+  // be separated is a property of the canvas, and a duration constant would
   // silently lie at every other window size.
-  const COLLAPSE_GAP = 10;
+  const COLLAPSE_GAP = MARK_H + 2;
   const LABEL_CH = 5.6;
   const LABEL_PAD = 5;
   const LANE_LABEL_CH = 6.2;
   // Wide enough for a two-digit count at the badge's 9px mono.
-  const CLUSTER_MIN_W = 16;
+  const CLUSTER_MIN_W = 18;
+  // Extra time rendered either side of the view, as a multiple of its span.
+  // A drag TRANSLATES the rendered content instead of rebuilding it, and this
+  // buffer is what gives the translation something to reveal. Rebuilding per
+  // frame was the whole reason panning felt stepped: every move reclustered,
+  // reseated labels and refolded the readout, so marks and text jumped
+  // between two valid layouts many times a second.
+  const OVERSCAN = 1;
 
   function parseT(iso) {
     return Date.parse(iso) / 1000;
@@ -104,11 +119,16 @@
   // The scale now maps a VIEW onto the plot, not the whole domain. When the
   // view equals the domain (REWIND's default) this is the old behaviour
   // exactly; when it is narrower, the chart becomes a window that pans.
-  function buildScale(from, to) {
+  // `bmin`/`bmax` bound what is RENDERED; `dmin`/`dmax` bound what is VISIBLE.
+  // The buffer is clamped to the domain, so a view that already covers the
+  // whole domain (REWIND) renders exactly the domain and nothing more.
+  function buildScale(from, to, domainMax) {
     const dmin = from;
     const dmax = to > from ? to : from + 1;
     const k = (VW - PAD_L - PAD_R) / (dmax - dmin);
-    return { dmin, dmax, k };
+    const pad = (dmax - dmin) * OVERSCAN;
+    const cap = Math.max(dmax, domainMax || 0);
+    return { dmin, dmax, k, bmin: Math.max(0, dmin - pad), bmax: Math.min(cap, dmax + pad) };
   }
 
   // Keep the view inside the domain, and never let it grow past it: panning
@@ -238,7 +258,6 @@
       lanes,
       primaryLane,
       omittedSeries,
-      live: !!doc.live,
       byId,
       childrenOf,
       // Whether this document carries causation AT ALL. A REWIND run history
@@ -309,6 +328,11 @@
   // Seat labels by severity first, then left to right. A purely left-to-right
   // greedy pass lets a flood of routine traffic take the slot a critical event
   // needed, and that is the one label that must never be the one dropped.
+  //
+  // Candidates now span the whole rendered buffer, most of it off screen. Only
+  // a label whose mark is IN VIEW gets nudged off the canvas edge: doing it to
+  // the rest would stack the buffer's labels into a pile just outside the
+  // plot, which the next pan would slide into view as a solid block of text.
   function seatLabels(candidates) {
     const order = candidates.slice().sort((a, b) => b.tier - a.tier || a.cx - b.cx);
     const placed = [];
@@ -316,13 +340,15 @@
       if (c.skip) continue;
       let l = c.cx - c.w / 2;
       let r = c.cx + c.w / 2;
-      if (l < PAD_L) {
-        l = PAD_L;
-        r = l + c.w;
-      }
-      if (r > VW - PAD_R) {
-        r = VW - PAD_R;
-        l = r - c.w;
+      if (c.cx >= PAD_L && c.cx <= VW - PAD_R) {
+        if (l < PAD_L) {
+          l = PAD_L;
+          r = l + c.w;
+        }
+        if (r > VW - PAD_R) {
+          r = VW - PAD_R;
+          l = r - c.w;
+        }
       }
       if (placed.some((q) => !(r <= q.l - LABEL_PAD || l >= q.r + LABEL_PAD))) continue;
       placed.push({ l, r, c });
@@ -400,15 +426,21 @@
     if (focus.unresolved) {
       const pt = pointPos.get(focus.unresolved);
       if (pt) {
+        // Anchored to the MARK, not to the plot's left edge. The edge layer
+        // is clipped to the plot now, so a stub pinned to that edge would be
+        // sliced in half the moment the view panned; hung off the mark it
+        // runs out toward the past and is clipped there, which is where its
+        // cause actually is. The readout carries the same timestamp in words,
+        // so nothing is lost when the note itself scrolls out.
         layer.appendChild(
           svg("path", {
-            d: `M${PAD_L - 30},${pt.y} L${pt.x - 7},${pt.y}`,
+            d: `M${pt.x - 46},${pt.y} L${pt.x - 7},${pt.y}`,
             class: "cs-edge cs-edge--up cs-edge--stub",
             "marker-end": "url(#cs-arrow-up)",
           })
         );
         const note = svg("text", {
-          x: PAD_L - 32,
+          x: pt.x - 48,
           y: pt.y - 6,
           class: "cs-edge-note",
           "text-anchor": "end",
@@ -422,6 +454,11 @@
 
     g.appendChild(layer);
   }
+
+  // Clip paths are referenced by id, and two scrubbers can be mounted on one
+  // page (the flowing window and REWIND), so the id has to be unique per
+  // render or the second mount clips against the first one's rect.
+  let clipSeq = 0;
 
   function renderTimeline(model, scale, focus) {
     const laneCount = Math.max(1, model.lanes.length);
@@ -466,6 +503,47 @@
       g.appendChild(t);
     });
 
+    // Everything positioned by TIME lives in one clipped group, so a pan can
+    // be a single translate on it. The clip is what makes that safe: the group
+    // holds a buffer wider than the view, and without it those extra marks
+    // would draw straight over the lane labels.
+    const seq = ++clipSeq;
+    const defs = svg("defs");
+    const clipRect = (id, box) => {
+      const c = svg("clipPath", { id });
+      c.appendChild(svg("rect", box));
+      defs.appendChild(c);
+      return `url(#${id})`;
+    };
+    const plotClip = clipRect(`cs-plot-${seq}`, {
+      x: PAD_L,
+      y: 0,
+      width: VW - PAD_R - PAD_L,
+      height: vh,
+    });
+    const axisClip = clipRect(`cs-axis-${seq}`, { x: 0, y: axisY, width: VW, height: vh - axisY });
+    g.appendChild(defs);
+    // The clip must sit OUTSIDE the transform. `clip-path` resolves in the
+    // element's own user space, so a clip on the group that carries the
+    // translate slides along with the content it is meant to be windowing:
+    // the marks move, the window moves with them, and the same slice stays on
+    // screen shifted sideways. Window first, then pan what is inside it.
+    const plotWindow = svg("g", { "clip-path": plotClip });
+    const axisWindow = svg("g", { "clip-path": axisClip });
+    const plot = svg("g", { class: "cs-pan cs-plot" });
+    const axisRow = svg("g", { class: "cs-pan cs-axis-row" });
+    plotWindow.appendChild(plot);
+    axisWindow.appendChild(axisRow);
+    g.appendChild(plotWindow);
+    g.appendChild(axisWindow);
+    // One offset, applied to both strips: they are windowed differently but
+    // they show the same instant, so they can never be panned apart.
+    const setPan = (dx) => {
+      const t = `translate(${dx} 0)`;
+      plot.setAttribute("transform", t);
+      axisRow.setAttribute("transform", t);
+    };
+
     const timed = [];
     const selectable = [];
     const pointPos = new Map();
@@ -480,22 +558,16 @@
         // burst overprint into a smear, and both took the same branch: every
         // label drawn on top of its neighbours, or past twelve no labels at
         // all and a row of anonymous squares saying only "something happened".
-        // Only what the view covers, plus a margin so a cluster straddling an
-        // edge still merges with the neighbours that pushed it there instead
-        // of splitting into a different shape at the boundary.
-        const margin = (scale.dmax - scale.dmin) * 0.05;
-        const visible = lane.points.filter(
-          (p) => p.secs >= scale.dmin - margin && p.secs <= scale.dmax + margin
-        );
+        // The whole buffer, not just the view: what a pan translates into
+        // sight has to have been drawn already, and a cluster straddling the
+        // view edge must merge the same way it would mid-view rather than
+        // splitting into a different shape at the boundary.
+        const visible = lane.points.filter((p) => p.secs >= scale.bmin && p.secs <= scale.bmax);
         const clusters = clusterPoints(visible, X, chain);
         const candidates = [];
         let prevBase = null;
 
         clusters.forEach((c) => {
-          // The margin above exists so a cluster straddling an edge merges the
-          // same way it would mid-view. Its marks must still not be DRAWN
-          // outside the plot, or they land on top of the lane labels.
-          if (c.xEnd < PAD_L - MARK_W || c.xStart > VW - PAD_R + MARK_W) return;
           const head = clusterHead(c);
           const n = c.items.length;
           const base = stripLanePrefix(head.point.label, lane.label);
@@ -521,45 +593,39 @@
           const repeat = !inChain && head.tier === 0 && n < 3 && base === prevBase;
           if (head.tier === 0) prevBase = base;
 
-          let markEl;
+          // One event or six, the mark is the same pill at the same height: a
+          // rounded rect whose corner radius is half its height, so a single
+          // event is exactly a circle and a group is that circle stretched
+          // over the span its members occupy. Width therefore means elapsed
+          // time and nothing else, and the count inside says how many sit in
+          // it. The floor is whatever fits two digits, because a badge too
+          // narrow to carry its own number is worse than a plain mark: it is
+          // visibly a merged thing that will not say how much it merged.
+          //
+          // The pair this replaces differed in shape AND height -- an 8-unit
+          // square against a 12-unit rounded badge -- so a group read as a
+          // different kind of thing rather than as more of the same thing.
+          const w = n > 1 ? Math.max(CLUSTER_MIN_W, c.xEnd - c.xStart + MARK_H) : MARK_H;
+          const markEl = svg("rect", {
+            x: c.xStart - MARK_H / 2,
+            y: y - MARK_H / 2,
+            width: w,
+            height: MARK_H,
+            rx: MARK_H / 2,
+            class: `cs-mark cs-mark--${n > 1 ? "cluster" : "single"} cs-tier--${head.tier}`,
+          });
+          plot.appendChild(markEl);
+          timed.push({ el: markEl, t: c.items[0].secs });
           if (n > 1) {
-            // The floor is whatever fits the count digit. A badge too narrow
-            // to carry its own number is worse than a plain mark: it is
-            // visibly a merged thing that will not say how much it merged.
-            const w = Math.max(CLUSTER_MIN_W, c.xEnd - c.xStart + MARK_W + 2);
-            markEl = svg("rect", {
-              x: c.xStart - MARK_W / 2 - 1,
-              y: y - 6,
-              width: w,
-              height: 12,
-              rx: 6,
-              class: `cs-mark cs-mark--cluster cs-tier--${head.tier}`,
+            const ct = svg("text", {
+              x: c.xStart - MARK_H / 2 + w / 2,
+              y: y + 3.2,
+              class: "cs-cluster-count",
+              "text-anchor": "middle",
             });
-            g.appendChild(markEl);
-            timed.push({ el: markEl, t: c.items[0].secs });
-            // Unreachable given CLUSTER_MIN_W, kept so a future change to the
-            // floor degrades to a bare badge rather than clipped digits.
-            if (w >= CLUSTER_MIN_W) {
-              const ct = svg("text", {
-                x: c.xStart - MARK_W / 2 - 1 + w / 2,
-                y: y + 3.2,
-                class: "cs-cluster-count",
-                "text-anchor": "middle",
-              });
-              ct.textContent = String(n);
-              g.appendChild(ct);
-              timed.push({ el: ct, t: c.items[0].secs });
-            }
-          } else {
-            markEl = svg("rect", {
-              x: c.xStart - MARK_W / 2,
-              y: y - MARK_W / 2,
-              width: MARK_W,
-              height: MARK_W,
-              class: `cs-mark cs-mark--setpoint cs-tier--${head.tier}`,
-            });
-            g.appendChild(markEl);
-            timed.push({ el: markEl, t: c.items[0].secs });
+            ct.textContent = String(n);
+            plot.appendChild(ct);
+            timed.push({ el: ct, t: c.items[0].secs });
           }
 
           // A count is only honest if its contents are recoverable. The folded
@@ -576,14 +642,14 @@
           markEl.classList.add("cs-mark--hit");
           markEl._csCluster = c;
           const hit = svg("rect", {
-            x: c.xStart - MARK_W,
+            x: c.xStart - MARK_H,
             y: y - 11,
-            width: Math.max(MARK_W * 2, c.xEnd - c.xStart + MARK_W * 2),
+            width: w + MARK_H,
             height: 22,
             class: "cs-hit",
           });
           hit._csCluster = c;
-          g.appendChild(hit);
+          plot.appendChild(hit);
           selectable.push({ el: markEl, point: c.items[0] });
 
           if (focus) {
@@ -615,7 +681,7 @@
             "text-anchor": "middle",
           });
           lab.textContent = slot.c.text;
-          g.appendChild(lab);
+          plot.appendChild(lab);
           timed.push({ el: lab, t: slot.c.t });
         });
       } else {
@@ -627,7 +693,7 @@
           const span = vmax - vmin || 1;
           const yFor = (v) => y + 14 - ((v - vmin) / span) * 24;
           const points = numeric.map((p) => `${X(p.secs)},${yFor(p.value)}`).join(" ");
-          g.appendChild(svg("polyline", { points, class: "cs-run-line" }));
+          plot.appendChild(svg("polyline", { points, class: "cs-run-line" }));
         }
         lane.points.forEach((p) => {
           const x = X(p.secs);
@@ -635,7 +701,7 @@
             p.text != null
               ? svg("circle", { cx: x, cy: y, r: 3.5, class: "cs-mark cs-mark--check" })
               : svg("circle", { cx: x, cy: y, r: 2.5, class: "cs-mark cs-mark--acquire" });
-          g.appendChild(mark);
+          plot.appendChild(mark);
           timed.push({ el: mark, t: p.secs });
         });
       }
@@ -647,35 +713,25 @@
     // time and the eye has nothing fixed to measure motion against. Ticks
     // span the VIEW, so they stay put under the pointer while panning.
     const tickStep = pickTickStep(scale.dmax - scale.dmin);
-    const firstTick = Math.ceil((model.t0 + scale.dmin) / tickStep) * tickStep - model.t0;
-    for (let secs = firstTick; secs <= scale.dmax; secs += tickStep) {
+    const firstTick = Math.ceil((model.t0 + scale.bmin) / tickStep) * tickStep - model.t0;
+    for (let secs = firstTick; secs <= scale.bmax; secs += tickStep) {
       const x = X(secs);
-      g.appendChild(svg("line", { x1: x, y1: axisY, x2: x, y2: axisY + 5, class: "cs-tick" }));
+      axisRow.appendChild(svg("line", { x1: x, y1: axisY, x2: x, y2: axisY + 5, class: "cs-tick" }));
       const lab = svg("text", { x, y: axisY + 17, class: "cs-tick-label", "text-anchor": "middle" });
       lab.textContent = fmtClock(model.t0, secs).slice(0, tickStep < 60 ? 8 : 5);
-      g.appendChild(lab);
+      axisRow.appendChild(lab);
     }
 
-    // Only a flowing window has a live edge, and only when the view actually
-    // reaches it: panned into the past, the right edge of the plot is just
-    // wherever you stopped, and labelling that LIVE would be a lie.
-    if (model.live && model.xmax <= scale.dmax + 1e-6) {
-      const liveX = X(model.xmax);
-      g.appendChild(
-        svg("line", { x1: liveX, y1: LANE_START - 18, x2: liveX, y2: axisY, class: "cs-live" })
-      );
-      const liveLab = svg("text", {
-        x: liveX - 4,
-        y: LANE_START - 22,
-        class: "cs-live-label",
-        "text-anchor": "end",
-      });
-      liveLab.textContent = `LIVE ${fmtClock(model.t0, model.xmax).slice(0, 5)}`;
-      g.appendChild(liveLab);
-    }
+    // There is no LIVE rule any more. The right edge of a flowing window is
+    // the present by construction, and the clock ticks say which instant that
+    // is; panned into the past the same edge is just wherever the viewer
+    // stopped. The rule was therefore either redundant or wrong, never in
+    // between, and it cost a dashed line across every lane to say so.
 
-    if (focus) renderChainEdges(g, model, focus, pointPos, scale);
+    if (focus) renderChainEdges(plot, model, focus, pointPos, scale);
 
+    // The cursor marks an INSTANT, so it belongs to the pannable group and
+    // travels with the events it sits between.
     const cursorLine = svg("line", {
       x1: X(0),
       y1: LANE_START - 14,
@@ -683,12 +739,12 @@
       y2: axisY,
       class: "cs-cursor",
     });
-    g.appendChild(cursorLine);
+    plot.appendChild(cursorLine);
     const handle = svg("polygon", { points: "0,-9 7,0 0,9 -7,0", class: "cs-cursor-handle" });
     handle.setAttribute("transform", `translate(${X(0)} ${axisY})`);
-    g.appendChild(handle);
+    plot.appendChild(handle);
 
-    return { g, X, axisY, timed, cursorLine, handle, selectable };
+    return { g, setPan, X, axisY, timed, cursorLine, handle, selectable };
   }
 
   function applyFold(model, scene, cursor) {
@@ -801,9 +857,13 @@
       if (onScrub) onScrub();
     };
 
+    // `state.scale` describes what was RENDERED. Between rebuilds a pan only
+    // translates that content, so the pointer has to be moved back into
+    // rendered space before it can be read as a time -- without this the
+    // hover cursor drifts away from the pointer by exactly the pan distance.
     const secsFromEvent = (clientX) => {
       const rect = svgEl.getBoundingClientRect();
-      const xUser = ((clientX - rect.left) / rect.width) * VW;
+      const xUser = ((clientX - rect.left) / rect.width) * VW - state.panDx;
       return (xUser - PAD_L) / state.scale.k + state.scale.dmin;
     };
 
@@ -874,8 +934,16 @@
       // mount(), which holds the view and the render loop.
       state.refocus();
       // A selected cluster fixes the readout at its own instant, so what the
-      // panel says and what is highlighted cannot disagree.
-      if (cluster) setCursor(cluster.items[0].secs);
+      // panel says and what is highlighted cannot disagree. `state.setCursor`
+      // and not this closure's: refocus() above replaced the scene, and the
+      // local one still writes to the detached copy.
+      if (cluster) {
+        state.setCursor(cluster.items[0].secs);
+        // A chain can be pinned from off screen -- by keyboard, or by a
+        // selection that survived a pan -- and then every visible mark dims
+        // with nothing lit to show for it. Bring the pinned event in.
+        state.revealCursor();
+      }
     };
     state.setSelection = setSelection;
 
@@ -906,23 +974,38 @@
       // Without this the next re-slide snaps the view forward again and the
       // drag fights the clock.
       notifyScrub();
-      pan = { x0: e.clientX, from0: state.view.from, moved: false };
+      state.stopGlide();
+      pan = { x0: e.clientX, from0: state.view.from, moved: false, v: 0, x: e.clientX, at: e.timeStamp };
       svgEl.classList.add("cs-grabbing");
       const onMove = (ev) => {
         if (!pan) return;
         if (Math.abs(ev.clientX - pan.x0) > CLICK_SLOP) pan.moved = true;
         const rect = svgEl.getBoundingClientRect();
         const perPx = (state.view.to - state.view.from) / ((rect.width * (VW - PAD_L - PAD_R)) / VW);
+        // Velocity in seconds-of-record per millisecond, smoothed so one
+        // jittery sample cannot decide how far the release throws.
+        const dt = ev.timeStamp - pan.at;
+        if (dt > 0) {
+          const inst = (-(ev.clientX - pan.x) * perPx) / dt;
+          pan.v = pan.v * 0.7 + inst * 0.3;
+          pan.x = ev.clientX;
+          pan.at = ev.timeStamp;
+        }
         state.panTo(pan.from0 - (ev.clientX - pan.x0) * perPx);
       };
-      const onUp = () => {
+      const onUp = (ev) => {
         // A press that never moved is a click on empty space: clear any pinned
         // selection rather than leaving it stranded with nothing highlighted.
         if (pan && !pan.moved) setSelection(null);
+        // Stale velocity throws the view after the hand has already stopped,
+        // so a release that follows a pause coasts nowhere.
+        const idle = pan && ev && ev.timeStamp - pan.at > 90;
+        const v = pan && pan.moved && !idle ? pan.v : 0;
         pan = null;
         svgEl.classList.remove("cs-grabbing");
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
+        state.glide(v);
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
@@ -1211,7 +1294,7 @@
     const span = opts.viewSpanSecs && opts.viewSpanSecs > 0 ? opts.viewSpanSecs : domainMax;
     const initialFrom = opts.follow ? domainMax - span : 0;
     let view = clampView(initialFrom, span, domainMax);
-    const scale = buildScale(view.from, view.to);
+    const scale = buildScale(view.from, view.to, domainMax);
     // Generic over WHAT truncated (`observations` for a run, `events` for
     // an enclosure, ...): report every truthy key by name rather than
     // hardcoding one domain's vocabulary.
@@ -1244,21 +1327,79 @@
       canPan: span < domainMax - 1e-6,
     };
 
-    // Panning changes which events are visible, so the clusters and the axis
-    // both have to be rebuilt: a plain transform would slide stale tick labels
-    // along with the marks. Coalesced onto a frame so a drag rebuilds once per
-    // paint rather than once per pointermove.
-    let panFrame = 0;
+    // What the DOM currently holds, which after a translate-only pan is no
+    // longer what `state.view` says. Every pan decision is made against this.
+    let shown = { from: view.from, bmin: scale.bmin, bmax: scale.bmax, k: scale.k };
+    state.panDx = 0;
+
+    // Panning is a translate on the one clipped group, not a rebuild. The
+    // rebuild is what made dragging feel stepped: it recomputed clusters,
+    // reseated every label and refolded the readout on each frame, so marks
+    // and text hopped between two equally valid layouts many times a second.
+    // Content outside the view is already drawn (see OVERSCAN), so sliding it
+    // in costs one attribute write and the motion tracks the hand exactly.
     state.panTo = (from) => {
       const next = clampView(from, span, domainMax);
       if (Math.abs(next.from - state.view.from) < 1e-9) return;
       state.view = next;
-      if (panFrame) return;
-      panFrame = requestAnimationFrame(() => {
-        panFrame = 0;
+      // Past the buffer there is genuinely nothing drawn to reveal, so this
+      // is the one case that must rebuild.
+      if (next.from < shown.bmin - 1e-6 || next.to > shown.bmax + 1e-6) {
         rerender();
-      });
+        return;
+      }
+      state.panDx = -(next.from - shown.from) * shown.k;
+      scene.setPan(state.panDx);
     };
+
+    // Release carries on for a moment instead of stopping dead. Travel is
+    // bounded by the buffer so a throw can never outrun what is drawn, which
+    // is what keeps a mid-glide rebuild -- and the reseat that comes with it
+    // -- off the screen entirely.
+    let glideId = 0;
+    state.stopGlide = () => {
+      if (glideId) cancelAnimationFrame(glideId);
+      glideId = 0;
+    };
+    state.glide = (v0) => {
+      state.stopGlide();
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (still || !state.canPan || Math.abs(v0) < 0.005) {
+        settle();
+        return;
+      }
+      const lo = shown.bmin;
+      const hi = shown.bmax - (state.view.to - state.view.from);
+      let v = v0;
+      let prev = null;
+      const step = (ts) => {
+        if (prev === null) prev = ts;
+        const dt = Math.min(50, ts - prev);
+        prev = ts;
+        v *= Math.pow(0.9, dt / 16.7);
+        const want = state.view.from + v * dt;
+        const to = Math.max(lo, Math.min(hi, want));
+        state.panTo(to);
+        if (Math.abs(v) < 0.005 || to !== want) {
+          glideId = 0;
+          settle();
+          return;
+        }
+        glideId = requestAnimationFrame(step);
+      };
+      glideId = requestAnimationFrame(step);
+    };
+
+    // Once the motion has stopped, rebuild at where it stopped. The buffer
+    // recentres, and -- the reason this is unconditional -- the labels reseat
+    // against the plot's real edges. A label is seated for the position it was
+    // DRAWN at, so one that pans in from the buffer arrives centred on its
+    // mark and can hang half outside the plot; only a rebuild puts it right.
+    // Doing it here rather than per frame is the whole point: it costs one
+    // frame after the hand has let go, where a jump is invisible.
+    function settle() {
+      if (Math.abs(state.view.from - shown.from) > 1e-6) rerender();
+    }
     // Bring the cursor back into view after a keyboard step walked it past an
     // edge, so `,` and `.` can cross the whole domain without a manual pan.
     state.revealCursor = () => {
@@ -1290,11 +1431,18 @@
 
     let controls;
     function rerender() {
-      state.scale = buildScale(state.view.from, state.view.to);
+      state.scale = buildScale(state.view.from, state.view.to, domainMax);
       const focus = focusFor();
       const next = renderTimeline(model, state.scale, focus);
       stage.replaceChildren(next.g);
       scene = next;
+      shown = {
+        from: state.view.from,
+        bmin: state.scale.bmin,
+        bmax: state.scale.bmax,
+        k: state.scale.k,
+      };
+      state.panDx = 0;
       state.focus = focus;
       controls = wireDrag(root, model, scene, state, opts);
       if (anchor) {
@@ -1332,6 +1480,7 @@
 
     root._coraScrubberCleanup = () => {
       controls.stopPlay();
+      state.stopGlide();
     };
   }
 

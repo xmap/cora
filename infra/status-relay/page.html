@@ -196,8 +196,14 @@
   .cs-tick-label { fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 10px; }
   .cs-run-line { stroke: var(--cs-sub); stroke-width: 1.6; fill: none; }
   .cs-life-label { font-size: 9.5px; font-weight: 500; fill: var(--cs-sub); }
+  /* One mark family: single and cluster are the same pill at the same
+     height and the same fill, so a group reads as more of the same thing
+     rather than as a different thing. Only WIDTH and the count inside
+     separate them, and both of those mean the same thing. The surface-
+     coloured stroke is the 2-unit gap COLLAPSE_GAP leaves between
+     neighbours, which is what keeps two touching pills legible as two. */
   .cs-mark { stroke: var(--cs-surface); stroke-width: 1; transition: opacity 0.12s ease; }
-  .cs-mark--setpoint { fill: var(--cs-ink); }
+  .cs-mark--single, .cs-mark--cluster { fill: var(--cs-ink); }
   .cs-mark--acquire { fill: var(--cs-sub); }
   .cs-mark--check { fill: var(--cs-warn); }
   /* Severity, reusing the page's existing status hues rather than a new set.
@@ -207,15 +213,9 @@
   .cs-tier--2 { fill: var(--cs-alarm); }
   text.cs-tier--1 { fill: var(--cs-warn); font-weight: 600; }
   text.cs-tier--2 { fill: var(--cs-alarm); font-weight: 700; }
-  .cs-mark--cluster { fill: var(--cs-sub); }
   .cs-cluster-count {
     font-family: var(--cs-mono); font-size: 9px; font-weight: 700;
     fill: var(--cs-surface); pointer-events: none;
-  }
-  .cs-live { stroke: var(--cs-sub); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.6; }
-  .cs-live-label {
-    fill: var(--cs-sub); font-family: var(--cs-mono); font-size: 9px;
-    letter-spacing: 0.1em; opacity: 0.85;
   }
   .cs-future { opacity: 0.25; }
   .cs-cursor { stroke: var(--cs-alarm); stroke-width: 1.4; stroke-dasharray: 4 3; }
