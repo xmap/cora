@@ -757,6 +757,75 @@
     }
   }
 
+  // The card that follows the pointer. Hovering an event is the whole
+  // interaction now, so this has to answer on its own: what it is, when, what
+  // it belongs to, what caused it and what it set off. A collapsed group lists
+  // its members, because the count on the pill is a promise that they are
+  // recoverable and hover is the fastest place to keep it.
+  function tipHtml(model, cluster, focus) {
+    const esc = (v) =>
+      String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    const row = (k, v, cls) =>
+      `<div class="cs-tip-row${cls ? ` ${cls}` : ""}"><span class="cs-tip-k">${esc(k)}</span>` +
+      `<span class="cs-tip-v">${esc(v)}</span></div>`;
+
+    const items = cluster.items;
+    const head = focus.point;
+    const out = [];
+    if (items.length > 1) {
+      out.push(`<div class="cs-tip-head">${esc(items.length)} events</div>`);
+      out.push(
+        '<div class="cs-tip-list">' +
+          items
+            .map(
+              (p) =>
+                `<div class="cs-tip-item${p === head ? " cs-tip-item--head" : ""}">` +
+                `<span class="cs-tip-k">${esc(p.label)}</span>` +
+                `<span class="cs-tip-v">${esc(fmtClock(model.t0, p.secs))}</span></div>`
+            )
+            .join("") +
+          "</div>"
+      );
+      out.push(row("relations for", head.label));
+    } else {
+      out.push(`<div class="cs-tip-head">${esc(head.label)}</div>`);
+      out.push(row("occurred", fmtClock(model.t0, head.secs)));
+    }
+
+    // Silent where the document records no relations at all, rather than
+    // reporting their absence as an operator having acted directly.
+    if (model.hasCausation) {
+      let cause;
+      if (!head.cause) {
+        cause = "nothing, an operator acted directly";
+      } else {
+        const parent = model.byId.get(head.cause);
+        cause = parent
+          ? `${parent.label} @ ${fmtClock(model.t0, parent.secs)}`
+          : head.cause_at
+            ? `outside this window, @ ${fmtClock(model.t0, parseT(head.cause_at) - model.t0)}`
+            : "outside this window";
+      }
+      out.push(row("caused by", cause, head.cause ? "cs-tip-row--up" : ""));
+      let effects = 0;
+      for (const hop of focus.dist.values()) if (hop > 0) effects += 1;
+      out.push(row("set off", effects ? `${effects} event${effects === 1 ? "" : "s"}` : "nothing",
+        effects ? "cs-tip-row--down" : ""));
+      if (focus.corr) {
+        let n = 0;
+        for (const lane of model.lanes) for (const q of lane.points) if (q.corr === focus.corr) n += 1;
+        out.push(row("correlated with", `${n} event${n === 1 ? "" : "s"}`));
+      }
+      if (focus.truncatedUp || focus.truncatedDown) {
+        const cut = [];
+        if (focus.truncatedUp) cut.push("earlier causes");
+        if (focus.truncatedDown) cut.push("later effects");
+        out.push(row("not shown", `${cut.join(" and ")} beyond ${MAX_CHAIN_HOPS} steps`));
+      }
+    }
+    return out.join("");
+  }
+
   // What the trace found, in words, for the panel that has room for them.
   function chainRows(model, focus) {
     const rows = [];
@@ -871,7 +940,7 @@
       state.cursor = Math.max(0, Math.min(model.xmax, secs));
       applyFold(model, scene, state.cursor);
       const folded = foldTo(model, state.cursor);
-      renderReadout(root, model, folded, model.t0, state.cursor, state.focus);
+      renderReadout(root, model, folded, model.t0, state.cursor, state.pinned);
       svgEl.setAttribute("aria-valuenow", String(Math.round(state.cursor)));
       svgEl.setAttribute("aria-valuetext", fmtClock(model.t0, state.cursor));
     };
@@ -933,17 +1002,19 @@
       // and that changes what the clusters are. `state.refocus` is owned by
       // mount(), which holds the view and the render loop.
       state.refocus();
-      // A selected cluster fixes the readout at its own instant, so what the
-      // panel says and what is highlighted cannot disagree. `state.setCursor`
-      // and not this closure's: refocus() above replaced the scene, and the
-      // local one still writes to the detached copy.
-      if (cluster) {
-        state.setCursor(cluster.items[0].secs);
-        // A chain can be pinned from off screen -- by keyboard, or by a
-        // selection that survived a pan -- and then every visible mark dims
-        // with nothing lit to show for it. Bring the pinned event in.
-        state.revealCursor();
-      }
+      if (!cluster) return;
+      // A chain can be pinned from off screen, by keyboard or by a selection
+      // that survived a pan, and then every visible mark dims with nothing lit
+      // to show for it. Bring the pinned event in either way.
+      state.reveal(cluster.items[0].secs);
+      // Where the cursor answers for the pointer, a pin fixes it at its own
+      // instant so the panel and the highlight cannot disagree. Where the
+      // cursor is parked (a flowing window), it stays parked: dropping a
+      // dashed rule across every lane is exactly what the pin is trying to
+      // avoid, and the card plus the panel's pinned rows already say which
+      // event it is. `state.setCursor` and not this closure's, because
+      // refocus() above replaced the scene the local one writes to.
+      if (opts.cursorFollowsPointer !== false) state.setCursor(cluster.items[0].secs);
     };
     state.setSelection = setSelection;
 
@@ -1012,12 +1083,32 @@
     };
     svgEl.addEventListener("pointerdown", onDown);
 
-    // Hover drives the fold cursor. It needs no press, so it never competes
-    // with pan or select, and a viewer reads the folded state just by moving
-    // across the chart. A pinned selection wins: the cursor stays put.
+    // Hover is the primary act: moving onto an event shows its card, lights
+    // its causal chain and its correlation group, and draws the edges. No
+    // press, so it never competes with pan or select, and nothing has to be
+    // clicked to read a relation. A pinned selection wins and hover stops
+    // changing anything until it is released.
+    //
+    // Driven from `pointermove` and never `pointerover`: focusing rebuilds the
+    // scene, which destroys and recreates the element under the pointer, and
+    // the browser fires a fresh `pointerover` for that. Reacting to it would
+    // focus the same event again and again. A rebuild generates no
+    // `pointermove`, so this loop cannot start.
     svgEl.addEventListener("pointermove", (e) => {
-      if (pan || state.selected) return;
+      if (pan) return;
+      const cluster = clusterFor(e.target);
+      if (state.selected) return;
+      state.setHover(cluster, e.clientX, e.clientY);
+      // The fold cursor follows the pointer only where the caller wants it to.
+      // In a flowing window it stays parked at the live edge: a dashed rule
+      // roaming across every lane is one more thing between the pointer and
+      // the event it is trying to reach.
+      if (cluster || opts.cursorFollowsPointer === false) return;
       setCursor(secsFromEvent(e.clientX));
+    });
+    svgEl.addEventListener("pointerleave", () => {
+      if (pan || state.selected) return;
+      state.setHover(null);
     });
 
     // Keyboard parity. The slider used to be the only focusable control and
@@ -1258,9 +1349,9 @@
           <span class="cs-subtitle"></span>
           <div class="cs-controls">${controlsHtml}</div>
         </div>
-        <div class="cs-stage"></div>
+        <div class="cs-stage"><div class="cs-tip" data-on="0" aria-hidden="true"></div></div>
         <div class="cs-hint">
-          Drag to pan &middot; click an event to pin it &middot; hover to fold &middot;
+          Hover an event for its relations &middot; drag to pan &middot; click to pin &middot;
           <kbd>&larr;</kbd><kbd>&rarr;</kbd> cursor,
           <kbd>shift</kbd> to pan, <kbd>,</kbd><kbd>.</kbd> step events,
           <kbd>enter</kbd> pin
@@ -1314,6 +1405,9 @@
       jumpLabel: opts.jumpLabel,
     });
     const stage = root.querySelector(".cs-stage");
+    // The card lives outside the SVG and survives every rebuild, so a hover
+    // that re-renders the scene underneath it does not make it flicker.
+    const tip = stage.querySelector(".cs-tip");
     let scene = renderTimeline(model, scale);
     stage.appendChild(scene.g);
 
@@ -1400,33 +1494,74 @@
     function settle() {
       if (Math.abs(state.view.from - shown.from) > 1e-6) rerender();
     }
-    // Bring the cursor back into view after a keyboard step walked it past an
-    // edge, so `,` and `.` can cross the whole domain without a manual pan.
-    state.revealCursor = () => {
+    // Bring an instant into view: after a keyboard step walked the cursor past
+    // an edge, so `,` and `.` can cross the whole domain without a manual pan,
+    // or after a pin landed on something off screen. Takes the instant rather
+    // than reading the cursor, because a flowing window parks the cursor and a
+    // pin there has nothing to do with where it sits.
+    state.reveal = (secs) => {
       if (!state.canPan) return;
       const margin = (state.view.to - state.view.from) * 0.1;
-      if (state.cursor < state.view.from + margin) state.panTo(state.cursor - margin);
-      else if (state.cursor > state.view.to - margin) {
-        state.panTo(state.cursor - (state.view.to - state.view.from) + margin);
+      if (secs < state.view.from + margin) state.panTo(secs - margin);
+      else if (secs > state.view.to - margin) {
+        state.panTo(secs - (state.view.to - state.view.from) + margin);
       }
     };
+    state.revealCursor = () => state.reveal(state.cursor);
 
     // The selection anchors on a POINT, not a cluster: clusters are rebuilt on
     // every render and tracing a chain changes which ones exist at all, so a
-    // cluster object cannot survive its own selection.
+    // cluster object cannot survive its own selection. `hover` is the same
+    // thing with a shorter life; a pin outranks it.
     let anchor = null;
+    let hover = null;
 
-    function focusFor() {
-      if (!anchor) return null;
-      const traced = traceChain(model, anchor);
+    function traceFor(point) {
+      if (!point) return null;
+      const traced = traceChain(model, point);
       return {
-        point: anchor,
-        corr: anchor.corr || null,
+        point,
+        corr: point.corr || null,
         dist: traced.dist,
         unresolved: traced.unresolved,
         truncatedUp: traced.truncatedUp,
         truncatedDown: traced.truncatedDown,
       };
+    }
+    const focusFor = () => traceFor(anchor || hover);
+
+    // Hovering rebuilds, because tracing a chain un-collapses its members and
+    // that changes which clusters exist. Guarded on the anchor POINT so
+    // sweeping within one mark costs nothing, and so the rebuild's own
+    // re-entry cannot recurse.
+    state.setHover = (cluster, clientX, clientY) => {
+      const point = cluster ? cluster.items[0] : null;
+      if (point !== hover) {
+        hover = point;
+        rerender();
+      }
+      if (!cluster) {
+        tip.setAttribute("data-on", "0");
+        return;
+      }
+      tip.innerHTML = tipHtml(model, cluster, traceFor(point));
+      tip.setAttribute("data-on", "1");
+      placeTip(clientX, clientY);
+    };
+
+    // Kept inside the stage and flipped to the other side of the pointer near
+    // an edge, so the card never leaves the panel or covers the mark it
+    // describes.
+    function placeTip(clientX, clientY) {
+      if (clientX === undefined) return;
+      const sb = stage.getBoundingClientRect();
+      const tb = tip.getBoundingClientRect();
+      let x = clientX - sb.left + 16;
+      let y = clientY - sb.top - tb.height - 12;
+      if (x + tb.width > sb.width - 6) x = clientX - sb.left - tb.width - 16;
+      if (y < 4) y = clientY - sb.top + 20;
+      tip.style.left = `${Math.max(4, x)}px`;
+      tip.style.top = `${Math.max(4, y)}px`;
     }
 
     let controls;
@@ -1434,7 +1569,7 @@
       state.scale = buildScale(state.view.from, state.view.to, domainMax);
       const focus = focusFor();
       const next = renderTimeline(model, state.scale, focus);
-      stage.replaceChildren(next.g);
+      stage.replaceChildren(tip, next.g);
       scene = next;
       shown = {
         from: state.view.from,
@@ -1443,7 +1578,7 @@
         k: state.scale.k,
       };
       state.panDx = 0;
-      state.focus = focus;
+      state.pinned = anchor ? focus : null;
       controls = wireDrag(root, model, scene, state, opts);
       if (anchor) {
         const match = scene.selectable.find((s) => s.point === anchor);
@@ -1454,7 +1589,25 @@
 
     state.refocus = () => {
       anchor = state.selected ? state.selected.items[0] : null;
+      // A pin supersedes whatever was hovered; releasing one leaves the chart
+      // clear rather than snapping back to whatever the pointer is over.
+      hover = null;
+      if (!anchor) {
+        tip.setAttribute("data-on", "0");
+        rerender();
+        return;
+      }
       rerender();
+      // Re-anchor the card to the pinned MARK, not to wherever the pointer
+      // happened to be. A pin outlives the pointer, so a card left at the last
+      // hover position drifts away from the thing it describes, and panning
+      // afterwards strands it completely.
+      const seat = scene.selectable.find((x) => x.point === anchor);
+      if (!seat) return;
+      const r = seat.el.getBoundingClientRect();
+      tip.innerHTML = tipHtml(model, state.selected, focusFor());
+      tip.setAttribute("data-on", "1");
+      placeTip(r.left + r.width / 2, r.top);
     };
 
     controls = wireDrag(root, model, scene, state, opts);

@@ -133,15 +133,44 @@
   .cs-btn:hover { color: var(--cs-ink); border-color: color-mix(in srgb, var(--cs-warn) 60%, var(--cs-line)); }
   .cs-play[aria-pressed="true"] { color: #1a130a; background: var(--cs-warn); border-color: var(--cs-warn); }
   .cs-btn:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
-  .cs-stage { overflow-x: auto; margin-top: 0.7rem; }
+  .cs-stage { overflow-x: auto; margin-top: 0.7rem; position: relative; }
   /* `grab` announces the one gesture that is not discoverable: that the chart
      body can be dragged. Marks override it back to a pointer so a clickable
      thing still looks clickable. */
   .cora-scrubber__svg { display: block; width: 100%; min-width: 640px; height: auto; touch-action: none; cursor: grab; }
   .cora-scrubber__svg.cs-grabbing { cursor: grabbing; }
   .cora-scrubber__svg:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
+  .cora-scrubber__svg * { pointer-events: none; }
+  .cs-hit, .cs-mark { pointer-events: auto; }
   .cs-hit { fill: transparent; cursor: pointer; }
   .cs-mark--hit { cursor: pointer; }
+  /* Follows the pointer, so it must never be under it. */
+  .cs-tip {
+    position: absolute; z-index: 3; pointer-events: none; opacity: 0;
+    transition: opacity 0.09s ease; min-width: 190px; max-width: 300px;
+    background: var(--cs-panel); border: 1px solid var(--cs-line);
+    border-radius: 9px; padding: 0.5rem 0.6rem;
+    box-shadow: 0 6px 22px rgb(0 0 0 / 45%);
+  }
+  .cs-tip[data-on="1"] { opacity: 1; }
+  .cs-tip-head {
+    font-size: 0.78rem; font-weight: 600; color: var(--cs-ink);
+    margin-bottom: 0.35rem;
+  }
+  .cs-tip-row, .cs-tip-item {
+    display: flex; justify-content: space-between; gap: 0.8rem;
+    padding: 0.1rem 0; font-size: 0.7rem;
+  }
+  .cs-tip-k { color: var(--cs-sub); }
+  .cs-tip-v { font-family: var(--cs-mono); color: var(--cs-ink); text-align: right; }
+  .cs-tip-row--up .cs-tip-v { color: var(--cs-alarm); }
+  .cs-tip-row--down .cs-tip-v { color: var(--cs-warn); }
+  .cs-tip-list {
+    max-height: 8.4rem; overflow-y: auto; margin-bottom: 0.35rem;
+    padding-bottom: 0.3rem; border-bottom: 1px solid var(--cs-line);
+  }
+  .cs-tip-item .cs-tip-k { color: var(--cs-mute); }
+  .cs-tip-item--head .cs-tip-k { color: var(--cs-ink); font-weight: 600; }
   .cs-selected { stroke: var(--cs-ink); stroke-width: 2; }
   /* Everything outside the pinned event's chain and correlation group recedes
      rather than disappearing: the shape of the surrounding traffic is still
@@ -770,6 +799,12 @@
       subtitle: doc.subtitle,
       viewSpanSecs: flowing.viewSpanSecs,
       follow: true,
+      // The fold cursor stays parked at the live edge. In a flowing window it
+      // marks the present, which is a fixed place; letting the pointer move it
+      // put a dashed rule across every lane between the viewer and the event
+      // they were reaching for. REWIND leaves this on, because there moving
+      // the cursor to read the state at a time IS the interaction.
+      cursorFollowsPointer: false,
       showPlay: false,
       showJumpLast: false,
       onScrub: pauseFollowing,

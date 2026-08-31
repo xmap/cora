@@ -37,21 +37,55 @@
     return seed / 0x7fffffff;
   }
 
+  // Ids and causation, not just event types. Without them `hasCausation` is
+  // false for the whole document and the page renders its relations-free
+  // path, so every hover, edge and highlight went unexercised here while the
+  // preview looked healthy. A fixture that cannot produce the positive case
+  // makes any test written against it unfalsifiable.
+  let evSeq = 0;
+  const uuid = (n) => "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
+
+  function event(stream, types, ms) {
+    return {
+      event_id: uuid(900000 + evSeq++),
+      stream_type: stream,
+      stream_id: uuid(100 + Math.floor(rnd() * 3)),
+      event_type: types[Math.floor(rnd() * types.length)],
+      occurred_at: new Date(ms).toISOString(),
+      recorded_at: new Date(ms).toISOString(),
+      correlation_id: uuid(Math.floor(rnd() * 40)),
+      causation_id: null,
+      cause_occurred_at: null,
+    };
+  }
+
   function burst(atMs) {
     const [stream, types] = LANES[Math.floor(rnd() * LANES.length)];
     const n = rnd() < 0.45 ? 1 + Math.floor(rnd() * 5) : 1;
     const out = [];
-    for (let i = 0; i < n; i++) {
-      out.push({
-        stream_type: stream,
-        stream_id: "00000000-0000-4000-8000-" + String(100 + Math.floor(rnd() * 3)).padStart(12, "0"),
-        event_type: types[Math.floor(rnd() * types.length)],
-        occurred_at: new Date(atMs + i * 400).toISOString(),
-        recorded_at: new Date(atMs + i * 400).toISOString(),
-        correlation_id: "00000000-0000-4000-8000-" + String(Math.floor(rnd() * 40)).padStart(12, "0"),
-        causation_id: null,
-        cause_occurred_at: null,
-      });
+    for (let i = 0; i < n; i++) out.push(event(stream, types, atMs + i * 400));
+
+    // A REACTION tail. Only a subscriber sets causation_id in production, and
+    // it fires within a couple of seconds of its cause and on a different
+    // stream, so the chain has to be built that way here or the fixture keeps
+    // producing roots forever. An earlier version tried to chain within a
+    // burst, which cannot work: a burst is one stream and the next is eight
+    // seconds away, so no candidate was ever both foreign and recent.
+    if (rnd() < 0.55) {
+      let cause = out[Math.floor(rnd() * out.length)];
+      let ms = atMs + n * 400;
+      const hops = 1 + Math.floor(rnd() * 3);
+      for (let h = 0; h < hops; h++) {
+        const other = LANES.filter((l) => l[0] !== cause.stream_type);
+        const [rStream, rTypes] = other[Math.floor(rnd() * other.length)];
+        ms += 300 + rnd() * 1500;
+        const re = event(rStream, rTypes, ms);
+        re.causation_id = cause.event_id;
+        re.cause_occurred_at = cause.occurred_at;
+        re.correlation_id = cause.correlation_id;
+        out.push(re);
+        cause = re;
+      }
     }
     return out;
   }
