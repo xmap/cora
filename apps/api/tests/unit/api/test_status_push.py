@@ -1395,14 +1395,18 @@ async def test_run_history_tail_on_reconnect_repushes_a_still_open_run_promptly(
 
 
 @pytest.mark.unit
-def test_build_activity_message_shape() -> None:
+def test_build_activity_message_shape_for_an_operator_originated_event() -> None:
     stream_id = uuid4()
+    correlation_id = uuid4()
     row = EventActivityRow(
         stream_type="Run",
         stream_id=stream_id,
         event_type="RunStarted",
         occurred_at=_NOW,
         recorded_at=_NOW,
+        correlation_id=correlation_id,
+        causation_id=None,
+        cause_occurred_at=None,
     )
 
     message = build_activity_message(rows=[row], generated_at="t0", producer_id="p1")
@@ -1419,9 +1423,38 @@ def test_build_activity_message_shape() -> None:
                 "event_type": "RunStarted",
                 "occurred_at": _NOW.isoformat(),
                 "recorded_at": _NOW.isoformat(),
+                "correlation_id": str(correlation_id),
+                "causation_id": None,
+                "cause_occurred_at": None,
             }
         ],
     }
+
+
+@pytest.mark.unit
+def test_build_activity_message_carries_a_reacted_event_s_cause_and_its_time() -> None:
+    """A subscriber reacting to an event sets `causation_id`, and the cause is
+    usually older than the receiver's own window. Both the id and the cause's
+    time have to ride out, or a viewer holding fifteen minutes cannot tell an
+    event whose cause scrolled away from one that never had a cause at all."""
+    causation_id = uuid4()
+    cause_at = _NOW - timedelta(minutes=40)
+    row = EventActivityRow(
+        stream_type="Caution",
+        stream_id=uuid4(),
+        event_type="CautionRegistered",
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        correlation_id=uuid4(),
+        causation_id=causation_id,
+        cause_occurred_at=cause_at,
+    )
+
+    message = build_activity_message(rows=[row], generated_at="t0", producer_id="p1")
+
+    event = message["events"][0]
+    assert event["causation_id"] == str(causation_id)
+    assert event["cause_occurred_at"] == cause_at.isoformat()
 
 
 # ---------- _ActivityTail ----------

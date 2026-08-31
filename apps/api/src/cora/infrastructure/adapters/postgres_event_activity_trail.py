@@ -24,14 +24,21 @@ LIMIT 1
 """
 
 _READ_SINCE_SQL = """
-SELECT stream_type, stream_id, event_type, occurred_at, recorded_at,
-       transaction_id::text AS transaction_id_text, position
-FROM events
-WHERE (transaction_id, position) > ($1::xid8, $2)
-  AND transaction_id < pg_snapshot_xmin(pg_current_snapshot())
-ORDER BY transaction_id ASC, position ASC
+SELECT e.stream_type, e.stream_id, e.event_type, e.occurred_at, e.recorded_at,
+       e.correlation_id, e.causation_id, cause.occurred_at AS cause_occurred_at,
+       e.transaction_id::text AS transaction_id_text, e.position
+FROM events e
+LEFT JOIN events cause ON cause.event_id = e.causation_id
+WHERE (e.transaction_id, e.position) > ($1::xid8, $2)
+  AND e.transaction_id < pg_snapshot_xmin(pg_current_snapshot())
+ORDER BY e.transaction_id ASC, e.position ASC
 LIMIT $3
 """
+"""The LEFT JOIN rides `events_event_id_unique`, so resolving a cause is one
+index lookup per row and at most `limit` of them. It is LEFT rather than
+INNER because a null `causation_id` is the common case, not an anomaly: every
+operator-originated command arrives over REST with no cause, and an INNER
+join would silently drop exactly those rows."""
 
 # xid8 0 is Postgres's own invalid-transaction-id sentinel: never assigned
 # to a real transaction, so it compares strictly less than any row that
@@ -70,6 +77,9 @@ class PostgresEventActivityTrail:
                 event_type=row["event_type"],
                 occurred_at=row["occurred_at"],
                 recorded_at=row["recorded_at"],
+                correlation_id=row["correlation_id"],
+                causation_id=row["causation_id"],
+                cause_occurred_at=row["cause_occurred_at"],
             )
             for row in rows
         ]

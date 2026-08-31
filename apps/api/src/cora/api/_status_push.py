@@ -1282,8 +1282,17 @@ def build_activity_message(
     """Assemble one activity push -- flowing mode's entire feed. The
     browser accumulates these into its own rolling window; this producer
     holds no window of its own, only the tail cursor. Event metadata only
-    (`stream_type`, `stream_id`, `event_type`, timestamps): never
-    `event.payload`, see `EventActivityTrail`'s own module docstring.
+    (`stream_type`, `stream_id`, `event_type`, timestamps, and the three
+    relationship fields): never `event.payload`, see `EventActivityTrail`'s
+    own module docstring for why those three are not a breach of that rule.
+
+    `schema_version` stays 1. Adding keys is additive by the repo's own
+    versioning stance, and the relay and the producer deploy to different
+    hosts, so a page served by an older relay must keep working against a
+    newer producer and vice versa. Every consumer treats `correlation_id`,
+    `causation_id` and `cause_occurred_at` as absent-by-default rather than
+    required, which is also what makes this safe to roll out to the live
+    2-BM page one host at a time.
 
     Unlike `build_snapshot`, never sent when `rows` is empty: there is no
     heartbeat need here, since "no message this tick" already means
@@ -1301,6 +1310,15 @@ def build_activity_message(
                 "event_type": row.event_type,
                 "occurred_at": render_value(row.occurred_at),
                 "recorded_at": render_value(row.recorded_at),
+                "correlation_id": render_value(row.correlation_id),
+                "causation_id": (
+                    render_value(row.causation_id) if row.causation_id is not None else None
+                ),
+                "cause_occurred_at": (
+                    render_value(row.cause_occurred_at)
+                    if row.cause_occurred_at is not None
+                    else None
+                ),
             }
             for row in rows
         ],

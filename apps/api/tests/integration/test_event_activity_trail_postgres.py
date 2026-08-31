@@ -33,6 +33,10 @@ async def _write_event(
     stream_type: str = "Run",
     stream_id: UUID | None = None,
     event_type: str = "RunStarted",
+    event_id: UUID | None = None,
+    correlation_id: UUID | None = None,
+    causation_id: UUID | None = None,
+    occurred_at: datetime = _NOW,
 ) -> UUID:
     stream_id = stream_id or uuid4()
     await store.append(
@@ -41,12 +45,13 @@ async def _write_event(
         0,
         [
             NewEvent(
-                event_id=uuid4(),
+                event_id=event_id or uuid4(),
                 event_type=event_type,
                 schema_version=1,
                 payload={"irrelevant": "never read back by this trail"},
-                occurred_at=_NOW,
-                correlation_id=uuid4(),
+                occurred_at=occurred_at,
+                correlation_id=correlation_id or uuid4(),
+                causation_id=causation_id,
                 principal_id=None,
             )
         ],
@@ -123,6 +128,59 @@ async def test_read_since_advances_the_cursor_so_a_second_call_sees_nothing_new(
 
     assert len(first_rows) == 1
     assert second_rows == []
+
+
+@pytest.mark.integration
+async def test_read_since_carries_correlation_and_a_null_cause_for_an_operator_command(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A command arriving over REST has no `causation_id`. That is the common
+    case, not an anomaly, so the LEFT JOIN must return the row rather than
+    filter it out the way an INNER join would."""
+    store = PostgresEventStore(db_pool)
+    trail = PostgresEventActivityTrail(db_pool)
+    cursor = await trail.head()
+    correlation_id = uuid4()
+
+    await _write_event(store, correlation_id=correlation_id, causation_id=None)
+    rows, _cursor = await trail.read_since(cursor=cursor, limit=10)
+
+    assert len(rows) == 1
+    assert rows[0].correlation_id == correlation_id
+    assert rows[0].causation_id is None
+    assert rows[0].cause_occurred_at is None
+
+
+@pytest.mark.integration
+async def test_read_since_resolves_the_cause_s_time_even_when_the_cause_is_not_in_the_page(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The join resolves against the whole table, not the page being returned.
+    A cause is almost always older than the effect that cites it, so a lookup
+    limited to the current page would report nearly every cause unresolvable
+    and hand the browser a window it cannot distinguish from "uncaused"."""
+    store = PostgresEventStore(db_pool)
+    trail = PostgresEventActivityTrail(db_pool)
+
+    cause_event_id = uuid4()
+    cause_at = datetime(2026, 6, 21, 11, 20, 0, tzinfo=UTC)
+    await _write_event(store, event_id=cause_event_id, occurred_at=cause_at)
+
+    # Baseline AFTER the cause, so the cause is deliberately outside the page.
+    cursor = await trail.head()
+    await _write_event(
+        store,
+        stream_type="Caution",
+        event_type="CautionRegistered",
+        causation_id=cause_event_id,
+    )
+
+    rows, _cursor = await trail.read_since(cursor=cursor, limit=10)
+
+    assert len(rows) == 1
+    assert rows[0].event_type == "CautionRegistered"
+    assert rows[0].causation_id == cause_event_id
+    assert rows[0].cause_occurred_at == cause_at
 
 
 @pytest.mark.integration

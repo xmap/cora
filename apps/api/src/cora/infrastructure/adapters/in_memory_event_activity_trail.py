@@ -32,12 +32,19 @@ class InMemoryEventActivityTrail:
         self, *, cursor: EventActivityCursor, limit: int
     ) -> tuple[list[EventActivityRow], EventActivityCursor]:
         cursor_key = _cursor_key(cursor)
+        all_events = self._store.all_events()
         newer = sorted(
-            (e for e in self._store.all_events() if (e.transaction_id, e.position) > cursor_key),
+            (e for e in all_events if (e.transaction_id, e.position) > cursor_key),
             key=lambda e: (e.transaction_id, e.position),
         )[:limit]
         if not newer:
             return [], cursor
+        # Stands in for the Postgres adapter's LEFT JOIN on `event_id`. Built
+        # over every event in the store, not just the page being returned: a
+        # cause is usually older than the page that carries its effect, so
+        # resolving against `newer` alone would report almost every cause as
+        # unresolvable and the two adapters would disagree.
+        occurred_by_event_id = {e.event_id: e.occurred_at for e in all_events}
         rows = [
             EventActivityRow(
                 stream_type=event.stream_type,
@@ -45,6 +52,13 @@ class InMemoryEventActivityTrail:
                 event_type=event.event_type,
                 occurred_at=event.occurred_at,
                 recorded_at=event.recorded_at,
+                correlation_id=event.correlation_id,
+                causation_id=event.causation_id,
+                cause_occurred_at=(
+                    occurred_by_event_id.get(event.causation_id)
+                    if event.causation_id is not None
+                    else None
+                ),
             )
             for event in newer
         ]
