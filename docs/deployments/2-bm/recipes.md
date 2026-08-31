@@ -29,6 +29,8 @@ The station shutter has three PVs in play, not one, corrected 2026-08-27 against
 
 Both momentary-command questions are now answered by the same run: writing `1` to `CloseEPICSC` while the shutter was already closed completed cleanly and left the beamline byte-identical, so the command self-resets and is safe to repeat. APS PSS sign-off on the leaf names is still outstanding.
 
+**`collect`'s `detector` parameter is a PV prefix with NO trailing colon, and it includes the camera's `cam1` segment.** The action body builds each address as `{detector}:TriggerMode`, `{detector}:AcquireTime` and so on, so the correct value at 2-BM is `2bmSP1:cam1`. An earlier version of the tables below read `2bmSP1:`, which is wrong twice over: the trailing colon produces a doubled separator, and the `cam1` segment is missing entirely. A conduct on 2026-08-31 failed at the capture step with `Control address '2bmSP1::TriggerMode' not connected`, which is what that mistake looks like from the outside. The seed code in `pilot_seed.py` always carried the correct form; only these tables were wrong.
+
 ### `dark_field`
 
 **Realizes** [`cora.capability.acquisition`](../../catalog/capabilities.md). Shutter closed, no beam: capture a dark-frame stack for reconstruction subtraction.
@@ -39,7 +41,7 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify) |
 | 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
-| 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
+| 3 | action | `collect` | `{ detector: "2bmSP1:cam1", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
 
 **Status:** steps 1 and 2 were conducted against real hardware on 2026-08-27 and completed (`actuation_kind: Physical`). Step 3 is NOT yet conductible: `collect` writes the substrate-neutral string `"Internal"` to `2bmSP1:cam1:TriggerMode`, and that record is a two-value enum accepting only `Off` / `On`. The Oryx is an ADSpinnaker camera, not generic ADCore, so the trigger vocabulary does not map. Conducting this recipe whole would halt at the capture step until that mapping is fixed.
 
@@ -53,7 +55,7 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:OpenEPICSC` (StationShutter, open command) | `1` (verify) |
 | 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "OFF"` (open, inverted polarity) |
-| 3 | action | `collect` | `{ detector: "2bmSP1:", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
+| 3 | action | `collect` | `{ detector: "2bmSP1:cam1", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
 
 **Closing steps** (see [glossary](../../reference/glossary.md#recipe-ladder)): walked once `steps` above reaches a real terminal (Completed or Aborted), so the shutter closes even if the capture halts partway through instead of only on a clean run.
 
