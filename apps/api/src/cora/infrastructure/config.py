@@ -567,6 +567,25 @@ class Settings(BaseSettings):
     # precede the enforcement rather than follow it.
     liveness_posture: Literal["off", "shadow", "enforce"] = "off"
 
+    # `policy_posture` governs whether a Policy refusal is APPLIED or merely
+    # observed. Two states, not three: "off" is already spelled
+    # `trust_policy_id = None`, which returns AllowAllAuthorize before
+    # TrustAuthorize is built at all, and a second spelling of off is how a
+    # deployment ends up believing it is gated when it is not.
+    #   - "shadow"  the gate loads the Policy, reaches a real verdict, and
+    #               records it, but a Deny is downgraded to Allow and the
+    #               refusal that did not happen is kept in the Verdict row's
+    #               reason. This is what makes a first rollout safe: the
+    #               deployment cannot be broken by a policy that is missing
+    #               a command, and the verdict logbook becomes the inventory
+    #               of what enforcement WOULD have refused.
+    #   - "enforce" (default) a Deny is a Deny.
+    #
+    # Defaults to "enforce" so that adding this setting cannot silently
+    # weaken a deployment that already sets `trust_policy_id`. Shadow has to
+    # be asked for.
+    policy_posture: Literal["shadow", "enforce"] = "enforce"
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-

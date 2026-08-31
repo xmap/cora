@@ -322,9 +322,10 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
 
     2. `trust_policy_id is not None` without
        `require_authenticated_principal=True`, when `app_env` is
-       NOT `test`. Post-Phase-A: the seeded bootstrap policy permits
-       SYSTEM_PRINCIPAL_ID to call DefinePolicy + RegisterActor.
-       Without the principal-header check, ANY caller spoofing
+       NOT `test` AND some conjunct actually refuses. Post-Phase-A:
+       the seeded bootstrap policy permits SYSTEM_PRINCIPAL_ID to
+       call DefinePolicy + RegisterActor. Without the principal-header
+       check, ANY caller spoofing
        `X-Principal-Id: 00000000-0000-0000-0000-000000000000`
        becomes SYSTEM and gets standing admin. Staging/local
        deployments with only TRUST_POLICY_ID set (forgetting the
@@ -335,6 +336,32 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
        under real policy" scenarios that REQUIRE this combo to be
        constructible. The exemption is safe because `app_env=test`
        is never operator-set in deployment configs.
+
+       A fully-shadowed gate is exempt too, and the reason is that
+       this condition's premise is enforcement. It says spoofing a
+       principal wins standing admin "under the configured Policy" —
+       but a gate that refuses nothing confers nothing. Shadow leaves
+       the deployment behaviourally identical to the AllowAll default
+       it already ran under, where the same caller could already issue
+       the same command as the same spoofed principal, so requiring
+       the header here would demand a new control as the price of
+       MEASURING, while granting no protection in return.
+
+       That price is not payable, which is why the exemption is a
+       correctness fix rather than a convenience. Turning the header
+       check on is itself an unshadowable, hard-failing change: it
+       401s every header-less caller at the boundary, above the gate,
+       where no posture can soften it. Requiring it before shadow
+       would mean the only route to a safe first rollout ran through
+       the unsafe one, and the shadow posture could never be used for
+       the thing it exists for.
+
+       The protection is deferred, not dropped. Both postures are
+       read at boot, so the flip to `enforce` is a restart, and this
+       same guard fires on it. Liveness is checked alongside Policy
+       because the two postures are independent: `POLICY_POSTURE=shadow`
+       with `LIVENESS_POSTURE=enforce` really does refuse, so it is
+       not a shadowed gate and does not get the exemption.
 
     3. `app_env in {prod, production, staging}` with `trust_policy_id is
        None` and `allow_permissive_authz` not set. A None `trust_policy_id`
@@ -367,18 +394,27 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
             "production-tier environment (prod / production / staging)."
         )
         raise RuntimeError(msg)
+    # A gate that refuses nothing is not a gate to bypass. Both postures
+    # participate because they are independent knobs: a shadowed Policy
+    # alongside an enforcing Liveness still refuses commands.
+    gate_refuses = settings.policy_posture == "enforce" or settings.liveness_posture == "enforce"
     if (
         app_env != "test"
         and settings.trust_policy_id is not None
+        and gate_refuses
         and not settings.require_authenticated_principal
     ):
         msg = (
-            f"trust_policy_id={settings.trust_policy_id!r} requires "
+            f"trust_policy_id={settings.trust_policy_id!r} with "
+            f"policy_posture={settings.policy_posture!r} / "
+            f"liveness_posture={settings.liveness_posture!r} requires "
             "require_authenticated_principal=True (set "
             "REQUIRE_AUTHENTICATED_PRINCIPAL=true). Without the "
             "principal-header check, any caller can spoof "
             "X-Principal-Id and become SYSTEM under the configured "
             "Policy — bypassing the authz gate you just turned on. "
+            "To measure before enforcing, set POLICY_POSTURE=shadow: a "
+            "shadowed gate applies no refusal and does not require this. "
             "See memory/project_bootstrap_policy_design.md (F1)."
         )
         raise RuntimeError(msg)

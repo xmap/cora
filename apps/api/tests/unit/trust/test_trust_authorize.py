@@ -10,10 +10,12 @@ Verdict observation row scoped to the target Conduit's
 verdict logbook.
 """
 
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+import structlog.testing
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
@@ -566,3 +568,215 @@ async def test_exempt_command_is_never_refused_on_liveness(command_name: str) ->
 
     assert isinstance(result, Allow)
     assert lookup.asked == []
+
+
+# --- policy_posture: observe a refusal without applying it -------------------
+#
+# The rollout problem these cover. Liveness ships three postures and Policy
+# shipped one, so the only way to learn what a first policy is missing was to
+# enforce it and watch something break. On a beamline the something could be a
+# brake command, since `_BRAKE` is exempt from LIVENESS and nothing exempts it
+# from Policy.
+
+
+@pytest.mark.unit
+async def test_shadow_downgrades_a_refusal_it_would_otherwise_apply() -> None:
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_enforce_is_the_default_so_the_knob_cannot_weaken_a_deployment() -> None:
+    """A config that sets trust_policy_id and nothing else keeps enforcing.
+
+    The one regression this whole feature could plausibly introduce is a
+    deployment that was gating yesterday and is not today because a new
+    setting defaulted the permissive way.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID)  # no posture argument
+
+    result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Deny)
+
+
+@pytest.mark.unit
+async def test_shadow_leaves_a_permitted_call_untouched() -> None:
+    """Shadow downgrades refusals and nothing else."""
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_shadow_keeps_the_conjuncts_it_consulted() -> None:
+    """Posture governs what is done with the answer, never whether asked."""
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    enforced = TrustAuthorize(store, policy_id=_POLICY_ID)
+    shadowed = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    refused = await enforced.authorize(_OTHER_PRINCIPAL, "RegisterActor", UUID(int=0))
+    observed = await shadowed.authorize(_OTHER_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert refused.evaluated == observed.evaluated
+
+
+@pytest.mark.unit
+async def test_a_shadowed_refusal_is_recorded_as_what_actually_happened() -> None:
+    """The Verdict row says Allow, and carries the refusal that did not happen.
+
+    This is the shape the whole posture turns on. A row reading `Deny` beside
+    a command that went on to succeed would make the record false in the one
+    place a reader looks to find out whether something was refused. Recording
+    `Allow` with no reason would be true and useless: the shadow period exists
+    to produce an inventory, and the inventory has to be retrievable from the
+    record rather than from stdout.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    await _seed_conduit_with_open_verdict_logbook(store)
+
+    verdicts = InMemoryVerdictStore()
+    authorize = TrustAuthorize(
+        store,
+        policy_id=_POLICY_ID,
+        verdict_store=verdicts,
+        clock=FakeClock(_OBS_NOW),
+        id_generator=FixedIdGenerator([_OBS_EVENT_ID]),
+        policy_enforced=False,
+    )
+
+    result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+    assert isinstance(result, Allow)
+
+    rows = verdicts.all()
+    assert len(rows) == 1
+    assert rows[0].decision == "Allow"
+    assert rows[0].reason is not None
+    assert rows[0].reason.startswith("shadow, not enforced: ")
+    # The counterfactual survives intact, not just its marker: an operator
+    # reading the logbook has to see WHY enforcement would have refused.
+    assert "permitted set" in rows[0].reason
+    assert rows[0].actor_id == _OTHER_PRINCIPAL
+    assert rows[0].command_name == "RegisterActor"
+
+
+@pytest.mark.unit
+async def test_an_allow_carries_no_shadow_reason() -> None:
+    """Only a downgraded refusal is annotated, so the prefix stays a filter."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    await _seed_conduit_with_open_verdict_logbook(store)
+
+    verdicts = InMemoryVerdictStore()
+    authorize = TrustAuthorize(
+        store,
+        policy_id=_POLICY_ID,
+        verdict_store=verdicts,
+        clock=FakeClock(_OBS_NOW),
+        id_generator=FixedIdGenerator([_OBS_EVENT_ID]),
+        policy_enforced=False,
+    )
+
+    await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    assert verdicts.all()[0].reason is None
+
+
+# --- what the log says a shadowed call did -----------------------------------
+#
+# The first live shadow window on the 2-BM deployment logged BOTH
+# `trust_authorize.deny` and `policy_shadow_near_miss` for every near-miss,
+# because the decision was logged before the posture was applied. Counting
+# refusals out of the log therefore counted refusals that never happened, which
+# is the one number a shadow period exists to produce. These pin the ordering
+# rather than the wording.
+
+
+def _log_events(captured: Sequence[Mapping[str, object]]) -> list[object]:
+    return [entry.get("event") for entry in captured]
+
+
+def _entry(captured: Sequence[Mapping[str, object]], event: str) -> Mapping[str, object]:
+    return next(e for e in captured if e.get("event") == event)
+
+
+@pytest.mark.unit
+async def test_a_shadowed_refusal_is_never_logged_as_a_deny() -> None:
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    with structlog.testing.capture_logs() as captured:
+        result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    assert isinstance(result, Allow)
+    events = _log_events(captured)
+    assert "trust_authorize.deny" not in events
+    assert "trust_authorize.allow" in events
+    assert "trust_authorize.policy_shadow_near_miss" in events
+
+
+@pytest.mark.unit
+async def test_the_allow_line_for_a_shadowed_refusal_carries_the_counterfactual() -> None:
+    """Moving the line must not cost the reason it was carrying.
+
+    An operator reading only the allow stream still has to be able to tell a
+    genuine permit from a refusal that was observed and dropped.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    with structlog.testing.capture_logs() as captured:
+        await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    allow = _entry(captured, "trust_authorize.allow")
+    reason = allow["shadowed_reason"]
+    assert isinstance(reason, str)
+    assert reason.startswith("shadow, not enforced: ")
+    assert "permitted set" in reason
+
+
+@pytest.mark.unit
+async def test_a_genuine_allow_is_not_annotated_as_shadowed() -> None:
+    """The discriminator has to separate the two, not mark everything."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, policy_enforced=False)
+
+    with structlog.testing.capture_logs() as captured:
+        await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    allow = _entry(captured, "trust_authorize.allow")
+    assert allow["shadowed_reason"] is None
+    assert "trust_authorize.policy_shadow_near_miss" not in _log_events(captured)
+
+
+@pytest.mark.unit
+async def test_an_enforced_refusal_is_still_logged_as_a_deny() -> None:
+    """The move must not silence the posture that does refuse."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID)
+
+    with structlog.testing.capture_logs() as captured:
+        result = await authorize.authorize(_OTHER_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
+
+    assert isinstance(result, Deny)
+    events = _log_events(captured)
+    assert "trust_authorize.deny" in events
+    assert "trust_authorize.allow" not in events
+    assert "trust_authorize.policy_shadow_near_miss" not in events

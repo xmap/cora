@@ -29,7 +29,7 @@ for the aggregate shape.
 | --- | --- | --- |
 | `2-BM Zone` | `2-BM Local Conduit` | `2-BM Zone` -> `2-BM Zone` |
 
-## Policy: not yet defined
+## Policy: defined, not yet pointed at
 
 `TrustAuthorize` gates commands against exactly one configured Policy per deployment (`Settings.trust_policy_id`
 is a single, optional `UUID`, not a collection). A deployment cannot run more than one Policy at a time, so a
@@ -37,8 +37,31 @@ two-Policy split (one for operator commands, a separate one for agent-issued Dec
 `Settings` can express; any such split would have to be modeled inside one Policy's own permitted-principals and
 permitted-commands rows instead.
 
-2-BM has not defined a Policy yet, and `trust_policy_id` is unset. With no Policy configured, the deployment
-runs on `AllowAllAuthorize`, the permissive stub that admits every command from every principal regardless of
-Zone, Conduit, or Actor kind. The two seeded operators above are therefore usable principals for hands-on
-testing, not principals a Policy has actually vetted. Defining a real Policy for 2-BM, and switching
-`trust_policy_id` to point at it, is future work.
+A starter Policy now exists at 2-BM, named `2-BM operators on the HTTP surface`. It binds the nil Conduit and
+the seeded HTTP Surface, permits the two operator seats above, and permits 58 command names. What it is for,
+what it deliberately leaves out, and what the measurements say is in the
+[authorization rollout runbook](authorization-rollout-runbook.md).
+
+`trust_policy_id` is still unset, so the deployment continues to run on `AllowAllAuthorize`, the permissive stub
+that admits every command from every principal regardless of Zone, Conduit, or Actor kind. The two seeded
+operators are therefore still usable principals for hands-on testing, not principals a Policy has actually
+vetted. A Policy that exists and a Policy that decides are two different things, and only the first is true
+today.
+
+Three properties of the Policy shape are worth reading before anyone writes the next one, because each limits
+what a Policy at this beamline can say:
+
+- **Permission is a cross product, not a grant list.** A Policy holds a set of principals and a set of commands,
+  and permits every pairing of the two. It cannot say that one operator may conduct while another may only
+  review. Combined with the one-Policy-per-deployment limit above, differentiated roles are not currently
+  expressible at all, and the starter Policy is a union rather than a least-privilege set because a union is the
+  only honest thing a single cross product can be.
+- **A Policy binds one Surface, and matching is strict.** Commands arriving on the MCP Surface, and commands
+  raised inside the process by agent runtimes (which pass no Surface and so arrive on the nil sentinel), never
+  match a Policy bound to HTTP. Most of the commands this deployment issues are agent-raised, so most of its
+  traffic is outside what any single HTTP-bound Policy can govern.
+- **Nothing exempts a brake.** The liveness conjunct deliberately never refuses `StopRun`, `HoldProcedure` and
+  their siblings, so that switching a principal off cannot also remove their ability to halt work. The Policy
+  conjunct has no such exemption, so a Policy that omits a brake command refuses it. The starter Policy lists
+  every brake explicitly for that reason, and a Policy derived from observed history would not have, because
+  nobody at 2-BM has yet needed to stop a run.
