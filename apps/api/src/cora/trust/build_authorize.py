@@ -86,6 +86,18 @@ def build_authorize(
             "Set trust_policy_id, or set liveness_posture=off to say so deliberately."
         )
         raise ValueError(msg)
+    # Same shape, same reason, for the policy knob. Asking for a shadow
+    # rollout with no policy to shadow is the misconfiguration that would
+    # look most like success: the deployment boots, refuses nothing, records
+    # nothing, and an operator waiting for a shadow inventory waits forever.
+    if settings.policy_posture == "shadow" and settings.trust_policy_id is None:
+        msg = (
+            "policy_posture='shadow' has no effect without trust_policy_id: "
+            "AllowAllAuthorize reaches no verdict, so nothing would be observed "
+            "and the verdict logbook would stay empty. Set trust_policy_id to "
+            "the policy you want to shadow."
+        )
+        raise ValueError(msg)
 
     if settings.trust_policy_id is None:
         return AllowAllAuthorize()
@@ -101,6 +113,7 @@ def build_authorize(
         id_generator=id_generator,
         liveness_lookup=liveness_lookup if posture != "off" else None,
         liveness_enforced=posture == "enforce",
+        policy_enforced=settings.policy_posture == "enforce",
     )
 
 

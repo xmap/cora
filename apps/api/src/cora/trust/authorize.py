@@ -140,6 +140,11 @@ from cora.trust.aggregates.policy import load_policy
 
 _log = get_logger(__name__)
 
+# Marks a Verdict row whose refusal was observed rather than applied. A
+# reader filtering the verdict logbook for what an enforcing gate would
+# have stopped looks for this prefix.
+_SHADOW_REASON_PREFIX = "shadow, not enforced: "
+
 
 class TrustAuthorize:
     """Authorize port adapter that gates via a single configured Policy."""
@@ -154,6 +159,7 @@ class TrustAuthorize:
         id_generator: IdGenerator | None = None,
         liveness_lookup: PrincipalLivenessLookup | None = None,
         liveness_enforced: bool = False,
+        policy_enforced: bool = True,
     ) -> None:
         if liveness_enforced and liveness_lookup is None:
             msg = "TrustAuthorize: liveness_enforced requires a liveness_lookup to be wired"
@@ -163,6 +169,18 @@ class TrustAuthorize:
             raise ValueError(msg)
         self._event_store = event_store
         self._policy_id = policy_id
+        # Defaults to True so that adding this knob cannot weaken a
+        # deployment that already gates: an existing config that sets
+        # `trust_policy_id` and nothing else keeps enforcing exactly as it
+        # did. Only an explicit `policy_posture=shadow` downgrades, and the
+        # boot path refuses that combination without a policy id.
+        #
+        # There is no third "off" state here on purpose. Off is already
+        # spelled `trust_policy_id is None`, which returns
+        # `AllowAllAuthorize` from `build_authorize` before this class is
+        # constructed at all, and two ways to say the same thing is how a
+        # deployment ends up believing it is gated when it is not.
+        self._policy_enforced = policy_enforced
         self._verdict_store = verdict_store
         self._clock = clock
         self._id_generator = id_generator
@@ -291,15 +309,63 @@ class TrustAuthorize:
                     correlation_id=str(current_correlation_id()),
                 )
 
+        result, shadow_reason = self._apply_policy_posture(
+            result,
+            principal_id=principal_id,
+            command_name=command_name,
+            surface_id=surface_id,
+        )
+
         if self._verdict_store is not None:
             await self._emit_verdict(
                 principal_id=principal_id,
                 command_name=command_name,
                 conduit_id=conduit_id,
                 result=result,
+                shadow_reason=shadow_reason,
             )
 
         return result
+
+    def _apply_policy_posture(
+        self,
+        result: AuthzResult,
+        *,
+        principal_id: UUID,
+        command_name: str,
+        surface_id: UUID,
+    ) -> tuple[AuthzResult, str | None]:
+        """In shadow, turn a refusal into a recorded near-miss.
+
+        Runs BEFORE `_emit_verdict` deliberately, so the Verdict row says
+        what the system actually did. A row reading `Deny` beside a command
+        that went on to succeed would make the record false in the one place
+        a reader goes to find out whether something was refused, and no
+        amount of surrounding log context repairs that.
+
+        The counterfactual is not thrown away: it rides in the row's own
+        `reason`, prefixed, so the shadow log is queryable from the record
+        rather than only from stdout. That is what makes a shadow period
+        usable as the INVENTORY for the eventual policy: every principal and
+        command an enforcing gate would have refused is retrievable
+        afterwards, with its reason, from the verdict logbook.
+
+        `evaluated` is carried across unchanged. The conjuncts really were
+        consulted; posture governs what is done with the answer, never
+        whether the question was asked.
+        """
+        if self._policy_enforced or not isinstance(result, Deny):
+            return result, None
+        _log.warning(
+            "trust_authorize.policy_shadow_near_miss",
+            policy_id=str(self._policy_id),
+            principal_id=str(principal_id),
+            command_name=command_name,
+            surface_id=str(surface_id),
+            would_deny_reason=result.reason,
+            correlation_id=str(current_correlation_id()),
+        )
+        return Allow(evaluated=result.evaluated), f"{_SHADOW_REASON_PREFIX}{result.reason}"
 
     async def _emit_verdict(
         self,
@@ -308,6 +374,7 @@ class TrustAuthorize:
         command_name: str,
         conduit_id: UUID,
         result: AuthzResult,
+        shadow_reason: str | None = None,
     ) -> None:
         """Best-effort write of one Verdict entry per call.
 
@@ -341,7 +408,11 @@ class TrustAuthorize:
             return
 
         decision_str: VerdictDecision = "Allow" if isinstance(result, Allow) else "Deny"
-        reason = result.reason if isinstance(result, Deny) else None
+        # `shadow_reason` is set only on an Allow that a shadow posture
+        # downgraded from a Deny, so the two are never both present: the
+        # row reports the decision that was ACTED ON, and carries the
+        # refusal that did not happen as its reason.
+        reason = result.reason if isinstance(result, Deny) else shadow_reason
 
         await self._verdict_store.append(
             [

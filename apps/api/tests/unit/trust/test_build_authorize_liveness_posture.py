@@ -19,8 +19,10 @@ import pytest
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import (
+    Allow,
     AllowAllAuthorize,
     AlwaysLivePrincipalLivenessLookup,
+    Deny,
     FakeClock,
     FixedIdGenerator,
 )
@@ -83,3 +85,48 @@ def test_enforce_with_both_wired_builds_the_real_gate() -> None:
     )
 
     assert isinstance(built, TrustAuthorize)
+
+
+# --- policy_posture wiring ---------------------------------------------------
+
+
+@pytest.mark.unit
+def test_shadow_without_a_policy_id_is_refused_at_boot() -> None:
+    """The misconfiguration that would look most like success.
+
+    Asking for a shadow rollout with nothing to shadow boots cleanly,
+    refuses nothing, records nothing, and leaves an operator waiting for an
+    inventory that will never arrive. Same shape as the liveness guard above
+    and for the same reason: a control that was asked for and silently not
+    supplied is worse than one that was never asked for.
+    """
+    with pytest.raises(ValueError, match="policy_posture='shadow' has no effect"):
+        _build(_settings(trust_policy_id=None, policy_posture="shadow"))
+
+
+# Both postures are asserted through the verdict the built adapter reaches,
+# never through its private flag: the attribute name is not the contract,
+# the refusal is. Neither store here holds the configured policy, so the
+# Deny comes from the adapter's own fail-closed path, which is a refusal a
+# shadow rollout equally must not apply.
+
+
+@pytest.mark.unit
+async def test_enforce_is_the_default_posture() -> None:
+    """Absent an explicit posture, a configured policy still refuses."""
+    authorize = _build(_settings(trust_policy_id=_POLICY_ID))
+    assert isinstance(authorize, TrustAuthorize)
+
+    result = await authorize.authorize(_POLICY_ID, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Deny)
+
+
+@pytest.mark.unit
+async def test_shadow_posture_reaches_the_adapter() -> None:
+    authorize = _build(_settings(trust_policy_id=_POLICY_ID, policy_posture="shadow"))
+    assert isinstance(authorize, TrustAuthorize)
+
+    result = await authorize.authorize(_POLICY_ID, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
