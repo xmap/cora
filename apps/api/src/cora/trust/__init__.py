@@ -22,9 +22,12 @@ Layout:
 from cora.trust._bootstrap import (
     SYSTEM_BOOTSTRAP_POLICY_ID,
     SYSTEM_HTTP_SURFACE_ID,
+    SYSTEM_LOCAL_CONDUIT_ID,
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
     verify_bootstrap_seed_present,
+    verify_local_conduit_matches_policy,
+    verify_local_conduit_seed_present,
     warn_if_verdict_log_dormant,
 )
 from cora.trust._projections import register_trust_projections
@@ -38,6 +41,7 @@ from cora.trust.wire import TrustHandlers, wire_trust
 __all__ = [
     "SYSTEM_BOOTSTRAP_POLICY_ID",
     "SYSTEM_HTTP_SURFACE_ID",
+    "SYSTEM_LOCAL_CONDUIT_ID",
     "SYSTEM_MCP_STDIO_SURFACE_ID",
     "SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID",
     "TrustAuthorize",
@@ -48,6 +52,8 @@ __all__ = [
     "register_trust_routes",
     "register_trust_tools",
     "verify_bootstrap_seed_present",
+    "verify_local_conduit_matches_policy",
+    "verify_local_conduit_seed_present",
     "warn_if_verdict_log_dormant",
     "wire_trust",
 ]

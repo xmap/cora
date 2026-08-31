@@ -127,6 +127,7 @@ def build_deps(
     now: datetime | None = None,
     event_store: EventStore | None = None,
     trust_policy_id: UUID | None = None,
+    trust_conduit_id: UUID | None = None,
     deny: bool = False,
     authz: Authorize | None = None,
     llm: LLM | None = None,
@@ -158,6 +159,10 @@ def build_deps(
     `trust_policy_id` sets `Settings.trust_policy_id` (default None =
     AllowAll posture). Use this for tests that exercise startup checks
     keyed on whether real authz is configured.
+
+    `trust_conduit_id` sets `Settings.trust_conduit_id` (default None =
+    every caller's conduit_id resolves to itself, unchanged). Use this
+    for tests exercising the conduit-injection boot guards.
 
     `llm` wires a test LLM (typically
     `FakeLLM`) when the handler under test consumes one
@@ -242,7 +247,11 @@ def build_deps(
     from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
 
     kernel = make_inmemory_kernel(
-        settings=Settings(app_env="test", trust_policy_id=trust_policy_id),  # type: ignore[call-arg]
+        settings=Settings(  # type: ignore[call-arg]
+            app_env="test",
+            trust_policy_id=trust_policy_id,
+            trust_conduit_id=trust_conduit_id,
+        ),
         clock=FakeClock(now or DEFAULT_NOW),
         id_generator=FixedIdGenerator(list(ids or [])),
         authz=authz,
