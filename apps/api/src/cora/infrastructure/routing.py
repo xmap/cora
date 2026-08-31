@@ -98,6 +98,28 @@ but not other BCs or `cora.api`). `cora.trust._bootstrap` re-exports
 these for backward compatibility with existing trust-internal callers.
 """
 
+SYSTEM_IN_PROCESS_SURFACE_ID = UUID("00000000-0000-0000-0000-000000000023")
+"""Seeded Surface UUID for CORA's own in-process work.
+
+Continues the `...0020` / `...0021` / `...0022` sequence above. Written
+by a later migration than those three (see
+`cora.infrastructure.schema_version.EXPECTED_SCHEMA_VERSION` for the
+current newest one) and, unlike them, threaded unconditionally: every
+composition-root runtime that calls a handler directly, in-process,
+with no HTTP or MCP request behind it (agent tick loops, capture
+readers, one-time operator entrypoints) passes this constant as
+`surface_id` rather than falling through to `NIL_SENTINEL_ID`. There is
+no `Settings` knob gating this, unlike `SYSTEM_LOCAL_CONDUIT_ID`: those
+call sites always originated in-process, so naming that fact is a
+correction, not a behavior change a deployment might want to opt out of.
+
+Deliberately absent from `cora.infrastructure.observability.surface_context
+._SURFACE_KIND_BY_UUID`: that map resolves HTTP-reachable Surfaces only,
+and in-process work is by definition never reachable via the HTTP
+middleware, the same reasoning that already excludes
+`SYSTEM_MCP_STDIO_SURFACE_ID`.
+"""
+
 SYSTEM_LOCAL_ZONE_ID = UUID("00000000-0000-0000-0000-000000000030")
 SYSTEM_LOCAL_CONDUIT_ID = UUID("00000000-0000-0000-0000-000000000031")
 """Seeded Zone/Conduit UUIDs for the deployment's one real Conduit.
@@ -319,6 +341,7 @@ def get_mcp_surface_id() -> UUID:
 __all__ = [
     "NIL_SENTINEL_ID",
     "SYSTEM_HTTP_SURFACE_ID",
+    "SYSTEM_IN_PROCESS_SURFACE_ID",
     "SYSTEM_LOCAL_CONDUIT_ID",
     "SYSTEM_LOCAL_ZONE_ID",
     "SYSTEM_MCP_STDIO_SURFACE_ID",

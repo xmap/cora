@@ -6,13 +6,16 @@ Every command and query has one handler and as many surface adapters as needed. 
 
 ## Surface aggregate
 
-The Trust BC carries a `Surface` aggregate that names the ingress shape each call arrives through. Three seeded values today, modeled as a closed `SurfaceKind` enum:
+The Trust BC carries a `Surface` aggregate that names the ingress shape each call arrives through. Four seeded values today, modeled as a closed `SurfaceKind` enum:
 
 | Surface | Kind | Default policy binding |
 | --- | --- | --- |
 | HTTP | `HTTP` | V2 bootstrap policy |
 | MCP stdio | `MCP_STDIO` | n/a |
 | MCP streamable HTTP | `MCP_STREAMABLE_HTTP` | n/a |
+| In-process | `IN_PROCESS` | n/a |
+
+`IN_PROCESS` names CORA's own in-process work: agent tick loops, capture readers, and one-time operator entrypoints that call a handler directly with no HTTP request or MCP tool call behind them. Every such call site passes it explicitly; there is no default-binding policy or Settings knob for it, since the calls it names always originated in-process.
 
 `surface_id` threads through every command + query handler, the `Authorize` port, Policy evaluation, and the idempotency-cache key namespace (so the same `Idempotency-Key` on different surfaces does not collide). The composition root injects the resolved `surface_id` per-request; tests use a canonical `NIL_SENTINEL_ID` from `cora.infrastructure.routing`.
 

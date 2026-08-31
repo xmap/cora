@@ -80,6 +80,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run import FeedHeartbeat, RunObservationLogbookClosedError
 from cora.run.errors import UnauthorizedError
 from cora.run.features.append_observations import AppendObservations, ObservationInput
@@ -221,6 +222,7 @@ class CaptureProgressFeeder:
                 AppendObservations(run_id=run_id, entries=tuple(entries)),
                 principal_id=self._principal_id,
                 correlation_id=self._deps.id_generator.new_id(),
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise

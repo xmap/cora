@@ -14,6 +14,7 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.routing import (
     NIL_SENTINEL_ID,
     SYSTEM_HTTP_SURFACE_ID,
+    SYSTEM_IN_PROCESS_SURFACE_ID,
     SYSTEM_LOCAL_CONDUIT_ID,
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
@@ -38,8 +39,11 @@ _log = get_logger(__name__)
 # below.
 SYSTEM_BOOTSTRAP_POLICY_ID = UUID("00000000-0000-0000-0000-000000000002")
 
-# Default Surfaces seeded by
-# `20260519200000_seed_default_surfaces_and_v2_policy.sql`.
+# Default Surfaces. The first three are seeded by
+# `20260519200000_seed_default_surfaces_and_v2_policy.sql`;
+# `SYSTEM_IN_PROCESS_SURFACE_ID` by a later migration (see
+# `cora.infrastructure.schema_version.EXPECTED_SCHEMA_VERSION` for the
+# current newest one).
 #
 # Re-exported above from `cora.infrastructure.routing` so historical
 # `from cora.trust._bootstrap import SYSTEM_HTTP_SURFACE_ID` callers
@@ -242,6 +246,7 @@ async def verify_local_conduit_matches_policy(deps: Kernel) -> None:
 __all__ = [
     "SYSTEM_BOOTSTRAP_POLICY_ID",
     "SYSTEM_HTTP_SURFACE_ID",
+    "SYSTEM_IN_PROCESS_SURFACE_ID",
     "SYSTEM_LOCAL_CONDUIT_ID",
     "SYSTEM_MCP_STDIO_SURFACE_ID",
     "SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID",

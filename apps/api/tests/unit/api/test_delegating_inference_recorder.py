@@ -17,7 +17,7 @@ from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.decision.errors import InferenceAgentMismatchError, UnauthorizedError
 from cora.decision.features.append_inferences.command import AppendInferences
 from cora.infrastructure.ports import AgentInferenceTrace
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 
 _DECISION_ID = UUID("01900000-0000-7000-8000-0000000d0001")
 _EVENT_ID = UUID("01900000-0000-7000-8000-0000000e0001")
@@ -35,6 +35,7 @@ class _SpyAppendInferences:
         self.principal_ids: list[UUID] = []
         self.correlation_ids: list[UUID] = []
         self.causation_ids: list[UUID | None] = []
+        self.surface_ids: list[UUID] = []
         self._raises = raises
 
     async def __call__(
@@ -50,6 +51,7 @@ class _SpyAppendInferences:
         self.principal_ids.append(principal_id)
         self.correlation_ids.append(correlation_id)
         self.causation_ids.append(causation_id)
+        self.surface_ids.append(surface_id)
         if self._raises is not None:
             raise self._raises
         return len(command.entries)
@@ -121,6 +123,10 @@ async def test_record_threads_envelope_identifiers() -> None:
     assert spy.principal_ids == [_PRINCIPAL_ID]
     assert spy.correlation_ids == [_CORRELATION_ID]
     assert spy.causation_ids == [_CAUSATION_ID]
+    assert spy.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "DelegatingInferenceRecorder.record must pass the internal "
+        "Surface, not fall through to NIL_SENTINEL_ID."
+    )
 
 
 @pytest.mark.unit

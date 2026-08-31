@@ -17,6 +17,16 @@ V1 values:
 - MCP_STREAMABLE_HTTP: MCP tool calls arriving over the
   streamable-http transport (typical for remote agents). Must
   authenticate; audit trail should differentiate from stdio.
+- IN_PROCESS: no transport at all. CORA's own background code (agent
+  runtimes, tick loops, capture readers) calling a handler directly,
+  in-process, on behalf of no external caller. Distinct from every
+  other member above, which all name a real wire protocol a request
+  arrived over; this one names the absence of one. Orthogonal to the
+  deferred transports below, none of which describe in-process work
+  either. Not named INTERNAL: that word already names an unrelated
+  domain value elsewhere (`Operation.acquisitions.trigger_mode`'s
+  `"Internal"` camera-trigger source), and on its own reads as
+  "internal network" rather than "no transport."
 
 Deferred kinds (with documented anticipated names so future code
 review catches conflicts):
@@ -40,3 +50,4 @@ class SurfaceKind(StrEnum):
     HTTP = "http"
     MCP_STDIO = "mcp_stdio"
     MCP_STREAMABLE_HTTP = "mcp_streamable_http"
+    IN_PROCESS = "in_process"

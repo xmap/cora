@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.api._capture_baseline_reader import CaptureBaselineReader
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
     ControlNotConnectedError,
@@ -74,6 +74,7 @@ class _FakeAppendObservations:
 
     def __init__(self, *, raises: Exception | None = None) -> None:
         self.calls: list[AppendObservations] = []
+        self.surface_ids: list[UUID] = []
         self._raises = raises
 
     async def __call__(
@@ -88,6 +89,7 @@ class _FakeAppendObservations:
         if self._raises is not None:
             raise self._raises
         self.calls.append(command)
+        self.surface_ids.append(surface_id)
         return len(command.entries)
 
 
@@ -131,6 +133,10 @@ async def test_read_baseline_appends_one_batch_for_every_declared_channel() -> N
     assert all(e.sampling_procedure == "baseline" for e in command.entries)
     assert all(e.is_simulated is False for e in command.entries)
     assert all(e.sampled_at == _NOW for e in command.entries)
+    assert append.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "CaptureBaselineReader.read must pass the internal Surface, not "
+        "fall through to NIL_SENTINEL_ID."
+    )
 
 
 @pytest.mark.unit

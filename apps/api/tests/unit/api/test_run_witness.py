@@ -36,7 +36,7 @@ from cora.api._run_witness import (
 )
 from cora.infrastructure.config import Settings
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run import (
     CapturePath,
     CapturePathStore,
@@ -503,6 +503,7 @@ class _FakeRecordWitnessedRun:
         self.run_id = run_id if run_id is not None else uuid4()
         self.raises = raises
         self.calls: list[RecordWitnessedRun] = []
+        self.surface_ids: list[UUID] = []
 
     async def __call__(
         self,
@@ -514,6 +515,7 @@ class _FakeRecordWitnessedRun:
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> UUID:
         self.calls.append(command)
+        self.surface_ids.append(surface_id)
         if self.raises is not None:
             raise self.raises
         return self.run_id
@@ -526,6 +528,7 @@ class _FakeRecordWitnessedRunOutcome:
     def __init__(self, *, raises: Exception | None = None) -> None:
         self.raises = raises
         self.calls: list[RecordWitnessedRunOutcome] = []
+        self.surface_ids: list[UUID] = []
 
     async def __call__(
         self,
@@ -537,6 +540,7 @@ class _FakeRecordWitnessedRunOutcome:
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> None:
         self.calls.append(command)
+        self.surface_ids.append(surface_id)
         if self.raises is not None:
             raise self.raises
 
@@ -548,6 +552,7 @@ class _FakeTruncateRun:
     def __init__(self, *, raises: Exception | None = None) -> None:
         self.raises = raises
         self.calls: list[TruncateRun] = []
+        self.surface_ids: list[UUID] = []
 
     async def __call__(
         self,
@@ -559,6 +564,7 @@ class _FakeTruncateRun:
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> None:
         self.calls.append(command)
+        self.surface_ids.append(surface_id)
         if self.raises is not None:
             raise self.raises
 
@@ -660,6 +666,11 @@ async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> Non
     assert command.plan_id == _PLAN_ID
     assert command.trigger == "Monitor"
     assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
+    assert fake.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "RunWitnessRecorder._promote must pass the internal Surface, not "
+        "fall through to NIL_SENTINEL_ID, so a Policy can gate this "
+        "background promotion distinctly from an operator-driven call."
+    )
 
 
 class _RaisingCaptureProbeStore:
@@ -1464,6 +1475,10 @@ async def test_run_witness_recorder_truncates_stale_run_and_repromotes_on_a_seco
     truncate_command = truncate.calls[0]
     assert truncate_command.run_id == stale_run_id
     assert truncate_command.interrupted_at is None
+    assert truncate.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "RunWitnessRecorder._truncate_stale must pass the internal "
+        "Surface, not fall through to NIL_SENTINEL_ID."
+    )
 
 
 @pytest.mark.unit
@@ -1530,6 +1545,10 @@ async def test_run_witness_recorder_records_ended_outcome_while_open() -> None:
     assert command.observed_at == _NOW
     assert command.trigger == "Monitor"
     assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
+    assert outcome.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "RunWitnessRecorder._record_outcome must pass the internal "
+        "Surface, not fall through to NIL_SENTINEL_ID."
+    )
 
     # Reopening after the close promotes again: proves the entry was
     # actually cleared, not merely left stale.
@@ -2980,6 +2999,7 @@ class _FakeListRuns:
     def __init__(self, pages: list[Any]) -> None:
         self._pages = pages
         self.queries: list[Any] = []
+        self.surface_ids: list[UUID] = []
 
     async def __call__(
         self,
@@ -2990,6 +3010,7 @@ class _FakeListRuns:
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> Any:
         self.queries.append(query)
+        self.surface_ids.append(surface_id)
         return self._pages[len(self.queries) - 1]
 
 
@@ -3056,6 +3077,9 @@ async def test_rebuild_open_captures_extracts_capture_code_from_external_refs() 
     result = await rebuild_open_captures(deps, list_runs=list_runs)
 
     assert result == {_CODE: run_id}
+    assert list_runs.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
+        "rebuild_open_captures must pass the internal Surface, not fall through to NIL_SENTINEL_ID."
+    )
 
 
 @pytest.mark.unit

@@ -6793,7 +6793,7 @@
         "properties": {
           "kind": {
             "$ref": "#/components/schemas/SurfaceKind",
-            "description": "Process-level arrival kind. Closed enum; one of http / mcp_stdio / mcp_streamable_http."
+            "description": "Process-level arrival kind. Closed enum; one of http / mcp_stdio / mcp_streamable_http / in_process."
           },
           "name": {
             "description": "Display name for the new surface.",
@@ -16380,7 +16380,8 @@
         "enum": [
           "http",
           "mcp_stdio",
-          "mcp_streamable_http"
+          "mcp_streamable_http",
+          "in_process"
         ],
         "title": "SurfaceKind",
         "type": "string"
