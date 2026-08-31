@@ -31,6 +31,10 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 
 **`collect`'s `detector` parameter is a PV prefix with NO trailing colon, and it includes the camera's `cam1` segment.** The action body builds each address as `{detector}:TriggerMode`, `{detector}:AcquireTime` and so on, so the correct value at 2-BM is `2bmSP1:cam1`. An earlier version of the tables below read `2bmSP1:`, which is wrong twice over: the trailing colon produces a doubled separator, and the `cam1` segment is missing entirely. A conduct on 2026-08-31 failed at the capture step with `Control address '2bmSP1::TriggerMode' not connected`, which is what that mistake looks like from the outside. The seed code in `pilot_seed.py` always carried the correct form; only these tables were wrong.
 
+**A check step's `timeout_s` decides between two different questions, and only one of them should wait.** A check can carry an optional `timeout_s`: absent (the default), the check reads once and a mismatch halts, byte-identical to before this field existed; present, the check reads once and, only if the criterion does not already hold, waits for it up to the deadline, judging whatever it last saw if the deadline expires. Whether to set it depends on what the check is asking. An **arrival check** asks "did the thing I just commanded actually happen": it follows a setpoint or an action that moves something, and the record it reads lags the command by however long the substrate takes to catch up, so it needs a deadline generous enough to clear that lag. A **gate check** asks "is this true right now": for example, whether a hutch is secured or a permit is clear, and an instantaneous read is correct there; waiting ten seconds for a hutch to become secured would not be a safety check, it would be a bug. Both are written the same way, a check step with a criterion and an optional `timeout_s`, so a recipe author has to choose deliberately rather than by default.
+
+For the station shutter this is grounded: the status PV scans at 1 Hz and the command is a 1 second pulse, so roughly 2 seconds of substrate latency precede the device (measured 2026-08-28 on real EPICS). Because a check with a deadline still returns the instant the criterion holds rather than waiting out the whole deadline, generosity costs nothing on the happy path and only delays how fast a genuinely stuck shutter is reported, so `timeout_s: 10` is the sensible choice for every shutter check below. No comparable measurement exists yet for the energy-tracking optic axes or any other motor at 2-BM; sizing a motor arrival check needs a real settle-time measurement first, so `energy_setting`'s axis checks are flagged below rather than given an invented number.
+
 ### `dark_field`
 
 **Realizes** [`cora.capability.acquisition`](../../catalog/capabilities.md). Shutter closed, no beam: capture a dark-frame stack for reconstruction subtraction.
@@ -40,10 +44,12 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify) |
-| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed), `timeout_s: 10` |
 | 3 | action | `collect` | `{ detector: "2bmSP1:cam1", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
 
-**Status:** steps 1 and 2 were conducted against real hardware on 2026-08-27 and completed (`actuation_kind: Physical`). Step 3 is NOT yet conductible: `collect` writes the substrate-neutral string `"Internal"` to `2bmSP1:cam1:TriggerMode`, and that record is a two-value enum accepting only `Off` / `On`. The Oryx is an ADSpinnaker camera, not generic ADCore, so the trigger vocabulary does not map. Conducting this recipe whole would halt at the capture step until that mapping is fixed.
+Step 2 is an **arrival check**: it follows the close command, not a standing fact. It reads correctly today even without a deadline because the shutter's resting state at 2-BM is closed, so the criterion is usually already true before the check runs, but that is a fact about the beamline's rest state, not about the check, and it would not hold if the shutter happened to be open when this recipe ran. `timeout_s: 10` puts it on the same footing as `flat_field`'s checks below rather than leaving it correct by coincidence.
+
+**Status:** steps 1 and 2 were conducted against real hardware on 2026-08-27 and completed (`actuation_kind: Physical`), before `timeout_s` existed; that conduct exercised the pre-fix instantaneous read, which passed because the shutter was already closed. Step 3 is NOT yet conductible: `collect` writes the substrate-neutral string `"Internal"` to `2bmSP1:cam1:TriggerMode`, and that record is a two-value enum accepting only `Off` / `On`. The Oryx is an ADSpinnaker camera, not generic ADCore, so the trigger vocabulary does not map. Conducting this recipe whole would halt at the capture step until that mapping is fixed.
 
 ### `flat_field`
 
@@ -54,15 +60,19 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:OpenEPICSC` (StationShutter, open command) | `1` (verify) |
-| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "OFF"` (open, inverted polarity) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "OFF"` (open, inverted polarity), `timeout_s: 10` |
 | 3 | action | `collect` | `{ detector: "2bmSP1:cam1", repetitions: <<repetitions>>, dwell: <<dwell>> }` |
+
+Step 2 is the motivating **arrival check** for the deadline field: it follows the open command, and unlike the close side, open is not the shutter's resting state, so this check cannot rely on the criterion already being true. Without `timeout_s` a check fired immediately after the open command reads the shutter mid-travel and halts on a false negative.
 
 **Closing steps** (see [glossary](../../reference/glossary.md#recipe-ladder)): walked once `steps` above reaches a real terminal (Completed or Aborted), so the shutter closes even if the capture halts partway through instead of only on a clean run.
 
 | # | Step | Address | Value / params |
 | --- | --- | --- | --- |
 | 1 | setpoint | `S02BM-PSS:SBS:CloseEPICSC` (StationShutter, close command) | `1` (verify, return to safe state) |
-| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed) |
+| 2 | check | `S02BM-PSS:SBS:BeamBlockingM` (StationShutter, status read-back) | `== "ON"` (closed), `timeout_s: 10` |
+
+This closing check is the same **arrival check** as `dark_field`'s: it follows a close command and gets the same deadline for the same reason.
 
 **Precondition:** the sample is out of the beam path. This is an operator assertion, not a CORA setpoint (CORA does not drive the sample out automatically).
 
@@ -84,9 +94,11 @@ Both momentary-command questions are now answered by the same run: writing `1` t
 | 4 | setpoint | `2bma:m9` (SampleSlit vertical top) | `0.19 mm` (verify) |
 | 5 | setpoint | `2bma:m10` (SampleSlit vertical bottom) | `-0.19 mm` (verify) |
 | 6 | action | `coordinate_energy_move` | `{ energy_kev: <<energy_kev>>, axis_count: 5 }` |
-| 7-11 | check | each axis readback (`.RBV`) *(illustrative)* | `within_tolerance` |
+| 7-11 | check | each axis readback (`.RBV`) *(illustrative)* | `within_tolerance`, `timeout_s`: **needs measurement** |
 
 The setpoint positions shown are illustrative curve outputs and are **provisional**: the per-energy curves await the real saved-position table from 2-BM staff. The curve-interpolation runtime (`eval_lookup_table`) exists, but a live free-keV recipe is still blocked on two things: the saved per-energy table is not populated, and the Plan.wiring-backed constituent resolver that would let the recipe address the five facets as `pseudoaxis://` constituents is deferred. So a v1 recipe encodes **one energy's resolved positions** as literal setpoints, one recipe per saved energy. The saved menu here is the **Mono** menu (the configured energies are listed on the [energy-tracking optic axes](inventory.md#energy-tracking-optic-axes)); `energy_setting` as written is the mono-mode recipe, and pink-mode energy selection is deferred with the [beam-mode work](questions.md#beam-mode) (`MODE-3` / `MIRROR-1`). `energy_kev` is recorded but does not drive live position computation at v1; once the saved table lands and the resolver ships, the runtime can interpolate an in-between energy (for example 22 keV, between the saved 20.0 and 25.0) rather than only the menu points.
+
+Steps 7-11 are the recipe most exposed to the defect the check-step deadline fixes: five motor setpoints followed by five **arrival checks**, one per axis, each asking whether that axis actually reached its commanded position. Every one of them needs `timeout_s`. Unlike the shutter, there is no measured settle time for these axes, or for any motor at 2-BM, in this repository: the 2 second shutter figure comes from a scanned status PV and a momentary command pulse, neither of which describes a motor's move-and-settle behavior. Inventing a number here would look like the same kind of grounded sizing the shutter got and would not be; the table above marks it **needs measurement** rather than guessing. This is one more reason the recipe stays "design, pending executor": the real `.RBV` addresses are not pinned yet either, so there is nothing to measure against until both land.
 
 **Status:** design, pending executor (see [What still needs to land](#what-still-needs-to-land)).
 
@@ -113,6 +125,8 @@ The setpoint positions shown are illustrative curve outputs and are **provisiona
 | | 11 | check | enable PV | connected |
 | Confirm enabled | 12 | action | `caget_poll` | `{ pv: "2bmHXP:HexapodAllEnabled.VAL", timeout_s: 180, interval_s: 1 }` |
 | | 13 | check | `2bmHXP:HexapodAllEnabled.VAL` | `== 1` |
+
+Steps 2, 4, 7, and 11 are each an **arrival check**: they follow an action that changes real-world state (stop a process, toggle a relay, restart a process) and ask whether that state actually landed, so each would need a deliberate `timeout_s` once it is wired to a real address and criterion rather than the placeholder targets shown. This table carries no measured timing for any of them (how long the IOC takes to actually stop, how long the PDU's own status read lags a toggle), so no number is proposed here; the surrounding `sleep` actions are the pre-existing, coarser-grained way this recipe already compensates for exactly this kind of lag, and are a different mechanism from a check's own deadline. Step 13 is different in kind: `caget_poll` immediately before it (step 12) already polls the same PV up to 180 s with its own `timeout_s`, so by the time step 13 reads, arrival has already been confirmed by the poll. Step 13 is correctly an instantaneous read, a **gate check** on a value the previous step already waited for, not a second arrival check.
 
 Every record above is confirmed against the authoritative reboot script, pinned at [`decarlof/2bmb-bin@372285c6`](https://github.com/decarlof/2bmb-bin/blob/372285c69492/hexapod_reboot.py) (HXP-3/4/6/7): the enable PVs (`2bmHXP:HexapodAllEnabled.VAL` read, `2bmHXP:EnableWork.PROC` force-enable), the IOC scripts, the host (`arcturus`), the NetBooter endpoints, outlet 5, and the timings. Staff confirmed that repo as the current production source on 2026-07-28, having read the deployed `/home/beams/2BMB/bin/hexapod_reboot.py` against it; the check was constant-level rather than byte-level, and the pin is the last commit to touch the file (2026-02-25, matching the deployed copy's date). CORA cites the commit rather than `HEAD` so the record stays true after the next edit. The upstream of that fork is `xray-imaging/2bmb-bin`, but the fork is what was compared against the beamline, so the fork is what is cited.
 
