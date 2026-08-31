@@ -22,6 +22,12 @@ the composition root wires BCs into the kernel.
     command through that single Policy aggregate. See
     `cora/trust/authorize.py` for the bootstrap workflow when
     first enabling real auth in a deployment.
+  - `Settings.trust_conduit_id`, when also set, is passed through so
+    an UNSPECIFIED (nil) conduit_id resolves to it -- see
+    `TrustAuthorize._effective_conduit_id`. Requires `trust_policy_id`
+    for the same reason `policy_posture='shadow'` does: `AllowAllAuthorize`
+    is never constructed with a conduit_id, so a configured conduit with
+    no policy would be read by nothing.
 
 ## VerdictStore wiring
 
@@ -98,6 +104,20 @@ def build_authorize(
             "the policy you want to shadow."
         )
         raise ValueError(msg)
+    # Same shape again for the conduit knob. AllowAllAuthorize is returned
+    # below and never constructed with a conduit_id at all, so a configured
+    # trust_conduit_id with no trust_policy_id would be read by nothing:
+    # not one Verdict row would be written, and nothing would say so short
+    # of reading this file.
+    if settings.trust_conduit_id is not None and settings.trust_policy_id is None:
+        msg = (
+            "trust_conduit_id is configured but has no effect without "
+            "trust_policy_id: AllowAllAuthorize is never constructed with a "
+            "conduit_id, so nothing would resolve to it and the verdict "
+            "logbook would stay empty. Set trust_policy_id, or unset "
+            "trust_conduit_id to say so deliberately."
+        )
+        raise ValueError(msg)
 
     if settings.trust_policy_id is None:
         return AllowAllAuthorize()
@@ -114,6 +134,7 @@ def build_authorize(
         liveness_lookup=liveness_lookup if posture != "off" else None,
         liveness_enforced=posture == "enforce",
         policy_enforced=settings.policy_posture == "enforce",
+        conduit_id=settings.trust_conduit_id,
     )
 
 

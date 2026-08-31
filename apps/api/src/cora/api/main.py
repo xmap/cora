@@ -277,6 +277,8 @@ from cora.trust import (
     register_trust_routes,
     register_trust_tools,
     verify_bootstrap_seed_present,
+    verify_local_conduit_matches_policy,
+    verify_local_conduit_seed_present,
     warn_if_verdict_log_dormant,
     wire_trust,
 )
@@ -1061,6 +1063,18 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # this check, a stale / unrestored DB silently 403s every
             # API call instead of failing visibly at startup.
             await verify_bootstrap_seed_present(deps)
+
+            # Boot-time fail-fast for the two ways `trust_conduit_id`
+            # opts a deployment into a populated verdict logbook and gets
+            # it wrong: the configured Conduit doesn't exist or has no
+            # open verdict logbook, or it exists but the configured
+            # Policy governs a DIFFERENT conduit (which would deny every
+            # command at the conduit check, before principal or command
+            # are even consulted). Both are no-ops when
+            # `trust_conduit_id` is unset. See
+            # project_authorization_envelope_design watch item 6.
+            await verify_local_conduit_seed_present(deps)
+            await verify_local_conduit_matches_policy(deps)
 
             # Heads-up (non-fatal): when authz is enforced but the
             # per-Conduit Verdict audit log cannot populate yet (conduit

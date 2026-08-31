@@ -98,6 +98,25 @@ but not other BCs or `cora.api`). `cora.trust._bootstrap` re-exports
 these for backward compatibility with existing trust-internal callers.
 """
 
+SYSTEM_LOCAL_ZONE_ID = UUID("00000000-0000-0000-0000-000000000030")
+SYSTEM_LOCAL_CONDUIT_ID = UUID("00000000-0000-0000-0000-000000000031")
+"""Seeded Zone/Conduit UUIDs for the deployment's one real Conduit.
+
+Written by 20260831140000_seed_local_zone_conduit_verdict_logbook.sql,
+alongside a `ConduitLogbookOpened(kind="verdict")` on the Conduit's own
+stream. Inert by default: `Settings.trust_conduit_id` is `None` until an
+operator opts in, mirroring `trust_policy_id` / `TRUST_POLICY_ID`.
+
+A single self-loop Zone (`source_zone_id == target_zone_id ==
+SYSTEM_LOCAL_ZONE_ID`) rather than a placeholder split, because
+`project_conduit_injection_design.md` WI10 keeps multi-zone ISA-99
+topology deliberately out of scope until a real segregated-network need
+arrives; a single zone is an honest description of that state; two
+synthetic zones would not be.
+
+Not the nil sentinel: a real Conduit id keeps `NIL_SENTINEL_ID` meaning
+"unspecified", never "this one, in particular"."""
+
 
 class ErrorResponse(BaseModel):
     """Shared error body for OpenAPI documentation."""
@@ -300,6 +319,8 @@ def get_mcp_surface_id() -> UUID:
 __all__ = [
     "NIL_SENTINEL_ID",
     "SYSTEM_HTTP_SURFACE_ID",
+    "SYSTEM_LOCAL_CONDUIT_ID",
+    "SYSTEM_LOCAL_ZONE_ID",
     "SYSTEM_MCP_STDIO_SURFACE_ID",
     "SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID",
     "SYSTEM_PRINCIPAL_ID",

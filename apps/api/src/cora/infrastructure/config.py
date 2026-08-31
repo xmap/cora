@@ -137,6 +137,25 @@ class Settings(BaseSettings):
     # project_bootstrap_policy_design.md, WI8).
     trust_policy_id: UUID | None = None
 
+    # The Conduit `TrustAuthorize` resolves an UNSPECIFIED (nil-sentinel)
+    # `conduit_id` to, so the per-decision Verdict audit log can actually
+    # populate. Every handler still passes the nil sentinel today (the
+    # ~180-call-site sweep is deferred per project_conduit_injection_design
+    # WI10, since the deployment has exactly one real Conduit until
+    # multi-zone topology lands); this setting lets that shared, single
+    # Conduit be named once, in configuration, instead of at every call
+    # site. An explicit non-nil conduit_id a caller passes always wins —
+    # this is a default for the unspecified case, never an override.
+    #
+    # Default None: today's behaviour (conduit_id resolves to nil, the
+    # verdict log stays dormant, `warn_if_verdict_log_dormant` says so at
+    # boot) is unchanged for every existing deployment and test. Setting
+    # this to `SYSTEM_LOCAL_CONDUIT_ID` (seeded by
+    # 20260831140000_seed_local_zone_conduit_verdict_logbook.sql) is what
+    # an operator does to opt in. See memory
+    # project_authorization_envelope_design watch item 6.
+    trust_conduit_id: UUID | None = None
+
     # Production deployments behind an auth proxy that sets
     # `X-Principal-Id` should set this true: requests without the
     # header are then rejected with 401 instead of silently falling

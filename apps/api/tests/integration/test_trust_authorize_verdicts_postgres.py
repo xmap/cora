@@ -32,6 +32,7 @@ from cora.infrastructure.ports import (
     FakeClock,
     FixedIdGenerator,
 )
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_LOCAL_CONDUIT_ID
 from cora.trust.aggregates.conduit.entries import (
     PostgresVerdictStore,
     Verdict,
@@ -204,3 +205,50 @@ async def test_postgres_traversal_store_dedups_on_event_id(
 
 def uuid_for(s: str) -> UUID:
     return UUID(s)
+
+
+@pytest.mark.integration
+async def test_a_configured_conduit_is_what_makes_the_seed_migration_matter(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The migration by itself proves nothing about `TrustAuthorize`; this
+    proves the two connect.
+
+    Drives `authorize()` with the caller passing `NIL_SENTINEL_ID` (every
+    real handler today) against `TrustAuthorize(conduit_id=SYSTEM_LOCAL_CONDUIT_ID)`
+    -- the configuration `20260831140000_seed_local_zone_conduit_verdict_logbook.sql`
+    exists to make usable. A row landing under `SYSTEM_LOCAL_CONDUIT_ID`,
+    from a caller that never mentioned it, is the end-to-end proof that an
+    operator setting `trust_conduit_id` actually populates
+    `entries_conduit_verdicts` on a real deployment.
+    """
+    policy_id = UUID("01900000-0000-7000-8000-000000069a01")
+    entry_id = UUID("01900000-0000-7000-8000-000000069a02")
+
+    event_store = PostgresEventStore(db_pool)
+    await seed_policy(
+        event_store,
+        policy_id=policy_id,
+        permitted_principal_ids={_PRINCIPAL_ID},
+        permitted_commands={"RegisterActor"},
+        conduit_id=SYSTEM_LOCAL_CONDUIT_ID,
+        occurred_at=_NOW,
+    )
+
+    authorize = TrustAuthorize(
+        event_store,
+        policy_id=policy_id,
+        verdict_store=PostgresVerdictStore(db_pool),
+        clock=FakeClock(_NOW),
+        id_generator=FixedIdGenerator([entry_id]),
+        conduit_id=SYSTEM_LOCAL_CONDUIT_ID,
+    )
+
+    result = await authorize.authorize(_PRINCIPAL_ID, "RegisterActor", NIL_SENTINEL_ID)
+    assert isinstance(result, Allow)
+
+    rows = await _read_traversals(db_pool, SYSTEM_LOCAL_CONDUIT_ID)
+    row = next(r for r in rows if r["event_id"] == entry_id)
+    assert row["conduit_id"] == SYSTEM_LOCAL_CONDUIT_ID
+    assert row["actor_id"] == _PRINCIPAL_ID
+    assert row["decision"] == "Allow"

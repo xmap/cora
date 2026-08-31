@@ -780,3 +780,98 @@ async def test_an_enforced_refusal_is_still_logged_as_a_deny() -> None:
     assert "trust_authorize.deny" in events
     assert "trust_authorize.allow" not in events
     assert "trust_authorize.policy_shadow_near_miss" not in events
+
+
+# --- resolving an unspecified conduit_id --------------------------------
+#
+# `trust_conduit_id` lets a deployment name its one real Conduit once, in
+# configuration, instead of at every one of the ~180 call sites that
+# currently pass the nil sentinel. The property under test: the SAME
+# resolved value must feed both the Policy evaluation and the Verdict
+# write, so the row that gets written can never describe a conduit the
+# command was not actually evaluated against.
+
+
+@pytest.mark.unit
+async def test_an_unspecified_conduit_resolves_to_the_configured_one() -> None:
+    """The caller passes nil; the policy is bound to the configured conduit."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, conduit_id=_TARGET_CONDUIT_ID)
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_an_unspecified_conduit_still_denies_a_mismatched_policy() -> None:
+    """Configuring a conduit does not bypass the conduit-mismatch check."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_OTHER_CONDUIT_ID)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, conduit_id=_TARGET_CONDUIT_ID)
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Deny)
+    assert "conduit" in result.reason.lower()
+
+
+@pytest.mark.unit
+async def test_a_callers_own_non_nil_conduit_is_never_overridden() -> None:
+    """Configuration is a default for UNSPECIFIED, never an override."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_OTHER_CONDUIT_ID)
+    # Configured conduit is _TARGET_CONDUIT_ID, but the caller passes a
+    # real conduit_id of its own -- the policy bound to _OTHER_CONDUIT_ID
+    # must still be the one evaluated.
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID, conduit_id=_TARGET_CONDUIT_ID)
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", _OTHER_CONDUIT_ID)
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_no_configured_conduit_leaves_nil_untouched() -> None:
+    """Default (conduit_id=None): today's behaviour, unchanged."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=UUID(int=0))
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID)
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_the_verdict_row_names_the_same_conduit_the_policy_was_evaluated_against() -> None:
+    """The row and the decision can never disagree about which conduit.
+
+    Resolution happens once, in `_effective_conduit_id`, and the SAME
+    value is threaded to both `decide_authorization` and `_emit_verdict`.
+    A resolver called twice (or a stale unresolved value reaching the
+    verdict write) could in principle diverge from what was evaluated;
+    this pins that they cannot.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=_TARGET_CONDUIT_ID)
+    await _seed_conduit_with_open_verdict_logbook(store)
+
+    verdicts = InMemoryVerdictStore()
+    authorize = TrustAuthorize(
+        store,
+        policy_id=_POLICY_ID,
+        verdict_store=verdicts,
+        clock=FakeClock(_OBS_NOW),
+        id_generator=FixedIdGenerator([_OBS_EVENT_ID]),
+        conduit_id=_TARGET_CONDUIT_ID,
+    )
+
+    # Caller passes nil; only the resolved conduit_id has an open logbook.
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+    rows = verdicts.all()
+    assert len(rows) == 1
+    assert rows[0].conduit_id == _TARGET_CONDUIT_ID
