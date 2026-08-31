@@ -278,7 +278,7 @@
 | src/cora/api/beamline\_staff\_seed.py                                                    |      108 |        3 |       16 |        0 |     97.6% |   233-235 |
 | src/cora/api/capture\_watch\_preflight.py                                                |      217 |        3 |       82 |        1 |     98.7% |534, 642-643 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/main.py                                                                     |      431 |        7 |       66 |        4 |     97.8% |394-\>393, 819-820, 1288-1300, 1491-\>1496, 1498-\>1501 |
+| src/cora/api/main.py                                                                     |      432 |        7 |       66 |        4 |     97.8% |430-\>429, 855-856, 1324-1336, 1527-\>1532, 1534-\>1537 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/pilot\_seed.py                                                              |      367 |       43 |       64 |       10 |     85.8% |308-313, 331-337, 347-348, 381-383, 426-427, 470-507, 572-573, 584-585, 662, 666, 678-679, 764-766, 936-966 |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
@@ -1497,7 +1497,7 @@
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/infrastructure/capture\_scan\_ingestor\_binding.py                              |       77 |        0 |       20 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |      400 |       11 |       76 |        6 |     96.4% |955, 1798-1802, 1885-1889, 1897-1901, 1910-1914, 2061-2066 |
+| src/cora/infrastructure/config.py                                                        |      401 |       11 |       76 |        6 |     96.4% |974, 1817-1821, 1904-1908, 1916-1920, 1929-1933, 2080-2085 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |      129 |        1 |       18 |        2 |     98.0% |1235, 1426-\>1422 |
 | src/cora/infrastructure/edge\_runtime.py                                                 |       16 |        0 |        0 |        0 |    100.0% |           |
@@ -2537,8 +2537,8 @@
 | src/cora/trust/aggregates/zone/evolver.py                                                |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/zone/read.py                                                   |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/zone/state.py                                                  |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/authorize.py                                                              |       65 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/trust/build\_authorize.py                                                       |       18 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/authorize.py                                                              |       76 |        0 |       20 |        0 |    100.0% |           |
+| src/cora/trust/build\_authorize.py                                                       |       21 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/trust/errors.py                                                                 |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/\_\_init\_\_.py                                                  |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/abort\_visit/\_\_init\_\_.py                                     |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -2717,7 +2717,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **62312** | **1392** | **9488** |  **425** | **97.3%** |           |
+| **TOTAL**                                                                                | **62328** | **1392** | **9492** |  **425** | **97.3%** |           |
 
 
 ## Setup coverage badge
