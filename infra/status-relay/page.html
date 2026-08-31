@@ -247,6 +247,15 @@
     fill: var(--cs-surface); pointer-events: none;
   }
   .cs-future { opacity: 0.25; }
+  /* The present, in a flowing window: a quiet dashed rule at the right edge
+     and nothing else. Green because that is what LIVE means on this page;
+     the alarm hue below belongs to REWIND's cursor, which is a control the
+     viewer drives rather than a fact about the record. */
+  .cs-now { stroke: var(--cs-good); stroke-width: 1.2; stroke-dasharray: 3 4; opacity: 0.75; }
+  .cs-now-label {
+    fill: var(--cs-good); font-family: var(--cs-mono); font-size: 8.5px;
+    letter-spacing: 0.14em; opacity: 0.9;
+  }
   .cs-cursor { stroke: var(--cs-alarm); stroke-width: 1.4; stroke-dasharray: 4 3; }
   .cs-cursor-handle { fill: var(--cs-alarm); stroke: var(--cs-surface); stroke-width: 1.2; }
   .cs-panels { display: grid; grid-template-columns: 1fr; gap: 0.7rem; margin-top: 0.6rem; }
@@ -571,7 +580,12 @@
   // update) and there is no single subject with a "current status" -- a
   // busy hour touches many Runs, many Decisions -- so every lane here is
   // read the same generic "last event" way, none of them primary.
-  var FLOWING_WINDOW_MS = 15 * 60 * 1000;
+  // How much record the page RETAINS, which since panning exists is no longer
+  // the same question as how much it shows. The relay backfills this much on
+  // connect (`_ACTIVITY_BUFFER_SECONDS`), so a viewer can drag back through a
+  // whole shift rather than through the last quarter hour. What is on screen
+  // at once is `flowing.viewSpanSecs`, chosen from the window picker.
+  var FLOWING_WINDOW_MS = 24 * 60 * 60 * 1000;
   // Sub-pixel per step at a 15-minute window (0.45 of a user unit), so the
   // right edge creeps rather than ticking, at half the rebuild cost of 250ms.
   var FLOWING_RESLIDE_MS = 500;
@@ -654,18 +668,30 @@
     DecisionDebriefRequested: 1,
   };
 
-  // How much of the buffer is on screen at once. The default is the whole
-  // buffer, which is exactly the behaviour before panning existed; anything
-  // narrower makes the chart a window you can drag through the retained 15
-  // minutes. Also sets how far a drag travels per pixel, so a narrow window
-  // pans slowly and precisely and a wide one covers ground.
-  var FLOWING_WINDOWS = [["2m", 120], ["5m", 300], ["15m", FLOWING_WINDOW_MS / 1000]];
+  // How much of the buffer is on screen at once, and therefore also how far a
+  // drag travels per pixel: a narrow window pans slowly and precisely, a wide
+  // one covers ground. Nothing here selects the whole 24 hours, because 812
+  // plot units over a day is about 106 seconds each and every burst would
+  // collapse into one pill; a day is something to drag THROUGH, not to look
+  // at. 15m stays the default, which is what the page showed before it could
+  // pan at all.
+  var FLOWING_WINDOWS = [
+    ["2m", 120],
+    ["5m", 300],
+    ["15m", 900],
+    ["1h", 3600],
+    ["6h", 6 * 3600],
+  ];
 
   var flowing = {
     buffer: [],
     following: true,
     pausedAtMs: 0,
-    viewSpanSecs: FLOWING_WINDOW_MS / 1000,
+    viewSpanSecs: 900,
+    // Set from the relay's replay when its own cap dropped events. The left
+    // edge then does not mean "nothing happened before this", and the page
+    // has to say which of the two it is.
+    replayTruncated: false,
   };
   var flowingStageEl = document.getElementById("flowing-stage");
   var flowingResumeEl = document.getElementById("flowing-resume");
@@ -706,12 +732,20 @@
         cause_at: e.cause_occurred_at,
       });
     });
+    var retainedHours = Math.round(FLOWING_WINDOW_MS / 3600000);
     var subtitle =
-      buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 15m";
+      buffer.length +
+      " event" +
+      (buffer.length === 1 ? "" : "s") +
+      " retained over " +
+      retainedHours +
+      "h";
     // A "run started here" cue without the cost of a track per run. It counts
     // only starts INSIDE the window: a run already under way when the window
     // opened emitted its RunStarted before the buffer began and is invisible
     // here, the same blind spot the flowing view has for anything older.
+    var note = retentionNote(buffer);
+    if (note) subtitle += " \u00b7 " + note;
     if (runStarts > 0) {
       subtitle += " · " + runStarts + " run" + (runStarts === 1 ? "" : "s") + " started";
     }
@@ -733,6 +767,27 @@
         return lanesByDomain[key];
       }),
     };
+  }
+
+  // What the left edge of the buffer actually means. Panning into empty space
+  // looks exactly like a quiet beamline, so the page says which it is rather
+  // than letting the absence speak. Reported in the subtitle because that is
+  // the one line always on screen no matter where the chart is panned.
+  function retentionNote(buffer) {
+    if (flowing.replayTruncated) return "relay buffer capped, earlier events dropped";
+    if (buffer.length === 0) return "";
+    var oldest = Infinity;
+    buffer.forEach(function (e) {
+      var t = Date.parse(e.occurred_at);
+      if (t < oldest) oldest = t;
+    });
+    var ageMin = Math.round((Date.now() - oldest) / 60000);
+    // Comfortably short of the retention window means the relay has not been
+    // up long enough to fill it, so there is nothing older to pan to.
+    if (ageMin < FLOWING_WINDOW_MS / 60000 - 30) {
+      return "nothing retained before " + ageMin + "m ago";
+    }
+    return "";
   }
 
   function updateFlowingStatus() {
@@ -786,12 +841,27 @@
   }
   renderFlowingWindowPicker();
 
+  // The domain starts at the oldest event actually held, not a flat 24 hours
+  // back. A relay that came up ten minutes ago holds ten minutes; letting the
+  // domain claim a day would let a viewer drag through 23 hours of blank
+  // chart, which is indistinguishable from a beamline that sat idle all
+  // night. Never later than the view span, or there is nothing to pan.
+  function flowingDomainStartMs(nowMs) {
+    var floor = nowMs - FLOWING_WINDOW_MS;
+    var oldest = nowMs - flowing.viewSpanSecs * 1000;
+    flowing.buffer.forEach(function (e) {
+      var t = Date.parse(e.occurred_at);
+      if (t >= floor && t < oldest) oldest = t;
+    });
+    return Math.max(floor, oldest);
+  }
+
   function renderFlowing() {
     var nowMs = Date.now();
     pruneFlowingBuffer(nowMs);
     var doc = activityToTimelineDocument(
       flowing.buffer,
-      new Date(nowMs - FLOWING_WINDOW_MS).toISOString(),
+      new Date(flowingDomainStartMs(nowMs)).toISOString(),
       new Date(nowMs).toISOString()
     );
     window.CoraScrubber.mount(flowingStageEl, doc, {
@@ -799,12 +869,6 @@
       subtitle: doc.subtitle,
       viewSpanSecs: flowing.viewSpanSecs,
       follow: true,
-      // The fold cursor stays parked at the live edge. In a flowing window it
-      // marks the present, which is a fixed place; letting the pointer move it
-      // put a dashed rule across every lane between the viewer and the event
-      // they were reaching for. REWIND leaves this on, because there moving
-      // the cursor to read the state at a time IS the interaction.
-      cursorFollowsPointer: false,
       showPlay: false,
       showJumpLast: false,
       onScrub: pauseFollowing,
@@ -814,6 +878,7 @@
 
   function handleActivity(msg) {
     var events = msg.events || [];
+    if (msg.replay_truncated) flowing.replayTruncated = true;
     if (events.length === 0) return;
     flowing.buffer = flowing.buffer.concat(events);
     pruneFlowingBuffer(Date.now());

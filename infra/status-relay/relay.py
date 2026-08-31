@@ -131,7 +131,7 @@ round-trip on a `/run-history/<id>` cache miss -- never exceeds it.
 Exceeding `open_timeout` aborts the TCP handshake with no HTTP response
 at all, turning a legitimate 504 into an unexplained `Failed to fetch`."""
 
-_ACTIVITY_BUFFER_SECONDS = 15 * 60
+_ACTIVITY_BUFFER_SECONDS = 24 * 60 * 60
 """How long this relay backfills a freshly-connecting watcher with recent
 `"activity"` events, mirroring `page.html`'s own `FLOWING_WINDOW_MS`: a
 separate literal, not a shared constant, since this relay imports nothing
@@ -141,6 +141,22 @@ direction that this value should be >= the browser's own window --
 buffering less would leave a visible gap on reconnect, buffering more is
 harmless since the browser prunes anything older than its own window on
 receipt (`pruneFlowingBuffer`)."""
+
+_ACTIVITY_BUFFER_MAX_EVENTS = 40_000
+"""Hard ceiling on buffered events, independent of their age. At the measured
+2-BM rate (228 events in the busiest hour) a day is roughly 5,500 events, so
+this is about seven times the expected peak and exists for the case the
+measurement does not cover: a backfill, a migration, or any burst that would
+otherwise let one day of wall-clock consume unbounded memory on the jump host
+and arrive at a browser as one enormous replay message. When it bites, the
+OLDEST events are dropped and `_activity_buffer_truncated` says so, because a
+buffer that silently starts later than it claims makes a busy morning look
+like a quiet one."""
+
+_activity_buffer_truncated = False
+"""Whether the event cap has ever dropped anything this process. Reported to
+watchers in the replay message: absent data must not read as an absence of
+activity."""
 
 _PAGE_PATH = Path(__file__).parent / "page.html"
 _SCRUBBER_JS_PATH = Path(__file__).parent / "scrubber.js"
@@ -268,8 +284,13 @@ def _store_enclosure_timeline(message: dict[str, Any]) -> None:
 
 def _prune_activity_buffer() -> None:
     cutoff = datetime.now(UTC).timestamp() - _ACTIVITY_BUFFER_SECONDS
-    global _activity_buffer  # noqa: PLW0603
+    global _activity_buffer, _activity_buffer_truncated  # noqa: PLW0603
     _activity_buffer = [event for event in _activity_buffer if _event_epoch(event) >= cutoff]
+    if len(_activity_buffer) > _ACTIVITY_BUFFER_MAX_EVENTS:
+        dropped = len(_activity_buffer) - _ACTIVITY_BUFFER_MAX_EVENTS
+        _activity_buffer = _activity_buffer[-_ACTIVITY_BUFFER_MAX_EVENTS:]
+        _activity_buffer_truncated = True
+        _log.warning("activity_buffer.capped", extra={"dropped": dropped})
 
 
 def _event_epoch(event: dict[str, Any]) -> float:
@@ -309,6 +330,11 @@ def _activity_replay_message() -> dict[str, Any] | None:
         "producer_id": _producer_id,
         "generated_at": datetime.now(UTC).isoformat(),
         "events": list(_activity_buffer),
+        # Only ever sent on a replay, and only true when something was
+        # actually dropped: a watcher that panned to the left edge would
+        # otherwise read the start of this buffer as the start of the record.
+        "replay_truncated": _activity_buffer_truncated,
+        "retained_seconds": _ACTIVITY_BUFFER_SECONDS,
     }
 
 

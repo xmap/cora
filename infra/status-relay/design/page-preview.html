@@ -90,10 +90,20 @@
     return out;
   }
 
+  // A full retention window, at the measured 2-BM shape: 228 events in the
+  // busiest hour, quieter overnight. This is the load the relay now replays
+  // on connect and the page then holds, so the preview has to carry it or the
+  // only thing ever exercised is the fifteen minutes the page used to keep.
   function backlog() {
     const events = [];
-    for (let t = NOW - 14 * 60 * 1000; t < NOW; t += 8000 + rnd() * 25000) {
-      events.push(...burst(t));
+    const span = 24 * 60 * 60 * 1000;
+    for (let t = NOW - span; t < NOW; ) {
+      // Hour of day drives the rate: a beamline runs hot in shift hours and
+      // ticks over between them.
+      const hour = new Date(t).getHours();
+      const busy = hour >= 8 && hour < 22;
+      t += (busy ? 8000 : 40000) + rnd() * (busy ? 25000 : 90000);
+      if (t < NOW) events.push(...burst(t));
     }
     return events;
   }

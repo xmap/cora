@@ -258,6 +258,15 @@
       lanes,
       primaryLane,
       omittedSeries,
+      // A FLOWING window and a CLOSED history want opposite things at the
+      // right edge, and the document already knows which it is. Live: a rule
+      // marking the present, and no roaming cursor -- there is no "state at a
+      // time you point at" to read, only what is current. Closed: a fold
+      // cursor the viewer drives, and no live rule, because nothing about that
+      // document is live. Deriving it here rather than from a caller option
+      // means every mount agrees, including the dev harness, which had been
+      // getting the roaming cursor because it never passed the flag.
+      live: !!doc.live,
       byId,
       childrenOf,
       // Whether this document carries causation AT ALL. A REWIND run history
@@ -469,17 +478,29 @@
     // Focusable and slider-shaped: the value it announces is the fold cursor's
     // clock time, which `setCursor` keeps in `aria-valuetext`. This replaces
     // the separate slider element that used to be the only keyboard route.
+    // Slider semantics only where there is a value to move. A live window has
+    // no cursor to announce, so claiming a slider role would promise a control
+    // that is not there.
     const g = svg("svg", {
       viewBox: `0 0 ${VW} ${vh}`,
       class: "cora-scrubber__svg",
       tabindex: "0",
-      role: "slider",
-      "aria-label":
-        "Timeline. Arrows move the fold cursor, comma and period step between events, " +
-        "shift with arrows pans, Enter pins the nearest event.",
-      "aria-valuemin": "0",
-      "aria-valuemax": String(Math.round(model.xmax)),
-      "aria-valuenow": "0",
+      ...(model.live
+        ? {
+            role: "group",
+            "aria-label":
+              "Live activity timeline. Comma and period step between events, arrows pan, " +
+              "Escape releases a pinned event.",
+          }
+        : {
+            role: "slider",
+            "aria-label":
+              "Timeline. Arrows move the fold cursor, comma and period step between events, " +
+              "shift with arrows pans, Enter pins the nearest event.",
+            "aria-valuemin": "0",
+            "aria-valuemax": String(Math.round(model.xmax)),
+            "aria-valuenow": "0",
+          }),
     });
 
     const laneY = new Map();
@@ -722,36 +743,55 @@
       axisRow.appendChild(lab);
     }
 
-    // There is no LIVE rule any more. The right edge of a flowing window is
-    // the present by construction, and the clock ticks say which instant that
-    // is; panned into the past the same edge is just wherever the viewer
-    // stopped. The rule was therefore either redundant or wrong, never in
-    // between, and it cost a dashed line across every lane to say so.
-
     if (focus) renderChainEdges(plot, model, focus, pointPos, scale);
 
-    // The cursor marks an INSTANT, so it belongs to the pannable group and
-    // travels with the events it sits between.
-    const cursorLine = svg("line", {
-      x1: X(0),
-      y1: LANE_START - 14,
-      x2: X(0),
-      y2: axisY,
-      class: "cs-cursor",
-    });
-    plot.appendChild(cursorLine);
-    const handle = svg("polygon", { points: "0,-9 7,0 0,9 -7,0", class: "cs-cursor-handle" });
-    handle.setAttribute("transform", `translate(${X(0)} ${axisY})`);
-    plot.appendChild(handle);
+    // Both mark an INSTANT, so both belong to the pannable group and travel
+    // with the events they sit between. Only one is ever drawn.
+    let cursorLine = null;
+    let handle = null;
+    if (model.live) {
+      // The present. Drawn only when the view actually reaches it: panned into
+      // the past the right edge is just wherever the viewer stopped, and
+      // labelling that LIVE would be a lie, so the rule leaves rather than
+      // following the edge.
+      if (model.xmax >= scale.bmin && model.xmax <= scale.bmax) {
+        const lx = X(model.xmax);
+        plot.appendChild(
+          svg("line", { x1: lx, y1: LANE_START - 18, x2: lx, y2: axisY, class: "cs-now" })
+        );
+        const lab = svg("text", {
+          x: lx - 5,
+          y: LANE_START - 22,
+          class: "cs-now-label",
+          "text-anchor": "end",
+        });
+        lab.textContent = "LIVE";
+        plot.appendChild(lab);
+      }
+    } else {
+      cursorLine = svg("line", {
+        x1: X(0),
+        y1: LANE_START - 14,
+        x2: X(0),
+        y2: axisY,
+        class: "cs-cursor",
+      });
+      plot.appendChild(cursorLine);
+      handle = svg("polygon", { points: "0,-9 7,0 0,9 -7,0", class: "cs-cursor-handle" });
+      handle.setAttribute("transform", `translate(${X(0)} ${axisY})`);
+      plot.appendChild(handle);
+    }
 
     return { g, setPan, X, axisY, timed, cursorLine, handle, selectable };
   }
 
   function applyFold(model, scene, cursor) {
     const X = scene.X;
-    scene.cursorLine.setAttribute("x1", X(cursor));
-    scene.cursorLine.setAttribute("x2", X(cursor));
-    scene.handle.setAttribute("transform", `translate(${X(cursor)} ${scene.axisY})`);
+    if (scene.cursorLine) {
+      scene.cursorLine.setAttribute("x1", X(cursor));
+      scene.cursorLine.setAttribute("x2", X(cursor));
+      scene.handle.setAttribute("transform", `translate(${X(cursor)} ${scene.axisY})`);
+    }
     for (const { el, t } of scene.timed) {
       el.classList.toggle("cs-future", t > cursor + 1e-6);
     }
@@ -941,8 +981,10 @@
       applyFold(model, scene, state.cursor);
       const folded = foldTo(model, state.cursor);
       renderReadout(root, model, folded, model.t0, state.cursor, state.pinned);
-      svgEl.setAttribute("aria-valuenow", String(Math.round(state.cursor)));
-      svgEl.setAttribute("aria-valuetext", fmtClock(model.t0, state.cursor));
+      if (!model.live) {
+        svgEl.setAttribute("aria-valuenow", String(Math.round(state.cursor)));
+        svgEl.setAttribute("aria-valuetext", fmtClock(model.t0, state.cursor));
+      }
     };
     state.setCursor = setCursor;
 
@@ -1014,7 +1056,7 @@
       // avoid, and the card plus the panel's pinned rows already say which
       // event it is. `state.setCursor` and not this closure's, because
       // refocus() above replaced the scene the local one writes to.
-      if (opts.cursorFollowsPointer !== false) state.setCursor(cluster.items[0].secs);
+      if (!model.live) state.setCursor(cluster.items[0].secs);
     };
     state.setSelection = setSelection;
 
@@ -1103,7 +1145,7 @@
       // In a flowing window it stays parked at the live edge: a dashed rule
       // roaming across every lane is one more thing between the pointer and
       // the event it is trying to reach.
-      if (cluster || opts.cursorFollowsPointer === false) return;
+      if (cluster || model.live) return;
       setCursor(secsFromEvent(e.clientX));
     });
     svgEl.addEventListener("pointerleave", () => {
@@ -1128,7 +1170,21 @@
       // events, which is the only way to reach a mark without hunting.
       if (e.key === "," || e.key === ".") {
         e.preventDefault();
-        const step = stepToAdjacentPoint(model, state.cursor, e.key === "." ? 1 : -1);
+        const dir = e.key === "." ? 1 : -1;
+        if (model.live) {
+          // No cursor to walk, so step the SELECTION: the ring and the card
+          // are then what say where the keyboard is, which is more than an
+          // invisible caret ever said.
+          const from = state.selected ? state.selected.items[0].secs : dir > 0 ? -1 : model.xmax + 1;
+          const next = stepToAdjacentPoint(model, from, dir);
+          if (next === null) return;
+          notifyScrub();
+          state.reveal(next);
+          const near = nearestCluster(scene, next);
+          if (near) setSelection(near);
+          return;
+        }
+        const step = stepToAdjacentPoint(model, state.cursor, dir);
         if (step !== null) {
           notifyScrub();
           setSelection(null);
@@ -1139,6 +1195,7 @@
       }
       if (e.key === "Enter") {
         e.preventDefault();
+        if (model.live) return;
         const near = nearestCluster(scene, state.cursor);
         if (near) setSelection(near);
         return;
@@ -1150,6 +1207,20 @@
         return;
       }
       const panBy = { PageDown: -span, PageUp: span };
+      if (model.live && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        if (!state.canPan) return;
+        notifyScrub();
+        state.panTo(state.view.from + (e.key === "ArrowRight" ? span / 4 : -span / 4));
+        return;
+      }
+      if (model.live && (e.key === "Home" || e.key === "End")) {
+        e.preventDefault();
+        if (!state.canPan) return;
+        notifyScrub();
+        state.panTo(e.key === "Home" ? 0 : model.xmax);
+        return;
+      }
       if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();
         if (!state.canPan) return;
@@ -1350,16 +1421,21 @@
           <div class="cs-controls">${controlsHtml}</div>
         </div>
         <div class="cs-stage"><div class="cs-tip" data-on="0" aria-hidden="true"></div></div>
-        <div class="cs-hint">
-          Hover an event for its relations &middot; drag to pan &middot; click to pin &middot;
-          <kbd>&larr;</kbd><kbd>&rarr;</kbd> cursor,
-          <kbd>shift</kbd> to pan, <kbd>,</kbd><kbd>.</kbd> step events,
-          <kbd>enter</kbd> pin
-        </div>
+        <div class="cs-hint">${
+          opts.live
+            ? "Hover an event for its relations &middot; drag to pan &middot; click to pin &middot; " +
+              "<kbd>&larr;</kbd><kbd>&rarr;</kbd> pan, <kbd>,</kbd><kbd>.</kbd> step events, " +
+              "<kbd>esc</kbd> release"
+            : "Hover an event for its relations &middot; drag to pan &middot; click to pin &middot; " +
+              "<kbd>&larr;</kbd><kbd>&rarr;</kbd> cursor, <kbd>shift</kbd> to pan, " +
+              "<kbd>,</kbd><kbd>.</kbd> step events, <kbd>enter</kbd> pin"
+        }</div>
         ${note}
         <div class="cs-panels">
           <div class="cs-readout">
-            <div class="cs-readout-head">Folded state at cursor</div>
+            <div class="cs-readout-head">${
+              opts.live ? "Current state" : "Folded state at cursor"
+            }</div>
             <div class="cs-readout-body"></div>
           </div>
         </div>
@@ -1400,6 +1476,7 @@
     scaffold(root, model, {
       chromeTitle: opts.chromeTitle || "Timeline",
       subtitle,
+      live: model.live,
       showPlay: opts.showPlay,
       showJumpLast: opts.showJumpLast,
       jumpLabel: opts.jumpLabel,
