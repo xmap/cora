@@ -113,9 +113,19 @@ They are **not** in the verdict logbook, and that is worth stating because the d
 gate writes one `Verdict` row per decision to the logbook of the Conduit the command traversed, and the row is
 skipped when that Conduit has none open. This deployment has no Conduit streams at all, and every handler
 routes through the nil sentinel, so no verdict row can be written for any decision, shadowed or enforced. The
-`trust_authorize.verdict_log_dormant` boot warning exists to say so. Until Conduit injection is wired, the
-authorization record lives in the log rather than in the record, which is a real gap in a system whose claim is
-that the record is the artifact.
+`trust_authorize.verdict_log_dormant` boot warning exists to say so. Until this deployment opts in to the fix
+below, the authorization record lives in the log rather than in the record, which is a real gap in a system
+whose claim is that the record is the artifact.
+
+**The fix now exists in code, and 2-BM has not adopted it yet.** A forward-only migration seeds a `SYSTEM_LOCAL_ZONE_ID` /
+`SYSTEM_LOCAL_CONDUIT_ID` pair with an open verdict logbook, and `Settings.trust_conduit_id` lets a deployment
+resolve every handler's UNSPECIFIED (nil-sentinel) `conduit_id` to that one Conduit, so the Verdict row and the
+Policy evaluation always describe the same conduit. Two boot guards refuse a misconfiguration that would look
+wired and populate nothing: the configured Conduit missing or logbook-less, or the configured Policy governing
+a different Conduit than `trust_conduit_id` names. Adopting it at 2-BM is a separate, deliberate step: re-define
+the starter Policy bound to `SYSTEM_LOCAL_CONDUIT_ID` instead of the nil conduit, set `TRUST_CONDUIT_ID`, and
+restart. Left for a follow-up rather than folded into this rollout, so the shadow inventory already accumulating
+is not interrupted by another restart.
 
 ## Rollback
 

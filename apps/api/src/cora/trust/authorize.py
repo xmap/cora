@@ -35,13 +35,26 @@ to one conduit naturally denies calls on another via evaluate's
 existing conduit-mismatch check.
 
 Operational consequence: deployments wire `Settings.trust_policy_id`
-to a Policy whose `conduit_id` matches what handlers pass. Today
-every handler passes `UUID(int=0)` (nil sentinel; surface-level
-conduit injection is the next step), so the gating policy must use
-`conduit_id=UUID(int=0)`. Once HTTP / MCP / A2A surfaces start
-injecting their own conduit_ids, deployments will define one Policy
-per conduit (single-policy-per-deployment shape stays; the operator
-picks which conduit to gate first, others fall through to deny).
+to a Policy whose `conduit_id` matches what handlers pass. Every
+handler passes `UUID(int=0)` (nil sentinel; the ~180-call-site sweep
+that would let a handler pass a real conduit_id of its own is
+deferred, per `project_conduit_injection_design.md` WI10, until a
+real multi-zone need exists), so the gating policy must use
+`conduit_id=UUID(int=0)` unless a deployment configures
+`Settings.trust_conduit_id`.
+
+`trust_conduit_id` resolves the UNSPECIFIED case: when the caller
+passes the nil sentinel AND a conduit is configured, that conduit is
+used for both the Policy evaluation and the Verdict write, never one
+without the other, so the row that gets written can never disagree
+with the decision that produced it (`_effective_conduit_id` is the
+single place this is decided). A caller that passes a real,
+non-nil conduit_id of its own is never overridden — configuration is
+a default for "unspecified", not an override for "specified". Once
+HTTP / MCP / A2A surfaces start injecting their own conduit_ids,
+deployments will define one Policy per conduit (single-policy-per-
+deployment shape stays; the operator picks which conduit to gate
+first, others fall through to deny).
 
 ## Bootstrap problem (closed)
 
@@ -160,6 +173,7 @@ class TrustAuthorize:
         liveness_lookup: PrincipalLivenessLookup | None = None,
         liveness_enforced: bool = False,
         policy_enforced: bool = True,
+        conduit_id: UUID | None = None,
     ) -> None:
         if liveness_enforced and liveness_lookup is None:
             msg = "TrustAuthorize: liveness_enforced requires a liveness_lookup to be wired"
@@ -169,6 +183,11 @@ class TrustAuthorize:
             raise ValueError(msg)
         self._event_store = event_store
         self._policy_id = policy_id
+        # The configured conduit a caller's UNSPECIFIED (nil) conduit_id
+        # resolves to. None leaves every caller's conduit_id exactly as
+        # passed, which for every handler today means nil — today's
+        # behaviour, unchanged. See `_effective_conduit_id`.
+        self._conduit_id = conduit_id
         # Defaults to True so that adding this knob cannot weaken a
         # deployment that already gates: an existing config that sets
         # `trust_policy_id` and nothing else keeps enforcing exactly as it
@@ -249,6 +268,26 @@ class TrustAuthorize:
             )
         return liveness if self._liveness_enforced else None
 
+    def _effective_conduit_id(self, conduit_id: UUID) -> UUID:
+        """Resolve an UNSPECIFIED conduit_id to the configured one.
+
+        Called exactly once per `authorize()` call, and the single result
+        feeds BOTH the Policy evaluation and the Verdict write below, so
+        the two can never disagree about which conduit a command
+        traversed -- the row that gets written always describes the
+        conduit the decision was actually evaluated against.
+
+        `NIL_SENTINEL_ID` is documented (`infrastructure.routing`) as
+        meaning "unspecified", not "none", so resolving it to the
+        deployment's one configured conduit is a default for the
+        unspecified case, not a fabrication. A caller that already
+        passes a real, non-nil conduit_id is never overridden -- this
+        only fills in what the caller left blank.
+        """
+        if self._conduit_id is not None and conduit_id == NIL_SENTINEL_ID:
+            return self._conduit_id
+        return conduit_id
+
     async def authorize(
         self,
         principal_id: UUID,
@@ -256,6 +295,7 @@ class TrustAuthorize:
         conduit_id: UUID,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> AuthzResult:
+        conduit_id = self._effective_conduit_id(conduit_id)
         liveness = await self._resolve_liveness(principal_id, command_name)
         policy = await load_policy(self._event_store, self._policy_id)
         if policy is None:
@@ -274,10 +314,11 @@ class TrustAuthorize:
                 )
             )
         else:
-            # Forward caller's conduit_id (was policy.conduit_id previously).
-            # evaluate's conduit-mismatch check now meaningfully
-            # gates calls — a policy bound to one conduit denies calls on
-            # another instead of being evaluated as if it were governing.
+            # Forward the EFFECTIVE conduit_id (was policy.conduit_id
+            # previously). evaluate's conduit-mismatch check now
+            # meaningfully gates calls — a policy bound to one conduit
+            # denies calls on another instead of being evaluated as if
+            # it were governing.
             # Forward surface_id; defaults to nil where the route
             # layer hasn't been swept to inject the real Surface ID.
             result = decide_authorization(

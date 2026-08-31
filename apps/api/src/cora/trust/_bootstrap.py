@@ -14,6 +14,7 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.routing import (
     NIL_SENTINEL_ID,
     SYSTEM_HTTP_SURFACE_ID,
+    SYSTEM_LOCAL_CONDUIT_ID,
     SYSTEM_MCP_STDIO_SURFACE_ID,
     SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID,
     SYSTEM_PRINCIPAL_ID,
@@ -120,14 +121,14 @@ async def warn_if_verdict_log_dormant(deps: Kernel) -> None:
     per-Conduit Verdict audit log cannot populate.
 
     `TrustAuthorize` writes a Verdict row per decision only when the
-    conduit a command flows through has an open verdict logbook. Handlers
-    currently route every command through the nil-sentinel conduit
-    (surface / conduit injection is not wired yet), and no verdict
-    logbook is seeded there, so the audit log silently stays empty even
-    with enforcement on. Surfacing it here turns a silent gap into a
-    boot-time heads-up rather than a discovery during a compliance audit.
-    Authz decisions are still captured in structured logs
-    (`trust_authorize.allow` / `trust_authorize.deny`) and OTel spans.
+    conduit a command flows through has an open verdict logbook. Checks
+    the EFFECTIVE conduit — `settings.trust_conduit_id` when an operator
+    has opted in, the nil sentinel otherwise (every handler still passes
+    nil; `TrustAuthorize` resolves it to the configured conduit only when
+    the caller passed nil, per `authorize.py`'s `_effective_conduit_id`).
+    An operator who has run `verify_local_conduit_seed_present` and
+    pointed `trust_conduit_id` at a seeded, logbook-open Conduit sees no
+    warning here, because there is nothing dormant to report.
 
     Non-fatal by design: a known-limitation notice, not a misconfig. When
     `trust_policy_id` is unset (AllowAll) there are no decisions to record
@@ -137,32 +138,116 @@ async def warn_if_verdict_log_dormant(deps: Kernel) -> None:
     if settings.trust_policy_id is None:
         return
 
-    conduit = await load_conduit(deps.event_store, NIL_SENTINEL_ID)
+    effective_conduit_id = settings.trust_conduit_id or NIL_SENTINEL_ID
+    conduit = await load_conduit(deps.event_store, effective_conduit_id)
     if conduit is not None and conduit.logbooks.get(LOGBOOK_KIND_VERDICT) is not None:
         return
 
     _log.warning(
         "trust_authorize.verdict_log_dormant",
         trust_policy_id=str(settings.trust_policy_id),
-        conduit_id=str(NIL_SENTINEL_ID),
+        conduit_id=str(effective_conduit_id),
         detail=(
             "Authorization is ENFORCED but the per-Conduit Verdict audit log "
-            "will NOT populate: handlers route through the nil-sentinel "
-            "conduit, which has no open verdict logbook (conduit injection is "
-            "not wired yet). Authz decisions are still recorded in structured "
-            "logs (trust_authorize.allow / trust_authorize.deny) and OTel "
-            "spans. See memory project_authorization_envelope_design (watch "
-            "item 6) + project_conduit_injection_design."
+            "will NOT populate: commands traverse the nil-sentinel conduit, "
+            "which has no open verdict logbook. Set `trust_conduit_id` to "
+            "SYSTEM_LOCAL_CONDUIT_ID (seeded by "
+            "20260831140000_seed_local_zone_conduit_verdict_logbook.sql) to "
+            "populate entries_conduit_verdicts. Authz decisions are still "
+            "recorded in structured logs (trust_authorize.allow / "
+            "trust_authorize.deny) and OTel spans. See memory "
+            "project_authorization_envelope_design (watch item 6) + "
+            "project_conduit_injection_design."
         ),
     )
+
+
+async def verify_local_conduit_seed_present(deps: Kernel) -> None:
+    """Fail-fast at lifespan start when `trust_conduit_id` is configured
+    but the Conduit it names cannot actually populate the verdict log.
+
+    Same failure this whole area keeps re-learning: asking for an audit
+    control and silently not getting one. Two ways that happens here —
+    the Conduit stream is missing, or it exists with no open `verdict`
+    logbook — and both are checked. No-op when `trust_conduit_id` is
+    unset (today's default; every deployment behaves exactly as before).
+    """
+    settings = deps.settings
+    if settings.trust_conduit_id is None:
+        return
+
+    conduit = await load_conduit(deps.event_store, settings.trust_conduit_id)
+    if conduit is None:
+        hint = (
+            "Re-run `make migrate-apply` — "
+            "20260831140000_seed_local_zone_conduit_verdict_logbook.sql is "
+            "idempotent (ON CONFLICT DO NOTHING) and safe to re-apply."
+            if settings.trust_conduit_id == SYSTEM_LOCAL_CONDUIT_ID
+            else "A custom Conduit must be defined via `POST /conduits` first."
+        )
+        msg = (
+            f"trust_conduit_id={settings.trust_conduit_id} is configured but "
+            f"no Conduit stream exists at that id. {hint}"
+        )
+        raise RuntimeError(msg)
+
+    if conduit.logbooks.get(LOGBOOK_KIND_VERDICT) is None:
+        msg = (
+            f"trust_conduit_id={settings.trust_conduit_id} is configured and "
+            "the Conduit exists, but it has no open verdict logbook, so "
+            "TrustAuthorize would resolve to this conduit and still write "
+            "nothing to entries_conduit_verdicts. `define_conduit` opens one "
+            "automatically for a Conduit created through the API; a hand-"
+            "seeded Conduit must include a ConduitLogbookOpened(kind="
+            f"{LOGBOOK_KIND_VERDICT!r}) event."
+        )
+        raise RuntimeError(msg)
+
+
+async def verify_local_conduit_matches_policy(deps: Kernel) -> None:
+    """Fail-fast when `trust_conduit_id` and `trust_policy_id` are both
+    set but the configured Policy governs a different Conduit.
+
+    `Policy.evaluate` checks conduit before surface or principal
+    (`aggregates/policy/state.py`), so a mismatch here denies EVERY
+    command the instant `trust_conduit_id` starts being resolved — not a
+    narrowing of what the policy permits, a silent lockout of the whole
+    deployment. Existing nil-bound bootstrap/operator policies keep
+    working unmigrated as long as this stays unset; this guard is what
+    makes leaving them unmigrated safe rather than an oversight.
+    """
+    settings = deps.settings
+    if settings.trust_conduit_id is None or settings.trust_policy_id is None:
+        return
+
+    policy = await load_policy(deps.event_store, settings.trust_policy_id)
+    if policy is None:
+        # verify_bootstrap_seed_present (or an operator's own responsibility
+        # for a custom policy) already covers a missing policy stream.
+        return
+
+    if policy.conduit_id != settings.trust_conduit_id:
+        msg = (
+            f"trust_conduit_id={settings.trust_conduit_id} is configured but "
+            f"trust_policy_id={settings.trust_policy_id} governs conduit "
+            f"{policy.conduit_id}, a different one. Every command would be "
+            "denied at the conduit check, before principal or command are "
+            "even consulted. Re-define the policy bound to "
+            f"{settings.trust_conduit_id}, or point trust_conduit_id at "
+            f"{policy.conduit_id} instead."
+        )
+        raise RuntimeError(msg)
 
 
 __all__ = [
     "SYSTEM_BOOTSTRAP_POLICY_ID",
     "SYSTEM_HTTP_SURFACE_ID",
+    "SYSTEM_LOCAL_CONDUIT_ID",
     "SYSTEM_MCP_STDIO_SURFACE_ID",
     "SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID",
     "SYSTEM_PRINCIPAL_ID",
     "verify_bootstrap_seed_present",
+    "verify_local_conduit_matches_policy",
+    "verify_local_conduit_seed_present",
     "warn_if_verdict_log_dormant",
 ]

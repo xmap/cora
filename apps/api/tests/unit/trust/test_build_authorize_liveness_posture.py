@@ -28,6 +28,7 @@ from cora.infrastructure.ports import (
 )
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.build_authorize import build_authorize
+from tests._authz import seed_policy
 
 _POLICY_ID = UUID("01900000-0000-7000-8000-000000000601")
 
@@ -125,6 +126,51 @@ async def test_enforce_is_the_default_posture() -> None:
 @pytest.mark.unit
 async def test_shadow_posture_reaches_the_adapter() -> None:
     authorize = _build(_settings(trust_policy_id=_POLICY_ID, policy_posture="shadow"))
+    assert isinstance(authorize, TrustAuthorize)
+
+    result = await authorize.authorize(_POLICY_ID, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+
+
+# --- trust_conduit_id wiring --------------------------------------------
+
+
+@pytest.mark.unit
+def test_trust_conduit_id_without_a_policy_id_is_refused_at_boot() -> None:
+    """Same shape as the shadow-without-a-policy guard, and for the same
+    reason: AllowAllAuthorize is returned below and never constructed with
+    a conduit_id, so a configured conduit with nothing to gate would be
+    read by nothing -- not one Verdict row would be written."""
+    with pytest.raises(ValueError, match="trust_conduit_id is configured but has no effect"):
+        _build(_settings(trust_policy_id=None, trust_conduit_id=_POLICY_ID))
+
+
+@pytest.mark.unit
+async def test_trust_conduit_id_reaches_the_adapter() -> None:
+    """Wired through so an unspecified conduit_id resolves at the adapter.
+
+    Asserted through a real resolution, never a private attribute: the
+    policy is bound to a real conduit and the caller passes nil. That
+    only allows if `build_authorize` actually forwarded `trust_conduit_id`
+    to `TrustAuthorize.__init__`.
+    """
+    store = InMemoryEventStore()
+    conduit_id = UUID("01900000-0000-7000-8000-000000000702")
+    await seed_policy(
+        store,
+        policy_id=_POLICY_ID,
+        permitted_principal_ids=[_POLICY_ID],
+        permitted_commands=["RegisterActor"],
+        conduit_id=conduit_id,
+    )
+    authorize = build_authorize(
+        _settings(trust_policy_id=_POLICY_ID, trust_conduit_id=conduit_id),
+        store,
+        pool=None,
+        clock=FakeClock(datetime(2026, 5, 9, 12, 0, 0, tzinfo=UTC)),
+        id_generator=FixedIdGenerator([]),
+    )
     assert isinstance(authorize, TrustAuthorize)
 
     result = await authorize.authorize(_POLICY_ID, "RegisterActor", UUID(int=0))

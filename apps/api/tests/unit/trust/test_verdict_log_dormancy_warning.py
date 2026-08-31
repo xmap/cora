@@ -101,3 +101,78 @@ async def test_no_warning_when_nil_conduit_has_open_verdict_logbook() -> None:
     with structlog.testing.capture_logs() as logs:
         await warn_if_verdict_log_dormant(deps)
     assert not _warned(logs)
+
+
+# --- checks the EFFECTIVE conduit, not always the nil sentinel ----------
+#
+# `trust_conduit_id` lets an operator opt a deployment into a populated
+# verdict log without sweeping every call site. Once opted in, this check
+# must follow that configured conduit rather than continuing to ask about
+# nil -- otherwise a correctly-wired deployment would get a false alarm,
+# or a misconfigured one would get false reassurance.
+
+_CONFIGURED_CONDUIT_ID = UUID("01900000-0000-7000-8000-0000000000d3")
+
+
+async def _seed_conduit_with_open_verdict_logbook(
+    store: InMemoryEventStore, conduit_id: UUID
+) -> None:
+    defined = ConduitDefined(
+        conduit_id=conduit_id,
+        name="Configured conduit",
+        source_zone_id=uuid4(),
+        target_zone_id=uuid4(),
+        occurred_at=_NOW,
+    )
+    opened = ConduitLogbookOpened(
+        conduit_id=conduit_id,
+        logbook_id=_LOGBOOK_ID,
+        kind=LOGBOOK_KIND_VERDICT,
+        schema=LogbookSchema(fields={"x": LogbookFieldSpec(type="string")}),
+        occurred_at=_NOW,
+    )
+    events = [
+        to_new_event(
+            event_type=event_type_name(e),
+            payload=to_payload(e),
+            occurred_at=e.occurred_at,
+            event_id=uuid4(),
+            command_name="DefineConduit",
+            correlation_id=uuid4(),
+            principal_id=uuid4(),
+        )
+        for e in (defined, opened)
+    ]
+    await store.append("Conduit", conduit_id, expected_version=0, events=events)
+
+
+@pytest.mark.unit
+async def test_warns_about_the_configured_conduit_when_it_is_dormant() -> None:
+    """An operator who set trust_conduit_id but never seeded it is still
+    told, and told about the RIGHT conduit -- checking nil here would
+    silently pass a genuinely dormant configured conduit."""
+    deps = build_deps(trust_policy_id=_POLICY_ID, trust_conduit_id=_CONFIGURED_CONDUIT_ID)
+    with structlog.testing.capture_logs() as logs:
+        await warn_if_verdict_log_dormant(deps)
+    entry = next(e for e in logs if e.get("event") == _DORMANT_EVENT)
+    assert entry["conduit_id"] == str(_CONFIGURED_CONDUIT_ID)
+
+
+@pytest.mark.unit
+async def test_no_false_alarm_when_the_configured_conduit_is_wired_but_nil_is_not() -> None:
+    """The property this whole test class exists for: a deployment that
+    opted into the local Conduit and seeded it correctly must not be told
+    its audit log is dormant just because the UNCONFIGURED nil conduit
+    (which nothing routes through any more) has no logbook of its own."""
+    store = InMemoryEventStore()
+    await _seed_conduit_with_open_verdict_logbook(store, _CONFIGURED_CONDUIT_ID)
+    # Deliberately do NOT seed the nil conduit, to prove the check follows
+    # trust_conduit_id rather than defaulting back to nil.
+    deps = build_deps(
+        trust_policy_id=_POLICY_ID,
+        trust_conduit_id=_CONFIGURED_CONDUIT_ID,
+        event_store=store,
+    )
+    with structlog.testing.capture_logs() as logs:
+        await warn_if_verdict_log_dormant(deps)
+    assert not _warned(logs)
