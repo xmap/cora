@@ -26,6 +26,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -104,6 +105,7 @@ class _RelayHarness:
         relay._watchers.clear()
         relay._run_histories.clear()
         relay._enclosure_timelines.clear()
+        relay._activity_buffer.clear()
 
         check_viewer_auth = relay.basic_auth(
             realm="cora-status", credentials=(_VIEWER_USER, _VIEWER_PASSWORD)
@@ -377,10 +379,10 @@ async def test_enclosure_timeline_from_producer_is_broadcast_to_a_connected_watc
 
 async def test_enclosure_timeline_is_replayed_to_a_watcher_that_connects_later() -> None:
     """The behavior that makes REWIND reach an enclosure without any
-    on-demand request path: unlike `activity`, a pushed timeline is
-    cached (`relay._enclosure_timelines`) and replayed on every new
-    `/watch` connection, not just broadcast to whoever happened to
-    already be listening."""
+    on-demand request path: a pushed timeline is cached
+    (`relay._enclosure_timelines`, no eviction, unlike `activity`'s
+    bounded time window) and replayed on every new `/watch` connection,
+    not just broadcast to whoever happened to already be listening."""
     async with _RelayHarness() as harness:
         enclosure_id = str(uuid4())
         async with harness.connect_producer() as producer:
@@ -412,6 +414,96 @@ async def test_malformed_enclosure_timeline_without_enclosure_id_is_dropped() ->
         # (and, if it were going to, mis-store) the frame.
         await asyncio.sleep(0.1)
         assert relay._enclosure_timelines == {}
+
+
+def _recent_iso() -> str:
+    """A timestamp inside `relay._ACTIVITY_BUFFER_SECONDS` of real now,
+    since pruning compares `occurred_at` against the wall clock at test
+    run time, not a fixed date."""
+    return datetime.now(UTC).isoformat()
+
+
+def _sample_activity_message(*, occurred_at: str, stream_type: str = "Run") -> dict:
+    return {
+        "kind": "activity",
+        "schema_version": 1,
+        "producer_id": "p1",
+        "generated_at": "2026-08-30T00:05:00+00:00",
+        "events": [
+            {
+                "stream_type": stream_type,
+                "stream_id": str(uuid4()),
+                "event_type": "RunStarted",
+                "occurred_at": occurred_at,
+                "recorded_at": occurred_at,
+            }
+        ],
+    }
+
+
+async def test_activity_from_producer_is_broadcast_to_a_connected_watcher() -> None:
+    async with _RelayHarness() as harness, harness.connect_watcher() as watcher:
+        async with harness.connect_producer() as producer:
+            message = _sample_activity_message(occurred_at=_recent_iso())
+            await producer.send(json.dumps(message))
+            received = await _recv_until_kind(watcher, "activity")
+            assert received == message, received
+
+
+async def test_activity_is_replayed_to_a_watcher_that_connects_later() -> None:
+    """The fix for the flowing lanes going empty on a refresh or a
+    resumed SSH tunnel: before this, `activity` was a pure pass-through
+    with nothing for a fresh `/watch` connection to catch up on. Now the
+    last `relay._ACTIVITY_BUFFER_SECONDS` of events are buffered
+    (`relay._activity_buffer`) and replayed as one synthetic `activity`
+    message on connect, in the same shape `page.html`'s `handleActivity`
+    already knows how to consume."""
+    async with _RelayHarness() as harness:
+        async with harness.connect_producer() as producer:
+            message = _sample_activity_message(occurred_at=_recent_iso())
+            await producer.send(json.dumps(message))
+            # Give the relay's event loop a turn to process the frame
+            # before a fresh watcher connects and expects to see it.
+            await asyncio.sleep(0.1)
+
+            async with harness.connect_watcher() as watcher:
+                received = await _recv_until_kind(watcher, "activity")
+                assert received["events"] == message["events"], received
+
+
+async def test_activity_older_than_the_buffer_window_is_not_replayed() -> None:
+    async with _RelayHarness() as harness:
+        async with harness.connect_producer() as producer:
+            stale = _sample_activity_message(occurred_at="2020-01-01T00:00:00+00:00")
+            await producer.send(json.dumps(stale))
+            await asyncio.sleep(0.1)
+
+            async with harness.connect_watcher() as watcher:
+                got_activity = False
+                try:
+                    await _recv_until_kind(watcher, "activity", max_frames=3, timeout=0.5)
+                    got_activity = True
+                except (TimeoutError, AssertionError):
+                    pass
+                assert not got_activity, "a stale event outside the buffer window was replayed"
+
+
+async def test_malformed_activity_without_events_list_is_dropped() -> None:
+    async with _RelayHarness() as harness, harness.connect_producer() as producer:
+        await producer.send(
+            json.dumps(
+                {
+                    "kind": "activity",
+                    "schema_version": 1,
+                    "producer_id": "p1",
+                    "generated_at": "2026-08-30T00:00:00+00:00",
+                }
+            )
+        )
+        # No reply is expected either way; give the relay a turn to process
+        # (and, if it were going to, mis-store) the frame.
+        await asyncio.sleep(0.1)
+        assert relay._activity_buffer == []
 
 
 TESTS: list[Callable[[], Awaitable[None]]] = [
