@@ -102,6 +102,45 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `Objective_2x` | `magnification=2.0`; `numerical_aperture=0.055`; `working_distance=34 mm` |
 | `Objective_1.1x` | `magnification=1.1`; `numerical_aperture=0.03`; `working_distance=50 mm` |
 
+## Axis feedback survey
+
+Measured live 2026-08-31 by reading each motor record's `MSTA` status word.
+This decides whether a check on that axis's `.RBV` is an INDEPENDENT witness
+that the axis arrived, or merely the controller repeating what it was told.
+
+| Axis | PV | `MSTA` | Encoder | Closed loop | Homed |
+| --- | --- | --- | --- | --- | --- |
+| `SampleTop_X` | `2bmb:m18` | 2 | no | no | no |
+| `SampleTop_Z` | `2bmb:m17` | 3 | no | no | no |
+| `SampleTable` Y | `2bmb:m24` | 3 | no | no | no |
+| `SampleTable` X-up | `2bmb:m21` | 3 | no | no | no |
+| `SampleTable` X-down | `2bmb:m22` | 3 | no | no | no |
+| `SampleTable` Z | `2bmb:m20` | 7 | no | no | no |
+| `LaminographyPitch` | `2bmb:m49` | 11 | no | no | no |
+| `Rotary` | `2bmb:m102` | 2347 | yes | yes | no |
+| `Hexapod_X` | `2bmHXP:m1` | 18467 | flag absent | yes | yes |
+| `Hexapod_Y` | `2bmHXP:m2` | 18466 | flag absent | yes | yes |
+| `Hexapod_Pitch` | `2bmHXP:m4` | 18466 | flag absent | yes | yes |
+| `Hexapod_Roll` | `2bmHXP:m5` | 18466 | flag absent | yes | yes |
+
+The whole sample stack is open-loop and unencoded, so on those seven axes
+`.RBV` is the controller's own step count. A recipe check against it confirms
+that steps were issued, not that the stage moved. That is a property of the
+hardware rather than a defect, but it changes what an arrival check can
+honestly claim, and it is the same independent-side problem that applies to
+declared travel limits.
+
+`Rotary` is the only axis reporting a true encoder (bit 8), alongside the
+closed-loop and servo bits. The four hexapod axes report servo, closed-loop
+position mode and HOMED, but the Aerotech driver does not set the
+encoder-present bit, so its absence there is a driver reporting choice rather
+than evidence of an open loop.
+
+Two incidental readings for staff. `2bmb:m20` was sitting on its PLUS limit
+switch (bit 2) at the time of the survey. Nothing in the sample stack reports
+HOMED, so those absolute positions are whatever they were last set to rather
+than referenced to a physical datum.
+
 ## Vendor catalog
 
 Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufacturer, part number)`, so one vendor product converges on one id. Microscope-housing Models are on the [Microscope deployment](microscope.md#vendor-catalog) page.
