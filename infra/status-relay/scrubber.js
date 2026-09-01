@@ -887,7 +887,12 @@
               width: cw,
               height: ch,
               rx: 1.5,
-              class: `cs-mark cs-mark--${wide ? "many" : n > 1 ? "packed" : "single"} cs-tier--${tier}`,
+              class:
+                `cs-mark cs-mark--${wide ? "many" : n > 1 ? "packed" : "single"} cs-tier--${tier}` +
+                // On a track a mark sits ON the lifetime bar, so it needs the
+                // bar held off it. On a flat lane there is nothing under it
+                // and a ring would only thicken the square.
+                (lane.render === "track" ? " cs-mark--on-track" : ""),
             });
             const title = svg("title");
             title.textContent = wide

@@ -297,7 +297,14 @@
   /* Tones are STATES OF A CONDITION over a range, which is what separates a
      permit ribbon from a row of samples. Unknown is its own state and never
      blended into either neighbour: not-observed is not the same as fine. */
-  .cs-track--good { fill: color-mix(in srgb, var(--cs-good) 70%, transparent); }
+  /* Measured against the plain track it sits among, not picked. At 70% a
+     good bar composited to luminance 0.191 where every other bar on the chart
+     is 0.083, so the quietest state on the page was more than twice the
+     weight of everything around it -- and colour spent on "nothing is wrong"
+     is colour the alarm tiers no longer have to escalate from. At 45% it
+     lands on 0.089, the same weight as a plain bar, still unmistakably
+     green. */
+  .cs-track--good { fill: color-mix(in srgb, var(--cs-good) 32%, transparent); }
   .cs-track--bad { fill: var(--cs-alarm); }
   .cs-track--warn { fill: var(--cs-warn); }
   .cs-track--unknown {
@@ -314,6 +321,14 @@
      squares read as separate without a ring thickening each one. */
   .cs-mark { transition: opacity 0.12s ease; }
   .cs-mark--single, .cs-mark--packed, .cs-mark--many { fill: var(--cs-mark); }
+  /* A mark drawn ON a bar needs the bar held off it. Blue on the old green
+     was a contrast ratio of 1.15, which is not a mark on a bar, it is one
+     colour: the events on a subject or a clearance row were invisible. A ring
+     in the surface colour separates a mark from whatever it sits on and
+     leaves the ratio a property of mark-against-ring, so it holds whatever
+     the bar underneath is doing. Only on tracks -- on open chart the ring
+     would just thicken every square against its own background. */
+  .cs-mark--on-track { stroke: var(--cs-surface); stroke-width: 0.9; }
   .cs-mark--acquire { fill: var(--cs-sub); }
   .cs-mark--check { fill: var(--cs-warn); }
   /* Severity, reusing the page's existing status hues rather than a new set.
@@ -887,6 +902,18 @@
     governance: "Governance",
     judgement: "Judgement",
   };
+  // Each zone is a PRECONDITION for the next, and the page is read downward.
+  // Cover and a permit have to hold before a sample can be mounted; a sample
+  // has to be mounted before a run can measure it; a run has to have run
+  // before there is anything to conclude. Reading down the chart is reading
+  // the order in which things have to become true.
+  //
+  // It also puts the two short, slow-changing blocks at the top and the tall
+  // one in the middle: the permit ribbon used to sit below a tree that can
+  // reach twenty-six rows, so the one thing an operator glances at was the
+  // one thing they had to scroll for. And because the row cap is spent in
+  // this order, a busy tree can no longer crowd the ribbon off the chart.
+  var ZONE_ORDER = ["governance", "participants", "execution", "judgement"];
   // Which zone each domain's flat lane belongs to. A leftover event -- one
   // whose instance is not on screen -- lands in its OWN zone rather than at
   // the bottom of the page: a stray Run event is execution, not a judgement,
@@ -1154,8 +1181,7 @@
     }
     claimAll();
 
-    // ---- EXECUTION -------------------------------------------------------
-    zone("execution");
+    function execution() {
     var procsOfRun = {};
     rows("procedures").forEach(function (pr) {
       (procsOfRun[pr.parent_run_id] = procsOfRun[pr.parent_run_id] || []).push(pr);
@@ -1196,21 +1222,19 @@
       mine.forEach(function (r) { emitRun(r, 1); });
     });
     loose.forEach(function (r) { emitRun(r, 0); });
-    flatFor("execution");
+    }
 
-    // ---- PARTICIPANTS ----------------------------------------------------
-    zone("participants");
+    function participants() {
     rows("subjects").forEach(function (sj) {
       track("SUBJ", instanceLabel(sj.name, sj.subject_id), 0, sj.created_at, null, sj.subject_id, {
         tone: sj.status === "Mounted" || sj.status === "Measured" ? "good" : null,
       });
     });
 
-    flatFor("participants");
+    }
 
-    // ---- GOVERNANCE ------------------------------------------------------
-    zone("governance");
     var permitRows = 0;
+    function governance() {
     Object.keys(enclosureTimelines).forEach(function (encId) {
       var segs = permitSegments(enclosureTimelines[encId]);
       if (!segs) return;
@@ -1266,12 +1290,24 @@
         { tone: cl.status === "Active" ? "good" : "unknown" }
       );
     });
+    }
 
-    flatFor("governance");
+    // Judgement has no instance rows at all, only its flat lanes.
+    function judgement() {}
 
-    // ---- JUDGEMENT -------------------------------------------------------
-    zone("judgement");
-    flatFor("judgement");
+    var ZONE_BODY = {
+      execution: execution,
+      participants: participants,
+      governance: governance,
+      judgement: judgement,
+    };
+    ZONE_ORDER.forEach(function (key) {
+      zone(key);
+      ZONE_BODY[key]();
+      // At the END of each zone, once its tracks have claimed what they can,
+      // so a leftover sits under the heading it actually belongs to.
+      flatFor(key);
+    });
 
     // Under no zone at all: see DOMAIN_ZONE.
     flatFor(null);
