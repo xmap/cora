@@ -181,12 +181,21 @@
   }
   .cs-tip-row--up .cs-tip-v { color: var(--cs-alarm); }
   .cs-tip-row--down .cs-tip-v { color: var(--cs-warn); }
+  /* Kinship is a THIRD relation beside cause and effect, so it gets its own
+     hue rather than borrowing one of theirs: a bound row is not something the
+     event caused. */
+  .cs-tip-row--kin .cs-tip-v { color: var(--cs-mark); }
   .cs-tip-list {
     max-height: 8.4rem; overflow-y: auto; margin-bottom: 0.35rem;
     padding-bottom: 0.3rem; border-bottom: 1px solid var(--cs-line);
   }
   .cs-tip-item .cs-tip-k { color: var(--cs-mute); }
   .cs-tip-item--head .cs-tip-k { color: var(--cs-ink); font-weight: 600; }
+  /* The second channel. Opacity already says "something on this row is in
+     the chain you are tracing"; this says "the record binds this row to the
+     pinned event's row", which is a different claim from a different source
+     and must stay tellable apart from it. */
+  .cs-kin-tick { fill: var(--cs-mark); }
   .cs-selected { stroke: var(--cs-ink); stroke-width: 1.6; }
   /* The pack a pinned event came out of. A fill, not a second ring: the ring
      already means "this event", and two strokes a few units apart would read
@@ -928,8 +937,9 @@
     return name || shortId(id) || "unnamed";
   }
 
-  function eventPoint(e) {
+  function eventPoint(e, kin) {
     return {
+      kin: (kin && kin[e.stream_id]) || null,
       t: e.occurred_at,
       label: e.event_type,
       tier: EVENT_TIER[e.event_type] || 0,
@@ -969,6 +979,74 @@
   // instance is on screen, otherwise in its domain's flat lane. Nothing is
   // dropped for want of a home -- an event vanishing because its Run had
   // already finished would make a busy window look quiet.
+  // ---- What the record BINDS to what ----------------------------------
+  //
+  // A second channel beside the causal chain, and a strictly separate one:
+  // causation comes off an event, kinship comes off the projection, and
+  // merging them into one visual would leave no way to tell "this caused
+  // that" from "the record says these belong together".
+  //
+  // Only relations the read models actually carry are drawn. Three that a
+  // viewer would reasonably expect are NOT here, because the record does not
+  // hold them, and inferring one from co-occurrence in time would be the
+  // chart asserting a fact CORA never recorded:
+  //
+  //   permit <-> run       EnclosureSummaryItem has no run and a run has no
+  //                        enclosure. They share a clock, nothing more.
+  //   decision <-> run     DecisionSummaryItem carries `decided_by` and
+  //                        `parent_id`. Neither is a run or a subject.
+  //   caution <-> anything Cautions are not in the snapshot at all; the page
+  //                        sees them only as events on a flat lane.
+  //
+  // Containment is absent too, deliberately. Campaign holds run holds
+  // procedure is already drawn, by nesting and by bar thickness, so a tick
+  // repeating it would spend the channel on the one thing the layout already
+  // answers.
+  // Keyed by STREAM id, not by lane. A run has a row of its own and a
+  // dataset does not, so kinship has to be able to hang off one event sitting
+  // on a lane it shares with hundreds of others. The two directions are
+  // recorded independently, because a relation can be drawable one way and
+  // not the other: a dataset event can tick the run that wrote it, and the
+  // run cannot tick back at a row that does not exist.
+  function buildKin(snap, laneIdFor) {
+    var kin = {};
+    function point(fromId, toId, why) {
+      var lane = laneIdFor(toId);
+      if (!fromId || !lane) return;
+      if (laneIdFor(fromId) === lane) return;
+      (kin[fromId] = kin[fromId] || {})[lane] = why;
+    }
+    // Each side says its own half. The card prints the phrase belonging to
+    // whatever is pinned, so a run reads "measuring SMP-115" and the sample
+    // reads "measured by R-4471" -- one relation, stated from wherever the
+    // reader happens to be standing.
+    function bind(aId, bId, aSays, bSays) {
+      point(aId, bId, aSays);
+      point(bId, aId, bSays);
+    }
+    var rows = function (key) {
+      return (snap && snap[key]) || [];
+    };
+    rows("runs").forEach(function (r) {
+      bind(r.run_id, r.subject_id, "measuring", "measured by");
+    });
+    rows("datasets").forEach(function (d) {
+      bind(d.dataset_id, d.producing_run_id, "written by", "wrote");
+      bind(d.dataset_id, d.subject_id, "written from", "source of");
+    });
+    // Cover either reaches a row or it does not. This is the question anyone
+    // looking at a clearance on a live page is actually asking, and until the
+    // bindings rode the wire the ribbon could not answer it.
+    rows("clearances").forEach(function (cl) {
+      ["run_binding_ids", "procedure_binding_ids", "subject_binding_ids"].forEach(function (k) {
+        (cl[k] || []).forEach(function (id) {
+          bind(cl.clearance_id, id, "covers", "covered by");
+        });
+      });
+    });
+    return kin;
+  }
+
   function buildRows(buffer, snap, nowIso) {
     // Every list is read through `rows`, never off `snap` directly. The page
     // renders once before the first snapshot lands, so `flowing.snapshot`
@@ -990,9 +1068,22 @@
     var trackCount = 0;
     var dropped = 0;
 
+    // Which streams get a row of their own. Built before anything is drawn,
+    // because kinship names the lane it points AT and a relation to a row
+    // that will not exist cannot be drawn either way.
+    var hasRow = {};
+    ["runs", "procedures", "campaigns", "subjects", "clearances"].forEach(function (key) {
+      var idKey = { runs: "run_id", procedures: "procedure_id", campaigns: "campaign_id",
+                    subjects: "subject_id", clearances: "clearance_id" }[key];
+      rows(key).forEach(function (r) { hasRow[r[idKey]] = true; });
+    });
+    var kin = buildKin(snap, function (id) {
+      return id && hasRow[id] ? "track:" + id : null;
+    });
+
     function pointsFor(streamId) {
       claimed[streamId] = true;
-      return (byStream[streamId] || []).map(eventPoint);
+      return (byStream[streamId] || []).map(function (e) { return eventPoint(e, kin); });
     }
     function track(kind, label, depth, from, to, streamId, extra) {
       if (trackCount >= MAX_TRACK_ROWS) {
@@ -1004,6 +1095,7 @@
         lane_id: "track:" + streamId,
         label: label,
         render: "track",
+        kin: kin[streamId] || null,
         kind: kind,
         depth: depth,
         from: from,
@@ -1057,7 +1149,7 @@
       DOMAIN_ORDER.forEach(function (key) { pendingFlat[key] = []; });
       buffer.forEach(function (e) {
         if (claimed[e.stream_id]) return;
-        pendingFlat[STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other"].push(eventPoint(e));
+        pendingFlat[STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other"].push(eventPoint(e, kin));
       });
     }
     claimAll();

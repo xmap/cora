@@ -506,7 +506,13 @@ async def _drain_datasets_for_runs(
                 "dataset_id": render_value(item.dataset_id),
                 "name": item.name,
                 "status": item.status,
+                # Both ends of what a dataset came from. `producing_run_id`
+                # was already here; `subject_id` is the same class of fact and
+                # answers the question the run id cannot, which is what was
+                # being measured when a dataset that no longer has an open run
+                # was written.
                 "producing_run_id": render_value(item.producing_run_id),
+                "subject_id": render_value(item.subject_id),
             }
             for item in items
         )
@@ -591,6 +597,18 @@ async def _drain_active_clearances(
             "valid_from": render_value(item.valid_from),
             "valid_until": render_value(item.valid_until),
             "registered_at": render_value(item.registered_at),
+            # WHAT the cover covers. A clearance drawn as a bar over a range
+            # says only that cover existed; these say whether it reaches the
+            # run on screen, which is the question anyone looking at a
+            # clearance on a live page is actually asking. Opaque ids of
+            # entities the same payload already names.
+            #
+            # `asset_binding_ids` is left off: nothing on this page draws an
+            # asset, so it would be a field on the wire that no consumer can
+            # resolve to anything.
+            "run_binding_ids": [render_value(i) for i in item.run_binding_ids],
+            "procedure_binding_ids": [render_value(i) for i in item.procedure_binding_ids],
+            "subject_binding_ids": [render_value(i) for i in item.subject_binding_ids],
         }
         for item in items
     ]

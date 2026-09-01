@@ -230,6 +230,13 @@
       to: lane.to || null,
       segments: lane.segments || null,
       tone: lane.tone || null,
+      // Rows this row is bound to, as `{ <other lane_id>: "why" }`. The
+      // document supplies the graph and the reason; this module knows only
+      // that lanes can name kin, never what a run or a subject is. Both
+      // directions are the document's job to state: a relation drawn in one
+      // direction only would answer "what does this run measure" and stay
+      // silent on "what is measuring this sample".
+      kin: lane.kin || null,
       points: (lane.points || [])
         .map((p) => ({
           secs: parseT(p.t) - t0,
@@ -243,6 +250,11 @@
           // Relationships, all optional. A document that carries none renders
           // exactly as it did before they existed.
           id: p.id || null,
+          // Kinship can belong to the EVENT rather than to the row. A run has
+          // a row of its own and a dataset does not, so a dataset's binding
+          // rides on its one event instead of on the lane it shares with
+          // everything else in its domain.
+          kin: p.kin || null,
           corr: p.corr || null,
           cause: p.cause || null,
           cause_at: p.cause_at || null,
@@ -283,11 +295,15 @@
     // by scanning every lane would do it at pointer rate.
     const byId = new Map();
     const childrenOf = new Map();
+    // Which row an event is ON. Needed to answer "what is the pinned event
+    // bound to", which is a question about its ROW, not about the event.
+    const laneOf = new Map();
     let hasCausation = false;
     for (const lane of lanes) {
       for (const p of lane.points) {
         if (p.id) byId.set(p.id, p);
         if (p.id || p.cause) hasCausation = true;
+        laneOf.set(p, lane);
       }
     }
     for (const lane of lanes) {
@@ -315,6 +331,7 @@
       live: !!doc.live,
       byId,
       childrenOf,
+      laneOf,
       // Whether this document carries causation AT ALL. A REWIND run history
       // has none, so every point there looks causeless -- and calling that "an
       // operator acted directly" would state a fact the document never
@@ -619,6 +636,14 @@
       return t;
     };
 
+    // A SECOND channel, deliberately not the first. Dimming already means
+    // one thing -- "something on this row is in the chain you are tracing" --
+    // and lighting a row because the record binds it to the pinned event's
+    // row would make it mean two, with no way left to tell which. So a bound
+    // row keeps whatever brightness the chain gave it and gets a tick in the
+    // gutter instead, carrying the reason it is bound.
+    const kin = focus ? kinOf(model, focus.point) : null;
+
     const laneY = new Map();
     model.lanes.forEach((lane) => {
       const y = rowY.get(lane);
@@ -635,6 +660,19 @@
           svg("line", { x1: ruleFrom, y1: y, x2: VW - PAD_R, y2: y, class: "cs-zone-rule" })
         );
         return;
+      }
+      if (kin && kin[lane.lane_id]) {
+        // At the rail's start, pointing into the plot: the row's own left
+        // edge is where the eye already goes to read across it.
+        // No `<title>`: decoration is not hit-testable on this chart, so one
+        // here could never open. The words live in the card, which is
+        // readable on hover and on a pin alike.
+        g.appendChild(
+          svg("polygon", {
+            points: `${PAD_L - 8},${y - 4} ${PAD_L - 8},${y + 4} ${PAD_L - 1},${y}`,
+            class: "cs-kin-tick",
+          })
+        );
       }
       // Every row that holds marks gets the same rail, tracks included. A
       // track used to draw only its lifetime bar, so a row whose bar was
@@ -1050,6 +1088,15 @@
   // packed burst it names that square's own event and says which of how many;
   // over a bar too big to pack it lists the contents, because the number on
   // that bar is a promise they are recoverable.
+  // The event's own bindings where it has them, otherwise its row's. Never
+  // the two merged: a point that states its kin is stating it for itself, and
+  // adding the row's would attribute a neighbour's relations to it.
+  function kinOf(model, point) {
+    if (point.kin) return point.kin;
+    const lane = model.laneOf.get(point);
+    return (lane && lane.kin) || null;
+  }
+
   function tipHtml(model, cluster, focus) {
     const esc = (v) =>
       String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -1079,6 +1126,19 @@
       );
     } else if (group.length > 1) {
       out.push(row("in a burst of", `${group.length}, this is #${(cluster.index || 0) + 1}`));
+    }
+
+    // What the RECORD binds this event's row to, as against what caused it.
+    // Two different questions with two different sources: causation comes off
+    // the event, kinship comes off the projection, and they are never merged
+    // into one line. Silent where the document states none, which is not the
+    // same as a row that is bound to nothing.
+    const kin = kinOf(model, head);
+    if (kin) {
+      const named = model.lanes.filter((l) => kin[l.lane_id]);
+      for (const l of named) {
+        out.push(row(kin[l.lane_id], l.label, "cs-tip-row--kin"));
+      }
     }
 
     // Silent where the document records no relations at all, rather than

@@ -84,6 +84,11 @@
     Campaign: [["c1", 52, 0]],
     Enclosure: [["enc1", 60, 0]],
     Clearance: [["cl1", 24 * 60, 0], ["cl2", 24 * 60, 0]],
+    // Kinship for a dataset hangs off the EVENT, so a Dataset event has to
+    // carry a dataset_id the snapshot names. A random id per event would walk
+    // the flat-lane path and never the bound one, and the preview would look
+    // right while testing nothing.
+    Dataset: [["ds1", 24 * 60, 0], ["ds2", 24 * 60, 0], ["ds3", 24 * 60, 0]],
   };
   function streamIdFor(stream, ms) {
     const lives = LIVES[stream];
@@ -216,17 +221,34 @@
       campaigns: [
         { campaign_id: "c1", name: "CMP-2211", intent: "Tomography", status: "Active", run_count: 2 },
       ],
-      datasets: [],
+      // Datasets have no row of their own, so their bindings are the case
+      // that proves kinship can hang off ONE event on a shared lane. d3 is
+      // written from a subject with no producing run left open, which is the
+      // reason `subject_id` rides the wire beside `producing_run_id`.
+      datasets: [
+        { dataset_id: "ds1", name: "tomo-4471-a", status: "Registered",
+          producing_run_id: "r1", subject_id: "s1" },
+        { dataset_id: "ds2", name: "tomo-4472-a", status: "Promoted",
+          producing_run_id: "r2", subject_id: "s2" },
+        { dataset_id: "ds3", name: "tomo-old-b", status: "Registered",
+          producing_run_id: null, subject_id: "s1" },
+      ],
       // Two ranges, deliberately different: one open-ended and one that
       // expires later today. Both are cover IN FORCE, so both draw to the
       // right edge, and a bar that stopped mid-chart would be the bug.
       clearances: [
         { clearance_id: "cl1", template_code: "ESAF-7741", risk_band: "Yellow",
           status: "Active", valid_from: iso(20 * 60 * 60 * 1000),
-          valid_until: iso(-6 * 60 * 60 * 1000), registered_at: iso(21 * 60 * 60 * 1000) },
+          valid_until: iso(-6 * 60 * 60 * 1000), registered_at: iso(21 * 60 * 60 * 1000),
+          run_binding_ids: ["r1", "r2"], procedure_binding_ids: [],
+          subject_binding_ids: ["s1"] },
+        // Cover that reaches NOTHING on screen. A clearance with no bindings
+        // has to stay tickless, or "covered" would be what the chart says
+        // about every clearance whether or not it reaches anything.
         { clearance_id: "cl2", template_code: "RAD-118", risk_band: "Green",
           status: "Active", valid_from: null, valid_until: null,
-          registered_at: iso(5 * 60 * 60 * 1000) },
+          registered_at: iso(5 * 60 * 60 * 1000),
+          run_binding_ids: [], procedure_binding_ids: [], subject_binding_ids: [] },
       ],
       enclosures: [], decisions: [],
     };

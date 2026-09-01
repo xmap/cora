@@ -2113,6 +2113,8 @@ async def test_lifespan_pushes_active_clearances_only() -> None:
 @pytest.mark.unit
 async def test_lifespan_clearance_row_carries_its_range_and_no_free_text() -> None:
     received: asyncio.Queue[str] = asyncio.Queue()
+    bound_run = uuid4()
+    bound_subject = uuid4()
 
     async def handler(ws: ServerConnection) -> None:
         async for message in ws:
@@ -2135,9 +2137,9 @@ async def test_lifespan_clearance_row_carries_its_range_and_no_free_text() -> No
             external_id=None,
             status="Active",
             risk_band="Yellow",
-            subject_binding_ids=[],
-            asset_binding_ids=[],
-            run_binding_ids=[],
+            subject_binding_ids=[bound_subject],
+            asset_binding_ids=[uuid4()],
+            run_binding_ids=[bound_run],
             procedure_binding_ids=[],
             parent_id=None,
             registered_at=_NOW,
@@ -2167,9 +2169,18 @@ async def test_lifespan_clearance_row_carries_its_range_and_no_free_text() -> No
             "valid_from",
             "valid_until",
             "registered_at",
+            "run_binding_ids",
+            "procedure_binding_ids",
+            "subject_binding_ids",
         }
         assert row["valid_from"] == started.isoformat()
         assert row["valid_until"] == ends.isoformat()
+        # What the cover covers, so a viewer can ask whether it reaches the
+        # run on screen. Asset bindings stay off: nothing on that page draws
+        # an asset, so the ids would resolve to nothing.
+        assert row["run_binding_ids"] == [str(bound_run)]
+        assert row["subject_binding_ids"] == [str(bound_subject)]
+        assert row["procedure_binding_ids"] == []
         # Operator free text and reviewer identity never leave the API host.
         assert "Beryllium" not in raw
         assert "floor coordinator" not in raw
