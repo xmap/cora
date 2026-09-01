@@ -452,8 +452,14 @@
     return placed;
   }
 
-  function renderChainEdges(g, model, focus, pointPos, scale) {
+  function renderChainEdges(g, over, model, focus, pointPos, scale) {
     const layer = svg("g", { class: "cs-edges" });
+    // Rings go ABOVE the marks while the edges stay below them. They are
+    // drawn in the same pass but they are not the same kind of thing: an
+    // arrow's tail must pass behind the mark it leaves, and a ring is a
+    // highlight ON a mark, so the two want opposite sides of it. Sharing the
+    // edge layer left every ring chopped by the squares packed either side.
+    const ringLayer = svg("g", { class: "cs-rings" });
 
     // One marker per direction. Causation is a strict parent pointer in an
     // append-only log, so the head always sits at the EFFECT and the arrow is
@@ -511,7 +517,7 @@
         if (point.cause) continue;
         const pt = pointPos.get(point);
         if (pt) {
-          layer.appendChild(svg("circle", { cx: pt.x, cy: pt.y, r: 6.5, class: "cs-root-ring" }));
+          ringLayer.appendChild(svg("circle", { cx: pt.x, cy: pt.y, r: 6.5, class: "cs-root-ring" }));
         }
       }
     }
@@ -549,6 +555,7 @@
     }
 
     g.appendChild(layer);
+    over.appendChild(ringLayer);
   }
 
   // Clip paths are referenced by id, and two scrubbers can be mounted on one
@@ -966,7 +973,10 @@
       axisRow.appendChild(lab);
     }
 
-    if (focus) renderChainEdges(edgeLayer, model, focus, pointPos, scale);
+    // Appended here, after every mark, so the rings land on top of them.
+    const ringWindow = svg("g");
+    plot.appendChild(ringWindow);
+    if (focus) renderChainEdges(edgeLayer, ringWindow, model, focus, pointPos, scale);
 
     // Both mark an INSTANT, so both belong to the pannable group and travel
     // with the events they sit between. Only one is ever drawn.
