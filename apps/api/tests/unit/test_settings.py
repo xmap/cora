@@ -136,6 +136,41 @@ def test_settings_rejects_malformed_trust_conduit_id(
 
 
 @pytest.mark.unit
+def test_settings_trust_in_process_policy_id_defaults_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default unset -> every in-process call keeps resolving to the one
+    front policy, unchanged. Today's behaviour for every existing
+    deployment."""
+    monkeypatch.delenv("TRUST_IN_PROCESS_POLICY_ID", raising=False)
+    settings = Settings()
+    assert settings.trust_in_process_policy_id is None
+
+
+@pytest.mark.unit
+def test_settings_trust_in_process_policy_id_parses_uuid_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from uuid import UUID
+
+    policy_id = UUID("01900000-0000-7000-8000-000000000602")
+    monkeypatch.setenv("TRUST_IN_PROCESS_POLICY_ID", str(policy_id))
+    settings = Settings()
+    assert settings.trust_in_process_policy_id == policy_id
+
+
+@pytest.mark.unit
+def test_settings_rejects_malformed_trust_in_process_policy_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv("TRUST_IN_PROCESS_POLICY_ID", "not-a-uuid")
+    with pytest.raises(pydantic.ValidationError):
+        Settings()
+
+
+@pytest.mark.unit
 def test_settings_run_initiator_enabled_defaults_to_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

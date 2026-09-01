@@ -26,11 +26,13 @@ from cora.infrastructure.ports import (
     FakeClock,
     FixedIdGenerator,
 )
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.trust.authorize import TrustAuthorize
 from cora.trust.build_authorize import build_authorize
 from tests._authz import seed_policy
 
 _POLICY_ID = UUID("01900000-0000-7000-8000-000000000601")
+_IN_PROCESS_POLICY_ID = UUID("01900000-0000-7000-8000-000000000602")
 
 
 def _settings(**overrides: object) -> Settings:
@@ -174,5 +176,63 @@ async def test_trust_conduit_id_reaches_the_adapter() -> None:
     assert isinstance(authorize, TrustAuthorize)
 
     result = await authorize.authorize(_POLICY_ID, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+
+
+# --- trust_in_process_policy_id wiring -----------------------------------
+
+
+@pytest.mark.unit
+def test_trust_in_process_policy_id_without_a_policy_id_is_refused_at_boot() -> None:
+    """Same shape as the conduit guard, and for the same reason:
+    AllowAllAuthorize is returned below and never constructed with a second
+    policy id, so a configured backdoor policy with no front gate would be
+    read by nothing -- every in-process call would keep reaching no gate
+    at all."""
+    with pytest.raises(
+        ValueError, match="trust_in_process_policy_id is configured but has no effect"
+    ):
+        _build(_settings(trust_policy_id=None, trust_in_process_policy_id=_IN_PROCESS_POLICY_ID))
+
+
+@pytest.mark.unit
+async def test_trust_in_process_policy_id_reaches_the_adapter() -> None:
+    """Wired through so an in-process call resolves to the backdoor policy.
+
+    Asserted through a real resolution, never a private attribute: the
+    front policy denies this principal/command pair, the backdoor policy
+    permits it. That only allows if `build_authorize` actually forwarded
+    `trust_in_process_policy_id` to `TrustAuthorize.__init__`.
+    """
+    store = InMemoryEventStore()
+    await seed_policy(
+        store,
+        policy_id=_POLICY_ID,
+        permitted_principal_ids=[],
+        permitted_commands=[],
+    )
+    await seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        permitted_principal_ids=[_POLICY_ID],
+        permitted_commands=["RecordWitnessedRun"],
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+    authorize = build_authorize(
+        _settings(trust_policy_id=_POLICY_ID, trust_in_process_policy_id=_IN_PROCESS_POLICY_ID),
+        store,
+        pool=None,
+        clock=FakeClock(datetime(2026, 5, 9, 12, 0, 0, tzinfo=UTC)),
+        id_generator=FixedIdGenerator([]),
+    )
+    assert isinstance(authorize, TrustAuthorize)
+
+    result = await authorize.authorize(
+        _POLICY_ID,
+        "RecordWitnessedRun",
+        UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
 
     assert isinstance(result, Allow)

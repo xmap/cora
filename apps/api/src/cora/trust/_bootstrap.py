@@ -243,6 +243,55 @@ async def verify_local_conduit_matches_policy(deps: Kernel) -> None:
         raise RuntimeError(msg)
 
 
+async def verify_in_process_policy_matches_surface(deps: Kernel) -> None:
+    """Fail-fast when `trust_in_process_policy_id` is configured but the
+    Policy it names does not actually govern the in-process door.
+
+    A policy configured for the backdoor but bound to the wrong Surface —
+    or, once `trust_conduit_id` is also set, the wrong Conduit — would
+    still be reachable from `_effective_policy_id` at every in-process
+    call, but `evaluate` would strict-deny every one of them at the
+    surface (or conduit) check, indistinguishable from having no backdoor
+    policy configured at all. This is the same "looks wired, governs
+    nothing" failure `verify_local_conduit_matches_policy` closes for the
+    conduit knob, applied to the second policy slot.
+    """
+    settings = deps.settings
+    if settings.trust_in_process_policy_id is None:
+        return
+
+    policy = await load_policy(deps.event_store, settings.trust_in_process_policy_id)
+    if policy is None:
+        # A missing policy stream is the operator's responsibility to
+        # define (this policy has no bootstrap seed); not this guard's
+        # concern, same reasoning as verify_local_conduit_matches_policy.
+        return
+
+    if policy.surface_id != SYSTEM_IN_PROCESS_SURFACE_ID:
+        msg = (
+            f"trust_in_process_policy_id={settings.trust_in_process_policy_id} "
+            f"is configured but governs surface {policy.surface_id}, not "
+            f"SYSTEM_IN_PROCESS_SURFACE_ID ({SYSTEM_IN_PROCESS_SURFACE_ID}). "
+            "Every in-process call would be denied at the surface check "
+            "instead of reaching this policy's principal/command rules. "
+            "Re-define the policy bound to the in-process Surface, or point "
+            "trust_in_process_policy_id at one that is."
+        )
+        raise RuntimeError(msg)
+
+    if settings.trust_conduit_id is not None and policy.conduit_id != settings.trust_conduit_id:
+        msg = (
+            f"trust_conduit_id={settings.trust_conduit_id} is configured but "
+            f"trust_in_process_policy_id={settings.trust_in_process_policy_id} "
+            f"governs conduit {policy.conduit_id}, a different one. Every "
+            "in-process command would be denied at the conduit check. "
+            "Re-define the backdoor policy bound to "
+            f"{settings.trust_conduit_id}, or point trust_conduit_id at "
+            f"{policy.conduit_id} instead."
+        )
+        raise RuntimeError(msg)
+
+
 __all__ = [
     "SYSTEM_BOOTSTRAP_POLICY_ID",
     "SYSTEM_HTTP_SURFACE_ID",
@@ -252,6 +301,7 @@ __all__ = [
     "SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID",
     "SYSTEM_PRINCIPAL_ID",
     "verify_bootstrap_seed_present",
+    "verify_in_process_policy_matches_surface",
     "verify_local_conduit_matches_policy",
     "verify_local_conduit_seed_present",
     "warn_if_verdict_log_dormant",

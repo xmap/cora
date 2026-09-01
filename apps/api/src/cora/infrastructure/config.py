@@ -156,6 +156,23 @@ class Settings(BaseSettings):
     # project_authorization_envelope_design watch item 6.
     trust_conduit_id: UUID | None = None
 
+    # A second, optional Policy that governs ONLY calls arriving through
+    # the in-process Surface (`SYSTEM_IN_PROCESS_SURFACE_ID` — CORA's own
+    # background agents, never a human, never an external caller). Every
+    # other surface keeps resolving to `trust_policy_id` exactly as
+    # before. Mirrors `trust_conduit_id`'s shape: a deployment-level
+    # default for the UNSPECIFIED case (here, "no backdoor policy
+    # configured"), never an override of a policy a caller's own surface
+    # already resolves to.
+    #
+    # Default None: today's behaviour (an in-process call is evaluated
+    # against the one front policy, same as every other surface) is
+    # unchanged for every existing deployment and test. Requires
+    # `trust_policy_id` to also be set — `build_authorize` refuses to
+    # boot otherwise, since a policy for a door that has no gate yet
+    # governs nothing.
+    trust_in_process_policy_id: UUID | None = None
+
     # Production deployments behind an auth proxy that sets
     # `X-Principal-Id` should set this true: requests without the
     # header are then rejected with 401 instead of silently falling

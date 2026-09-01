@@ -128,6 +128,7 @@ def build_deps(
     event_store: EventStore | None = None,
     trust_policy_id: UUID | None = None,
     trust_conduit_id: UUID | None = None,
+    trust_in_process_policy_id: UUID | None = None,
     deny: bool = False,
     authz: Authorize | None = None,
     llm: LLM | None = None,
@@ -163,6 +164,11 @@ def build_deps(
     `trust_conduit_id` sets `Settings.trust_conduit_id` (default None =
     every caller's conduit_id resolves to itself, unchanged). Use this
     for tests exercising the conduit-injection boot guards.
+
+    `trust_in_process_policy_id` sets `Settings.trust_in_process_policy_id`
+    (default None = every in-process call keeps resolving to the one
+    front policy, unchanged). Use this for tests exercising the
+    backdoor-policy boot guard.
 
     `llm` wires a test LLM (typically
     `FakeLLM`) when the handler under test consumes one
@@ -251,6 +257,7 @@ def build_deps(
             app_env="test",
             trust_policy_id=trust_policy_id,
             trust_conduit_id=trust_conduit_id,
+            trust_in_process_policy_id=trust_in_process_policy_id,
         ),
         clock=FakeClock(now or DEFAULT_NOW),
         id_generator=FixedIdGenerator(list(ids or [])),
