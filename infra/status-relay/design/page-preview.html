@@ -29,6 +29,20 @@
     ["Caution", ["CautionRegistered"]],
     ["Enclosure", ["EnclosurePermitObserved"]],
     ["Dataset", ["DatasetRegistered", "DatasetPromoted"]],
+    // Zones other than Execution and Judgement were exercised by a permit
+    // ribbon and nothing else, so every lane the page can now file -- an
+    // equipment change, a clearance review, a budget draw -- went undrawn
+    // here while the fixture looked complete.
+    ["Clearance", ["ClearanceReviewed", "ClearanceExtended"]],
+    ["Mount", ["MountRegistered", "MountDismounted"]],
+    ["Supply", ["SupplyLevelObserved"]],
+    ["Visit", ["VisitStarted"]],
+    ["Allocation", ["AllocationDrawnDown"]],
+    ["Calibration", ["CalibrationRecorded"]],
+    // Deliberately not in the page's domain table: the "Unfiled" lane has to
+    // be reachable, or the one row that catches an unknown stream type is
+    // the one row nothing ever tests.
+    ["Sprocket", ["SprocketWidened"]],
   ];
 
   let seed = 11;
@@ -69,6 +83,7 @@
     Subject: [["s1", 55, 0], ["s2", 24, 0]],
     Campaign: [["c1", 52, 0]],
     Enclosure: [["enc1", 60, 0]],
+    Clearance: [["cl1", 24 * 60, 0], ["cl2", 24 * 60, 0]],
   };
   function streamIdFor(stream, ms) {
     const lives = LIVES[stream];
@@ -201,7 +216,19 @@
       campaigns: [
         { campaign_id: "c1", name: "CMP-2211", intent: "Tomography", status: "Active", run_count: 2 },
       ],
-      datasets: [], clearances: [], enclosures: [], decisions: [],
+      datasets: [],
+      // Two ranges, deliberately different: one open-ended and one that
+      // expires later today. Both are cover IN FORCE, so both draw to the
+      // right edge, and a bar that stopped mid-chart would be the bug.
+      clearances: [
+        { clearance_id: "cl1", template_code: "ESAF-7741", risk_band: "Yellow",
+          status: "Active", valid_from: iso(20 * 60 * 60 * 1000),
+          valid_until: iso(-6 * 60 * 60 * 1000), registered_at: iso(21 * 60 * 60 * 1000) },
+        { clearance_id: "cl2", template_code: "RAD-118", risk_band: "Green",
+          status: "Active", valid_from: null, valid_until: null,
+          registered_at: iso(5 * 60 * 60 * 1000) },
+      ],
+      enclosures: [], decisions: [],
     };
   }
 

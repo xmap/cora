@@ -95,13 +95,18 @@
   // property of the canvas, so a duration constant would silently lie at
   // every window size but the one it was measured at.
   const COLLAPSE_GAP = MARK_STEP;
-  const LABEL_CH = 5.6;
+  // Above the widest measured advance of the label face, not at it: the box
+  // is an estimate used to clamp a label inside the plot, and an estimate
+  // that runs under the truth clamps a label to an edge it then overhangs.
+  const LABEL_CH = 5.85;
   const LABEL_PAD = 5;
   const LANE_LABEL_CH = 6.2;
   // Extra time rendered either side of the view, as a multiple of its span.
   // A drag translates rather than rebuilds, and this buffer is what gives the
   // translation something to reveal.
   const OVERSCAN = 1;
+  // How far the pinned-group halo stands off its pack on every side.
+  const SEL_PAD = 3;
 
   function parseT(iso) {
     return Date.parse(iso) / 1000;
@@ -215,6 +220,7 @@
       lane_id: lane.lane_id,
       label: lane.label,
       render: lane.render,
+      noun: lane.noun,
       // `zone` and `track` rows. All optional, all ignored by a document that
       // does not use them, so the flat-lane shape this module started with
       // still renders exactly as it did.
@@ -322,13 +328,19 @@
   // `ProcedureIterationStarted` says no more than `IterationStarted`. Derived
   // from the lane's own label rather than a table of domain nouns, so this
   // module stays subject-neutral the way its header promises.
-  function stripLanePrefix(label, laneLabel) {
-    if (!laneLabel) return label;
-    const noun = laneLabel.replace(/s$/, "");
-    if (noun.length > 2 && label.length > noun.length && label.indexOf(noun) === 0) {
-      return label.slice(noun.length);
-    }
-    return label;
+  function stripLanePrefix(label, laneLabel, laneNoun) {
+    // The lane's own noun where the document supplies one, because a lane
+    // label is written to fit a gutter and a shortened one is not the
+    // aggregate's name: "Calibs" leaves the stem "Calib", which matches the
+    // front of "CalibrationRecorded" and cuts it to "rationRecorded".
+    const noun = (laneNoun || laneLabel || "").replace(/s$/, "");
+    if (noun.length < 3 || label.length <= noun.length) return label;
+    if (label.indexOf(noun) !== 0) return label;
+    // What is left has to be a WORD. These names are PascalCase, so the
+    // remainder starting lowercase means the cut landed inside one -- the
+    // failure above, and the only thing separating it from a correct strip.
+    const rest = label.slice(noun.length);
+    return /^[A-Z]/.test(rest) ? rest : label;
   }
 
   // Grouping is a RENDERING concern only: `lane.points` keeps every point,
@@ -418,7 +430,13 @@
       if (c.skip) continue;
       let l = c.cx - c.w / 2;
       let r = c.cx + c.w / 2;
-      if (c.cx >= PAD_L && c.cx <= VW - PAD_R) {
+      // Clamp anything that OVERLAPS the plot, not just what is centred in
+      // it. Labels are laid out across the whole overscan buffer so a pan has
+      // them ready, and one straddling the edge used to be left where it fell
+      // and half eaten by the clip, which reads as a broken word rather than
+      // as a mark that is partly off screen. Wholly outside stays where it is
+      // and stays invisible.
+      if (r > PAD_L && l < VW - PAD_R) {
         if (l < PAD_L) {
           l = PAD_L;
           r = l + c.w;
@@ -611,6 +629,19 @@
         );
         return;
       }
+      // Every row that holds marks gets the same rail, tracks included. A
+      // track used to draw only its lifetime bar, so a row whose bar was
+      // short had nothing to read its marks along while every flat lane did,
+      // and the two halves of the chart looked like two charts.
+      g.appendChild(
+        svg("line", {
+          x1: PAD_L,
+          y1: y,
+          x2: VW - PAD_R,
+          y2: y,
+          class: "cs-baseline" + (lane.render === "track" ? " cs-baseline--track" : ""),
+        })
+      );
       if (lane.render === "track") {
         // Two-part gutter: the KIND, fixed width and indented by depth, then
         // the instance's own name. Reading down the kind column alone gives
@@ -627,9 +658,17 @@
         g.appendChild(lt);
         return;
       }
-      g.appendChild(svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-baseline" }));
       const t = fitted(lane.label, PAD_L - 12, PAD_L - 16, "cs-lane-label");
       t.setAttribute("y", y + 4);
+      // A gutter label is two or three shortened words. Where the row's
+      // membership rule is not obvious from them, the document says so and
+      // it hangs off the label rather than off a legend nobody reads.
+      if (lane.hint) {
+        const existing = t.querySelector("title");
+        const ttl = existing || svg("title");
+        ttl.textContent = (existing ? existing.textContent + " -- " : "") + lane.hint;
+        if (!existing) t.appendChild(ttl);
+      }
       g.appendChild(t);
     });
 
@@ -665,7 +704,11 @@
     // Filled later, appended first: an arrow leaving a solid mark has to pass
     // BEHIND it, or its tail sits on top of the very thing it starts from.
     const edgeLayer = svg("g", { class: "cs-edge-layer" });
+    // Behind the marks for the same reason as the edges: it is a backdrop for
+    // the group a pinned event belongs to, not a thing to read over it.
+    const selLayer = svg("g", { class: "cs-sel-layer" });
     plot.appendChild(edgeLayer);
+    plot.appendChild(selLayer);
     plotWindow.appendChild(plot);
     axisWindow.appendChild(axisRow);
     g.appendChild(plotWindow);
@@ -743,7 +786,7 @@
         clusters.forEach((c) => {
           const head = clusterHead(c);
           const n = c.items.length;
-          const base = stripLanePrefix(head.point.label, lane.label);
+          const base = stripLanePrefix(head.point.label, lane.label, lane.noun);
           // `xN` only when every member really is that event: a burst of five
           // Adjusted plus one Resumed is not six resumes, so a mixed cluster
           // names the one it is titled after and counts the rest as `+N`.
@@ -799,8 +842,22 @@
             // the one event under the pointer rather than to whatever the
             // group is named after. `group` keeps the neighbours reachable so
             // the card can still say which of how many this is.
-            const cell_c = { xStart: cx, xEnd: cx + cw, items: [q], group: c.items, index: i };
+            // Below the cap a cell IS one event. Above it the bar is a
+            // single object standing for all of them, and handing it only the
+            // first would let a click on a bar of ninety report one event and
+            // silently drop the rest; carrying the group makes the card
+            // enumerate them instead.
+            const cell_c = {
+              xStart: cx,
+              xEnd: cx + cw,
+              items: wide ? c.items : [q],
+              group: c.items,
+              index: i,
+            };
             markEl._csCluster = cell_c;
+            // The whole pack, so pinning one square can outline the run of
+            // them it came out of rather than just itself.
+            markEl._csGroup = n > 1 ? { x: x0, y, w: packWidth(n), h: ch } : null;
             const hit = svg("rect", {
               x: cx - MARK_GAP,
               y: y - 9,
@@ -948,7 +1005,7 @@
       plot.appendChild(handle);
     }
 
-    return { g, setPan, X, axisY, timed, cursorLine, handle, selectable };
+    return { g, setPan, X, axisY, timed, cursorLine, handle, selectable, selLayer };
   }
 
   function applyFold(model, scene, cursor) {
@@ -1093,14 +1150,19 @@
     }
     for (const lane of model.lanes) {
       if (lane === model.primaryLane) continue;
+      // A zone caption is a heading over the rows beneath it, not a row. It
+      // has no points and never will, so listing it here only ever produced
+      // "Execution -- no reading yet".
+      if (lane.render === "zone") continue;
       const reading = folded.readings[lane.lane_id];
       let text;
       if (!reading) {
         text = "no reading yet";
-      } else if (lane.render === "markers") {
-        // A non-primary markers lane (every domain lane in a flowing
-        // window with no single subject, see mount()'s `follow` option):
-        // there is no value to show, only the most recent event's label.
+      } else if (lane.render === "markers" || lane.render === "track") {
+        // A markers lane or a track: neither carries a number, only events,
+        // so the most recent event's label IS the reading. A track used to
+        // fall through to the numeric branch below and report "undefined @"
+        // for every run, procedure, subject and ribbon on the chart.
         text = `${reading.label} @ ${fmtClock(t0, reading.secs)}`;
       } else {
         text = `${reading.text != null ? reading.text : reading.value} @ ${fmtClock(t0, reading.secs)}`;
@@ -1821,7 +1883,27 @@
       controls = wireDrag(root, model, scene, state, opts);
       if (anchor) {
         const match = scene.selectable.find((s) => s.point === anchor);
-        if (match) match.el.classList.add("cs-selected");
+        if (match) {
+          match.el.classList.add("cs-selected");
+          // Two marks, two questions. The ring on the square answers "which
+          // event", and a square is 6 units wide, so on its own it is a
+          // speck in the middle of a bar and says nothing about the run of
+          // events it came out of. The halo answers "out of what", and it
+          // covers the whole pack.
+          const box = match.el._csGroup;
+          if (box) {
+            scene.selLayer.appendChild(
+              svg("rect", {
+                x: box.x - SEL_PAD,
+                y: box.y - box.h / 2 - SEL_PAD,
+                width: box.w + SEL_PAD * 2,
+                height: box.h + SEL_PAD * 2,
+                rx: SEL_PAD + 1.5,
+                class: "cs-sel-group",
+              })
+            );
+          }
+        }
       }
       controls.setCursor(state.cursor);
     }

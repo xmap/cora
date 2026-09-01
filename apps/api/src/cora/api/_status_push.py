@@ -577,7 +577,20 @@ async def _drain_active_clearances(
             "clearance_id": render_value(item.clearance_id),
             "template_code": item.template_code,
             "risk_band": item.risk_band,
+            "status": item.status,
+            # A clearance is cover over a RANGE, so the viewer needs both ends
+            # of it, not just when it runs out. `registered_at` is the
+            # fallback the page draws from when cover was granted without an
+            # explicit start.
+            #
+            # `title` and `last_status_reason` stay off the wire. The title is
+            # operator-authored and the reason is free text written at the
+            # moment of an incident, which is the shape that carries
+            # incidental personal data; `template_code` names the clearance
+            # without either.
+            "valid_from": render_value(item.valid_from),
             "valid_until": render_value(item.valid_until),
+            "registered_at": render_value(item.registered_at),
         }
         for item in items
     ]

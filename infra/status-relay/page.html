@@ -187,7 +187,15 @@
   }
   .cs-tip-item .cs-tip-k { color: var(--cs-mute); }
   .cs-tip-item--head .cs-tip-k { color: var(--cs-ink); font-weight: 600; }
-  .cs-selected { stroke: var(--cs-ink); stroke-width: 2; }
+  .cs-selected { stroke: var(--cs-ink); stroke-width: 1.6; }
+  /* The pack a pinned event came out of. A fill, not a second ring: the ring
+     already means "this event", and two strokes a few units apart would read
+     as one thick box round the wrong thing. */
+  .cs-sel-group {
+    fill: color-mix(in srgb, var(--cs-ink) 13%, transparent);
+    stroke: color-mix(in srgb, var(--cs-ink) 34%, transparent);
+    stroke-width: 1;
+  }
   /* Everything outside the pinned event's chain and correlation group recedes
      rather than disappearing: the shape of the surrounding traffic is still
      context, it just stops competing. */
@@ -237,6 +245,7 @@
     border: 1px solid var(--cs-line); border-radius: 3px; padding: 0 3px;
   }
   .cs-baseline, .cs-axis, .cs-tick { stroke: var(--cs-line); stroke-width: 1; }
+  .cs-baseline--track { opacity: 0.45; }
   /* Same treatment as a track's KIND column: small mono caps. A flat lane
      has no instance to name, so the domain IS its identity and one word in
      the same voice as the rest of the gutter is the whole label. */
@@ -256,9 +265,13 @@
     fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 7.6px;
     letter-spacing: 0.1em;
   }
-  .cs-track-label { fill: var(--cs-sub); font-size: 10px; }
-  .cs-track-label--d0 { fill: var(--cs-ink); font-weight: 600; }
-  .cs-track-label--d2 { fill: var(--cs-mute); font-size: 9.5px; }
+  /* An instance name identifies a row; it is not the row's content. At 10px
+     near-white it was the loudest thing on the chart, so a gutter of names
+     outshouted the events they were there to label. Depth still reads,
+     through a two-step ramp rather than through weight. */
+  .cs-track-label { fill: var(--cs-mute); font-size: 8.6px; letter-spacing: 0.01em; }
+  .cs-track-label--d0 { fill: var(--cs-sub); font-weight: 500; }
+  .cs-track-label--d2 { font-size: 8.2px; }
   /* Thickness carries depth, so containment reads without a second colour or
      an extra rule: the campaign is visibly the thing holding the runs, which
      hold the procedures. */
@@ -658,35 +671,103 @@
   // catch-all below with Actor, Agent, Calibration, Allocation, and the
   // rest of the 42-type event vocabulary. Lane count is still fixed
   // either way, so the layout never reflows.
+  // Every one of the record's 42 aggregate types is filed here, not just the
+  // twelve the tables happen to show. An unmapped type used to fall into
+  // "Other", and "Other" sits under the last zone heading, so a Mount or an
+  // Allocation was being drawn as a JUDGEMENT -- the same category error the
+  // zones exist to prevent. Mapping one costs nothing at rest: a domain with
+  // no events in the buffer emits no lane, so the quiet ones are invisible
+  // until the day they are not.
   var STREAM_TYPE_TO_DOMAIN = {
     Run: "runs",
     Procedure: "procedures",
-    Subject: "subjects",
     Campaign: "campaigns",
+    Plan: "recipes",
+    Recipe: "recipes",
+    Method: "recipes",
+    Practice: "recipes",
+    Capability: "recipes",
+
+    Subject: "subjects",
+    Asset: "equipment",
+    Assembly: "equipment",
+    Mount: "equipment",
+    Frame: "equipment",
+    Fixture: "equipment",
+    Family: "equipment",
+    Model: "equipment",
+    Role: "equipment",
+    Supply: "supplies",
+    Actor: "actors",
+    Agent: "actors",
+    LanguageModel: "actors",
+    Credential: "actors",
+
+    Enclosure: "enclosures",
+    Clearance: "clearances",
+    ClearanceTemplate: "clearances",
+    Visit: "visits",
+    Allocation: "allocations",
+    Policy: "authority",
+    Ratification: "authority",
+    Surface: "authority",
+    Zone: "authority",
+    Conduit: "authority",
+    Permit: "authority",
+    Seal: "authority",
+    Facility: "authority",
+
     Dataset: "datasets",
     Distribution: "datasets",
     Acquisition: "datasets",
-    Clearance: "clearances",
-    ClearanceTemplate: "clearances",
+    Edition: "datasets",
     Caution: "cautions",
-    Enclosure: "enclosures",
     Decision: "decisions",
+    Attestation: "attestations",
+    Calibration: "calibrations",
   };
   var DOMAIN_ORDER = [
-    "runs", "procedures", "subjects", "campaigns", "datasets", "clearances", "cautions",
-    "enclosures", "decisions", "other",
+    "runs", "procedures", "campaigns", "recipes",
+    "subjects", "equipment", "supplies", "actors",
+    "enclosures", "clearances", "visits", "allocations", "authority",
+    "datasets", "decisions", "cautions", "attestations", "calibrations",
+    "other",
   ];
+  // Short enough to sit in a gutter that also has to hold an indent and an
+  // instance name. These are set in the same small mono caps as a track's
+  // KIND column, so they are read as a column and not as prose.
   var DOMAIN_LABEL = {
     runs: "Runs",
-    procedures: "Procedures",
+    procedures: "Procs",
+    campaigns: "Camps",
+    recipes: "Recipes",
     subjects: "Subjects",
-    campaigns: "Campaigns",
-    datasets: "Datasets",
-    clearances: "Clearances",
-    cautions: "Cautions",
+    equipment: "Equipment",
+    supplies: "Supplies",
+    actors: "Actors",
     enclosures: "Enclosures",
+    clearances: "Clearances",
+    visits: "Visits",
+    allocations: "Budget",
+    authority: "Authority",
+    datasets: "Datasets",
     decisions: "Decisions",
-    other: "Other",
+    cautions: "Cautions",
+    attestations: "Attests",
+    calibrations: "Calibs",
+    other: "Unfiled",
+  };
+  // The aggregate's own name, which is what an event type is prefixed with.
+  // Separate from the label because a label is written to fit the gutter:
+  // "Calibs" leaves the stem "Calib", and stripping that off
+  // "CalibrationRecorded" leaves the word fragment "rationRecorded". Only the
+  // domains whose label is not already the noun need an entry.
+  var DOMAIN_NOUN = {
+    procedures: "Procedure",
+    campaigns: "Campaign",
+    attestations: "Attestation",
+    calibrations: "Calibration",
+    allocations: "Allocation",
   };
 
   // Severity rank per event type: 1 notable, 2 critical, absent means routine.
@@ -751,7 +832,7 @@
     // real state and not an error: the chart then has no instance tracks and
     // falls back to one flat lane per domain, which is what it drew before
     // any of this existed.
-    snapshot: { runs: [], subjects: [], campaigns: [], procedures: [] },
+    snapshot: null,
   };
   var flowingStageEl = document.getElementById("flowing-stage");
   var flowingResumeEl = document.getElementById("flowing-resume");
@@ -771,45 +852,67 @@
   //
   //   EXECUTION    campaign > run > procedure   containment tree -> nest it,
   //                                             thickness carries depth
-  //   PARTICIPANTS subjects                     own lifetime, many-to-many
-  //                                             with runs -> their own bars
-  //   GOVERNANCE   enclosure permit             a CONDITION over a range ->
-  //                                             a ribbon. As dots you learn
-  //                                             it was sampled; as a ribbon
+  //   PARTICIPANTS subjects, equipment,         own lifetime, many-to-many
+  //                supplies, actors             with runs -> their own bars
+  //   GOVERNANCE   enclosure permits,           a CONDITION over a range ->
+  //                clearances, visits,          a ribbon. As dots you learn
+  //                allocations                  it was sampled; as a ribbon
   //                                             you learn whether it held
   //   JUDGEMENT    datasets, decisions,         point conclusions, no
-  //                cautions, clearances         lifetime -> flat lanes
+  //                cautions, attestations       lifetime -> flat lanes
   //
   // A row per instance costs vertical space, so the tree is capped and the
   // subtitle reports what the cap dropped.
   var MAX_TRACK_ROWS = 26;
+  // One word each. A caption used to carry its own rule ("a condition over a
+  // range"), which is worth reading once and is then four lines of standing
+  // text competing with the rows underneath it. The rule is written above, in
+  // the place that decides it.
   var ZONES = {
-    execution: "Execution · nested by containment",
-    participants: "Participants · many-to-many with runs",
-    governance: "Governance · a condition over a range",
-    judgement: "Judgement · point conclusions",
+    execution: "Execution",
+    participants: "Participants",
+    governance: "Governance",
+    judgement: "Judgement",
   };
   // Which zone each domain's flat lane belongs to. A leftover event -- one
   // whose instance is not on screen -- lands in its OWN zone rather than at
   // the bottom of the page: a stray Run event is execution, not a judgement,
   // and filing it under the last heading would make the zones lie about what
   // they group.
+  //
+  // `other` deliberately has NO zone. It is the catch-all for a stream type
+  // this page has never heard of, and there is no honest zone for that:
+  // filing an unknown under the last heading is how a Mount came to be drawn
+  // as a judgement. It renders after every zone, under no caption.
   var DOMAIN_ZONE = {
     runs: "execution",
     procedures: "execution",
     campaigns: "execution",
+    recipes: "execution",
     subjects: "participants",
+    equipment: "participants",
+    supplies: "participants",
+    actors: "participants",
     enclosures: "governance",
+    clearances: "governance",
+    visits: "governance",
+    allocations: "governance",
+    authority: "governance",
     datasets: "judgement",
     decisions: "judgement",
     cautions: "judgement",
-    clearances: "judgement",
-    other: "judgement",
+    attestations: "judgement",
+    calibrations: "judgement",
+    other: null,
   };
-  // Only these get a lane whatever happens, so their zone is never a bare
-  // caption. Every other domain appears only when it actually holds
-  // something.
-  var JUDGEMENT_DOMAINS = ["datasets", "decisions", "cautions", "clearances", "other"];
+  // A lane whatever happens, so its zone is never a bare caption and so an
+  // empty one reads as "nothing happened here" rather than as a row nobody
+  // drew. Every other domain appears only when it holds something.
+  var ALWAYS_ON = ["datasets", "decisions", "cautions", "other"];
+  // Domains that get instance TRACKS above their flat lane. Only for these
+  // can a flat lane mean "the ones with no row of their own"; for the rest it
+  // is the domain's only home, and calling it elsewhere would be a lie.
+  var TRACKED_DOMAINS = ["runs", "procedures", "campaigns", "subjects", "enclosures", "clearances"];
   // `Unknown` is its own state, never blended into a neighbour: not-observed
   // is not the same as fine, and smoothing over it would assert a safety
   // condition nobody measured.
@@ -863,6 +966,16 @@
   // dropped for want of a home -- an event vanishing because its Run had
   // already finished would make a busy window look quiet.
   function buildRows(buffer, snap, nowIso) {
+    // Every list is read through `rows`, never off `snap` directly. The page
+    // renders once before the first snapshot lands, so `flowing.snapshot`
+    // starts as a stub, and each list this function learns to use has to be
+    // added to that stub too or the first paint throws. Reading them here
+    // instead means the stub can never fall behind: the day a new list is
+    // added, an old producer that does not send it and the pre-snapshot paint
+    // both take the same empty path.
+    var rows = function (key) {
+      return (snap && snap[key]) || [];
+    };
     var lanes = [];
     var byStream = {};
     var pendingFlat = {};
@@ -906,14 +1019,23 @@
     function flatFor(zoneKey) {
       DOMAIN_ORDER.forEach(function (key) {
         if (DOMAIN_ZONE[key] !== zoneKey) return;
-        var isJudgement = JUDGEMENT_DOMAINS.indexOf(key) !== -1;
         var points = pendingFlat[key] || [];
-        if (!isJudgement && !points.length) return;
+        if (ALWAYS_ON.indexOf(key) === -1 && !points.length) return;
+        var tracked = TRACKED_DOMAINS.indexOf(key) !== -1;
         lanes.push({
           lane_id: "domain:" + key,
-          label: isJudgement ? DOMAIN_LABEL[key] : DOMAIN_LABEL[key] + " \u00b7 elsewhere",
+          label: tracked ? DOMAIN_LABEL[key] + " \u00b7 elsewhere" : DOMAIN_LABEL[key],
+          noun: DOMAIN_NOUN[key] || DOMAIN_LABEL[key],
           render: "markers",
           points: points,
+          hint: tracked
+            ? DOMAIN_LABEL[key] +
+              " with no row of their own above: the instance ended before this " +
+              "window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap."
+            : key === "other"
+              ? "Stream types this page has no domain for. Not a zone, because " +
+                "there is no honest zone for an unknown."
+              : null,
         });
       });
     }
@@ -922,11 +1044,12 @@
     // events have no home, and a flat lane emitted before that pass would
     // claim events a later track was about to take.
     function claimAll() {
-      snap.runs.forEach(function (r) { claimed[r.run_id] = true; });
-      snap.procedures.forEach(function (pr) { claimed[pr.procedure_id] = true; });
-      snap.campaigns.forEach(function (c) { claimed[c.campaign_id] = true; });
-      snap.subjects.forEach(function (sj) { claimed[sj.subject_id] = true; });
+      rows("runs").forEach(function (r) { claimed[r.run_id] = true; });
+      rows("procedures").forEach(function (pr) { claimed[pr.procedure_id] = true; });
+      rows("campaigns").forEach(function (c) { claimed[c.campaign_id] = true; });
+      rows("subjects").forEach(function (sj) { claimed[sj.subject_id] = true; });
       Object.keys(enclosureTimelines).forEach(function (id) { claimed[id] = true; });
+      rows("clearances").forEach(function (cl) { claimed[cl.clearance_id] = true; });
       DOMAIN_ORDER.forEach(function (key) { pendingFlat[key] = []; });
       buffer.forEach(function (e) {
         if (claimed[e.stream_id]) return;
@@ -938,12 +1061,12 @@
     // ---- EXECUTION -------------------------------------------------------
     zone("execution");
     var procsOfRun = {};
-    snap.procedures.forEach(function (pr) {
+    rows("procedures").forEach(function (pr) {
       (procsOfRun[pr.parent_run_id] = procsOfRun[pr.parent_run_id] || []).push(pr);
     });
     var runsOfCampaign = {};
     var loose = [];
-    snap.runs.forEach(function (r) {
+    rows("runs").forEach(function (r) {
       if (r.campaign_id) (runsOfCampaign[r.campaign_id] = runsOfCampaign[r.campaign_id] || []).push(r);
       else loose.push(r);
     });
@@ -964,7 +1087,7 @@
         );
       });
     }
-    snap.campaigns.forEach(function (c) {
+    rows("campaigns").forEach(function (c) {
       var mine = runsOfCampaign[c.campaign_id];
       // A Campaign with nothing running under it is a table row, not a track:
       // an empty bar spanning the window says only that the record has one.
@@ -981,7 +1104,7 @@
 
     // ---- PARTICIPANTS ----------------------------------------------------
     zone("participants");
-    snap.subjects.forEach(function (sj) {
+    rows("subjects").forEach(function (sj) {
       track("SUBJ", instanceLabel(sj.name, sj.subject_id), 0, sj.created_at, null, sj.subject_id, {
         tone: sj.status === "Mounted" || sj.status === "Measured" ? "good" : null,
       });
@@ -1024,11 +1147,38 @@
       });
     });
 
+    // A clearance is a CONDITION OVER A RANGE, the same shape as a permit and
+    // not the shape of a conclusion: it carries `valid_from` and
+    // `valid_until`, and drawn as dots you learn only that somebody touched
+    // it, never whether cover was in force while a run was going. It was in
+    // Judgement, which was the wrong zone for it.
+    rows("clearances").forEach(function (cl) {
+      // Cover already granted and not yet expired runs OPEN to the right
+      // edge. An expiry in the future is a date, not an ending, and drawing
+      // the bar to it would stop it somewhere inside the chart and read as
+      // cover that has already lapsed.
+      var until = cl.valid_until && Date.parse(cl.valid_until) <= Date.parse(nowIso)
+        ? cl.valid_until
+        : null;
+      track(
+        "CLR",
+        instanceLabel(cl.template_code, cl.clearance_id),
+        0,
+        cl.valid_from || cl.registered_at || null,
+        until,
+        cl.clearance_id,
+        { tone: cl.status === "Active" ? "good" : "unknown" }
+      );
+    });
+
     flatFor("governance");
 
     // ---- JUDGEMENT -------------------------------------------------------
     zone("judgement");
     flatFor("judgement");
+
+    // Under no zone at all: see DOMAIN_ZONE.
+    flatFor(null);
 
     return { lanes: lanes, dropped: dropped, tracks: trackCount, permits: permitRows };
   }
@@ -1239,12 +1389,13 @@
     // with -- which Run belongs to which Campaign, which Procedure is a phase
     // of which Run -- arrives ONLY here; the activity stream can tell one
     // instance from another by `stream_id` and nothing more.
-    flowing.snapshot = {
-      runs: msg.runs || [],
-      subjects: msg.subjects || [],
-      campaigns: msg.campaigns || [],
-      procedures: msg.procedures || [],
-    };
+    // The message IS the snapshot, so it is kept whole rather than copied
+    // list by list. The copy that used to stand here named four lists, and
+    // when clearances started being drawn as ribbons the wire carried them,
+    // the tables rendered them and the chart still saw nothing: the field was
+    // dropped in transit by a list that had never been updated. Keeping the
+    // object cannot drop a field that is on it.
+    flowing.snapshot = msg;
     if (flowing.following && !flowingIsBusy()) renderFlowing();
     renderRuns(msg.runs);
     renderSubjects(msg.subjects);

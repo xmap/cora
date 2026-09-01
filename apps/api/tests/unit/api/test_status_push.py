@@ -2111,6 +2111,72 @@ async def test_lifespan_pushes_active_clearances_only() -> None:
 
 
 @pytest.mark.unit
+async def test_lifespan_clearance_row_carries_its_range_and_no_free_text() -> None:
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True, status_push_url=url, status_push_tick_seconds=0.1
+        )
+        started = _NOW + timedelta(minutes=5)
+        ends = _NOW + timedelta(hours=8)
+        item = ClearanceSummaryItem(
+            clearance_id=uuid4(),
+            template_id=uuid4(),
+            template_code="ESAF",
+            facility_code="cora",
+            title="Beryllium handling, hutch B",
+            external_id=None,
+            status="Active",
+            risk_band="Yellow",
+            subject_binding_ids=[],
+            asset_binding_ids=[],
+            run_binding_ids=[],
+            procedure_binding_ids=[],
+            parent_id=None,
+            registered_at=_NOW,
+            last_status_changed_at=None,
+            last_status_reason="raised by the floor coordinator after the swap",
+            last_reviewed_by=uuid4(),
+            valid_from=started,
+            valid_until=ends,
+            next_review_due_at=None,
+        )
+
+        async with status_push_lifespan(
+            kernel, **_default_handlers(list_clearances=_make_list_clearances([item]))
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        row = json.loads(raw)["clearances"][0]
+        # Pinned as a SET, not field by field. A clearance is drawn as a bar
+        # over a range, and a dropped end silently turns it back into a dot;
+        # asserting only the fields this test remembers to name is how a field
+        # goes missing without a red test.
+        assert set(row) == {
+            "clearance_id",
+            "template_code",
+            "risk_band",
+            "status",
+            "valid_from",
+            "valid_until",
+            "registered_at",
+        }
+        assert row["valid_from"] == started.isoformat()
+        assert row["valid_until"] == ends.isoformat()
+        # Operator free text and reviewer identity never leave the API host.
+        assert "Beryllium" not in raw
+        assert "floor coordinator" not in raw
+        assert str(item.last_reviewed_by) not in raw
+
+
+@pytest.mark.unit
 async def test_lifespan_pushes_active_enclosures_only() -> None:
     received: asyncio.Queue[str] = asyncio.Queue()
 
