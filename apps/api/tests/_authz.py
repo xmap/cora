@@ -75,7 +75,16 @@ def make_policy_event(
     did. Pass `grants` instead when a test needs principals with
     DIFFERENT command sets, which is the case pairs exist to express and
     the two lists cannot state.
+
+    Supplying both raises rather than silently preferring one, matching
+    what the REST route and MCP tool do with the same ambiguity. A test
+    helper that quietly ignored half its arguments would let a test
+    believe it had seeded a policy it had not, which is worse here than
+    in production: the whole point of the fixture is to be trusted.
     """
+    if grants is not None and (permitted_principal_ids or permitted_commands):
+        msg = "make_policy_event: pass grants, or the two lists, not both."
+        raise ValueError(msg)
     resolved_grants = (
         tuple(grants)
         if grants is not None

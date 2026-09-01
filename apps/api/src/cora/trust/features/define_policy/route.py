@@ -24,6 +24,7 @@ from cora.infrastructure.routing import (
     get_surface_id,
 )
 from cora.trust.aggregates.policy import POLICY_NAME_MAX_LENGTH
+from cora.trust.features.define_policy import _grant_shape
 from cora.trust.features.define_policy.command import DefinePolicy
 from cora.trust.features.define_policy.handler import IdempotentHandler
 
@@ -81,23 +82,16 @@ class DefinePolicyRequest(BaseModel):
     def _exactly_one_grant_shape(self) -> "DefinePolicyRequest":
         """Reject a body that gives both shapes, or neither.
 
-        Accepting both would mean silently picking a winner, and the two
-        express different intents: a cross-product grants far more than
-        an equivalent-looking explicit mapping. Neither leaves the policy
-        undefined rather than deny-all, which is a typo, not an intent.
+        The rule lives in `_grant_shape.resolve`, shared with the MCP
+        tool so the two surfaces cannot drift. Raising it HERE, inside a
+        Pydantic validator, is what makes FastAPI render it as a 422
+        rather than a 500.
         """
-        pair_given = self.permitted_principal_ids is not None or self.permitted_commands is not None
-        if self.grants is not None and pair_given:
-            msg = (
-                "Give either 'grants' or the permitted_principal_ids/"
-                "permitted_commands pair, not both."
-            )
-            raise ValueError(msg)
-        if self.grants is None and (
-            self.permitted_principal_ids is None or self.permitted_commands is None
-        ):
-            msg = "Provide 'grants', or both 'permitted_principal_ids' and 'permitted_commands'."
-            raise ValueError(msg)
+        _grant_shape.resolve(
+            grants=self.grants,
+            permitted_principal_ids=self.permitted_principal_ids,
+            permitted_commands=self.permitted_commands,
+        )
         return self
 
 
@@ -110,10 +104,17 @@ class DefinePolicyResponse(BaseModel):
 def _to_command(body: DefinePolicyRequest) -> DefinePolicy:
     """Translate either accepted body shape into the one command shape.
 
-    The validator above has already guaranteed exactly one is present,
-    so the domain never sees two ways of saying this.
+    Re-resolves rather than trusting the validator's earlier verdict:
+    one call, one answer, and no second copy of the branch condition
+    that could disagree with the one that admitted the request.
     """
-    if body.grants is not None:
+    shape = _grant_shape.resolve(
+        grants=body.grants,
+        permitted_principal_ids=body.permitted_principal_ids,
+        permitted_commands=body.permitted_commands,
+    )
+    if shape is _grant_shape.GrantShape.EXACT:
+        assert body.grants is not None  # narrowed by resolve
         return DefinePolicy(
             name=body.name,
             conduit_id=body.conduit_id,
@@ -124,7 +125,7 @@ def _to_command(body: DefinePolicyRequest) -> DefinePolicy:
             ),
             surface_id=body.surface_id,
         )
-    assert body.permitted_principal_ids is not None  # guaranteed by the validator
+    assert body.permitted_principal_ids is not None  # narrowed by resolve
     assert body.permitted_commands is not None
     return DefinePolicy.from_cross_product(
         name=body.name,

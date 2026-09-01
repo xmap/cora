@@ -331,6 +331,56 @@ def test_a_pre_pairs_policy_still_permits_everything_it_used_to() -> None:
 
 
 @pytest.mark.unit
+def test_a_pre_pairs_event_with_repeated_entries_yields_each_pair_once() -> None:
+    """A repeated entry in either legacy list must not repeat the pair.
+
+    The old state folded both lists to frozensets, so nothing upstream
+    had a reason to prevent duplicates on disk. Folding to `Policy` would
+    collapse them regardless; this pins the EVENT, which anything reading
+    grants before the fold (an audit trail, a grant count) sees first.
+    """
+    p1 = UUID("01900000-0000-7000-8000-000000000111")
+    p2 = UUID("01900000-0000-7000-8000-000000000222")
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            _legacy_payload(
+                conduit_id=uuid4(),
+                principal_ids=[p1, p1, p2],
+                command_names=["StartRun", "StartRun"],
+            ),
+        )
+    )
+
+    assert isinstance(rebuilt, PolicyDefined)
+    assert rebuilt.grants == ((p1, "StartRun"), (p2, "StartRun"))
+
+
+@pytest.mark.unit
+def test_a_grants_bearing_payload_with_a_repeated_pair_yields_it_once() -> None:
+    """Same guarantee for the new shape, which is hand-writable too."""
+    p1 = UUID("01900000-0000-7000-8000-000000000111")
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            {
+                "policy_id": str(uuid4()),
+                "name": "Repeated",
+                "conduit_id": str(uuid4()),
+                "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+                "grants": [[str(p1), "StartRun"], [str(p1), "StartRun"]],
+                "occurred_at": _NOW.isoformat(),
+            },
+        )
+    )
+
+    assert isinstance(rebuilt, PolicyDefined)
+    assert rebuilt.grants == ((p1, "StartRun"),)
+
+
+@pytest.mark.unit
 def test_a_pre_pairs_event_with_an_empty_list_stays_deny_all() -> None:
     """Empty on either side cross-products to nothing, as it always did."""
     for principal_ids, command_names in (

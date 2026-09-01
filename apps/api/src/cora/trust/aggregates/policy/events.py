@@ -155,21 +155,29 @@ def _grants_from_payload(payload: Mapping[str, Any]) -> tuple[tuple[UUID, str], 
     multiplication from the check to the fold changes where it happens,
     never what it yields.
 
-    Both branches sort, so a fold is deterministic regardless of which
-    shape produced it.
+    Both branches deduplicate and sort, so the same logical permission
+    set yields the same tuple whichever shape produced it. Dedup matters
+    beyond tidiness: a legacy payload may repeat an entry in either list
+    (the old state folded both to frozensets, so nothing upstream had a
+    reason to prevent it), and the cross-product would then repeat the
+    pair once per repetition. Folding to `Policy` collapses that anyway,
+    but anything reading the EVENT before it folds -- an audit trail, a
+    grant count -- would otherwise double-count.
     """
     stored_grants = payload.get("grants")
     if stored_grants is not None:
         return tuple(
             sorted(
-                (UUID(principal_id), command_name) for principal_id, command_name in stored_grants
+                {(UUID(principal_id), command_name) for principal_id, command_name in stored_grants}
             )
         )
     return tuple(
         sorted(
-            (UUID(principal_id), command_name)
-            for principal_id in payload["permitted_principal_ids"]
-            for command_name in payload["permitted_commands"]
+            {
+                (UUID(principal_id), command_name)
+                for principal_id in payload["permitted_principal_ids"]
+                for command_name in payload["permitted_commands"]
+            }
         )
     )
 

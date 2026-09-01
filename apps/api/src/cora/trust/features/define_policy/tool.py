@@ -17,6 +17,7 @@ from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
 from cora.trust.aggregates.policy import POLICY_NAME_MAX_LENGTH
+from cora.trust.features.define_policy import _grant_shape
 from cora.trust.features.define_policy.command import DefinePolicy
 from cora.trust.features.define_policy.handler import IdempotentHandler
 
@@ -38,20 +39,19 @@ def _to_command(
 ) -> DefinePolicy:
     """Translate either accepted argument shape into the one command shape.
 
-    Mirrors the REST route's `_to_command` and rejects the same two
-    mistakes, because a tool that quietly picked a winner between the
-    shapes would let an agent grant a cross-product while believing it
-    had granted a mapping. That is the exact over-grant pairs exist to
-    stop, and an agent-facing surface is where it would be least
-    visible.
+    Shares `_grant_shape.resolve` with the REST route, so neither surface
+    can drift into quietly picking a winner between the two shapes. An
+    agent granting a cross-product while believing it had granted a
+    mapping is the exact over-grant pairs exist to stop, and an
+    agent-facing surface is where it would be least visible.
     """
-    pair_given = permitted_principal_ids is not None or permitted_commands is not None
-    if grants is not None and pair_given:
-        msg = (
-            "Give either 'grants' or the permitted_principal_ids/permitted_commands pair, not both."
-        )
-        raise ValueError(msg)
-    if grants is not None:
+    shape = _grant_shape.resolve(
+        grants=grants,
+        permitted_principal_ids=permitted_principal_ids,
+        permitted_commands=permitted_commands,
+    )
+    if shape is _grant_shape.GrantShape.EXACT:
+        assert grants is not None  # narrowed by resolve
         return DefinePolicy(
             name=name,
             conduit_id=conduit_id,
@@ -62,9 +62,8 @@ def _to_command(
             ),
             surface_id=surface_id,
         )
-    if permitted_principal_ids is None or permitted_commands is None:
-        msg = "Provide 'grants', or both 'permitted_principal_ids' and 'permitted_commands'."
-        raise ValueError(msg)
+    assert permitted_principal_ids is not None  # narrowed by resolve
+    assert permitted_commands is not None
     return DefinePolicy.from_cross_product(
         name=name,
         conduit_id=conduit_id,
