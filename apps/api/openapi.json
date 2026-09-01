@@ -6558,6 +6558,27 @@
             "title": "Conduit Id",
             "type": "string"
           },
+          "grants": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "propertyNames": {
+                  "format": "uuid"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact grants: which command names each principal may issue. Give this OR the permitted_principal_ids/permitted_commands pair, not both. An empty mapping yields a deny-all policy.",
+            "title": "Grants"
+          },
           "name": {
             "description": "Display name for the new policy.",
             "maxLength": 200,
@@ -6566,21 +6587,35 @@
             "type": "string"
           },
           "permitted_commands": {
-            "description": "Command names (for example 'RegisterActor', 'DefineZone') allowed via this conduit. Empty list yields a deny-all policy.",
-            "items": {
-              "type": "string"
-            },
-            "title": "Permitted Commands",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Command names (for example 'RegisterActor', 'DefineZone') allowed via this conduit, to every principal in permitted_principal_ids. Must be given together with it. Empty list yields a deny-all policy.",
+            "title": "Permitted Commands"
           },
           "permitted_principal_ids": {
-            "description": "Principals (UUIDs) allowed to act via this conduit. Empty list yields a deny-all policy.",
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "title": "Permitted Principal Ids",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Principals (UUIDs) allowed to act via this conduit. Grants EVERY listed principal EVERY name in permitted_commands; supply 'grants' instead when they should differ. Must be given together with permitted_commands. Empty list yields a deny-all policy.",
+            "title": "Permitted Principal Ids"
           },
           "surface_id": {
             "description": "UUID of the Surface this policy governs. Required: every policy binds a concrete Surface seeded by the deployment. The nil sentinel is rejected (InvalidPolicySurfaceError); it survives only on the retired V1 bootstrap seed stream.",
@@ -6592,8 +6627,6 @@
         "required": [
           "name",
           "conduit_id",
-          "permitted_principal_ids",
-          "permitted_commands",
           "surface_id"
         ],
         "title": "DefinePolicyRequest",

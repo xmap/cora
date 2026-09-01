@@ -109,8 +109,11 @@ def _authz_decision_us() -> dict[str, float | int]:
         id=uuid4(),
         name=PolicyName("perf-bench"),
         conduit_id=conduit,
-        permitted_principal_ids=frozenset({principal, *(uuid4() for _ in range(63))}),
-        permitted_commands=frozenset({"HoldRun", "StartRun", *(f"Cmd{i}" for i in range(30))}),
+        grants=frozenset(
+            (grant_principal, command_name)
+            for grant_principal in (principal, *(uuid4() for _ in range(63)))
+            for command_name in ("HoldRun", "StartRun", *(f"Cmd{i}" for i in range(30)))
+        ),
         surface_id=surface,
     )
 

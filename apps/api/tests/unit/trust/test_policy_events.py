@@ -5,7 +5,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.infrastructure.ports import Allow
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
+from cora.trust.aggregates.policy import evaluate
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
     PolicyGrantRevoked,
@@ -13,6 +16,7 @@ from cora.trust.aggregates.policy.events import (
     from_stored,
     to_payload,
 )
+from cora.trust.aggregates.policy.evolver import evolve
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -45,8 +49,7 @@ def test_event_type_name_returns_class_name() -> None:
         policy_id=uuid4(),
         name="X",
         conduit_id=uuid4(),
-        permitted_principal_ids=(),
-        permitted_commands=(),
+        grants=(),
         occurred_at=_NOW,
     )
     assert event_type_name(event) == "PolicyDefined"
@@ -61,8 +64,7 @@ def test_to_payload_serializes_policy_defined_to_primitives() -> None:
         policy_id=policy_id,
         name="Beam-team",
         conduit_id=conduit,
-        permitted_principal_ids=(p1,),
-        permitted_commands=("RegisterActor",),
+        grants=((p1, "RegisterActor"),),
         occurred_at=_NOW,
     )
     assert to_payload(event) == {
@@ -72,8 +74,7 @@ def test_to_payload_serializes_policy_defined_to_primitives() -> None:
         # for V1-shape callers. V1 events on disk lack the field and fold
         # via `from_stored`'s `.get(..., nil)` default.
         "surface_id": "00000000-0000-0000-0000-000000000000",
-        "permitted_principal_ids": [str(p1)],
-        "permitted_commands": ["RegisterActor"],
+        "grants": [[str(p1), "RegisterActor"]],
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -92,14 +93,16 @@ def test_to_payload_sorts_permission_lists_deterministically() -> None:
         policy_id=uuid4(),
         name="X",
         conduit_id=uuid4(),
-        permitted_principal_ids=(p3, p1, p2),
-        permitted_commands=("Z", "A", "M"),
+        grants=((p3, "Z"), (p1, "A"), (p2, "M")),
         occurred_at=_NOW,
     )
     payload = to_payload(event_in_one_order)
 
-    assert payload["permitted_principal_ids"] == sorted([str(p1), str(p2), str(p3)])
-    assert payload["permitted_commands"] == ["A", "M", "Z"]
+    assert payload["grants"] == [
+        [str(p1), "A"],
+        [str(p2), "M"],
+        [str(p3), "Z"],
+    ]
 
 
 @pytest.mark.unit
@@ -113,8 +116,7 @@ def test_from_stored_rebuilds_policy_defined() -> None:
             "policy_id": str(policy_id),
             "name": "Beam-team",
             "conduit_id": str(conduit),
-            "permitted_principal_ids": [str(p1)],
-            "permitted_commands": ["RegisterActor"],
+            "grants": [[str(p1), "RegisterActor"]],
             "occurred_at": _NOW.isoformat(),
         },
     )
@@ -123,8 +125,7 @@ def test_from_stored_rebuilds_policy_defined() -> None:
         policy_id=policy_id,
         name="Beam-team",
         conduit_id=conduit,
-        permitted_principal_ids=(p1,),
-        permitted_commands=("RegisterActor",),
+        grants=((p1, "RegisterActor"),),
         occurred_at=_NOW,
     )
 
@@ -136,8 +137,7 @@ def test_to_payload_then_from_stored_round_trips() -> None:
         policy_id=uuid4(),
         name="Beam-team",
         conduit_id=uuid4(),
-        permitted_principal_ids=(uuid4(), uuid4()),
-        permitted_commands=("X", "Y"),
+        grants=((uuid4(), "X"), (uuid4(), "Y")),
         occurred_at=_NOW,
     )
     stored = _stored("PolicyDefined", to_payload(original))
@@ -147,8 +147,7 @@ def test_to_payload_then_from_stored_round_trips() -> None:
     assert rebuilt.policy_id == original.policy_id
     assert rebuilt.name == original.name
     assert rebuilt.conduit_id == original.conduit_id
-    assert set(rebuilt.permitted_principal_ids) == set(original.permitted_principal_ids)
-    assert set(rebuilt.permitted_commands) == set(original.permitted_commands)
+    assert set(rebuilt.grants) == set(original.grants)
     assert rebuilt.occurred_at == original.occurred_at
 
 
@@ -228,3 +227,208 @@ def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
     in the load path."""
     with pytest.raises(ValueError, match=f"Malformed {event_type} payload"):
         from_stored(_stored(event_type, {}))
+
+
+# ---------- reading a pre-pairs event ----------
+#
+# `grants` replaced two independent lists that `evaluate` multiplied at
+# decision time. Every PolicyDefined already on disk carries the old
+# shape, so `from_stored` reconstructs it as the cross-product: the same
+# permissions those policies have always granted, reached by multiplying
+# in the fold instead of in the check.
+#
+# These are the load-bearing tests of that change. If the cross-product
+# is wrong, live deployments silently gain or lose authority on their
+# next restart, and nothing else in the suite would notice.
+
+
+def _legacy_payload(
+    *,
+    conduit_id: UUID,
+    principal_ids: list[UUID],
+    command_names: list[str],
+) -> dict[str, object]:
+    """A PolicyDefined payload in the shape written before pairs existed."""
+    return {
+        "policy_id": str(uuid4()),
+        "name": "Legacy",
+        "conduit_id": str(conduit_id),
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+        "permitted_principal_ids": [str(p) for p in principal_ids],
+        "permitted_commands": command_names,
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_a_pre_pairs_event_folds_to_the_full_cross_product() -> None:
+    """Two principals by three commands is six grants."""
+    p1 = UUID("01900000-0000-7000-8000-000000000111")
+    p2 = UUID("01900000-0000-7000-8000-000000000222")
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            _legacy_payload(
+                conduit_id=uuid4(),
+                principal_ids=[p1, p2],
+                command_names=["StartRun", "HoldRun", "AbortRun"],
+            ),
+        )
+    )
+
+    assert isinstance(rebuilt, PolicyDefined)
+    assert set(rebuilt.grants) == {
+        (p1, "StartRun"),
+        (p1, "HoldRun"),
+        (p1, "AbortRun"),
+        (p2, "StartRun"),
+        (p2, "HoldRun"),
+        (p2, "AbortRun"),
+    }
+
+
+@pytest.mark.unit
+def test_a_pre_pairs_policy_still_permits_everything_it_used_to() -> None:
+    """The property, stated as the OLD evaluate would have answered it.
+
+    Asserted by exhaustive evaluation rather than by rebuilding the same
+    cross-product the implementation builds. Comparing the fold against a
+    second copy of its own construction rule would agree by construction
+    and prove nothing; driving real verdicts checks the outcome a
+    deployment actually depends on, and stays honest if the fold is ever
+    rewritten.
+    """
+    principals = [UUID(int=1), UUID(int=2)]
+    commands = ["StartRun", "HoldRun"]
+    conduit_id = uuid4()
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            _legacy_payload(
+                conduit_id=conduit_id,
+                principal_ids=principals,
+                command_names=commands,
+            ),
+        )
+    )
+    assert isinstance(rebuilt, PolicyDefined)
+    policy = evolve(None, rebuilt)
+
+    for principal_id in principals:
+        for command_name in commands:
+            verdict = evaluate(
+                policy,
+                principal_id=principal_id,
+                command_name=command_name,
+                conduit_id=conduit_id,
+                surface_id=SYSTEM_HTTP_SURFACE_ID,
+            )
+            assert isinstance(verdict, Allow), (
+                f"{principal_id} could {command_name} before pairs and must still"
+            )
+
+
+@pytest.mark.unit
+def test_a_pre_pairs_event_with_repeated_entries_yields_each_pair_once() -> None:
+    """A repeated entry in either legacy list must not repeat the pair.
+
+    The old state folded both lists to frozensets, so nothing upstream
+    had a reason to prevent duplicates on disk. Folding to `Policy` would
+    collapse them regardless; this pins the EVENT, which anything reading
+    grants before the fold (an audit trail, a grant count) sees first.
+    """
+    p1 = UUID("01900000-0000-7000-8000-000000000111")
+    p2 = UUID("01900000-0000-7000-8000-000000000222")
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            _legacy_payload(
+                conduit_id=uuid4(),
+                principal_ids=[p1, p1, p2],
+                command_names=["StartRun", "StartRun"],
+            ),
+        )
+    )
+
+    assert isinstance(rebuilt, PolicyDefined)
+    assert rebuilt.grants == ((p1, "StartRun"), (p2, "StartRun"))
+
+
+@pytest.mark.unit
+def test_a_grants_bearing_payload_with_a_repeated_pair_yields_it_once() -> None:
+    """Same guarantee for the new shape, which is hand-writable too."""
+    p1 = UUID("01900000-0000-7000-8000-000000000111")
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            {
+                "policy_id": str(uuid4()),
+                "name": "Repeated",
+                "conduit_id": str(uuid4()),
+                "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+                "grants": [[str(p1), "StartRun"], [str(p1), "StartRun"]],
+                "occurred_at": _NOW.isoformat(),
+            },
+        )
+    )
+
+    assert isinstance(rebuilt, PolicyDefined)
+    assert rebuilt.grants == ((p1, "StartRun"),)
+
+
+@pytest.mark.unit
+def test_a_pre_pairs_event_with_an_empty_list_stays_deny_all() -> None:
+    """Empty on either side cross-products to nothing, as it always did."""
+    for principal_ids, command_names in (
+        ([], ["StartRun"]),
+        ([UUID(int=1)], []),
+        ([], []),
+    ):
+        rebuilt = from_stored(
+            _stored(
+                "PolicyDefined",
+                _legacy_payload(
+                    conduit_id=uuid4(),
+                    principal_ids=principal_ids,
+                    command_names=command_names,
+                ),
+            )
+        )
+        assert isinstance(rebuilt, PolicyDefined)
+        assert rebuilt.grants == ()
+
+
+@pytest.mark.unit
+def test_a_grants_bearing_payload_is_read_as_written_never_cross_producted() -> None:
+    """The new shape is authoritative, and is NOT multiplied.
+
+    The distinguishing case: two principals with DIFFERENT command sets.
+    Cross-producting the same material would yield four grants; reading
+    it exactly yields two. That difference is the entire point of the
+    change, so it is pinned rather than left implied.
+    """
+    p1 = UUID("01900000-0000-7000-8000-000000000111")
+    p2 = UUID("01900000-0000-7000-8000-000000000222")
+
+    rebuilt = from_stored(
+        _stored(
+            "PolicyDefined",
+            {
+                "policy_id": str(uuid4()),
+                "name": "Precise",
+                "conduit_id": str(uuid4()),
+                "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+                "grants": [[str(p1), "StartRun"], [str(p2), "AbortRun"]],
+                "occurred_at": _NOW.isoformat(),
+            },
+        )
+    )
+
+    assert isinstance(rebuilt, PolicyDefined)
+    assert set(rebuilt.grants) == {(p1, "StartRun"), (p2, "AbortRun")}
+    assert (p1, "AbortRun") not in rebuilt.grants
+    assert (p2, "StartRun") not in rebuilt.grants

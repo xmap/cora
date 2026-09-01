@@ -50,8 +50,7 @@ def _policy(*, policy_id: UUID, principals: frozenset[UUID]) -> Policy:
         id=policy_id,
         name=PolicyName("Beam-team"),
         conduit_id=policy_id,
-        permitted_principal_ids=principals,
-        permitted_commands=frozenset({"RegisterActor"}),
+        grants=frozenset((principal_id, "RegisterActor") for principal_id in principals),
     )
 
 

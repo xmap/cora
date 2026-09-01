@@ -49,7 +49,7 @@ async def test_trust_authorize_gates_via_real_postgres_policy(
 
     # Create a real Policy in Postgres.
     await define_policy.bind(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="Test-policy",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),

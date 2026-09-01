@@ -53,7 +53,7 @@ def _command(
     permitted_principal_ids: frozenset[UUID],
     permitted_commands: frozenset[str],
 ) -> DefinePolicy:
-    return DefinePolicy(
+    return DefinePolicy.from_cross_product(
         name=name,
         conduit_id=conduit_id,
         permitted_principal_ids=permitted_principal_ids,
@@ -67,8 +67,7 @@ def _state(*, policy_id: UUID) -> Policy:
         id=policy_id,
         name=PolicyName("Existing"),
         conduit_id=UUID(int=7),
-        permitted_principal_ids=frozenset({UUID(int=3)}),
-        permitted_commands=frozenset({"RegisterActor"}),
+        grants=frozenset({(UUID(int=3), "RegisterActor")}),
     )
 
 
@@ -142,8 +141,11 @@ def test_define_emits_single_event_with_injected_fields(
     assert event.policy_id == new_id
     assert event.name == name
     assert event.conduit_id == conduit_id
-    assert set(event.permitted_principal_ids) == permitted_principal_ids
-    assert set(event.permitted_commands) == permitted_commands
+    assert set(event.grants) == {
+        (principal_id, command_name)
+        for principal_id in permitted_principal_ids
+        for command_name in permitted_commands
+    }
     assert event.occurred_at == now
     assert event.surface_id == SYSTEM_HTTP_SURFACE_ID
 

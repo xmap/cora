@@ -455,7 +455,7 @@ async def install_aps_unit(
         correlation_id=correlation_id,
     )
     await bind_define_policy(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name=f"{unit_name} Operations Policy",
             conduit_id=BM2_LOCAL_CONDUIT_ID,
             permitted_principal_ids=frozenset(OPERATOR_POOL_IDS),
@@ -466,7 +466,7 @@ async def install_aps_unit(
         correlation_id=correlation_id,
     )
     await bind_define_policy(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name=f"{unit_name} Agent Policy",
             conduit_id=BM2_LOCAL_CONDUIT_ID,
             permitted_principal_ids=frozenset({RUN_DEBRIEF_ACTOR_ID}),

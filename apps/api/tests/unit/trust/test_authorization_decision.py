@@ -35,8 +35,7 @@ def _policy() -> Policy:
         name=PolicyName("Beam-team"),
         conduit_id=_CONDUIT,
         surface_id=_SURFACE,
-        permitted_principal_ids=frozenset({_PERMITTED}),
-        permitted_commands=frozenset({"StartRun"}),
+        grants=frozenset({(_PERMITTED, "StartRun")}),
     )
 
 

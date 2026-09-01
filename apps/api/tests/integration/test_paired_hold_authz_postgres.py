@@ -181,7 +181,7 @@ async def _policy(deps: Kernel, permitted: frozenset[UUID]) -> UUID:
     true only by a generous reading.
     """
     return await bind_define_policy(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="Governed hold exhibit Policy",
             conduit_id=NIL_SENTINEL_ID,
             permitted_principal_ids=permitted,

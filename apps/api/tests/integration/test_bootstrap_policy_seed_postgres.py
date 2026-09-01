@@ -248,7 +248,7 @@ async def test_bootstrap_policy_can_define_a_real_policy_end_to_end(
     # principal allowed to call DefinePolicy. This succeeds when the
     # call arrives on the bound HTTP Surface.
     returned_id = await define_policy.bind(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="Real Admin Policy",
             conduit_id=_NIL_CONDUIT,
             permitted_principal_ids=frozenset({admin_principal}),
@@ -336,8 +336,7 @@ async def test_concurrent_writes_against_bootstrap_stream_fail_loud(
         policy_id=SYSTEM_BOOTSTRAP_POLICY_ID,
         name="Accidental Overwrite Attempt",
         conduit_id=_NIL_CONDUIT,
-        permitted_principal_ids=(UUID("01900000-0000-7000-8000-000000000d01"),),
-        permitted_commands=("DefineEverything",),
+        grants=((UUID("01900000-0000-7000-8000-000000000d01"), "DefineEverything"),),
         occurred_at=_NOW,
         surface_id=SYSTEM_HTTP_SURFACE_ID,
     )

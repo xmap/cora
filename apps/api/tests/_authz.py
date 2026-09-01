@@ -63,16 +63,42 @@ def make_policy_event(
     surface_id: UUID = NIL_SENTINEL_ID,
     name: str = "Test-policy",
     occurred_at: datetime | None = None,
+    grants: Iterable[tuple[UUID, str]] | None = None,
 ) -> NewEvent:
     """Build one envelope-wrapped `PolicyDefined` for a permissive (or
     narrow) test policy. Shared by every tier; the tier-specific append
-    is done by the callers below."""
+    is done by the callers below.
+
+    Keeps the two-list signature because almost every caller wants a
+    policy where the listed principals really do share the listed
+    commands, and cross-producting them here is what this helper always
+    did. Pass `grants` instead when a test needs principals with
+    DIFFERENT command sets, which is the case pairs exist to express and
+    the two lists cannot state.
+
+    Supplying both raises rather than silently preferring one, matching
+    what the REST route and MCP tool do with the same ambiguity. A test
+    helper that quietly ignored half its arguments would let a test
+    believe it had seeded a policy it had not, which is worse here than
+    in production: the whole point of the fixture is to be trusted.
+    """
+    if grants is not None and (permitted_principal_ids or permitted_commands):
+        msg = "make_policy_event: pass grants, or the two lists, not both."
+        raise ValueError(msg)
+    resolved_grants = (
+        tuple(grants)
+        if grants is not None
+        else tuple(
+            (principal_id, command_name)
+            for principal_id in permitted_principal_ids
+            for command_name in permitted_commands
+        )
+    )
     event = PolicyDefined(
         policy_id=policy_id,
         name=name,
         conduit_id=conduit_id,
-        permitted_principal_ids=tuple(permitted_principal_ids),
-        permitted_commands=tuple(permitted_commands),
+        grants=resolved_grants,
         occurred_at=occurred_at if occurred_at is not None else datetime.now(tz=UTC),
         surface_id=surface_id,
     )

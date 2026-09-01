@@ -184,7 +184,7 @@ async def test_bearer_trust_authorize_end_to_end_postgres(
         event_store=event_store,
     )
     await define_policy.bind(bootstrap)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="BearerGate-PermitRegisterActor",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PRINCIPAL_PERMITTED}),

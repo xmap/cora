@@ -127,8 +127,7 @@ async def test_verify_raises_when_bootstrap_policy_misbound_to_non_http_surface(
         id=SYSTEM_BOOTSTRAP_POLICY_ID,
         name=PolicyName("Tampered"),
         conduit_id=UUID(int=0),
-        permitted_principal_ids=frozenset(),
-        permitted_commands=frozenset(),
+        grants=frozenset(),
         surface_id=UUID(int=99),  # NOT SYSTEM_HTTP_SURFACE_ID
     )
     with (

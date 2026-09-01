@@ -322,7 +322,7 @@ async def test_documented_bootstrap_workflow_produces_working_authz(
     # could never bootstrap.
     bootstrap = _bootstrap_deps(db_pool, ids=[policy_id, policy_event_id])
     returned_policy_id = await define_policy.bind(bootstrap)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="GateB-BootstrapPolicy",
             conduit_id=_CONDUIT_ID,
             # Permissive enough to keep working post-restart.
