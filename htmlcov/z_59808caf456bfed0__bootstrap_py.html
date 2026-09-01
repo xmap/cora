@@ -55,8 +55,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">57 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">57<span class="text"> run</span></button>
+            <span class="text">70 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">70<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">2<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_59808caf456bfed0__projections_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-31 20:50 +0000
+            created at 2026-09-01 00:48 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -327,19 +327,69 @@
     <p class="run"><span class="n"><a id="t243" href="#t243">243</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RuntimeError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t244" href="#t244">244</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t245" href="#t245">245</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t246" href="#t246">246</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t">    <span class="str">&quot;SYSTEM_BOOTSTRAP_POLICY_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t">    <span class="str">&quot;SYSTEM_HTTP_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">    <span class="str">&quot;SYSTEM_IN_PROCESS_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t">    <span class="str">&quot;SYSTEM_LOCAL_CONDUIT_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t">    <span class="str">&quot;SYSTEM_MCP_STDIO_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t">    <span class="str">&quot;SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t">    <span class="str">&quot;SYSTEM_PRINCIPAL_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">    <span class="str">&quot;verify_bootstrap_seed_present&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">    <span class="str">&quot;verify_local_conduit_matches_policy&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">    <span class="str">&quot;verify_local_conduit_seed_present&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">    <span class="str">&quot;warn_if_verdict_log_dormant&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t246" href="#t246">246</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">verify_in_process_policy_matches_surface</span><span class="op">(</span><span class="nam">deps</span><span class="op">:</span> <span class="nam">Kernel</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Fail-fast when `trust_in_process_policy_id` is configured but the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t"><span class="str">    Policy it names does not actually govern the in-process door.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t"><span class="str">    A policy configured for the backdoor but bound to the wrong Surface &#8212;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t"><span class="str">    or, once `trust_conduit_id` is also set, the wrong Conduit &#8212; would</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t"><span class="str">    still be reachable from `_effective_policy_id` at every in-process</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t"><span class="str">    call, but `evaluate` would strict-deny every one of them at the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t"><span class="str">    surface (or conduit) check, indistinguishable from having no backdoor</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t"><span class="str">    policy configured at all. This is the same &quot;looks wired, governs</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t"><span class="str">    nothing&quot; failure `verify_local_conduit_matches_policy` closes for the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t"><span class="str">    conduit knob, applied to the second policy slot.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">    <span class="nam">settings</span> <span class="op">=</span> <span class="nam">deps</span><span class="op">.</span><span class="nam">settings</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">    <span class="key">if</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">trust_in_process_policy_id</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">        <span class="key">return</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">    <span class="nam">policy</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">load_policy</span><span class="op">(</span><span class="nam">deps</span><span class="op">.</span><span class="nam">event_store</span><span class="op">,</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">trust_in_process_policy_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">    <span class="key">if</span> <span class="nam">policy</span> <span class="key">is</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">        <span class="com"># A missing policy stream is the operator&#x27;s responsibility to</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">        <span class="com"># define (this policy has no bootstrap seed); not this guard&#x27;s</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">        <span class="com"># concern, same reasoning as verify_local_conduit_matches_policy.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">        <span class="key">return</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t">    <span class="key">if</span> <span class="nam">policy</span><span class="op">.</span><span class="nam">surface_id</span> <span class="op">!=</span> <span class="nam">SYSTEM_IN_PROCESS_SURFACE_ID</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">            <span class="fst">f&quot;</span><span class="fst">trust_in_process_policy_id=</span><span class="op">{</span><span class="nam">settings</span><span class="op">.</span><span class="nam">trust_in_process_policy_id</span><span class="op">}</span><span class="fst"> </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t">            <span class="fst">f&quot;</span><span class="fst">is configured but governs surface </span><span class="op">{</span><span class="nam">policy</span><span class="op">.</span><span class="nam">surface_id</span><span class="op">}</span><span class="fst">, not </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">            <span class="fst">f&quot;</span><span class="fst">SYSTEM_IN_PROCESS_SURFACE_ID (</span><span class="op">{</span><span class="nam">SYSTEM_IN_PROCESS_SURFACE_ID</span><span class="op">}</span><span class="fst">). </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">            <span class="str">&quot;Every in-process call would be denied at the surface check &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">            <span class="str">&quot;instead of reaching this policy&#x27;s principal/command rules. &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">            <span class="str">&quot;Re-define the policy bound to the in-process Surface, or point &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t">            <span class="str">&quot;trust_in_process_policy_id at one that is.&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RuntimeError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">    <span class="key">if</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">trust_conduit_id</span> <span class="key">is</span> <span class="key">not</span> <span class="key">None</span> <span class="key">and</span> <span class="nam">policy</span><span class="op">.</span><span class="nam">conduit_id</span> <span class="op">!=</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">trust_conduit_id</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t283" href="#t283">283</a></span><span class="t">        <span class="nam">msg</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">            <span class="fst">f&quot;</span><span class="fst">trust_conduit_id=</span><span class="op">{</span><span class="nam">settings</span><span class="op">.</span><span class="nam">trust_conduit_id</span><span class="op">}</span><span class="fst"> is configured but </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">            <span class="fst">f&quot;</span><span class="fst">trust_in_process_policy_id=</span><span class="op">{</span><span class="nam">settings</span><span class="op">.</span><span class="nam">trust_in_process_policy_id</span><span class="op">}</span><span class="fst"> </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">            <span class="fst">f&quot;</span><span class="fst">governs conduit </span><span class="op">{</span><span class="nam">policy</span><span class="op">.</span><span class="nam">conduit_id</span><span class="op">}</span><span class="fst">, a different one. Every </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">            <span class="str">&quot;in-process command would be denied at the conduit check. &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">            <span class="str">&quot;Re-define the backdoor policy bound to &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">            <span class="fst">f&quot;</span><span class="op">{</span><span class="nam">settings</span><span class="op">.</span><span class="nam">trust_conduit_id</span><span class="op">}</span><span class="fst">, or point trust_conduit_id at </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">            <span class="fst">f&quot;</span><span class="op">{</span><span class="nam">policy</span><span class="op">.</span><span class="nam">conduit_id</span><span class="op">}</span><span class="fst"> instead.</span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t">        <span class="key">raise</span> <span class="nam">RuntimeError</span><span class="op">(</span><span class="nam">msg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t294" href="#t294">294</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t295" href="#t295">295</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t296" href="#t296">296</a></span><span class="t">    <span class="str">&quot;SYSTEM_BOOTSTRAP_POLICY_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t297" href="#t297">297</a></span><span class="t">    <span class="str">&quot;SYSTEM_HTTP_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t298" href="#t298">298</a></span><span class="t">    <span class="str">&quot;SYSTEM_IN_PROCESS_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t299" href="#t299">299</a></span><span class="t">    <span class="str">&quot;SYSTEM_LOCAL_CONDUIT_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t300" href="#t300">300</a></span><span class="t">    <span class="str">&quot;SYSTEM_MCP_STDIO_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t301" href="#t301">301</a></span><span class="t">    <span class="str">&quot;SYSTEM_MCP_STREAMABLE_HTTP_SURFACE_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t302" href="#t302">302</a></span><span class="t">    <span class="str">&quot;SYSTEM_PRINCIPAL_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">    <span class="str">&quot;verify_bootstrap_seed_present&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">    <span class="str">&quot;verify_in_process_policy_matches_surface&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="str">&quot;verify_local_conduit_matches_policy&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="str">&quot;verify_local_conduit_seed_present&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="str">&quot;warn_if_verdict_log_dormant&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -349,7 +399,7 @@
             <a class="nav" href="z_59808caf456bfed0__projections_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-31 20:50 +0000
+            created at 2026-09-01 00:48 +0000
         </p>
     </div>
 </footer>
