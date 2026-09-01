@@ -78,6 +78,7 @@ from cora.agent import (
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
     seed_run_witness_agent,
+    seed_status_publisher_agent,
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
@@ -1258,6 +1259,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # its own principal so the RegisterDistribution grant can be
             # revoked without blinding the scan ingestor).
             await seed_durable_copy_registrar_agent(deps)
+            # same shape for StatusPublisher (deterministic read-only relay
+            # agent behind the external status page feed; its own principal
+            # so that broad multi-BC read grant can be revoked without
+            # touching any other seeded agent's authority).
+            await seed_status_publisher_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row

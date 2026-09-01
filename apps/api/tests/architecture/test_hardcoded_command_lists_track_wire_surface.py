@@ -109,6 +109,37 @@ def _facility_fixture_commands(name: str) -> frozenset[str]:
     return _extract_frozenset_of_str(tree, name)
 
 
+_IN_PROCESS_GRANTS = CORA_ROOT / "api" / "in_process_grants.py"
+
+
+def _in_process_grants_commands() -> frozenset[str]:
+    """Every granted command name in
+    `cora.api.in_process_grants.IN_PROCESS_GRANTS`.
+
+    That table's shape -- a `MappingProxyType` keyed by imported UUID
+    constants and valued by `frozenset[str]` literals -- does not fit
+    `_extract_frozenset_of_str`'s single flat-frozenset shape, so this
+    walks the whole assigned value once and keeps every string constant
+    found anywhere in it. Only the granted command names ever appear as
+    string literals in that subtree: the mapping's keys are `Name`
+    references to imported constants, never literals, so nothing else
+    could be swept in by mistake.
+    """
+    tree = ast.parse(_IN_PROCESS_GRANTS.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)):
+            continue
+        if node.target.id != "IN_PROCESS_GRANTS" or node.value is None:
+            continue
+        return frozenset(
+            sub.value
+            for sub in ast.walk(node.value)
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+        )
+    msg = "IN_PROCESS_GRANTS not found as a module-level annotated assignment"
+    raise AssertionError(msg)
+
+
 _HARDCODED_COMMAND_LISTS: tuple[tuple[str, frozenset[str]], ...] = (
     (
         "facility_fixture._OPERATIONS_COMMANDS",
@@ -117,6 +148,10 @@ _HARDCODED_COMMAND_LISTS: tuple[tuple[str, frozenset[str]], ...] = (
     (
         "facility_fixture._AGENT_COMMANDS",
         _facility_fixture_commands("_AGENT_COMMANDS"),
+    ),
+    (
+        "in_process_grants.IN_PROCESS_GRANTS",
+        _in_process_grants_commands(),
     ),
 )
 
