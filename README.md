@@ -2512,10 +2512,10 @@
 | src/cora/trust/aggregates/conduit/read.py                                                |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/conduit/state.py                                               |       31 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/policy/\_\_init\_\_.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/aggregates/policy/events.py                                               |       32 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/aggregates/policy/events.py                                               |       33 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/policy/evolver.py                                              |       18 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/policy/read.py                                                 |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/aggregates/policy/state.py                                                |       44 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/trust/aggregates/policy/state.py                                                |       50 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/ratification/\_\_init\_\_.py                                   |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/aggregates/ratification/events.py                                         |       36 |        3 |       10 |        1 |     91.3% |   133-135 |
 | src/cora/trust/aggregates/ratification/evolver.py                                        |       22 |        0 |        6 |        0 |    100.0% |           |
@@ -2584,11 +2584,12 @@
 | src/cora/trust/features/define\_conduit/route.py                                         |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_conduit/tool.py                                          |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_policy/\_\_init\_\_.py                                   |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/define\_policy/command.py                                        |        4 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/define\_policy/\_grant\_shape.py                                 |       18 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/trust/features/define\_policy/command.py                                        |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_policy/decider.py                                        |       12 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_policy/handler.py                                        |       31 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/trust/features/define\_policy/route.py                                          |       19 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/trust/features/define\_policy/tool.py                                           |       18 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/trust/features/define\_policy/route.py                                          |       35 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/trust/features/define\_policy/tool.py                                           |       27 |        2 |        2 |        1 |     89.7% |     54-55 |
 | src/cora/trust/features/define\_surface/\_\_init\_\_.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/command.py                                       |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/define\_surface/decider.py                                       |        9 |        0 |        2 |        0 |    100.0% |           |
@@ -2717,7 +2718,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **62417** | **1392** | **9522** |  **425** | **97.3%** |           |
+| **TOTAL**                                                                                | **62473** | **1394** | **9532** |  **426** | **97.3%** |           |
 
 
 ## Setup coverage badge
