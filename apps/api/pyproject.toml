@@ -36,6 +36,12 @@ dependencies = [
     "opentelemetry-instrumentation-asyncpg>=0.62b1,<0.63",
     "opentelemetry-exporter-otlp-proto-http>=1.41,<2",
     "jsonschema-rs>=0.49.6,<1",
+    # PyYAML: parses a beamline descriptor (deployments/<id>/beamline.yaml).
+    # Runtime rather than dev because `cora.api.descriptor_probe` is an
+    # operator command run ON a deployment host, where the dev group may not
+    # be installed. Nothing on the request path imports it: the descriptor is
+    # a design artifact, and the seed ceremony still reads none of it.
+    "pyyaml>=6,<7",
     # Anthropic SDK: used by `AnthropicLLM`, the production implementor of
     # `cora.infrastructure.ports.LLM`. No other code imports this;
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
@@ -231,11 +237,10 @@ dev = [
     # Configuration in `[tool.mutmut]` below scopes mutation to pure
     # decider/evolver modules only.
     "mutmut>=3.7.0,<4",
-    # PyYAML: parses the beamline descriptor (deployments/<id>/beamline.yaml).
-    # Used by scripts/beamline_descriptor.py, which the docs build imports and
-    # the deployment round-trip test dynamic-imports. types-PyYAML supplies the
-    # type stubs pyright wants for `import yaml`.
-    "pyyaml>=6,<7",
+    # types-PyYAML: stubs only, for `import yaml`. The runtime package is a
+    # top-level dependency (see `dependencies`), not this group: it was dev-only
+    # while the descriptor was read exclusively by scripts/ and the docs build,
+    # and stopped being so when `cora.api.descriptor_probe` landed.
     "types-PyYAML>=6,<7",
 ]
 
