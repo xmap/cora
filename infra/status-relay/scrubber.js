@@ -54,27 +54,31 @@
   // instance that cannot be told from its siblings is not worth a row.
   const PAD_L = 168;
   const PAD_R = 24;
-  const LANE_START = 34;
-  const LANE_HEIGHT = 40;
-  // Rows are no longer one size. A zone header is a rule and a word; a track
-  // names itself in the gutter so it needs no room above its marks; a markers
-  // lane has to seat a label over every burst.
-  const ROW_H = { zone: 20, track: 26, markers: 38, series: 40 };
-  // How far each level of containment steps right. The tree is only ever
-  // three deep (campaign, run, procedure), so this stays a nudge rather than
-  // eating the gutter.
-  const INDENT = 12;
+  const LANE_START = 32;
+  const LANE_HEIGHT = 34;
+  // A row is sized for what it has to hold, not to a common pitch: a zone
+  // caption is a divider, a track names itself in the gutter and needs no
+  // room above its bar, and a markers lane has to seat a label over every
+  // burst without it touching the row above.
+  const ROW_H = { zone: 19, track: 22, markers: 32, series: 34 };
+  // The containment tree is only ever three deep, so the step stays a nudge
+  // rather than eating the gutter.
+  const INDENT = 10;
+  // Width of the kind column, which is a fixed 4-character mono word.
+  const KIND_W = 34;
+  // Advance width of the zone caption's own mono face, used to start its rule
+  // clear of the text rather than under it.
+  const ZONE_CH = 5.9;
   // Thickness carries DEPTH: the campaign reads as the thing containing the
   // runs, which contain the procedures, without another colour or rule.
   const TRACK_H = [7, 5, 3];
   const MAX_SERIES_LANES = 6;
   const AXIS_MARGIN = 44;
-  // One event is one square. A group is those squares PACKED side by side, so
-  // a burst adds up into a bar whose length is how many happened rather than a
-  // badge carrying a number, and every member stays its own shape with its own
-  // severity colour and its own hit target. That is what makes an individual
-  // event inside a burst pickable at all: there is no merged mark to drill
-  // into, only neighbours that stopped overlapping.
+  // One event is one square; a group is those squares PACKED side by side, so
+  // a burst's length is how many happened. Each keeps its own severity colour
+  // and its own hit target, which is what makes one event inside a burst
+  // pickable: there is no merged mark to drill into, only neighbours that
+  // stopped overlapping.
   const MARK_S = 9;
   const MARK_GAP = 2;
   const MARK_STEP = MARK_S + MARK_GAP;
@@ -84,23 +88,17 @@
   // number is worth more than the shape.
   const PACK_MAX = 8;
   const MARK_H = MARK_S;
-  // Two marks closer than this many user units cannot be drawn apart. Derived
-  // from the mark, not chosen: at exactly MARK_H two circles touch, so the
-  // extra 2 is the surface gap that keeps neighbours legible as two. At a
-  // 15-minute window over the 812-unit plot one unit is about 1.1s, so this
-  // lands near 15s -- but it is deliberately a WIDTH, not a duration. What can
-  // be separated is a property of the canvas, and a duration constant would
-  // silently lie at every other window size.
+  // Two marks closer than this cannot be drawn apart. Derived from the mark
+  // rather than chosen, and deliberately a WIDTH: what can be separated is a
+  // property of the canvas, so a duration constant would silently lie at
+  // every window size but the one it was measured at.
   const COLLAPSE_GAP = MARK_STEP;
   const LABEL_CH = 5.6;
   const LABEL_PAD = 5;
   const LANE_LABEL_CH = 6.2;
   // Extra time rendered either side of the view, as a multiple of its span.
-  // A drag TRANSLATES the rendered content instead of rebuilding it, and this
-  // buffer is what gives the translation something to reveal. Rebuilding per
-  // frame was the whole reason panning felt stepped: every move reclustered,
-  // reseated labels and refolded the readout, so marks and text jumped
-  // between two valid layouts many times a second.
+  // A drag translates rather than rebuilds, and this buffer is what gives the
+  // translation something to reveal.
   const OVERSCAN = 1;
 
   function parseT(iso) {
@@ -305,8 +303,7 @@
       // time you point at" to read, only what is current. Closed: a fold
       // cursor the viewer drives, and no live rule, because nothing about that
       // document is live. Deriving it here rather than from a caller option
-      // means every mount agrees, including the dev harness, which had been
-      // getting the roaming cursor because it never passed the flag.
+      // means every mount agrees, rather than each caller remembering to.
       live: !!doc.live,
       byId,
       childrenOf,
@@ -332,14 +329,9 @@
     return label;
   }
 
-  // Collapse is a RENDERING concern only: `lane.points` keeps every point,
-  // because `foldTo` walks the primary lane for the last point carrying a
+  // Grouping is a RENDERING concern only: `lane.points` keeps every point,
+  // because `foldTo` walks the primary lane for the last one carrying a
   // `state` and a merged point would break REWIND's folded readout.
-  // `separate` holds points that must not be merged into a neighbour: the
-  // members of a traced chain. An arrow pointing at a badge would claim it
-  // caused the whole badge when it caused one event inside it, so a focused
-  // chain un-collapses and every edge lands on a real event. Everything not in
-  // the chain stays merged, so focusing does not explode the whole chart.
   function clusterPoints(points, X) {
     const out = [];
     let cur = null;
@@ -545,9 +537,9 @@
   let clipSeq = 0;
 
   function renderTimeline(model, scale, focus) {
-    // Rows stack at their own heights rather than on a fixed pitch, because
-    // they are no longer the same kind of thing: a zone header is a caption, a
-    // track is a lifetime, a markers lane is a series of instants.
+    // Rows stack at their own heights rather than on a fixed pitch: a zone
+    // caption, a lifetime and a series of instants are not the same kind of
+    // row (see ROW_H).
     const rowY = new Map();
     let stackY = LANE_START;
     for (const lane of model.lanes) {
@@ -559,9 +551,6 @@
     const vh = axisY + AXIS_MARGIN;
     const X = (secs) => xFor(scale, secs);
 
-    // Focusable and slider-shaped: the value it announces is the fold cursor's
-    // clock time, which `setCursor` keeps in `aria-valuetext`. This replaces
-    // the separate slider element that used to be the only keyboard route.
     // Slider semantics only where there is a value to move. A live window has
     // no cursor to announce, so claiming a slider role would promise a control
     // that is not there.
@@ -608,14 +597,15 @@
       const y = rowY.get(lane);
       laneY.set(lane.lane_id, y);
       if (lane.render === "zone") {
-        // A caption and a rule. It separates without competing: the zones are
-        // the reason the rows below them are in that order, and once the eye
-        // has learned the order it should stop reading them.
+        // A caption then a rule to the right of it. The rule has to START
+        // clear of the text: run from the plot edge it passes straight under
+        // a caption long enough to reach there, which every one of these is.
         const zt = svg("text", { x: 8, y: y + 3, class: "cs-zone", "text-anchor": "start" });
         zt.textContent = lane.label;
         g.appendChild(zt);
+        const ruleFrom = Math.max(PAD_L, 8 + lane.label.length * ZONE_CH + 10);
         g.appendChild(
-          svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-zone-rule" })
+          svg("line", { x1: ruleFrom, y1: y, x2: VW - PAD_R, y2: y, class: "cs-zone-rule" })
         );
         return;
       }
@@ -629,7 +619,7 @@
           kt.textContent = lane.kind;
           g.appendChild(kt);
         }
-        const labX = 8 + indent + 40;
+        const labX = 8 + indent + KIND_W;
         const lt = fitted(lane.label, labX, PAD_L - 12 - labX, `cs-track-label cs-track-label--d${lane.depth}`, "start");
         lt.setAttribute("y", y + 3);
         g.appendChild(lt);
@@ -739,12 +729,6 @@
       }
 
       if (lane.render === "markers" || lane.render === "track") {
-        // The gate here used to be `points.length <= MAX_MARKER_LABELS`, which
-        // tests COUNT while the thing that ruins a lane is DENSITY. Twelve
-        // events spread over fifteen minutes read perfectly; twelve inside one
-        // burst overprint into a smear, and both took the same branch: every
-        // label drawn on top of its neighbours, or past twelve no labels at
-        // all and a row of anonymous squares saying only "something happened".
         // The whole buffer, not just the view: what a pan translates into
         // sight has to have been drawn already, and a cluster straddling the
         // view edge must merge the same way it would mid-view rather than
@@ -780,26 +764,11 @@
           const repeat = !inChain && head.tier === 0 && n < 3 && base === prevBase;
           if (head.tier === 0) prevBase = base;
 
-          // One event or six, the mark is the same pill at the same height: a
-          // rounded rect whose corner radius is half its height, so a single
-          // event is exactly a circle and a group is that circle stretched
-          // over the span its members occupy. Width therefore means elapsed
-          // time and nothing else, and the count inside says how many sit in
-          // it. The floor is whatever fits two digits, because a badge too
-          // narrow to carry its own number is worse than a plain mark: it is
-          // visibly a merged thing that will not say how much it merged.
-          //
-          // The pair this replaces differed in shape AND height -- an 8-unit
-          // square against a 12-unit rounded badge -- so a group read as a
-          // different kind of thing rather than as more of the same thing.
           const x0 = packStart(c);
+          // Over the cap a group draws as ONE bar carrying a count: a hundred
+          // squares is a smear, and a smear that will not say how many is
+          // worse than a number.
           const wide = n > PACK_MAX;
-          // Under the cap, one square per event: the bar IS the events, so
-          // each carries its own severity colour and its own hit target and
-          // any one of them can be picked out of a burst. Over it, a single
-          // bar takes the count back as a number, because a hundred squares
-          // is a smear and a smear that cannot say how many is worse than a
-          // number.
           const cells = wide ? [{ point: c.items[0], span: c.items }] : c.items.map((q) => ({ point: q }));
           cells.forEach((cell, i) => {
             const q = cell.point;
@@ -991,13 +960,11 @@
     }
   }
 
-  // The card that follows the pointer. Hovering an event is the whole
-  // interaction now, so this has to answer on its own: what it is, when, what
-  // caused it and what it set off. Where the pointer is over one square of a
-  // packed burst the card names that square's own event and says which of how
-  // many it is; where the burst was too big to pack and drew as one bar, it
-  // lists the contents, because the number on that bar is a promise that they
-  // are recoverable.
+  // The card that follows the pointer, and the whole of the interaction: what
+  // this event is, when, what caused it, what it set off. Over one square of a
+  // packed burst it names that square's own event and says which of how many;
+  // over a bar too big to pack it lists the contents, because the number on
+  // that bar is a promise they are recoverable.
   function tipHtml(model, cluster, focus) {
     const esc = (v) =>
       String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -1329,11 +1296,10 @@
     // clicked to read a relation. A pinned selection wins and hover stops
     // changing anything until it is released.
     //
-    // Driven from `pointermove` and never `pointerover`: focusing rebuilds the
-    // scene, which destroys and recreates the element under the pointer, and
-    // the browser fires a fresh `pointerover` for that. Reacting to it would
-    // focus the same event again and again. A rebuild generates no
-    // `pointermove`, so this loop cannot start.
+    // `pointermove` and never `pointerover`: focusing rebuilds the scene,
+    // which recreates the element under the pointer and makes the browser
+    // fire a fresh `pointerover`. Reacting to that would focus the same event
+    // forever; a rebuild generates no `pointermove`, so this cannot loop.
     svgEl.addEventListener("pointermove", (e) => {
       if (pan) return;
       const cluster = clusterFor(e.target);
@@ -1351,9 +1317,8 @@
       state.setHover(null);
     });
 
-    // Keyboard parity. The slider used to be the only focusable control and
-    // the only keyboard route; the chart itself now carries both, so removing
-    // the slider does not remove keyboard access.
+    // Keyboard parity: the chart itself is the focusable control, so every
+    // gesture below has a key.
     svgEl.addEventListener("keydown", (e) => {
       const span = state.view.to - state.view.from;
       if (e.key === " " || e.key === "Spacebar") {
@@ -1696,17 +1661,16 @@
       canPan: span < domainMax - 1e-6,
     };
 
-    // What the DOM currently holds, which after a translate-only pan is no
-    // longer what `state.view` says. Every pan decision is made against this.
+    // What the DOM holds, which after a translate-only pan is no longer what
+    // `state.view` says. Every pan decision is made against this.
     let shown = { from: view.from, bmin: scale.bmin, bmax: scale.bmax, k: scale.k };
     state.panDx = 0;
 
-    // Panning is a translate on the one clipped group, not a rebuild. The
-    // rebuild is what made dragging feel stepped: it recomputed clusters,
-    // reseated every label and refolded the readout on each frame, so marks
-    // and text hopped between two equally valid layouts many times a second.
-    // Content outside the view is already drawn (see OVERSCAN), so sliding it
-    // in costs one attribute write and the motion tracks the hand exactly.
+    // A translate on the clipped group, never a rebuild. Rebuilding per frame
+    // reclusters and reseats every label, so marks and text hop between two
+    // equally valid layouts many times a second and the drag reads as
+    // stepped. Content outside the view is already drawn (see OVERSCAN), so
+    // sliding it in costs one attribute write.
     state.panTo = (from) => {
       const next = clampView(from, span, domainMax);
       if (Math.abs(next.from - state.view.from) < 1e-9) return;
@@ -1759,13 +1723,10 @@
       glideId = requestAnimationFrame(step);
     };
 
-    // Once the motion has stopped, rebuild at where it stopped. The buffer
-    // recentres, and -- the reason this is unconditional -- the labels reseat
-    // against the plot's real edges. A label is seated for the position it was
-    // DRAWN at, so one that pans in from the buffer arrives centred on its
-    // mark and can hang half outside the plot; only a rebuild puts it right.
-    // Doing it here rather than per frame is the whole point: it costs one
-    // frame after the hand has let go, where a jump is invisible.
+    // Rebuild where the motion stopped. Unconditional because labels are
+    // seated for where they were DRAWN, so one that panned in from the buffer
+    // sits centred on its mark and can hang outside the plot; only a rebuild
+    // puts it right. One frame after the hand lets go, a reseat is invisible.
     function settle() {
       if (Math.abs(state.view.from - shown.from) > 1e-6) rerender();
     }
@@ -1875,10 +1836,9 @@
       rerender();
     };
 
-    // Re-anchor the card to the pinned MARK, not to wherever the pointer
-    // happened to be: a pin outlives the pointer. Separate from refocus and
-    // called LAST, because pinning can also pan (`reveal`) and a card placed
-    // before that pan is left pointing at where the mark used to be.
+    // Anchored to the pinned MARK, not to wherever the pointer happened to
+    // be: a pin outlives the pointer. Called LAST because pinning can also
+    // pan (`reveal`), and a card placed before that pan points at open chart.
     state.anchorTip = () => {
       if (!anchor || !state.selected) return;
       const seat = scene.selectable.find((x) => x.point === anchor);
