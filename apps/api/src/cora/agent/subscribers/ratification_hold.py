@@ -30,7 +30,7 @@ from cora.agent.subscribers._ratification_shared import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run import HOLD_CAUSE_RATIFICATION, RunHeld, RunStatus
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import fold as fold_run
@@ -108,7 +108,7 @@ class RatificationHoldSubscriber:
             principal_id=RATIFICATION_ENFORCER_AGENT_ID,
             command_name=HOLD_COMMAND_NAME,
             conduit_id=NIL_SENTINEL_ID,
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         if isinstance(authz, Deny):
             _log.info("ratification_hold.unauthorized", run_id=str(run_id))

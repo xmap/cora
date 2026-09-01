@@ -101,7 +101,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -294,7 +294,7 @@ class CautionPromoterSubscriber:
             principal_id=CAUTION_PROMOTER_AGENT_ID,
             command_name=_PROMOTE_COMMAND_NAME,
             conduit_id=NIL_SENTINEL_ID,
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         if isinstance(authz, Deny):
             return "PromotionDeferred", "not authorized to promote (Authorize denied)"

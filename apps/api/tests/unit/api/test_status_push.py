@@ -20,6 +20,7 @@ from uuid import UUID, uuid4
 import pytest
 from websockets.asyncio.server import ServerConnection, serve
 
+from cora.agent.seed_status_publisher import STATUS_PUBLISHER_AGENT_ID
 from cora.api._status_push import (
     _ActivityTail,
     _answer_request,
@@ -1735,6 +1736,48 @@ async def test_lifespan_pushes_a_snapshot_to_a_real_relay() -> None:
         ]
         assert snapshot["subjects"] == []
         assert snapshot["decisions"] == []
+
+
+@pytest.mark.unit
+async def test_lifespan_authorizes_the_periodic_read_as_the_status_publisher_agent() -> None:
+    """Pins the identity switch: every periodic read this runtime issues
+    authorizes as the seeded StatusPublisher agent, not the generic
+    SYSTEM_PRINCIPAL_ID a request without its own identity would fall
+    back to. Nothing else in this module asserts the exact principal, so
+    a silent revert to SYSTEM_PRINCIPAL_ID would otherwise pass the
+    whole suite."""
+    seen_principals: list[UUID] = []
+
+    async def list_runs(
+        query: ListRuns,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> RunListPage:
+        seen_principals.append(principal_id)
+        return RunListPage(items=[], next_cursor=None)
+
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=url,
+            status_push_tick_seconds=0.1,
+        )
+
+        async with status_push_lifespan(kernel, **_default_handlers(list_runs=list_runs)):
+            await asyncio.wait_for(received.get(), timeout=5)
+
+    assert seen_principals
+    assert all(principal == STATUS_PUBLISHER_AGENT_ID for principal in seen_principals)
 
 
 @pytest.mark.unit

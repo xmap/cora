@@ -64,7 +64,7 @@ from cora.api._flag_watcher import (
 from cora.campaign.errors import UnauthorizedError
 from cora.campaign.features.list_campaigns import ListCampaigns
 from cora.decision.aggregates.decision import DECISION_CONTEXT_CAMPAIGN_PROGRESS
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -139,7 +139,7 @@ async def _drain_held_campaigns(
             ListCampaigns(statuses=[_STATUS_HELD], cursor=cursor, limit=_PAGE_LIMIT),
             principal_id=CAMPAIGN_WATCHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         items.extend(page.items)
         if page.next_cursor is None:

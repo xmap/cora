@@ -126,32 +126,29 @@ read-only by design -- a request-triggered read must never insert into or
 evict from the ring, whose eviction order otherwise mirrors only what
 this tail has genuinely pushed.
 
-## Principal identity: the widening trigger has now fired
+## Principal identity: the widening trigger fired, and the seed is now wired
 
 Every other watcher here authenticates as its own seeded Agent (a real
 Actor with its own grant set, so a missing grant is auditable per-agent).
-This module still uses `SYSTEM_PRINCIPAL_ID` for every read: the read scope
-has now widened past the single `ListRuns` command this module started
-with, to NINE commands across seven BCs (`GetRunHistory` joins the Run
-BC's own `ListRuns`; `GetEnclosureHistory` joins the Enclosure BC's own
-`ListEnclosures`), which is exactly the trigger this docstring named for
+This module now authenticates as `STATUS_PUBLISHER_AGENT_ID`
+(`agent/seed_status_publisher.py`) for every read: the read scope widened
+past the single `ListRuns` command this module started with, to NINE
+commands across seven BCs (`GetRunHistory` joins the Run BC's own
+`ListRuns`; `GetEnclosureHistory` joins the Enclosure BC's own
+`ListEnclosures`), which was the trigger this docstring named for
 standing up a dedicated seeded identity (mirroring
-`agent/seed_calibration_watcher.py`). That identity is NOT built in this
-change; doing so is a follow-up, tracked so the deferral is visible rather
-than silently indefinite. Until then, a Trust Policy that denies any of the
-eight read commands to `SYSTEM_PRINCIPAL_ID` blinds this feature for that
-domain only (each drain is independently try/except-guarded; see
-`_push_loop`), never the others.
+`agent/seed_calibration_watcher.py`). A Trust Policy that denies any of
+the nine read commands to `STATUS_PUBLISHER_AGENT_ID` blinds this
+feature for that domain only (each drain is independently
+try/except-guarded; see `_push_loop`), never the others.
 
 The on-demand request path above makes `GetRunHistory` reachable from a
 browser at any time, not only on this module's own fixed tick, which is
-a materially larger claim on `SYSTEM_PRINCIPAL_ID` than the periodic push
-alone -- it does not add a NINTH command (it is the same `GetRunHistory`
-call the periodic push already makes, under the same identity, with the
-same `_UNAUTHORIZED_ERRORS` catch), but it does mean a wider surface can
-now trigger it on demand. The seeded-identity follow-up named above
-applies here with more force as a result; it remains deferred rather than
-bundled into this change, which is scoped to the transport itself.
+a materially larger claim on `STATUS_PUBLISHER_AGENT_ID` than the
+periodic push alone -- it does not add a NINTH command (it is the same
+`GetRunHistory` call the periodic push already makes, under the same
+identity, with the same `_UNAUTHORIZED_ERRORS` catch), but it does mean a
+wider surface can now trigger it on demand.
 
 `_ActivityTail`'s read is a NINTH, and it is a different KIND of gap, not
 just a bigger one: `EventActivityTrail` is a raw infrastructure port, not
@@ -180,6 +177,7 @@ from uuid import UUID
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed, InvalidStatus
 
+from cora.agent.seed_status_publisher import STATUS_PUBLISHER_AGENT_ID
 from cora.campaign.errors import UnauthorizedError as _CampaignUnauthorizedError
 from cora.campaign.features.list_campaigns import ListCampaigns
 from cora.data.errors import UnauthorizedError as _DataUnauthorizedError
@@ -199,7 +197,7 @@ from cora.infrastructure.adapters.postgres_event_activity_trail import (
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.projection import encode_cursor
 from cora.infrastructure.record_export import render_value
-from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_PRINCIPAL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.operation.errors import UnauthorizedError as _OperationUnauthorizedError
 from cora.operation.features.list_procedures import ListProcedures
 from cora.recipe.features.list_plans import ListPlans
@@ -406,9 +404,9 @@ async def _plan_names(list_plans: ListPlansHandler, deps: Kernel) -> dict[UUID, 
     items = await _drain_all(
         lambda cursor: list_plans(
             ListPlans(cursor=cursor, limit=_PAGE_LIMIT),
-            principal_id=SYSTEM_PRINCIPAL_ID,
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     )
     return {item.plan_id: item.name for item in items}
@@ -434,9 +432,9 @@ async def _drain_open_runs(
         items = await _drain_all(
             lambda cursor, status=status: list_runs(
                 ListRuns(status=status, cursor=cursor, limit=_PAGE_LIMIT),
-                principal_id=SYSTEM_PRINCIPAL_ID,
+                principal_id=STATUS_PUBLISHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         )
         for item in items:
@@ -478,9 +476,9 @@ async def _drain_open_subjects(
         items = await _drain_all(
             lambda cursor, status=status: list_subjects(
                 ListSubjects(status=status, cursor=cursor, limit=_PAGE_LIMIT),
-                principal_id=SYSTEM_PRINCIPAL_ID,
+                principal_id=STATUS_PUBLISHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         )
         rows.extend(
@@ -501,9 +499,9 @@ async def _drain_open_campaigns(
     items = await _drain_all(
         lambda cursor: list_campaigns(
             ListCampaigns(statuses=_OPEN_CAMPAIGN_STATUSES, cursor=cursor, limit=_PAGE_LIMIT),
-            principal_id=SYSTEM_PRINCIPAL_ID,
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     )
     return [
@@ -533,9 +531,9 @@ async def _drain_datasets_for_runs(
         items = await _drain_all(
             lambda cursor, run_id=run_id: list_datasets(
                 ListDatasets(producing_run_id=run_id, cursor=cursor, limit=_PAGE_LIMIT),
-                principal_id=SYSTEM_PRINCIPAL_ID,
+                principal_id=STATUS_PUBLISHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         )
         rows.extend(
@@ -583,9 +581,9 @@ async def _drain_procedures_for_runs(
         items = await _drain_all(
             lambda cursor, run_id=run_id: list_procedures(
                 ListProcedures(parent_run_id=run_id, cursor=cursor, limit=_PAGE_LIMIT),
-                principal_id=SYSTEM_PRINCIPAL_ID,
+                principal_id=STATUS_PUBLISHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         )
         rows.extend(
@@ -610,9 +608,9 @@ async def _drain_active_clearances(
     items = await _drain_all(
         lambda cursor: list_clearances(
             ListClearances(status=_ACTIVE_CLEARANCE_STATUS, cursor=cursor, limit=_PAGE_LIMIT),
-            principal_id=SYSTEM_PRINCIPAL_ID,
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     )
     return [
@@ -663,9 +661,9 @@ async def _drain_active_enclosures(
     items = await _drain_all(
         lambda cursor: list_enclosures(
             ListEnclosures(lifecycle=_ACTIVE_ENCLOSURE_LIFECYCLE, cursor=cursor, limit=_PAGE_LIMIT),
-            principal_id=SYSTEM_PRINCIPAL_ID,
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     )
     rows: list[dict[str, Any]] = []
@@ -714,9 +712,9 @@ class _DecisionTail:
         while True:
             page = await list_decisions(
                 ListDecisions(cursor=cursor, limit=_PAGE_LIMIT),
-                principal_id=SYSTEM_PRINCIPAL_ID,
+                principal_id=STATUS_PUBLISHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
             for item in page.items:
                 self._ring.append(
@@ -823,9 +821,9 @@ class _RunHistoryTail:
     ) -> RunHistoryView | None:
         return await get_run_history(
             GetRunHistory(run_id=run_id),
-            principal_id=SYSTEM_PRINCIPAL_ID,
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
 
     def _store(
@@ -908,9 +906,9 @@ class _EnclosureTimelineTail:
         for enclosure_id in enclosure_ids:
             view = await get_enclosure_history(
                 GetEnclosureHistory(enclosure_id=enclosure_id),
-                principal_id=SYSTEM_PRINCIPAL_ID,
+                principal_id=STATUS_PUBLISHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
             if view is None:
                 continue
@@ -1114,9 +1112,9 @@ async def _answer_request(
     try:
         view = await get_run_history(
             GetRunHistory(run_id=item.run_id),
-            principal_id=SYSTEM_PRINCIPAL_ID,
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except _UNAUTHORIZED_ERRORS:
         _log.warning(f"{_LOG_PREFIX}.request_unauthorized", run_id=str(item.run_id))

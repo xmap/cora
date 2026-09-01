@@ -51,7 +51,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -80,14 +80,15 @@ async def probe_read_grant(
     / test never trip it; under a real policy a missing grant is the silent
     worse-than-none failure, so it is surfaced loudly at boot when an operator is
     watching. Probes the exact tuple the runtime drain uses (the read
-    `command_name`, NIL conduit + surface). `strict` (operator opt-in via
-    `settings.watcher_authz_strict`) escalates the warning to a boot refusal.
+    `command_name`, the NIL conduit, and the in-process surface). `strict`
+    (operator opt-in via `settings.watcher_authz_strict`) escalates the
+    warning to a boot refusal.
     """
     decision = await deps.authz.authorize(
         principal_id=agent_id,
         command_name=read_command,
         conduit_id=NIL_SENTINEL_ID,
-        surface_id=NIL_SENTINEL_ID,
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
     )
     if not isinstance(decision, Deny):
         return

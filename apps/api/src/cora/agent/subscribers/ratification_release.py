@@ -45,7 +45,7 @@ from cora.agent.subscribers._ratification_shared import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run import (
     HOLD_CAUSE_RATIFICATION,
     HoldClaimReleased,
@@ -132,7 +132,7 @@ class RatificationReleaseSubscriber:
             principal_id=RATIFICATION_ENFORCER_AGENT_ID,
             command_name=RESUME_COMMAND_NAME,
             conduit_id=NIL_SENTINEL_ID,
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         if isinstance(authz, Deny):
             _log.info("ratification_release.unauthorized", run_id=str(run_id))
