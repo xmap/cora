@@ -161,35 +161,37 @@
       }
     }
 
-    // A WIDE fan: one event waking a whole rank of subscribers at once, each
-    // of which wakes one or two more. This is the shape the tail above cannot
-    // reach -- a 42% sibling rate mostly deepens, so a long cascade is still a
-    // near-thread, and the card's row cap of twelve stayed unreachable no
-    // matter how many hops were added. A cap that can never be hit makes every
-    // assertion about how it reports itself reconcile trivially.
-    if (rnd() < 0.1) {
-      const hub = out[Math.floor(rnd() * out.length)];
-      let fms = atMs + n * 400 + 900;
-      const width = 5 + Math.floor(rnd() * 4);
-      for (let w = 0; w < width; w++) {
-        const pool = LANES.filter((l) => l[0] !== hub.stream_type);
-        const [wStream, wTypes] = pool[Math.floor(rnd() * pool.length)];
-        fms += 120 + rnd() * 400;
-        const kid = event(wStream, wTypes, fms);
-        kid.causation_id = hub.event_id;
-        kid.cause_occurred_at = hub.occurred_at;
-        kid.correlation_id = hub.correlation_id;
-        out.push(kid);
-        for (let g = 0, gn = 1 + Math.floor(rnd() * 2); g < gn; g++) {
-          const gpool = LANES.filter((l) => l[0] !== kid.stream_type);
-          const [gStream, gTypes] = gpool[Math.floor(rnd() * gpool.length)];
-          fms += 100 + rnd() * 300;
-          const gk = event(gStream, gTypes, fms);
-          gk.causation_id = kid.event_id;
-          gk.cause_occurred_at = kid.occurred_at;
-          gk.correlation_id = kid.correlation_id;
-          out.push(gk);
-        }
+    if (rnd() < 0.1) fanOut(out, out[Math.floor(rnd() * out.length)], atMs + n * 400 + 900);
+    return out;
+  }
+
+  // A WIDE fan: one event waking a whole rank of subscribers at once, each of
+  // which wakes one or two more. The reaction tail cannot reach this shape --
+  // a 42% sibling rate mostly deepens, so a long cascade is still a
+  // near-thread, and the card's row cap of twelve stayed unreachable no matter
+  // how many hops were added. A cap that can never be hit makes every
+  // assertion about how it reports itself reconcile trivially.
+  function fanOut(out, hub, atMs) {
+    let fms = atMs;
+    const width = 5 + Math.floor(rnd() * 4);
+    for (let w = 0; w < width; w++) {
+      const pool = LANES.filter((l) => l[0] !== hub.stream_type);
+      const [wStream, wTypes] = pool[Math.floor(rnd() * pool.length)];
+      fms += 120 + rnd() * 400;
+      const kid = event(wStream, wTypes, fms);
+      kid.causation_id = hub.event_id;
+      kid.cause_occurred_at = hub.occurred_at;
+      kid.correlation_id = hub.correlation_id;
+      out.push(kid);
+      for (let g = 0, gn = 1 + Math.floor(rnd() * 2); g < gn; g++) {
+        const gpool = LANES.filter((l) => l[0] !== kid.stream_type);
+        const [gStream, gTypes] = gpool[Math.floor(rnd() * gpool.length)];
+        fms += 100 + rnd() * 300;
+        const gk = event(gStream, gTypes, fms);
+        gk.causation_id = kid.event_id;
+        gk.cause_occurred_at = kid.occurred_at;
+        gk.correlation_id = kid.correlation_id;
+        out.push(gk);
       }
     }
     return out;
@@ -215,6 +217,19 @@
       t += (busy ? 8000 : 40000) + rnd() * (busy ? 25000 : 90000);
       if (t < NOW) events.push(...burst(t));
     }
+
+    // One guaranteed wide fan, placed in the live window. The same reasoning
+    // as the `recent` rate above: at a 10% chance per burst, whether a fan
+    // lands where the flowing chart is looking depends on the wall clock, so
+    // the check that needs one passed in the afternoon and reported "none
+    // found" an hour later. A shape a check requires cannot be left to a dice
+    // roll whose landing spot moves with the time of day.
+    const hubAt = NOW - 4 * 60 * 1000;
+    const [hStream, hTypes] = LANES[Math.floor(rnd() * LANES.length)];
+    const hub = event(hStream, hTypes, hubAt);
+    events.push(hub);
+    fanOut(events, hub, hubAt + 800);
+    events.sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : 0));
     return events;
   }
 
