@@ -1196,6 +1196,55 @@
     return out.join("");
   }
 
+  // How many chain rows a card will draw before it stops. The card is a hover
+  // surface, not the panel, and a fan of three at six hops is arithmetically
+  // able to reach several hundred descendants.
+  const TIP_CHAIN_ROWS = 12;
+
+  // The ancestors of the pinned event, oldest FIRST, so the card reads
+  // forwards the way the story happened rather than backwards from the end.
+  //
+  // A path, not a tree, and not by simplification: `causation_id` is one
+  // scalar column, so an event has exactly one cause and this walk cannot
+  // branch. Bounded by whatever the dial traced, because `focus.dist` is.
+  function ancestorPath(model, focus) {
+    const out = [];
+    let cur = focus.point;
+    while (cur && cur.cause) {
+      const parent = model.byId.get(cur.cause);
+      if (!parent || !focus.dist.has(parent)) break;
+      out.push(parent);
+      cur = parent;
+    }
+    return out.reverse();
+  }
+
+  // The descendants, depth-first, each carrying its hop so the card can indent
+  // it.
+  //
+  // Kept as a TREE. Flattening it to a list would put two siblings in an order
+  // the record does not state, which is the same claim already refused for the
+  // correlation set -- made in text instead of in edges, and no more true for
+  // being quieter. Two events woken by one cause are concurrent, and the only
+  // honest rendering of that is that neither is drawn under the other.
+  function descendantTree(model, focus, cap) {
+    const rows = [];
+    const seen = new Set();
+    const walk = (point, depth) => {
+      if (!point.id) return;
+      const kids = (model.childrenOf.get(point.id) || [])
+        .filter((k) => !seen.has(k) && focus.dist.has(k) && focus.dist.get(k) > 0)
+        .sort((a, b) => a.secs - b.secs);
+      for (const kid of kids) {
+        seen.add(kid);
+        rows.push({ point: kid, depth, siblings: kids.length });
+        walk(kid, depth + 1);
+      }
+    };
+    walk(focus.point, 0);
+    return { rows: rows.slice(0, cap), total: rows.length, dropped: Math.max(0, rows.length - cap) };
+  }
+
   function tipHtml(model, cluster, focus) {
     const esc = (v) =>
       String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -1255,10 +1304,52 @@
             : "outside this window";
       }
       out.push(row("caused by", cause, head.cause ? "cs-tip-row--up" : ""));
-      let effects = 0;
-      for (const hop of focus.dist.values()) if (hop > 0) effects += 1;
-      out.push(row("set off", effects ? `${effects} event${effects === 1 ? "" : "s"}` : "nothing",
-        effects ? "cs-tip-row--down" : ""));
+
+      // Above, the immediate cause in words. Here, everything between it and
+      // whatever the dial reached -- which the card used to draw on the chart
+      // and then decline to name, reporting one hop up and a bare count down.
+      // A count says a chain is long; it does not say what happened.
+      const item = (p, cls, pad) =>
+        `<div class="cs-tip-item${cls ? ` ${cls}` : ""}"` +
+        `${pad ? ` style="padding-left: ${pad}px"` : ""}>` +
+        `<span class="cs-tip-k">${esc(p.label)}</span>` +
+        `<span class="cs-tip-v">${esc(fmtClock(model.t0, p.secs))}</span></div>`;
+
+      // Flat, because a path has no structure to show. The indentation the
+      // effects get below would be decoration here, and decoration that looks
+      // like the tree's real indentation is worse than none.
+      const up = ancestorPath(model, focus);
+      if (up.length > 1) {
+        out.push(
+          '<div class="cs-tip-chain">' +
+            up.map((p) => item(p, "cs-tip-item--up")).join("") +
+            item(head, "cs-tip-item--head") +
+            "</div>"
+        );
+      }
+
+      const down = descendantTree(model, focus, TIP_CHAIN_ROWS);
+      out.push(
+        row(
+          "set off",
+          down.total ? `${down.total} event${down.total === 1 ? "" : "s"}` : "nothing",
+          down.total ? "cs-tip-row--down" : ""
+        )
+      );
+      if (down.rows.length) {
+        // Indented by hop. Two rows at the same indent came out of one cause
+        // and are concurrent; the record states no order between them and
+        // neither does this.
+        out.push(
+          '<div class="cs-tip-chain">' +
+            down.rows.map((r) => item(r.point, "cs-tip-item--down", 8 + r.depth * 10)).join("") +
+            (down.dropped
+              ? `<div class="cs-tip-item cs-tip-item--cut"><span class="cs-tip-k">` +
+                `+${down.dropped} more not listed</span><span class="cs-tip-v"></span></div>`
+              : "") +
+            "</div>"
+        );
+      }
       if (focus.corr) {
         let n = 0;
         for (const lane of model.lanes) for (const q of lane.points) if (q.corr === focus.corr) n += 1;

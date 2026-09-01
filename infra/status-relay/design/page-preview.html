@@ -160,6 +160,38 @@
         cause = rnd() < 0.42 ? cause : re;
       }
     }
+
+    // A WIDE fan: one event waking a whole rank of subscribers at once, each
+    // of which wakes one or two more. This is the shape the tail above cannot
+    // reach -- a 42% sibling rate mostly deepens, so a long cascade is still a
+    // near-thread, and the card's row cap of twelve stayed unreachable no
+    // matter how many hops were added. A cap that can never be hit makes every
+    // assertion about how it reports itself reconcile trivially.
+    if (rnd() < 0.1) {
+      const hub = out[Math.floor(rnd() * out.length)];
+      let fms = atMs + n * 400 + 900;
+      const width = 5 + Math.floor(rnd() * 4);
+      for (let w = 0; w < width; w++) {
+        const pool = LANES.filter((l) => l[0] !== hub.stream_type);
+        const [wStream, wTypes] = pool[Math.floor(rnd() * pool.length)];
+        fms += 120 + rnd() * 400;
+        const kid = event(wStream, wTypes, fms);
+        kid.causation_id = hub.event_id;
+        kid.cause_occurred_at = hub.occurred_at;
+        kid.correlation_id = hub.correlation_id;
+        out.push(kid);
+        for (let g = 0, gn = 1 + Math.floor(rnd() * 2); g < gn; g++) {
+          const gpool = LANES.filter((l) => l[0] !== kid.stream_type);
+          const [gStream, gTypes] = gpool[Math.floor(rnd() * gpool.length)];
+          fms += 100 + rnd() * 300;
+          const gk = event(gStream, gTypes, fms);
+          gk.causation_id = kid.event_id;
+          gk.cause_occurred_at = kid.occurred_at;
+          gk.correlation_id = kid.correlation_id;
+          out.push(gk);
+        }
+      }
+    }
     return out;
   }
 

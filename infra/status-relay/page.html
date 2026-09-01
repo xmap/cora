@@ -175,8 +175,24 @@
     max-height: 8.4rem; overflow-y: auto; margin-bottom: 0.35rem;
     padding-bottom: 0.3rem; border-bottom: 1px solid var(--cs-line);
   }
+  /* The traced chain, in words. Its own block rather than more .cs-tip-rows:
+     these are events with clocks, not facts about one event, and a scroll cap
+     keeps a deep trace from turning the card into a page. */
+  .cs-tip-chain {
+    max-height: 7.6rem; overflow-y: auto;
+    margin: 0.25rem 0 0.35rem 0; padding: 0.2rem 0;
+    border-top: 1px solid var(--cs-line); border-bottom: 1px solid var(--cs-line);
+  }
+  .cs-tip-chain .cs-tip-k { overflow-wrap: anywhere; white-space: normal; }
   .cs-tip-item .cs-tip-k { color: var(--cs-mute); }
   .cs-tip-item--head .cs-tip-k { color: var(--cs-ink); font-weight: 600; }
+  /* The same two hues the arrows use, so a row in the card and the edge it
+     stands for are recognisably the same relation. All three are the same
+     specificity as `.cs-tip-item .cs-tip-k`, so they have to sit BELOW it:
+     written above they lost every hue to it without any warning. */
+  .cs-tip-item--up .cs-tip-k { color: color-mix(in srgb, var(--cs-alarm) 72%, var(--cs-sub)); }
+  .cs-tip-item--down .cs-tip-k { color: color-mix(in srgb, var(--cs-warn) 66%, var(--cs-sub)); }
+  .cs-tip-item--cut .cs-tip-k { color: var(--cs-mute); font-style: italic; }
   /* The second channel. Opacity already says "something on this row is in
      the chain you are tracing"; this says "the record binds this row to the
      pinned event's row", which is a different claim from a different source
