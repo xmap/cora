@@ -96,6 +96,17 @@
     --cs-ink: #e7ecf2;
     --cs-sub: #aab4c2;
     --cs-mute: #768091;
+    /* Marks wear a mark colour, never the text colour. Routine traffic was
+       drawn in --cs-ink, the same near-white as a heading, which made every
+       ordinary event as loud as an alarm and left the severity tiers nothing
+       to escalate FROM. Measured against the rest of what is on screen at
+       once (validate_palette, dark, surface #10141b): normal-vision floor
+       18.0 against the permit green, worst CVD pair 7.5 deutan between the
+       green ribbon and the red mark, which are a bar and a square on
+       different rows. #3f9dc9 -- the hue the prototype used -- fails that
+       floor at 14.9 against the same green. */
+    --cs-mark: #4c86c4;
+    --cs-mark-dim: #33556f;
     --cs-good: #3fb985;
     --cs-warn: #e6b24a;
     --cs-alarm: #f0644b;
@@ -245,10 +256,12 @@
   /* Thickness carries depth, so containment reads without a second colour or
      an extra rule: the campaign is visibly the thing holding the runs, which
      hold the procedures. */
-  .cs-track { fill: var(--cs-line); }
-  .cs-track--d0 { fill: color-mix(in srgb, var(--cs-sub) 55%, transparent); }
-  .cs-track--d1 { fill: color-mix(in srgb, var(--cs-sub) 80%, transparent); }
-  .cs-track--d2 { fill: var(--cs-line); }
+  /* Same hue as the marks that sit on them, so a track and its events read as
+     one thing; depth is carried by thickness and weight, not by another hue. */
+  .cs-track { fill: var(--cs-mark-dim); }
+  .cs-track--d0 { fill: color-mix(in srgb, var(--cs-mark-dim) 70%, transparent); }
+  .cs-track--d1 { fill: var(--cs-mark-dim); }
+  .cs-track--d2 { fill: color-mix(in srgb, var(--cs-mark-dim) 75%, transparent); }
   /* Tones are STATES OF A CONDITION over a range, which is what separates a
      permit ribbon from a row of samples. Unknown is its own state and never
      blended into either neighbour: not-observed is not the same as fine. */
@@ -268,7 +281,7 @@
      happened. No stroke -- the MARK_GAP between them is real space, so the
      squares read as separate without a ring thickening each one. */
   .cs-mark { transition: opacity 0.12s ease; }
-  .cs-mark--single, .cs-mark--packed, .cs-mark--many { fill: var(--cs-ink); }
+  .cs-mark--single, .cs-mark--packed, .cs-mark--many { fill: var(--cs-mark); }
   .cs-mark--acquire { fill: var(--cs-sub); }
   .cs-mark--check { fill: var(--cs-warn); }
   /* Severity, reusing the page's existing status hues rather than a new set.
@@ -279,7 +292,7 @@
   text.cs-tier--1 { fill: var(--cs-warn); font-weight: 600; }
   text.cs-tier--2 { fill: var(--cs-alarm); font-weight: 700; }
   .cs-cluster-count {
-    font-family: var(--cs-mono); font-size: 9px; font-weight: 700;
+    font-family: var(--cs-mono); font-size: 7.5px; font-weight: 700;
     fill: var(--cs-surface); pointer-events: none;
   }
   .cs-future { opacity: 0.25; }

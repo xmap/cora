@@ -60,7 +60,7 @@
   // caption is a divider, a track names itself in the gutter and needs no
   // room above its bar, and a markers lane has to seat a label over every
   // burst without it touching the row above.
-  const ROW_H = { zone: 19, track: 22, markers: 32, series: 34 };
+  const ROW_H = { zone: 18, track: 20, markers: 28, series: 32 };
   // The containment tree is only ever three deep, so the step stays a nudge
   // rather than eating the gutter.
   const INDENT = 10;
@@ -79,14 +79,16 @@
   // and its own hit target, which is what makes one event inside a burst
   // pickable: there is no merged mark to drill into, only neighbours that
   // stopped overlapping.
-  const MARK_S = 9;
+  const MARK_S = 6;
   const MARK_GAP = 2;
   const MARK_STEP = MARK_S + MARK_GAP;
   // Past this many, packing would run a single burst across a third of the
   // plot and shove its neighbours out of true. Beyond it the group draws as
-  // one bar of that width and takes a count back, which is the one case a
-  // number is worth more than the shape.
+  // one bar and takes a count back, which is the one case a number is worth
+  // more than the shape. The bar is taller than a square so that it reads as
+  // a summary rather than as one very long event, and so the digits fit.
   const PACK_MAX = 8;
+  const MANY_H = 9;
   const MARK_H = MARK_S;
   // Two marks closer than this cannot be drawn apart. Derived from the mark
   // rather than chosen, and deliberately a WIDTH: what can be separated is a
@@ -773,13 +775,14 @@
           cells.forEach((cell, i) => {
             const q = cell.point;
             const cw = wide ? packWidth(n) : MARK_S;
+            const ch = wide ? MANY_H : MARK_S;
             const cx = wide ? x0 : x0 + i * MARK_STEP;
             const tier = wide ? head.tier : q.tier || 0;
             const markEl = svg("rect", {
               x: cx,
-              y: y - MARK_S / 2,
+              y: y - ch / 2,
               width: cw,
-              height: MARK_S,
+              height: ch,
               rx: 1.5,
               class: `cs-mark cs-mark--${wide ? "many" : n > 1 ? "packed" : "single"} cs-tier--${tier}`,
             });
@@ -800,9 +803,9 @@
             markEl._csCluster = cell_c;
             const hit = svg("rect", {
               x: cx - MARK_GAP,
-              y: y - 11,
+              y: y - 9,
               width: cw + MARK_GAP * 2,
-              height: 22,
+              height: 18,
               class: "cs-hit",
             });
             hit._csCluster = cell_c;
@@ -814,7 +817,7 @@
           if (wide) {
             const ct = svg("text", {
               x: x0 + packWidth(n) / 2,
-              y: y + 3.2,
+              y: y + 2.6,
               class: "cs-cluster-count",
               "text-anchor": "middle",
             });
