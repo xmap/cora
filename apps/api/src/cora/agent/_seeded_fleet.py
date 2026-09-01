@@ -1,6 +1,6 @@
 """The set of Agents CORA ships with itself.
 
-Every deployment gets these eighteen at boot, seeded by the
+Every deployment gets these nineteen at boot, seeded by the
 `seed_*_agent` functions. Until this file existed the set existed only
 as sequential calls in `cora.api.main`, which was enough to create them
 and not enough to ask a question ABOUT them.
@@ -99,6 +99,10 @@ from cora.agent.seed_run_witness import (
     RUN_WITNESS_AGENT_ID,
     RUN_WITNESS_AGENT_NAME,
 )
+from cora.agent.seed_status_publisher import (
+    STATUS_PUBLISHER_AGENT_ID,
+    STATUS_PUBLISHER_AGENT_NAME,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -131,6 +135,7 @@ SEEDED_FLEET: Final[tuple[SeededAgent, ...]] = (
     SeededAgent(RUN_INITIATOR_AGENT_ID, RUN_INITIATOR_AGENT_NAME),
     SeededAgent(RUN_SUPERVISOR_AGENT_ID, RUN_SUPERVISOR_AGENT_NAME),
     SeededAgent(RUN_WITNESS_AGENT_ID, RUN_WITNESS_AGENT_NAME),
+    SeededAgent(STATUS_PUBLISHER_AGENT_ID, STATUS_PUBLISHER_AGENT_NAME),
 )
 
 
