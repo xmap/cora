@@ -139,7 +139,7 @@ from cora.data.features.register_distribution.decider import decide
 from cora.data.ports.checksum_verifier import Unreachable
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import ConcurrencyError, Deny
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -233,7 +233,7 @@ class DigestingDurableCopyRegistrar:
             principal_id=DURABLE_COPY_REGISTRAR_AGENT_ID,
             command_name=_COMMAND_NAME,
             conduit_id=NIL_SENTINEL_ID,
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         if isinstance(decision, Deny):
             return DurableCopyRegisterUnauthorized()

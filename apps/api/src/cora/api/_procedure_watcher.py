@@ -68,7 +68,7 @@ from cora.api._flag_watcher import (
     record_watcher_decision,
 )
 from cora.decision.aggregates.decision import DECISION_CONTEXT_PROCEDURE_PROGRESS
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.operation.adapters.postgres_procedure_activity_lookup import (
     PostgresProcedureActivityLookup,
 )
@@ -166,7 +166,7 @@ async def _drain_watched_procedures(
                 ListProcedures(status=status, cursor=cursor, limit=_PAGE_LIMIT),
                 principal_id=PROCEDURE_WATCHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
             items.extend(page.items)
             if page.next_cursor is None:

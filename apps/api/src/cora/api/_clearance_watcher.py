@@ -67,7 +67,7 @@ from cora.api._flag_watcher import (
     record_watcher_decision,
 )
 from cora.decision.aggregates.decision import DECISION_CONTEXT_CLEARANCE_PROGRESS
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.safety.errors import UnauthorizedError
 from cora.safety.features.get_clearance import GetClearance
 from cora.safety.features.list_clearances import ListClearances
@@ -154,7 +154,7 @@ async def _drain_watched_clearances(
                 ListClearances(status=status, cursor=cursor, limit=_PAGE_LIMIT),
                 principal_id=CLEARANCE_WATCHER_AGENT_ID,
                 correlation_id=deps.id_generator.new_id(),
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
             items.extend(page.items)
             if page.next_cursor is None:
@@ -176,7 +176,7 @@ async def _last_review_step_at(
         GetClearance(clearance_id=clearance_id),
         principal_id=CLEARANCE_WATCHER_AGENT_ID,
         correlation_id=deps.id_generator.new_id(),
-        surface_id=NIL_SENTINEL_ID,
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
     )
     if clearance is None or not clearance.review_steps:
         return None

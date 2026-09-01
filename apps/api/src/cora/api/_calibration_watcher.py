@@ -54,7 +54,7 @@ from cora.api._flag_watcher import (
 from cora.calibration.errors import UnauthorizedError
 from cora.calibration.features.list_calibrations import ListCalibrations
 from cora.decision.aggregates.decision import DECISION_CONTEXT_CALIBRATION_VERIFICATION
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -137,7 +137,7 @@ async def _drain_provisional_calibrations(
             ),
             principal_id=CALIBRATION_WATCHER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         items.extend(page.items)
         if page.next_cursor is None:

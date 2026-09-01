@@ -64,7 +64,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.safety.aggregates.clearance import (
     ClearanceCannotExpireError,
     ClearanceNotFoundError,
@@ -188,7 +188,7 @@ async def _expire_one(
             ExpireClearance(clearance_id=clearance_id, reason=_EXPIRE_REASON),
             principal_id=CLEARANCE_EXPIRER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except (ClearanceNotFoundError, ClearanceCannotExpireError) as exc:
         # The clearance changed under us between the list read and the expire
@@ -230,7 +230,7 @@ async def _drain_active_clearances(
             ListClearances(status="Active", cursor=cursor, limit=_PAGE_LIMIT),
             principal_id=CLEARANCE_EXPIRER_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         items.extend(page.items)
         if page.next_cursor is None:

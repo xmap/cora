@@ -45,6 +45,7 @@ from cora.decision.aggregates.decision import load_decision
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run._projections import register_run_projections
 from cora.run.aggregates.run import RunRequiresActiveClearanceError
 from cora.run.features.list_runs import ListRuns
@@ -263,6 +264,11 @@ async def test_run_initiator_without_start_grant_is_denied_no_run(
         policy_id=_POLICY_ID,
         permitted_principal_ids=[RUN_INITIATOR_AGENT_ID],
         permitted_commands=["ListRuns"],  # deliberately NOT StartRun
+        # Bound to the door the initiator actually arrives at. Without this
+        # the refusal below still happens, but at the SURFACE check, so the
+        # test would pass just as well with StartRun granted and would no
+        # longer be testing the thing its name claims.
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
     )
     gated = build_postgres_deps(
         db_pool,
@@ -303,6 +309,10 @@ async def test_run_initiator_with_start_grant_starts_run(db_pool: asyncpg.Pool) 
         policy_id=_POLICY_ID,
         permitted_principal_ids=[RUN_INITIATOR_AGENT_ID],
         permitted_commands=["StartRun"],
+        # The initiator authorizes on the in-process surface, so the policy
+        # granting it must bind that surface, exactly as the deployment's
+        # generated back-door rulebook does.
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
     )
     gated = build_postgres_deps(
         db_pool,

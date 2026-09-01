@@ -103,7 +103,7 @@ from cora.equipment.aggregates.asset import load_asset
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.recipe.aggregates.method import load_method
 from cora.recipe.aggregates.plan import load_plan
 from cora.recipe.aggregates.practice import load_practice
@@ -721,7 +721,7 @@ async def _issue_hold(
             HoldRun(run_id=run_id, decided_by_decision_id=decision_id, cause=HOLD_CAUSE_SUPERVISOR),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except (RunCannotHoldError, RunNotFoundError) as exc:
         # The Run changed under us between read and issue (someone else acted,
@@ -754,7 +754,7 @@ async def _issue_resume(
             ),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except (RunCannotResumeError, RunNotFoundError) as exc:
         # The Run changed under us between read and issue (an operator resumed
@@ -793,7 +793,7 @@ async def _issue_truncate(
             ),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except (RunCannotTruncateError, RunNotFoundError) as exc:
         # The Run changed under us between read and issue (someone else acted, or
@@ -886,7 +886,7 @@ async def _issue_abort(
             ),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except (RunCannotAbortError, RunNotFoundError) as exc:
         _log.info("run_supervisor.abort_skipped", run_id=str(run_id), reason=type(exc).__name__)
@@ -912,7 +912,7 @@ async def _issue_stop(
             StopRun(run_id=run_id, reason=reason, decided_by_decision_id=decision_id),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except (RunCannotStopError, RunNotFoundError) as exc:
         _log.info("run_supervisor.stop_skipped", run_id=str(run_id), reason=type(exc).__name__)
@@ -1014,7 +1014,7 @@ async def _drain_runs(
             ListRuns(status=status, cursor=cursor, limit=_PAGE_LIMIT),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         items.extend(page.items)
         if page.next_cursor is None:

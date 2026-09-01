@@ -62,7 +62,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs import ListRuns
 from cora.run.features.start_run import StartRun
@@ -206,7 +206,7 @@ async def initiate_run(
             ),
             principal_id=RUN_INITIATOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
     except UnauthorizedError:
         # Configuration fault: the initiator principal is not granted StartRun.
@@ -225,7 +225,7 @@ async def _drain_running_runs(list_runs: ListRunsHandler, deps: Kernel) -> list[
             ListRuns(status="Running", cursor=cursor, limit=_PAGE_LIMIT),
             principal_id=RUN_INITIATOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         items.extend(page.items)
         if page.next_cursor is None:
@@ -245,7 +245,7 @@ async def _drain_mounted_subjects(
             ListSubjects(status="Mounted", cursor=cursor, limit=_PAGE_LIMIT),
             principal_id=RUN_INITIATOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         items.extend(page.items)
         if page.next_cursor is None:

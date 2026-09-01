@@ -76,7 +76,7 @@ from cora.infrastructure.observability.gen_ai import compute_cost_usd
 from cora.infrastructure.ports import ConcurrencyError
 from cora.infrastructure.ports.inference_recorder import AgentInferenceTrace
 from cora.infrastructure.ports.llm import ModelRef
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
 from cora.operation.features.conduct_until_advised import ConductUntilAdvised
 from cora.operation.features.hold_procedure import HoldProcedure
@@ -495,7 +495,7 @@ async def steer_experiment(
                 ),
                 principal_id=EXPERIMENT_STEERER_AGENT_ID,
                 correlation_id=correlation_id,
-                surface_id=NIL_SENTINEL_ID,
+                surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
             break
         if choice == _CHOICE_CONCLUDE:

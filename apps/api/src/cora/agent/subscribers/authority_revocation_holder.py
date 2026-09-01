@@ -131,7 +131,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.run.aggregates.run import (
     HOLD_CAUSE_AUTHORITY_REVOCATION,
     RunHeld,
@@ -340,7 +340,7 @@ class AuthorityRevocationHolderSubscriber:
             principal_id=AUTHORITY_REVOCATION_HOLDER_AGENT_ID,
             command_name=_HOLD_COMMAND_NAME,
             conduit_id=NIL_SENTINEL_ID,
-            surface_id=NIL_SENTINEL_ID,
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
         if isinstance(authz, Deny):
             return "HoldDeferred", "not authorized to hold (Authorize denied)"
