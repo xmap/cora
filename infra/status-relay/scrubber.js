@@ -528,6 +528,7 @@
       // Thickness carries distance: the immediate cause is heaviest and each
       // further hop thinner, so the near story reads before the far one.
       path.style.strokeWidth = String(Math.max(0.7, 2.1 - 0.42 * Math.max(0, hop - 1)));
+      path.classList.add(`cs-hop-${Math.min(hop, MAX_CHAIN_HOPS)}`);
       layer.appendChild(path);
     }
 
@@ -906,6 +907,24 @@
             const ch = wide ? MANY_H : MARK_S;
             const cx = wide ? x0 : x0 + i * MARK_STEP;
             const tier = wide ? head.tier : q.tier || 0;
+            // Per CELL, not per cluster. A pack of six can hold one event of
+            // the chain and five bystanders, and lighting all six because one
+            // of them qualifies overstates the trace by five events.
+            const mine = wide ? c.items : [q];
+            let hop = null;
+            if (chain) {
+              for (const z of mine) {
+                if (!chain.has(z)) continue;
+                const d = Math.abs(chain.get(z));
+                if (hop === null || d < hop) hop = d;
+              }
+            }
+            // Correlation gets a FORM, never a place on the tone ramp. Both
+            // channels used to sit at full opacity, which was ambiguous but
+            // harmless; once tone means hop distance, a correlated bystander
+            // left at full would read as the pinned event itself.
+            const corrOnly =
+              !!focus && hop === null && !!focus.corr && mine.some((z) => z.corr === focus.corr);
             const markEl = svg("rect", {
               x: cx,
               y: y - ch / 2,
@@ -917,7 +936,9 @@
                 // On a track a mark sits ON the lifetime bar, so it needs the
                 // bar held off it. On a flat lane there is nothing under it
                 // and a ring would only thicken the square.
-                (lane.render === "track" ? " cs-mark--on-track" : ""),
+                (lane.render === "track" ? " cs-mark--on-track" : "") +
+                (hop !== null ? ` cs-hop-${Math.min(hop, MAX_CHAIN_HOPS)}` : "") +
+                (corrOnly ? " cs-mark--corr" : ""),
             });
             const title = svg("title");
             title.textContent = wide
@@ -958,7 +979,7 @@
             hit._csCluster = cell_c;
             plot.appendChild(hit);
             selectable.push({ el: markEl, point: q });
-            if (focus && dim) markEl.classList.add("cs-dim");
+            if (focus && hop === null && !corrOnly) markEl.classList.add("cs-dim");
           });
 
           if (wide) {
@@ -1247,7 +1268,7 @@
         const cut = [];
         if (focus.truncatedUp) cut.push("earlier causes");
         if (focus.truncatedDown) cut.push("later effects");
-        out.push(row("not shown", `${cut.join(" and ")} beyond ${MAX_CHAIN_HOPS} steps`));
+        out.push(row("not shown", `${cut.join(" and ")} beyond ${focus.hops} step${focus.hops === 1 ? "" : "s"}`));
       }
     }
     return out.join("");
@@ -1288,7 +1309,17 @@
       const cut = [];
       if (focus.truncatedUp) cut.push("earlier causes");
       if (focus.truncatedDown) cut.push("later effects");
-      rows.push(["not shown", `${cut.join(" and ")} beyond ${MAX_CHAIN_HOPS} steps`, "warn"]);
+      rows.push([
+        "not shown",
+        `${cut.join(" and ")} beyond ${focus.hops} step${focus.hops === 1 ? "" : "s"}`,
+        "warn",
+      ]);
+    }
+    // Only where it actually happened. Saying "branches: no" on every pin
+    // would train the reader to skip the row on the one pin where a single
+    // event woke four subscribers, which is the whole reason to raise the dial.
+    if (focus.widest > 1) {
+      rows.push(["branches", `one event set off ${focus.widest} at once`, null]);
     }
     return rows;
   }
@@ -1709,10 +1740,17 @@
     }
   }
 
-  // How far a chain is walked in each direction before it is cut. A long chain
-  // drawn in full is a hairball, and the cut is reported in the readout rather
-  // than silently trimming the story.
-  const MAX_CHAIN_HOPS = 4;
+  // How far a chain MAY be walked, and how far it is by default. The ceiling
+  // is a hairball guard; the default is a reading choice: one hop answers "why
+  // did this happen and what did it set off", which is the question a pin
+  // usually is, and everything past it is a follow-up the viewer can ask for.
+  //
+  // The dial is causation ONLY. Correlation is a flat SET -- every member is
+  // one originating command away from every other by construction -- so there
+  // is no depth to walk, and a control implying otherwise would put a shape on
+  // the record that the record does not have.
+  const MAX_CHAIN_HOPS = 6;
+  const DEFAULT_CHAIN_HOPS = 2;
 
   // Ancestors and descendants of `point`, with hop distance from it.
   //
@@ -1721,7 +1759,8 @@
   // arrive over a socket, and a malformed or self-referencing causation_id
   // would spin `while (cur.cause)` forever and hang the page. Trusting the
   // shape of remote data is not a guarantee, it is a hope.
-  function traceChain(model, point) {
+  function traceChain(model, point, maxHops) {
+    const hops_max = Math.max(1, Math.min(MAX_CHAIN_HOPS, maxHops || DEFAULT_CHAIN_HOPS));
     const dist = new Map([[point, 0]]);
     let truncatedUp = false;
     let truncatedDown = false;
@@ -1737,7 +1776,7 @@
       }
       if (dist.has(parent)) break;
       hops += 1;
-      if (hops > MAX_CHAIN_HOPS) {
+      if (hops > hops_max) {
         truncatedUp = true;
         break;
       }
@@ -1745,22 +1784,33 @@
       cur = parent;
     }
 
+    // Upstream above is a WALK, downstream here is a frontier, and the
+    // asymmetry is the record's, not a shortcut: `causation_id` is one scalar
+    // column, so an event has exactly one cause and upstream can only ever be
+    // a thread. Downstream is the inverted multimap, where one event waking
+    // three subscribers gives one node three children. Raising the dial
+    // therefore lengthens the story backwards and widens it forwards.
+    let widest = 0;
     let frontier = [point];
-    for (let depth = 1; depth <= MAX_CHAIN_HOPS && frontier.length; depth += 1) {
+    for (let depth = 1; depth <= hops_max && frontier.length; depth += 1) {
       const next = [];
       for (const node of frontier) {
         if (!node.id) continue;
-        for (const kid of model.childrenOf.get(node.id) || []) {
+        const kids = model.childrenOf.get(node.id) || [];
+        let fanned = 0;
+        for (const kid of kids) {
           if (dist.has(kid)) continue;
           dist.set(kid, depth);
           next.push(kid);
+          fanned += 1;
         }
+        if (fanned > widest) widest = fanned;
       }
       frontier = next;
-      if (depth === MAX_CHAIN_HOPS && next.length) truncatedDown = true;
+      if (depth === hops_max && next.length) truncatedDown = true;
     }
 
-    return { dist, unresolved, truncatedUp, truncatedDown };
+    return { dist, unresolved, truncatedUp, truncatedDown, widest, hops: hops_max };
   }
 
   // The rendered cluster closest to the cursor, so Enter can pin what the
@@ -1808,7 +1858,19 @@
     // "Resume following" control instead.
     const showPlay = opts.showPlay !== false;
     const showJumpLast = opts.showJumpLast !== false;
+    // Named for what it walks. "Depth" alone would read as covering the
+    // correlation highlight too, and that set has no depth to walk.
+    const depthOpts = [1, 2, 3, 4, 6]
+      .map(
+        (n) =>
+          `<option value="${n}"${n === DEFAULT_CHAIN_HOPS ? " selected" : ""}>` +
+          `${n} hop${n === 1 ? "" : "s"}</option>`
+      )
+      .join("");
     const controlsHtml =
+      `<label class="cs-depth"><span class="cs-depth-label">Causation</span>` +
+      `<select class="cs-depth-pick" aria-label="How many causal hops to trace">${depthOpts}</select>` +
+      `</label>` +
       (showPlay ? '<button type="button" class="cs-btn cs-play" aria-pressed="false">Play</button>' : "") +
       (showJumpLast
         ? `<button type="button" class="cs-btn cs-jump-last">${opts.jumpLabel || "Jump to last event"}</button>`
@@ -1897,6 +1959,7 @@
       playing: false,
       rafId: 0,
       selected: null,
+      depth: DEFAULT_CHAIN_HOPS,
       canPan: span < domainMax - 1e-6,
     };
 
@@ -1993,7 +2056,7 @@
 
     function traceFor(point) {
       if (!point) return null;
-      const traced = traceChain(model, point);
+      const traced = traceChain(model, point, state.depth);
       return {
         point,
         corr: point.corr || null,
@@ -2001,6 +2064,8 @@
         unresolved: traced.unresolved,
         truncatedUp: traced.truncatedUp,
         truncatedDown: traced.truncatedDown,
+        widest: traced.widest,
+        hops: traced.hops,
       };
     }
     const focusFor = () => traceFor(anchor || hover);
@@ -2120,6 +2185,17 @@
     };
 
     controls = wireDrag(root, model, scene, state, opts);
+
+    // Rebuild, not restyle: a deeper trace un-collapses clusters the pack had
+    // merged and adds edges, so which marks exist at all changes with the dial.
+    const depthPick = root.querySelector(".cs-depth-pick");
+    if (depthPick) {
+      depthPick.addEventListener("change", () => {
+        state.depth = Number(depthPick.value) || DEFAULT_CHAIN_HOPS;
+        rerender();
+        if (anchor) state.anchorTip();
+      });
+    }
 
     const playBtn = root.querySelector(".cs-play");
     if (playBtn) {

@@ -133,10 +133,18 @@
     // producing roots forever. An earlier version tried to chain within a
     // burst, which cannot work: a burst is one stream and the next is eight
     // seconds away, so no candidate was ever both foreign and recent.
+    // The tail must FORK, not just run. It used to reassign `cause = re` on
+    // every hop, which can only ever produce a thread -- so no node in this
+    // fixture ever had two children, and the renderer's branching walk (the
+    // whole reason downstream is a frontier and not a pointer chase) had never
+    // once been exercised by the fixture written to exercise it. Production
+    // branches freely: one event wakes a projector, a policy watcher and an
+    // expirer, and all three append against the same causation_id.
     if (rnd() < 0.55) {
-      let cause = out[Math.floor(rnd() * out.length)];
+      const root = out[Math.floor(rnd() * out.length)];
+      let cause = root;
       let ms = atMs + n * 400;
-      const hops = 1 + Math.floor(rnd() * 3);
+      const hops = 2 + Math.floor(rnd() * 4);
       for (let h = 0; h < hops; h++) {
         const other = LANES.filter((l) => l[0] !== cause.stream_type);
         const [rStream, rTypes] = other[Math.floor(rnd() * other.length)];
@@ -146,7 +154,10 @@
         re.cause_occurred_at = cause.occurred_at;
         re.correlation_id = cause.correlation_id;
         out.push(re);
-        cause = re;
+        // Deepen, or hang a sibling off the same cause. Both shapes have to
+        // occur: a fixture that only forks tests depth no better than one
+        // that only threads tested branching.
+        cause = rnd() < 0.42 ? cause : re;
       }
     }
     return out;

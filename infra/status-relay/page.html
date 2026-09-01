@@ -100,7 +100,17 @@
   }
   .cs-title { font-weight: 600; font-size: 1.02rem; }
   .cs-subtitle { font-family: var(--cs-mono); font-size: 0.7rem; color: var(--cs-mute); }
-  .cs-controls { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .cs-controls { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .cs-depth { display: flex; align-items: center; gap: 0.35rem; }
+  .cs-depth-label {
+    font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--cs-mute);
+  }
+  .cs-depth-pick {
+    background: transparent; color: var(--cs-sub); font: inherit; font-size: 0.72rem;
+    border: 1px solid var(--cs-line); border-radius: 4px; padding: 0.15rem 0.3rem;
+  }
+  .cs-depth-pick:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
   .cs-btn {
     font-size: 0.72rem; font-weight: 500; color: var(--cs-sub); background: var(--cs-panel-2);
     border: 1px solid var(--cs-line); border-radius: 7px; padding: 0.34rem 0.66rem;
@@ -314,6 +324,33 @@
   .cs-tier--2 { fill: var(--cs-alarm); }
   text.cs-tier--1 { fill: var(--cs-warn); font-weight: 600; }
   text.cs-tier--2 { fill: var(--cs-alarm); font-weight: 700; }
+  /* Hop distance, on the tone channel. Two-class selectors so the ramp sits
+     above the tier fills without touching them: tier owns HUE, depth owns
+     TONE, and the two never contend for the same property.
+
+     The floor is 0.48 against a .cs-dim of 0.14, a gap of more than three
+     times. That margin is the point: the far end of a traced chain and an
+     event outside it entirely are opposite answers, and a ramp that ran down
+     into the dim level would make the deepest hop indistinguishable from a
+     bystander exactly when the dial is turned up to look at it. */
+  .cs-mark.cs-hop-0 { opacity: 1; }
+  .cs-mark.cs-hop-1 { opacity: 0.84; }
+  .cs-mark.cs-hop-2 { opacity: 0.7; }
+  .cs-mark.cs-hop-3 { opacity: 0.58; }
+  .cs-mark.cs-hop-4, .cs-mark.cs-hop-5, .cs-mark.cs-hop-6 { opacity: 0.48; }
+  /* `stroke-opacity`, not `opacity`, so an edge keeps the direction tone set
+     by .cs-edge--down instead of having it overwritten by whichever rule the
+     cascade happened to see last. */
+  .cs-edge.cs-hop-1 { stroke-opacity: 0.85; }
+  .cs-edge.cs-hop-2 { stroke-opacity: 0.7; }
+  .cs-edge.cs-hop-3 { stroke-opacity: 0.58; }
+  .cs-edge.cs-hop-4, .cs-edge.cs-hop-5, .cs-edge.cs-hop-6 { stroke-opacity: 0.48; }
+  /* Correlation is a set with no depth, so it must not land anywhere on the
+     ramp above. Hollow is the signal; the tone only keeps it behind the chain
+     it is sharing a screen with. */
+  .cs-mark.cs-mark--corr {
+    fill: var(--cs-surface); stroke: var(--cs-mark); stroke-width: 1.2; opacity: 0.75;
+  }
   .cs-cluster-count {
     font-family: var(--cs-mono); font-size: 7.5px; font-weight: 700;
     fill: var(--cs-surface); pointer-events: none;
