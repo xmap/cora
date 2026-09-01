@@ -743,6 +743,16 @@
       // and drawn as dots you learn only that it was sampled, never whether
       // it held.
       if (lane.render === "track") {
+        // A bar recedes with the marks on it. Only the marks used to dim, so
+        // pinning an event dropped 250 squares to a whisper and left the
+        // ribbons -- a saturated green running the width of the chart --
+        // untouched, which made the loudest thing on screen the part that is
+        // not the story. A lane stays lit when it holds something in the
+        // traced chain or the pinned event's correlation, which is also what
+        // makes the tree answer "where did this happen".
+        const laneLit =
+          !focus ||
+          lane.points.some((p) => chain.has(p) || (focus.corr && p.corr === focus.corr));
         const bars = lane.segments
           ? lane.segments
           : [{ from: lane.from, to: lane.to, tone: lane.tone, h: TRACK_H[Math.min(lane.depth, 2)] }];
@@ -764,7 +774,12 @@
               class:
                 `cs-track cs-track--d${lane.depth}` +
                 (seg.tone ? ` cs-track--${seg.tone}` : "") +
-                (open ? " cs-track--open" : ""),
+                (open ? " cs-track--open" : "") +
+                // A standing bad or unsettled condition never recedes. Every
+                // other bar is context you can put down while you read
+                // something else; "the hutch is not permitted" is not, and it
+                // is the one dim that could cost something.
+                (!laneLit && seg.tone !== "bad" && seg.tone !== "warn" ? " cs-dim" : ""),
             })
           );
         }
@@ -774,7 +789,7 @@
           plot.appendChild(
             svg("polygon", {
               points: `${PAD_L + 6},${y - 5} ${PAD_L + 6},${y + 5} ${PAD_L},${y}`,
-              class: "cs-track-cap",
+              class: "cs-track-cap" + (laneLit ? "" : " cs-dim"),
             })
           );
         }

@@ -200,6 +200,10 @@
      rather than disappearing: the shape of the surrounding traffic is still
      context, it just stops competing. */
   .cs-dim { opacity: 0.14; }
+  /* A bar recedes further than a mark would let it: 0.14 on a lifetime that
+     spans the whole chart erases the skeleton, and the shape of the tree is
+     what tells you WHERE the lit part sits. */
+  .cs-track.cs-dim, .cs-track-cap.cs-dim { opacity: 0.24; }
   /* Direction is never in doubt, the head always sits at the effect. Hue
      separates "why this happened" from "what it set off". */
   .cs-edge { fill: none; }
