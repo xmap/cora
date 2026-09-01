@@ -321,6 +321,24 @@
         { enclosure_id: "enc1", name: "2-BM-B hutch", permit_status: "Permitted",
           facility_code: "aps" },
       ],
+      // The fleet readiness row. Deliberately STRANDED here, matching the
+      // real 2-BM deployment on the day this shipped (16 of 20 registered
+      // but never promoted). A fixture with a healthy fleet would render
+      // the "ready to act" row and silently exercise none of the reporting
+      // that exists for the case worth catching.
+      agents: {
+        ready: 4,
+        total: 20,
+        not_ready: [
+          "AuthorityRevocationHolder", "CalibrationWatcher", "CampaignWatcher",
+          "CaptureBaselineReader", "CaptureProgressFeeder", "CautionDrafter",
+          "CautionPromoter", "ClearanceExpirer", "ClearanceWatcher",
+          "ExperimentSteerer", "ProcedureWatcher", "RatificationEnforcer",
+          "RunDebriefer", "RunInitiator", "RunSupervisor", "RunWitness",
+        ],
+        held: [],
+        absent: [],
+      },
       decisions: [
         { decision_id: "d1", choice: "continue", confidence_band: "High",
           decided_by: "00000000-0000-4000-8000-000000000042", created_at: iso(14 * 60 * 1000) },
