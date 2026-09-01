@@ -375,8 +375,25 @@
   .cs-tone--good { color: var(--cs-good); }
   .cs-tone--warn { color: var(--cs-warn); }
   .cs-omitted-note { font-size: 0.7rem; color: var(--cs-mute); margin-top: 0.5rem; }
+  /* Title left, rewind right, on one line. Rewind is a way IN to a second
+     view rather than a section of this one, so it belongs with the page's
+     own chrome and not at the bottom of a stack of tables. */
+  #page-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  #page-head h1 { margin: 0; }
+  #rewind-control { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+  .rewind-label {
+    font-family: var(--mono); font-size: 0.68rem;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  }
   #rewind-picker { background: var(--row-border); color: var(--fg); border: 1px solid var(--row-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.9rem; }
-  #rewind-back { margin-left: 0.5rem; }
+  /* The whole width of the control when it wraps, so the note sits under the
+     picker it is about rather than beside it. */
+  #rewind-control .empty { flex-basis: 100%; text-align: right; font-size: 0.75rem; margin: 0; }
+  #rewind-stage:empty { display: none; }
+  #rewind-stage { margin-bottom: 1.2rem; }
   #flowing-status { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.5rem 0; min-height: 1.1em; }
   /* Not `.cs-btn`: that class reads `--cs-*` custom properties scoped to
      `.cora-scrubber`, and this button sits outside it (scaffold()
@@ -395,8 +412,25 @@
 </style>
 </head>
 <body>
-  <h1>CORA / 2-BM: live status</h1>
+  <div id="page-head">
+    <h1>CORA / 2-BM: live status</h1>
+    <div id="rewind-control">
+      <label class="rewind-label" for="rewind-picker">Rewind</label>
+      <select id="rewind-picker">
+        <option value="">Pick a run...</option>
+      </select>
+      <button type="button" id="rewind-back" class="cs-btn" style="display: none;">Back to live</button>
+      <div id="rewind-empty" class="empty">
+        no runs pushed since the relay started
+      </div>
+    </div>
+  </div>
   <div id="banner">connecting</div>
+
+  <!-- Directly under the control that opens it. Rewind used to be the last
+       thing on the page, so picking a run from anywhere above it changed
+       something off screen. -->
+  <div id="rewind-stage"></div>
 
   <div id="content">
     <h2>Live activity</h2>
@@ -459,17 +493,6 @@
       no decisions since this page's producer started
     </div>
 
-    <h2>Rewind</h2>
-    <div>
-      <select id="rewind-picker">
-        <option value="">Pick a run to rewind...</option>
-      </select>
-      <button type="button" id="rewind-back" class="cs-btn" style="display: none;">Back to live</button>
-    </div>
-    <div id="rewind-empty" class="empty">
-      no runs pushed since the relay started -- rewind only reaches runs seen while this relay has been up
-    </div>
-    <div id="rewind-stage"></div>
   </div>
 
 <script src="/scrubber.js"></script>

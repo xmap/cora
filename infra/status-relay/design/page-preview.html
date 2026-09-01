@@ -282,6 +282,52 @@
     };
   }
 
+  // Rewind went entirely unexercised here: the picker is filled from a
+  // `run_history_index` this stub never sent, and the history itself comes
+  // from a fetch the stub answered with an empty list. So the second of the
+  // page's two timeline views rendered nothing in the preview, and moving its
+  // control could not be checked by looking.
+  function runHistoryIndex() {
+    return {
+      kind: "run_history_index",
+      runs: [
+        { run_id: "r1", name: "R-4471", status: "Running", terminal: false },
+        { run_id: "r2", name: "R-4472", status: "Held", terminal: false },
+        { run_id: "r0", name: "R-4390", status: "Completed", terminal: true },
+      ],
+    };
+  }
+
+  // A closed history, which is the shape REWIND exists for: a fold cursor
+  // rather than a live edge, and observations to fold.
+  function runHistory(runId) {
+    const t0 = NOW - 60 * 60 * 1000;
+    const at = (min) => new Date(t0 + min * 60000).toISOString();
+    const events = [
+      { event_type: "RunStarted", occurred_at: at(0) },
+      { event_type: "RunAdjusted", occurred_at: at(11) },
+      { event_type: "RunHeld", occurred_at: at(26) },
+      { event_type: "RunResumed", occurred_at: at(33) },
+      { event_type: "RunCompleted", occurred_at: at(52) },
+    ];
+    const observations = [];
+    for (let i = 0; i <= 52; i += 2) {
+      observations.push({
+        channel_name: "detector",
+        sampled_at: at(i),
+        value: Math.round(i * 28.8),
+        commanded_total: 1500,
+      });
+      observations.push({
+        channel_name: "ring_current",
+        sampled_at: at(i),
+        value: 101 - (i % 7) * 0.4,
+        commanded_total: null,
+      });
+    }
+    return { run_id: runId, events, observations, observations_truncated: false };
+  }
+
   class StubSocket {
     constructor() {
       this.readyState = 1;
@@ -289,6 +335,7 @@
         this.onopen && this.onopen();
         this._send({ producer_connected: true });
         this._send(snapshot());
+        this._send(runHistoryIndex());
         this._send(enclosureTimeline());
         this._send({ kind: "activity", events: backlog() });
         this._tick = setInterval(() => {
@@ -315,8 +362,11 @@
       // timing; its script is inline at the end of body, so patching the
       // iframe's global here beats it to the first connect attempt.
       frame.contentWindow.WebSocket = StubSocket;
-      frame.contentWindow.fetch = () =>
-        Promise.resolve({ ok: true, json: () => Promise.resolve({ runs: [] }) });
+      frame.contentWindow.fetch = (url) => {
+        const m = String(url).match(/^\/run-history\/(.+)$/);
+        const body = m ? runHistory(decodeURIComponent(m[1])) : runHistoryIndex();
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+      };
     });
 </script>
 </body>
