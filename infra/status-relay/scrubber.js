@@ -49,10 +49,24 @@
   const SVGNS = "http://www.w3.org/2000/svg";
 
   const VW = 920;
-  const PAD_L = 84;
+  // Wide enough for a kind prefix, an indent and a name: a row is now often
+  // an INSTANCE ("RUN  R-4471") rather than a domain ("Runs"), and an
+  // instance that cannot be told from its siblings is not worth a row.
+  const PAD_L = 168;
   const PAD_R = 24;
   const LANE_START = 34;
   const LANE_HEIGHT = 40;
+  // Rows are no longer one size. A zone header is a rule and a word; a track
+  // names itself in the gutter so it needs no room above its marks; a markers
+  // lane has to seat a label over every burst.
+  const ROW_H = { zone: 20, track: 26, markers: 38, series: 40 };
+  // How far each level of containment steps right. The tree is only ever
+  // three deep (campaign, run, procedure), so this stays a nudge rather than
+  // eating the gutter.
+  const INDENT = 12;
+  // Thickness carries DEPTH: the campaign reads as the thing containing the
+  // runs, which contain the procedures, without another colour or rule.
+  const TRACK_H = [7, 5, 3];
   const MAX_SERIES_LANES = 6;
   const AXIS_MARGIN = 44;
   // One event is one square. A group is those squares PACKED side by side, so
@@ -91,6 +105,12 @@
 
   function parseT(iso) {
     return Date.parse(iso) / 1000;
+  }
+
+  // A track's own `from`/`to` arrive as ISO strings on the document, the same
+  // as every point's `t`, and have to land on the same seconds axis.
+  function trackSecs(model, iso) {
+    return parseT(iso) - model.t0;
   }
 
   function svg(tag, attrs) {
@@ -195,6 +215,15 @@
       lane_id: lane.lane_id,
       label: lane.label,
       render: lane.render,
+      // `zone` and `track` rows. All optional, all ignored by a document that
+      // does not use them, so the flat-lane shape this module started with
+      // still renders exactly as it did.
+      kind: lane.kind || null,
+      depth: lane.depth || 0,
+      from: lane.from || null,
+      to: lane.to || null,
+      segments: lane.segments || null,
+      tone: lane.tone || null,
       points: (lane.points || [])
         .map((p) => ({
           secs: parseT(p.t) - t0,
@@ -226,8 +255,14 @@
     const omittedSeries = seriesLanesAll.length - seriesLanes.length;
 
     const orderedSeriesIds = new Set(seriesLanes.map((l) => l.lane_id));
+    // `series` is the only render kind that gets capped, because it is the
+    // only one whose row count is driven by how many numeric channels a
+    // producer happens to have. Everything else the document asked for is
+    // drawn: a zone caption, an instance track and a markers lane are all
+    // deliberate rows, and silently dropping one would leave a gap in a
+    // containment tree with nothing to say a level was missing.
     const lanes = rawLanes.filter(
-      (l) => l.render === "markers" || orderedSeriesIds.has(l.lane_id)
+      (l) => l.render !== "series" || orderedSeriesIds.has(l.lane_id)
     );
 
     const subjectLaneId = doc.subject_lane_id || (markerLanes[0] && markerLanes[0].lane_id);
@@ -510,8 +545,17 @@
   let clipSeq = 0;
 
   function renderTimeline(model, scale, focus) {
-    const laneCount = Math.max(1, model.lanes.length);
-    const axisY = LANE_START + laneCount * LANE_HEIGHT + 10;
+    // Rows stack at their own heights rather than on a fixed pitch, because
+    // they are no longer the same kind of thing: a zone header is a caption, a
+    // track is a lifetime, a markers lane is a series of instants.
+    const rowY = new Map();
+    let stackY = LANE_START;
+    for (const lane of model.lanes) {
+      const h = ROW_H[lane.render] || LANE_HEIGHT;
+      rowY.set(lane, stackY + h / 2);
+      stackY += h;
+    }
+    const axisY = (model.lanes.length ? stackY : LANE_START + LANE_HEIGHT) + 10;
     const vh = axisY + AXIS_MARGIN;
     const X = (secs) => xFor(scale, secs);
 
@@ -543,24 +587,57 @@
           }),
     });
 
-    const laneY = new Map();
-    model.lanes.forEach((lane, i) => {
-      const y = LANE_START + i * LANE_HEIGHT;
-      laneY.set(lane.lane_id, y);
-      g.appendChild(svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-baseline" }));
-      const t = svg("text", { x: PAD_L - 12, y: y + 4, class: "cs-lane-label", "text-anchor": "end" });
-      // SVG has no text-overflow, so a long lane label silently runs under the
-      // plot instead of being clipped. Measure in the label's own advance
-      // width and keep the full text on hover.
-      const room = PAD_L - 12 - 4;
+    // SVG has no text-overflow, so a long label silently runs under the plot
+    // instead of being clipped. Measure in the label's own advance width and
+    // keep the full text on hover.
+    const fitted = (text, x, room, cls, anchor) => {
+      const t = svg("text", { x, y: 0, class: cls, "text-anchor": anchor || "end" });
       const maxChars = Math.floor(room / LANE_LABEL_CH);
       t.textContent =
-        lane.label.length > maxChars ? `${lane.label.slice(0, Math.max(1, maxChars - 1))}…` : lane.label;
-      if (t.textContent !== lane.label) {
+        text.length > maxChars ? `${text.slice(0, Math.max(1, maxChars - 1))}…` : text;
+      if (t.textContent !== text) {
         const full = svg("title");
-        full.textContent = lane.label;
+        full.textContent = text;
         t.appendChild(full);
       }
+      return t;
+    };
+
+    const laneY = new Map();
+    model.lanes.forEach((lane) => {
+      const y = rowY.get(lane);
+      laneY.set(lane.lane_id, y);
+      if (lane.render === "zone") {
+        // A caption and a rule. It separates without competing: the zones are
+        // the reason the rows below them are in that order, and once the eye
+        // has learned the order it should stop reading them.
+        const zt = svg("text", { x: 8, y: y + 3, class: "cs-zone", "text-anchor": "start" });
+        zt.textContent = lane.label;
+        g.appendChild(zt);
+        g.appendChild(
+          svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-zone-rule" })
+        );
+        return;
+      }
+      if (lane.render === "track") {
+        // Two-part gutter: the KIND, fixed width and indented by depth, then
+        // the instance's own name. Reading down the kind column alone gives
+        // the shape of the tree.
+        const indent = lane.depth * INDENT;
+        if (lane.kind) {
+          const kt = svg("text", { x: 8 + indent, y: y + 3, class: "cs-row-kind", "text-anchor": "start" });
+          kt.textContent = lane.kind;
+          g.appendChild(kt);
+        }
+        const labX = 8 + indent + 40;
+        const lt = fitted(lane.label, labX, PAD_L - 12 - labX, `cs-track-label cs-track-label--d${lane.depth}`, "start");
+        lt.setAttribute("y", y + 3);
+        g.appendChild(lt);
+        return;
+      }
+      g.appendChild(svg("line", { x1: PAD_L, y1: y, x2: VW - PAD_R, y2: y, class: "cs-baseline" }));
+      const t = fitted(lane.label, PAD_L - 12, PAD_L - 16, "cs-lane-label");
+      t.setAttribute("y", y + 4);
       g.appendChild(t);
     });
 
@@ -616,7 +693,52 @@
 
     for (const lane of model.lanes) {
       const y = laneY.get(lane.lane_id);
-      if (lane.render === "markers") {
+      if (lane.render === "zone") continue;
+
+      // A track is a LIFETIME, so it is drawn as a bar over the time it
+      // covers rather than as a sample at each end. Segments say the bar
+      // changed state part-way through: a permit is a condition over a range,
+      // and drawn as dots you learn only that it was sampled, never whether
+      // it held.
+      if (lane.render === "track") {
+        const bars = lane.segments
+          ? lane.segments
+          : [{ from: lane.from, to: lane.to, tone: lane.tone, h: TRACK_H[Math.min(lane.depth, 2)] }];
+        for (const seg of bars) {
+          const h = seg.h || TRACK_H[Math.min(lane.depth, 2)];
+          const open = seg.to === null || seg.to === undefined;
+          const s0 = seg.from === null || seg.from === undefined ? scale.bmin : trackSecs(model, seg.from);
+          const s1 = open ? scale.bmax : trackSecs(model, seg.to);
+          const a = X(Math.max(s0, scale.bmin));
+          const b = X(Math.min(s1, scale.bmax));
+          if (b - a < 0.5) continue;
+          plot.appendChild(
+            svg("rect", {
+              x: a,
+              y: y - h / 2,
+              width: b - a,
+              height: h,
+              rx: Math.min(3, h / 2),
+              class:
+                `cs-track cs-track--d${lane.depth}` +
+                (seg.tone ? ` cs-track--${seg.tone}` : "") +
+                (open ? " cs-track--open" : ""),
+            })
+          );
+        }
+        // A bar that began before the buffer must say so, or it reads as one
+        // that started exactly where the chart happens to begin.
+        if (lane.from !== null && trackSecs(model, lane.from) < scale.bmin - 1e-6) {
+          plot.appendChild(
+            svg("polygon", {
+              points: `${PAD_L + 6},${y - 5} ${PAD_L + 6},${y + 5} ${PAD_L},${y}`,
+              class: "cs-track-cap",
+            })
+          );
+        }
+      }
+
+      if (lane.render === "markers" || lane.render === "track") {
         // The gate here used to be `points.length <= MAX_MARKER_LABELS`, which
         // tests COUNT while the thing that ruins a lane is DENSITY. Twelve
         // events spread over fifteen minutes read perfectly; twelve inside one
@@ -759,7 +881,11 @@
           });
         });
 
-        seatLabels(candidates).forEach((slot) => {
+        // A track names itself in the gutter, and its row is sized for a bar
+        // rather than for a caption above one. Seating labels there would put
+        // them through the row above.
+        const seated = lane.render === "track" ? [] : seatLabels(candidates);
+        seated.forEach((slot) => {
           const lab = svg("text", {
             x: (slot.l + slot.r) / 2,
             y: y - 11,

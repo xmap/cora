@@ -45,11 +45,49 @@
   let evSeq = 0;
   const uuid = (n) => "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
 
+  // Events have to carry the SAME instance ids the snapshot does, or every
+  // track renders as an empty bar with its events piled into a catch-all lane
+  // instead. A stream_id pool that matched nothing was the whole reason to
+  // check this rather than assume it.
+  // Ids AND lifetimes. An event has to belong to an instance that was alive
+  // when it happened, or marks land outside their own track's bar and the
+  // preview shows a geometry the real feed can never produce -- which is
+  // exactly the kind of plausible-looking fixture that has already sent this
+  // work down two wrong turns.
+  //
+  // "r0" and "p0" have no snapshot row at all: a run that finished before the
+  // window opened still has events inside it, and they must reach the
+  // "elsewhere" lane rather than vanish.
+  const LIVES = {
+    Run: [
+      ["r1", 52, 0], ["r2", 21, 0], ["r3", 9, 0], ["r0", 24 * 60, 55],
+    ],
+    Procedure: [
+      ["p1", 50, 44], ["p2", 43, 30], ["p3", 29, 0],
+      ["p4", 19, 12], ["p5", 8, 0], ["p0", 24 * 60, 58],
+    ],
+    Subject: [["s1", 55, 0], ["s2", 24, 0]],
+    Campaign: [["c1", 52, 0]],
+    Enclosure: [["enc1", 60, 0]],
+  };
+  function streamIdFor(stream, ms) {
+    const lives = LIVES[stream];
+    if (!lives) {
+      // Judgement domains have no instance track, so their ids only ever have
+      // to tell one stream from another.
+      return uuid(100 + Math.floor(rnd() * 12));
+    }
+    const minsAgo = (NOW - ms) / 60000;
+    const alive = lives.filter((l) => minsAgo <= l[1] && minsAgo >= l[2]);
+    const pool = alive.length ? alive : lives;
+    return pool[Math.floor(rnd() * pool.length)][0];
+  }
+
   function event(stream, types, ms) {
     return {
       event_id: uuid(900000 + evSeq++),
       stream_type: stream,
-      stream_id: uuid(100 + Math.floor(rnd() * 3)),
+      stream_id: streamIdFor(stream, ms),
       event_type: types[Math.floor(rnd() * types.length)],
       occurred_at: new Date(ms).toISOString(),
       recorded_at: new Date(ms).toISOString(),
@@ -112,15 +150,81 @@
     return events;
   }
 
+  // A shape the LAYOUT can be built from, not just tables: two runs under one
+  // campaign and one standalone, procedures under each, and subjects the runs
+  // point at. Without `campaign_id` / `subject_id` / `parent_run_id` the
+  // execution zone renders as a flat list of runs and the nesting the chart
+  // exists to show goes unexercised, while the preview looks healthy.
+  const iso = (msAgo) => new Date(NOW - msAgo).toISOString();
+  const RUNS = [
+    { run_id: "r1", name: "R-4471", status: "Running", campaign_id: "c1", subject_id: "s1",
+      started_at: iso(52 * 60 * 1000),
+      progress: { detector: { value: 812, commanded_total: 1500 } } },
+    { run_id: "r2", name: "R-4472", status: "Held", campaign_id: "c1", subject_id: "s2",
+      started_at: iso(21 * 60 * 1000), progress: {} },
+    { run_id: "r3", name: "R-4480", status: "Running", campaign_id: null, subject_id: null,
+      started_at: iso(9 * 60 * 1000), progress: {} },
+  ];
+  const PROCEDURES = [
+    { procedure_id: "p1", name: "center_alignment", kind: "alignment", parent_run_id: "r1",
+      status: "Completed", registered_at: iso(50 * 60 * 1000),
+      last_status_changed_at: iso(44 * 60 * 1000), iteration_count: 2 },
+    { procedure_id: "p2", name: "flat_field", kind: "calibration", parent_run_id: "r1",
+      status: "Completed", registered_at: iso(43 * 60 * 1000),
+      last_status_changed_at: iso(30 * 60 * 1000), iteration_count: 5 },
+    { procedure_id: "p3", name: "tomography", kind: "acquisition", parent_run_id: "r1",
+      status: "Running", registered_at: iso(29 * 60 * 1000),
+      last_status_changed_at: null, iteration_count: 41 },
+    { procedure_id: "p4", name: "dark_field", kind: "calibration", parent_run_id: "r2",
+      status: "Held", registered_at: iso(19 * 60 * 1000),
+      last_status_changed_at: iso(12 * 60 * 1000), iteration_count: 1 },
+    { procedure_id: "p5", name: "center_alignment", kind: "alignment", parent_run_id: "r3",
+      status: "Running", registered_at: iso(8 * 60 * 1000),
+      last_status_changed_at: null, iteration_count: 3 },
+  ];
+
   function snapshot() {
     return {
       kind: "snapshot",
       generated_at: new Date().toISOString(),
-      runs: [{ run_id: "r1", name: "R-4471", status: "Running",
-               progress: { detector: { value: 812, commanded_total: 1500 } } }],
-      subjects: [{ subject_id: "s1", name: "SMP-115", status: "Mounted" }],
-      campaigns: [{ name: "CMP-2211", intent: "Tomography", status: "Active", run_count: 3 }],
+      runs: RUNS,
+      procedures: PROCEDURES,
+      subjects: [
+        { subject_id: "s1", name: "SMP-115", status: "Mounted", created_at: iso(55 * 60 * 1000) },
+        { subject_id: "s2", name: "SMP-116", status: "Received", created_at: iso(24 * 60 * 1000) },
+      ],
+      campaigns: [
+        { campaign_id: "c1", name: "CMP-2211", intent: "Tomography", status: "Active", run_count: 2 },
+      ],
       datasets: [], clearances: [], enclosures: [], decisions: [],
+    };
+  }
+
+  // A permit that actually changes, so the ribbon has something to be a
+  // ribbon ABOUT. Unknown at the start, good, a drop, and a recovery: drawn
+  // as dots this is four samples, drawn as a ribbon it is whether the hutch
+  // was safe.
+  function enclosureTimeline() {
+    return {
+      kind: "enclosure_timeline",
+      enclosure_id: "enc1",
+      document: {
+        domain: { from: iso(60 * 60 * 1000), to: new Date(NOW).toISOString() },
+        title: "2-BM-B hutch",
+        subtitle: "Permitted",
+        subject_lane_id: "permit",
+        lanes: [
+          { lane_id: "permit", label: "Permit", render: "markers", points: [
+            { t: iso(60 * 60 * 1000), label: "Unknown", state: "Unknown", tone: "warn" },
+            { t: iso(57 * 60 * 1000), label: "Permitted", state: "Permitted", tone: "good" },
+            { t: iso(26 * 60 * 1000), label: "NotPermitted", state: "NotPermitted", tone: "warn" },
+            { t: iso(22 * 60 * 1000), label: "Permitted", state: "Permitted", tone: "good" },
+          ] },
+          { lane_id: "lifecycle", label: "Lifecycle", render: "markers", points: [
+            { t: iso(60 * 60 * 1000), label: "Active", state: "Active" },
+          ] },
+        ],
+      },
     };
   }
 
@@ -131,6 +235,7 @@
         this.onopen && this.onopen();
         this._send({ producer_connected: true });
         this._send(snapshot());
+        this._send(enclosureTimeline());
         this._send({ kind: "activity", events: backlog() });
         this._tick = setInterval(() => {
           this._send(snapshot());

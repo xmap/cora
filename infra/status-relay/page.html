@@ -227,6 +227,39 @@
   }
   .cs-baseline, .cs-axis, .cs-tick { stroke: var(--cs-line); stroke-width: 1; }
   .cs-lane-label { fill: var(--cs-sub); font-size: 11px; }
+  /* A zone caption groups the rows under it by the SHAPE of the relation they
+     carry, not by name. It is the reason the rows are in that order, so it
+     stays quiet once the eye has learned them. */
+  .cs-zone {
+    fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 7.6px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .cs-zone-rule { stroke: var(--cs-line); stroke-width: 1; opacity: 0.5; }
+  .cs-row-kind {
+    fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 7.6px;
+    letter-spacing: 0.1em;
+  }
+  .cs-track-label { fill: var(--cs-sub); font-size: 10px; }
+  .cs-track-label--d0 { fill: var(--cs-ink); font-weight: 600; }
+  .cs-track-label--d2 { fill: var(--cs-mute); font-size: 9.5px; }
+  /* Thickness carries depth, so containment reads without a second colour or
+     an extra rule: the campaign is visibly the thing holding the runs, which
+     hold the procedures. */
+  .cs-track { fill: var(--cs-line); }
+  .cs-track--d0 { fill: color-mix(in srgb, var(--cs-sub) 55%, transparent); }
+  .cs-track--d1 { fill: color-mix(in srgb, var(--cs-sub) 80%, transparent); }
+  .cs-track--d2 { fill: var(--cs-line); }
+  /* Tones are STATES OF A CONDITION over a range, which is what separates a
+     permit ribbon from a row of samples. Unknown is its own state and never
+     blended into either neighbour: not-observed is not the same as fine. */
+  .cs-track--good { fill: color-mix(in srgb, var(--cs-good) 70%, transparent); }
+  .cs-track--bad { fill: var(--cs-alarm); }
+  .cs-track--warn { fill: var(--cs-warn); }
+  .cs-track--unknown {
+    fill: color-mix(in srgb, var(--cs-mute) 40%, transparent);
+    stroke: var(--cs-line); stroke-width: 1; stroke-dasharray: 2 3;
+  }
+  .cs-track-cap { fill: var(--cs-mute); opacity: 0.7; }
   .cs-tick-label { fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 10px; }
   .cs-run-line { stroke: var(--cs-sub); stroke-width: 1.6; fill: none; }
   .cs-life-label { font-size: 9.5px; font-weight: 500; fill: var(--cs-sub); }
@@ -695,6 +728,11 @@
     // edge then does not mean "nothing happened before this", and the page
     // has to say which of the two it is.
     replayTruncated: false,
+    // Latest snapshot rows, or empty until the first one lands. Empty is a
+    // real state and not an error: the chart then has no instance tracks and
+    // falls back to one flat lane per domain, which is what it drew before
+    // any of this existed.
+    snapshot: { runs: [], subjects: [], campaigns: [], procedures: [] },
   };
   var flowingStageEl = document.getElementById("flowing-stage");
   var flowingResumeEl = document.getElementById("flowing-resume");
@@ -707,33 +745,252 @@
     });
   }
 
-  function activityToTimelineDocument(buffer, domainFromIso, domainToIso) {
-    var lanesByDomain = {};
-    DOMAIN_ORDER.forEach(function (key) {
-      lanesByDomain[key] = {
-        lane_id: "domain:" + key,
-        label: DOMAIN_LABEL[key],
-        render: "markers",
-        points: [],
+  // ---- Four zones, grouped by the SHAPE of the relation each carries ----
+  //
+  // Not by name, and not by how the record is filed. Grouping by shape is
+  // what decides the mark:
+  //
+  //   EXECUTION    campaign > run > procedure   a containment tree, so nest
+  //                                             it and let thickness carry
+  //                                             depth
+  //   PARTICIPANTS subjects                     own lifetime, many-to-many
+  //                                             with runs, so a bar of their
+  //                                             own rather than a child row
+  //   GOVERNANCE   enclosure permit             a CONDITION over a range, not
+  //                                             a series of instants: drawn
+  //                                             as dots you learn it was
+  //                                             sampled, as a ribbon you
+  //                                             learn whether it held
+  //   JUDGEMENT    datasets, decisions,         point conclusions with no
+  //                cautions, clearances         lifetime, so flat lanes
+  //
+  // A row per instance costs vertical space, so the tree is capped. What the
+  // cap drops is reported rather than silently trimmed.
+  var MAX_TRACK_ROWS = 26;
+  var ZONES = {
+    execution: "Execution · nested by containment",
+    participants: "Participants · many-to-many with runs",
+    governance: "Governance · a condition over a range",
+    judgement: "Judgement · point conclusions",
+  };
+  // Only these get a flat lane whatever happens. The rest of the domains are
+  // catch-alls and appear only when they actually hold something.
+  var JUDGEMENT_DOMAINS = ["datasets", "decisions", "cautions", "clearances", "other"];
+  // Permit values, in the vocabulary the ribbon needs. `Unknown` is its own
+  // state and is never blended into either neighbour: not-observed is not the
+  // same as fine, and a ribbon that smoothed over it would be asserting a
+  // safety condition nobody measured.
+  var PERMIT_TONE = { Permitted: "good", NotPermitted: "bad", Unknown: "unknown" };
+
+  // A track with a blank label is a row that says nothing. `shortId` above
+  // returns "" for a missing id, which is right for a table cell and wrong
+  // for a row heading, so the fallback is spelled out here.
+  function instanceLabel(name, id) {
+    return name || shortId(id) || "unnamed";
+  }
+
+  function eventPoint(e) {
+    return {
+      t: e.occurred_at,
+      label: e.event_type,
+      tier: EVENT_TIER[e.event_type] || 0,
+      // Relationship fields ride through untouched. A producer older than
+      // this page simply omits them and every one reads undefined, which is
+      // the same state as an event that genuinely has no cause: the chart
+      // then behaves exactly as it did before they existed.
+      id: e.event_id,
+      corr: e.correlation_id,
+      cause: e.causation_id,
+      cause_at: e.cause_occurred_at,
+    };
+  }
+
+  // Segments folded from the permit lane of a pushed enclosure timeline. Each
+  // observation opens a segment that runs until the next one, and the last
+  // runs open to now: a permit is a standing claim, not a reading that
+  // expires the moment it was taken.
+  function permitSegments(doc) {
+    if (!doc || !doc.lanes) return null;
+    var lane = null;
+    doc.lanes.forEach(function (l) {
+      if (l.lane_id === "permit") lane = l;
+    });
+    if (!lane || !lane.points.length) return null;
+    return lane.points.map(function (p, i) {
+      var next = lane.points[i + 1];
+      return {
+        from: p.t,
+        to: next ? next.t : null,
+        tone: PERMIT_TONE[p.state] || "unknown",
+        h: 9,
       };
     });
+  }
+
+  // The row list. Every activity event lands somewhere: on the track of the
+  // instance it belongs to when that instance is on screen, and otherwise in
+  // its domain's flat lane. Nothing is dropped for want of a home, because an
+  // event that vanished because its Run had already finished would make a
+  // busy window look quiet.
+  function buildRows(buffer, snap, nowIso) {
+    var lanes = [];
+    var byStream = {};
+    buffer.forEach(function (e) {
+      (byStream[e.stream_id] = byStream[e.stream_id] || []).push(e);
+    });
+    var claimed = {};
+    var trackCount = 0;
+    var dropped = 0;
+
+    function pointsFor(streamId) {
+      claimed[streamId] = true;
+      return (byStream[streamId] || []).map(eventPoint);
+    }
+    function track(kind, label, depth, from, to, streamId, extra) {
+      if (trackCount >= MAX_TRACK_ROWS) {
+        dropped += 1;
+        return;
+      }
+      trackCount += 1;
+      var row = {
+        lane_id: "track:" + streamId,
+        label: label,
+        render: "track",
+        kind: kind,
+        depth: depth,
+        from: from,
+        to: to || null,
+        points: pointsFor(streamId),
+      };
+      if (extra) {
+        for (var k in extra) row[k] = extra[k];
+      }
+      lanes.push(row);
+    }
+    function zone(key) {
+      lanes.push({ lane_id: "zone:" + key, label: ZONES[key], render: "zone", points: [] });
+    }
+
+    // ---- EXECUTION -------------------------------------------------------
+    zone("execution");
+    var procsOfRun = {};
+    snap.procedures.forEach(function (pr) {
+      (procsOfRun[pr.parent_run_id] = procsOfRun[pr.parent_run_id] || []).push(pr);
+    });
+    var runsOfCampaign = {};
+    var loose = [];
+    snap.runs.forEach(function (r) {
+      if (r.campaign_id) (runsOfCampaign[r.campaign_id] = runsOfCampaign[r.campaign_id] || []).push(r);
+      else loose.push(r);
+    });
+    function emitRun(r, depth) {
+      track("RUN", instanceLabel(r.name, r.run_id), depth, r.started_at, null, r.run_id);
+      (procsOfRun[r.run_id] || []).forEach(function (pr) {
+        // A Procedure that has reached a terminal status stops where it
+        // stopped. `last_status_changed_at` is when that happened; without it
+        // the bar would run to now and claim the phase is still going.
+        var open = pr.status === "Running" || pr.status === "Held" || pr.status === "Defined";
+        track(
+          "PROC",
+          instanceLabel(pr.name || pr.kind, pr.procedure_id),
+          depth + 1,
+          pr.registered_at,
+          open ? null : pr.last_status_changed_at,
+          pr.procedure_id
+        );
+      });
+    }
+    snap.campaigns.forEach(function (c) {
+      var mine = runsOfCampaign[c.campaign_id];
+      // A Campaign with nothing running under it is a table row, not a track:
+      // an empty bar spanning the window says only that the record has one.
+      if (!mine || !mine.length) return;
+      var starts = mine
+        .map(function (r) { return r.started_at; })
+        .filter(Boolean)
+        .sort();
+      track("CAMP", instanceLabel(c.name, c.campaign_id), 0, starts[0] || null, null, c.campaign_id);
+      mine.forEach(function (r) { emitRun(r, 1); });
+    });
+    loose.forEach(function (r) { emitRun(r, 0); });
+
+    // ---- PARTICIPANTS ----------------------------------------------------
+    zone("participants");
+    snap.subjects.forEach(function (sj) {
+      track("SUBJ", instanceLabel(sj.name, sj.subject_id), 0, sj.created_at, null, sj.subject_id, {
+        tone: sj.status === "Mounted" || sj.status === "Measured" ? "good" : null,
+      });
+    });
+
+    // ---- GOVERNANCE ------------------------------------------------------
+    zone("governance");
+    var permitRows = 0;
+    Object.keys(enclosureTimelines).forEach(function (encId) {
+      var segs = permitSegments(enclosureTimelines[encId]);
+      if (!segs) return;
+      permitRows += 1;
+      var encName = instanceLabel(enclosureTimelines[encId].title, encId);
+      // The ribbon and its observations get SEPARATE rows. They are the same
+      // fact told twice -- the segments are folded from those very events --
+      // and drawn on one row the observations pack into a bar that covers the
+      // condition they were folded into. The ribbon answers "did it hold";
+      // the row under it keeps every observation individually pickable, which
+      // is what a causal edge into a permit drop has to land on.
+      if (trackCount < MAX_TRACK_ROWS) {
+        trackCount += 1;
+        lanes.push({
+          lane_id: "ribbon:" + encId,
+          label: encName,
+          render: "track",
+          kind: "ENCL",
+          depth: 0,
+          from: segs[0].from,
+          to: null,
+          segments: segs,
+          points: [],
+        });
+      }
+      lanes.push({
+        lane_id: "domain:permit:" + encId,
+        label: encName + " observed",
+        render: "markers",
+        points: pointsFor(encId),
+      });
+    });
+
+    // ---- JUDGEMENT, plus every event no track claimed --------------------
+    zone("judgement");
+    var flat = {};
+    DOMAIN_ORDER.forEach(function (key) {
+      flat[key] = [];
+    });
+    buffer.forEach(function (e) {
+      if (claimed[e.stream_id]) return;
+      flat[STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other"].push(eventPoint(e));
+    });
+    DOMAIN_ORDER.forEach(function (key) {
+      var isJudgement = JUDGEMENT_DOMAINS.indexOf(key) !== -1;
+      // A judgement lane is always present, so the zone never renders as a
+      // bare caption. Every other domain appears only when it has leftovers,
+      // which is exactly the "this happened to something not on screen" case
+      // that would otherwise be invisible.
+      if (!isJudgement && !flat[key].length) return;
+      lanes.push({
+        lane_id: "domain:" + key,
+        label: isJudgement ? DOMAIN_LABEL[key] : DOMAIN_LABEL[key] + " (elsewhere)",
+        render: "markers",
+        points: flat[key],
+      });
+    });
+
+    return { lanes: lanes, dropped: dropped, tracks: trackCount, permits: permitRows };
+  }
+
+  function activityToTimelineDocument(buffer, domainFromIso, domainToIso) {
+    var built = buildRows(buffer, flowing.snapshot, domainToIso);
     var runStarts = 0;
     buffer.forEach(function (e) {
-      var domain = STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other";
       if (e.event_type === "RunStarted") runStarts++;
-      lanesByDomain[domain].points.push({
-        t: e.occurred_at,
-        label: e.event_type,
-        tier: EVENT_TIER[e.event_type] || 0,
-        // Relationship fields ride through untouched. A producer older than
-        // this page simply omits them and every one reads undefined, which is
-        // the same state as an event that genuinely has no cause: the chart
-        // then behaves exactly as it did before they existed.
-        id: e.event_id,
-        corr: e.correlation_id,
-        cause: e.causation_id,
-        cause_at: e.cause_occurred_at,
-      });
     });
     var retainedHours = Math.round(FLOWING_WINDOW_MS / 3600000);
     var subtitle =
@@ -752,6 +1009,11 @@
     if (runStarts > 0) {
       subtitle += " · " + runStarts + " run" + (runStarts === 1 ? "" : "s") + " started";
     }
+    // The tree is capped, and a cap that says nothing turns a trimmed picture
+    // into a complete-looking one.
+    if (built.dropped > 0) {
+      subtitle += " · " + built.dropped + " track" + (built.dropped === 1 ? "" : "s") + " not shown";
+    }
     return {
       // No lane here represents one subject's current status the way
       // REWIND's Run lifecycle lane does, so this deliberately names a
@@ -766,9 +1028,7 @@
       // REWIND timeline LIVE as well.
       live: true,
       domain: { from: domainFromIso, to: domainToIso },
-      lanes: DOMAIN_ORDER.map(function (key) {
-        return lanesByDomain[key];
-      }),
+      lanes: built.lanes,
     };
   }
 
@@ -928,6 +1188,17 @@
   function handleSnapshot(msg) {
     producerConnected = true;
     generatedAt = Date.parse(msg.generated_at);
+    // Kept, not just rendered into tables. The structure the chart lays out
+    // with -- which Run belongs to which Campaign, which Procedure is a phase
+    // of which Run -- arrives ONLY here; the activity stream can tell one
+    // instance from another by `stream_id` and nothing more.
+    flowing.snapshot = {
+      runs: msg.runs || [],
+      subjects: msg.subjects || [],
+      campaigns: msg.campaigns || [],
+      procedures: msg.procedures || [],
+    };
+    if (flowing.following && !flowingIsBusy()) renderFlowing();
     renderRuns(msg.runs);
     renderSubjects(msg.subjects);
     renderCampaigns(msg.campaigns);
