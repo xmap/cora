@@ -75,6 +75,10 @@ from cora.operation.features.list_procedures.handler import (
     ProcedureListPage,
     ProcedureSummaryItem,
 )
+from cora.recipe.features.list_plans import (
+    ListPlans,
+)
+from cora.recipe.features.list_plans.handler import PlanListPage, PlanSummaryItem
 from cora.run.errors import UnauthorizedError as RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.get_run_history.handler import RunHistoryEvent, RunHistoryView
@@ -392,6 +396,19 @@ def _make_list_procedures(items: list[ProcedureSummaryItem]):
     return list_procedures
 
 
+def _make_list_plans(items: list[PlanSummaryItem]):
+    async def list_plans(
+        query: ListPlans,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID,
+    ) -> PlanListPage:
+        return PlanListPage(items=list(items), next_cursor=None)
+
+    return list_plans
+
+
 def _make_list_clearances(items: list[ClearanceSummaryItem]):
     async def list_clearances(
         query: ListClearances,
@@ -487,6 +504,7 @@ def _default_handlers(**overrides: Any) -> dict[str, Any]:
         "list_datasets": _make_list_datasets([]),
         "list_procedures": _make_list_procedures([]),
         "list_clearances": _make_list_clearances([]),
+        "list_plans": _make_list_plans([]),
         "list_enclosures": _make_list_enclosures([]),
         "list_decisions": _make_list_decisions([]),
         "get_run_history": _make_get_run_history(),
@@ -1652,11 +1670,12 @@ def _run_item(
     campaign_id: UUID | None = None,
     subject_id: UUID | None = None,
     running_since: datetime | None = _NOW,
+    plan_id: UUID | None = None,
 ) -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
         name=name,
-        plan_id=uuid4(),
+        plan_id=plan_id or uuid4(),
         subject_id=subject_id,
         raid=None,
         status=status,
@@ -1706,6 +1725,9 @@ async def test_lifespan_pushes_a_snapshot_to_a_real_relay() -> None:
                 "status": "Running",
                 "campaign_id": None,
                 "subject_id": None,
+                # No plan in the projection for this run, which is unknown
+                # rather than "this run has no plan": every run has one.
+                "plan_name": None,
                 "started_at": _NOW.isoformat(),
                 "progress": {},
                 "progress_trail": {},
@@ -2039,6 +2061,92 @@ async def test_procedures_section_is_present_and_empty_with_no_runs() -> None:
     would read "no open runs" as "this producer does not send procedures"."""
     snapshot = await _first_snapshot()
     assert snapshot["procedures"] == []
+
+
+@pytest.mark.unit
+async def test_lifespan_names_the_plan_a_run_is_executing() -> None:
+    """A Plan is a template with no lifetime, so it never earns a row on a
+    live view. Naming it on the run that is an instance of it is the only way
+    the template layer becomes visible at all."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=f"ws://127.0.0.1:{port}/ingest",
+            status_push_tick_seconds=0.1,
+        )
+        plan_id = uuid4()
+        run = _run_item(uuid4(), name="R-1", plan_id=plan_id)
+        # A second plan the run is NOT executing, so a lookup that simply took
+        # the first row would pass without matching anything.
+        other = PlanSummaryItem(
+            plan_id=uuid4(),
+            name="not-this-one",
+            practice_id=uuid4(),
+            method_id=uuid4(),
+            status="Versioned",
+            version_tag=None,
+            created_at=_NOW,
+            default_parameters_present=False,
+        )
+        mine = PlanSummaryItem(
+            plan_id=plan_id,
+            name="tomography-standard",
+            practice_id=uuid4(),
+            method_id=uuid4(),
+            status="Versioned",
+            version_tag=None,
+            created_at=_NOW,
+            default_parameters_present=False,
+        )
+
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(
+                list_runs=_make_list_runs([run]),
+                list_plans=_make_list_plans([other, mine]),
+            ),
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        assert json.loads(raw)["runs"][0]["plan_name"] == "tomography-standard"
+
+
+@pytest.mark.unit
+async def test_lifespan_run_with_no_plan_in_the_projection_pushes_a_null_plan_name() -> None:
+    """Absent must not read as a positive finding: a plan missing from the
+    projection is unknown, never "this run has no plan"."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=f"ws://127.0.0.1:{port}/ingest",
+            status_push_tick_seconds=0.1,
+        )
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(
+                list_runs=_make_list_runs([_run_item(uuid4(), name="R-1")]),
+                list_plans=_make_list_plans([]),
+            ),
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        row = json.loads(raw)["runs"][0]
+        assert "plan_name" in row
+        assert row["plan_name"] is None
 
 
 @pytest.mark.unit

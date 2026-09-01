@@ -1137,6 +1137,22 @@
     const about = lane.about;
     const out = [`<div class="cs-tip-head">${esc(about.head)}</div>`];
     if (about.note) out.push(`<div class="cs-tip-note">${esc(about.note)}</div>`);
+    // The instances behind the marks, where the document names them. Scrolls
+    // inside the card, the same way a burst's member list does, so a long one
+    // cannot push the facts under it off screen.
+    if (about.list && about.list.length) {
+      out.push(
+        '<div class="cs-tip-list">' +
+          about.list
+            .map(
+              ([k, v]) =>
+                `<div class="cs-tip-item"><span class="cs-tip-k">${esc(k)}</span>` +
+                `<span class="cs-tip-v">${esc(v)}</span></div>`
+            )
+            .join("") +
+          "</div>"
+      );
+    }
     for (const [k, v] of about.rows || []) {
       if (v === null || v === undefined || v === "") continue;
       out.push(

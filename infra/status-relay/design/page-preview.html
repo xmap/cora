@@ -182,13 +182,18 @@
   // exists to show goes unexercised, while the preview looks healthy.
   const iso = (msAgo) => new Date(NOW - msAgo).toISOString();
   const RUNS = [
+    // `plan_name` is the template layer. A run with one and a run without
+    // both have to be here: absent means the plan is not in the projection,
+    // which reads as unknown rather than as a run with no plan, and a fixture
+    // where every run has one would never exercise that.
     { run_id: "r1", name: "R-4471", status: "Running", campaign_id: "c1", subject_id: "s1",
-      started_at: iso(52 * 60 * 1000),
+      plan_name: "tomography-standard", started_at: iso(52 * 60 * 1000),
       progress: { detector: { value: 812, commanded_total: 1500 } } },
     { run_id: "r2", name: "R-4472", status: "Held", campaign_id: "c1", subject_id: "s2",
-      started_at: iso(21 * 60 * 1000), progress: {} },
+      plan_name: "tomography-standard", started_at: iso(21 * 60 * 1000),
+      progress: { detector: { value: 240, commanded_total: 900 }, ring_current: { value: 101 } } },
     { run_id: "r3", name: "R-4480", status: "Running", campaign_id: null, subject_id: null,
-      started_at: iso(9 * 60 * 1000), progress: {} },
+      plan_name: null, started_at: iso(9 * 60 * 1000), progress: {} },
   ];
   const PROCEDURES = [
     { procedure_id: "p1", name: "center_alignment", kind: "alignment", parent_run_id: "r1",
@@ -250,7 +255,20 @@
           registered_at: iso(5 * 60 * 60 * 1000),
           run_binding_ids: [], procedure_binding_ids: [], subject_binding_ids: [] },
       ],
-      enclosures: [], decisions: [],
+      // The enclosure the timeline message is about. These used to disagree:
+      // the chart drew a hutch ribbon while the dropped table said "no active
+      // enclosures", because they come from two different messages and only
+      // one of them was ever populated here.
+      enclosures: [
+        { enclosure_id: "enc1", name: "2-BM-B hutch", permit_status: "Permitted",
+          facility_code: "aps" },
+      ],
+      decisions: [
+        { decision_id: "d1", choice: "continue", confidence_band: "High",
+          decided_by: "00000000-0000-4000-8000-000000000042", created_at: iso(14 * 60 * 1000) },
+        { decision_id: "d2", choice: "hold for review", confidence_band: "Low",
+          decided_by: "00000000-0000-4000-8000-000000000043", created_at: iso(6 * 60 * 1000) },
+      ],
     };
   }
 

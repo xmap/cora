@@ -202,6 +202,7 @@ from cora.infrastructure.record_export import render_value
 from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_PRINCIPAL_ID
 from cora.operation.errors import UnauthorizedError as _OperationUnauthorizedError
 from cora.operation.features.list_procedures import ListProcedures
+from cora.recipe.features.list_plans import ListPlans
 from cora.run.errors import UnauthorizedError as _RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.list_runs import ListRuns
@@ -234,6 +235,7 @@ if TYPE_CHECKING:
     from cora.operation.features.list_procedures.handler import (
         Handler as ListProceduresHandler,
     )
+    from cora.recipe.features.list_plans.handler import Handler as ListPlansHandler
     from cora.run.features.get_run_history.handler import Handler as GetRunHistoryHandler
     from cora.run.features.get_run_history.handler import RunHistoryView
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
@@ -388,8 +390,36 @@ def _render_progress_trail(
     }
 
 
+async def _plan_names(list_plans: ListPlansHandler, deps: Kernel) -> dict[UUID, str]:
+    """Every plan's name, by id.
+
+    A Plan is a TEMPLATE: it has no lifetime of its own during a shift, so it
+    is never a row on a live view. What a viewer needs is the other direction,
+    which run is executing which plan, and that is an attribute of the run.
+    Only the name travels; a `plan_id` alone would be an opaque uuid the page
+    could only print back.
+
+    Drained whole rather than looked up per run. The set is small, static
+    across a shift, and `ListPlans` has no id filter, so N lookups for a
+    handful of open runs would be more queries for the same rows.
+    """
+    items = await _drain_all(
+        lambda cursor: list_plans(
+            ListPlans(cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    )
+    return {item.plan_id: item.name for item in items}
+
+
 async def _drain_open_runs(
-    list_runs: ListRunsHandler, deps: Kernel, *, witness_recorder: RunWitnessRecorder | None
+    list_runs: ListRunsHandler,
+    deps: Kernel,
+    *,
+    witness_recorder: RunWitnessRecorder | None,
+    plan_names: dict[UUID, str],
 ) -> tuple[list[dict[str, Any]], list[UUID]]:
     """Returns the rendered (JSON-safe) rows AND the raw run_id UUIDs.
 
@@ -424,6 +454,13 @@ async def _drain_open_runs(
                     # `created_at` otherwise, so a span always has a left edge.
                     "campaign_id": render_value(item.campaign_id),
                     "subject_id": render_value(item.subject_id),
+                    # The template this run is an instance OF, by name. A plan
+                    # has no lifetime during a shift and so never earns a row
+                    # of its own; naming it here is how the template layer
+                    # becomes visible at all. Absent when the plan is not in
+                    # the projection, which reads as unknown rather than as
+                    # a run with no plan.
+                    "plan_name": plan_names.get(item.plan_id),
                     "started_at": render_value(item.running_since or item.created_at),
                     "progress": _render_progress(item.run_id, witness_recorder),
                     "progress_trail": _render_progress_trail(item.run_id, witness_recorder),
@@ -1437,6 +1474,7 @@ async def _build_payload_fields(
     list_datasets: ListDatasetsHandler,
     list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
+    list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     decision_tail: _DecisionTail,
     list_decisions: ListDecisionsHandler,
@@ -1462,7 +1500,12 @@ async def _build_payload_fields(
     `_RunHistoryTail`'s, `_EnclosureTimelineTail`'s, and `_ActivityTail`'s
     module docstrings), so none of them may enter `_content_hash`'s
     change-detection input."""
-    runs, raw_run_ids = await _drain_open_runs(list_runs, deps, witness_recorder=witness_recorder)
+    runs, raw_run_ids = await _drain_open_runs(
+        list_runs,
+        deps,
+        witness_recorder=witness_recorder,
+        plan_names=await _plan_names(list_plans, deps),
+    )
     enclosures, raw_enclosure_ids = await _drain_active_enclosures(list_enclosures, deps)
     fields = {
         "runs": runs,
@@ -1509,6 +1552,7 @@ async def _push_loop(
     list_datasets: ListDatasetsHandler,
     list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
+    list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
@@ -1582,6 +1626,7 @@ async def _push_loop(
                             list_datasets=list_datasets,
                             list_procedures=list_procedures,
                             list_clearances=list_clearances,
+                            list_plans=list_plans,
                             list_enclosures=list_enclosures,
                             decision_tail=decision_tail,
                             list_decisions=list_decisions,
@@ -1658,6 +1703,7 @@ async def status_push_lifespan(
     list_datasets: ListDatasetsHandler,
     list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
+    list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
@@ -1722,6 +1768,7 @@ async def status_push_lifespan(
             list_datasets=list_datasets,
             list_procedures=list_procedures,
             list_clearances=list_clearances,
+            list_plans=list_plans,
             list_enclosures=list_enclosures,
             list_decisions=list_decisions,
             get_run_history=get_run_history,

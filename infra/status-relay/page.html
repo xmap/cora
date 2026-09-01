@@ -46,42 +46,7 @@
   #banner.stale { background: var(--stale); color: #2b1c00; }
   #banner.dead { background: var(--dead); color: #2b0a09; }
   #content.dimmed { opacity: 0.5; }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    max-width: 60rem;
-  }
-  th, td {
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--row-border);
-    font-size: 0.9rem;
-    vertical-align: top;
-  }
-  th { color: var(--muted); font-weight: 600; }
   .empty { color: var(--muted); font-style: italic; padding: 0.25rem 0 0.75rem 0; }
-  .progress-role {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.15rem 0;
-    white-space: nowrap;
-  }
-  .progress-role .role-label { color: var(--muted); width: 8rem; flex-shrink: 0; }
-  .progress-bar-track {
-    background: var(--row-border);
-    border-radius: 3px;
-    width: 8rem;
-    height: 0.5rem;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-  .progress-bar-fill { background: var(--live); height: 100%; }
-  .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
-  .no-progress { color: var(--muted); font-style: italic; }
-  .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
-  tr.clickable-row { cursor: pointer; }
-  tr.clickable-row:hover { background: var(--row-border); }
 
   /* ---- Rewind scrubber, adapted from docs/stylesheets/extra.css's
      .cora-scrubber block (the paper demo's own styling). Font stacks
@@ -442,57 +407,6 @@
     </div>
     <div id="flowing-stage"></div>
 
-    <h2>Runs</h2>
-    <table id="runs-table">
-      <thead><tr><th>Run</th><th>Status</th><th>Progress</th></tr></thead>
-      <tbody id="runs-body"></tbody>
-    </table>
-    <div id="runs-empty" class="empty" style="display: none;">no open runs</div>
-
-    <h2>Subjects</h2>
-    <table id="subjects-table">
-      <thead><tr><th>Subject</th><th>Status</th></tr></thead>
-      <tbody id="subjects-body"></tbody>
-    </table>
-    <div id="subjects-empty" class="empty" style="display: none;">no open subjects</div>
-
-    <h2>Campaigns</h2>
-    <table id="campaigns-table">
-      <thead><tr><th>Campaign</th><th>Intent</th><th>Status</th><th>Runs</th></tr></thead>
-      <tbody id="campaigns-body"></tbody>
-    </table>
-    <div id="campaigns-empty" class="empty" style="display: none;">no open campaigns</div>
-
-    <h2>Datasets from runs on screen</h2>
-    <table id="datasets-table">
-      <thead><tr><th>Dataset</th><th>Status</th><th>Run</th></tr></thead>
-      <tbody id="datasets-body"></tbody>
-    </table>
-    <div id="datasets-empty" class="empty" style="display: none;">no datasets from an open run yet</div>
-
-    <h2>Active clearances</h2>
-    <table id="clearances-table">
-      <thead><tr><th>Template</th><th>Risk</th><th>Valid until</th></tr></thead>
-      <tbody id="clearances-body"></tbody>
-    </table>
-    <div id="clearances-empty" class="empty" style="display: none;">no active clearances</div>
-
-    <h2>Enclosures</h2>
-    <table id="enclosures-table">
-      <thead><tr><th>Enclosure</th><th>Permit status</th></tr></thead>
-      <tbody id="enclosures-body"></tbody>
-    </table>
-    <div id="enclosures-empty" class="empty" style="display: none;">no active enclosures</div>
-
-    <h2>Recent decisions</h2>
-    <table id="decisions-table">
-      <thead><tr><th>Choice</th><th>Confidence</th><th>Decided by</th><th>When</th></tr></thead>
-      <tbody id="decisions-body"></tbody>
-    </table>
-    <div id="decisions-empty" class="empty" style="display: none;">
-      no decisions since this page's producer started
-    </div>
-
   </div>
 
 <script src="/scrubber.js"></script>
@@ -528,150 +442,6 @@
 
   function shortId(id) {
     return id ? String(id).slice(0, 8) : "";
-  }
-
-  function textCell(text) {
-    var cell = document.createElement("td");
-    cell.textContent = text === null || text === undefined ? "" : String(text);
-    return cell;
-  }
-
-  function renderProgressCell(progress) {
-    var cell = document.createElement("td");
-    var roles = progress ? Object.keys(progress) : [];
-    if (roles.length === 0) {
-      cell.className = "no-progress";
-      cell.textContent = "no progress reported";
-      return cell;
-    }
-    roles.sort().forEach(function (role) {
-      var reading = progress[role];
-      var line = document.createElement("div");
-      line.className = "progress-role";
-
-      var label = document.createElement("span");
-      label.className = "role-label";
-      label.textContent = role;
-      line.appendChild(label);
-
-      if (reading.commanded_total) {
-        var track = document.createElement("div");
-        track.className = "progress-bar-track";
-        var fill = document.createElement("div");
-        fill.className = "progress-bar-fill";
-        var pct = Math.max(0, Math.min(100, (reading.value / reading.commanded_total) * 100));
-        fill.style.width = pct + "%";
-        track.appendChild(fill);
-        line.appendChild(track);
-      }
-
-      var count = document.createElement("span");
-      count.className = "progress-count";
-      count.textContent = reading.commanded_total
-        ? reading.value + " / " + reading.commanded_total
-        : String(reading.value);
-      line.appendChild(count);
-
-      cell.appendChild(line);
-    });
-    return cell;
-  }
-
-  // Generic section renderer for every domain except Runs, which alone
-  // needs the progress-bar cell above.
-  function renderSection(name, items, rowBuilder) {
-    var tableEl = document.getElementById(name + "-table");
-    var bodyEl = document.getElementById(name + "-body");
-    var emptyEl = document.getElementById(name + "-empty");
-    bodyEl.innerHTML = "";
-    if (!items || items.length === 0) {
-      tableEl.style.display = "none";
-      emptyEl.style.display = "block";
-      return;
-    }
-    tableEl.style.display = "table";
-    emptyEl.style.display = "none";
-    items.forEach(function (item) {
-      bodyEl.appendChild(rowBuilder(item));
-    });
-  }
-
-  function renderRuns(runs) {
-    renderSection("runs", runs, function (run) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(run.name));
-      row.appendChild(textCell(run.status));
-      row.appendChild(renderProgressCell(run.progress));
-      return row;
-    });
-  }
-
-  function renderSubjects(subjects) {
-    renderSection("subjects", subjects, function (s) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(s.name));
-      row.appendChild(textCell(s.status));
-      return row;
-    });
-  }
-
-  function renderCampaigns(campaigns) {
-    renderSection("campaigns", campaigns, function (c) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(c.name));
-      row.appendChild(textCell(c.intent));
-      row.appendChild(textCell(c.status));
-      row.appendChild(textCell(c.run_count));
-      return row;
-    });
-  }
-
-  function renderDatasets(datasets) {
-    renderSection("datasets", datasets, function (d) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(d.name));
-      row.appendChild(textCell(d.status));
-      var runCell = textCell(shortId(d.producing_run_id));
-      runCell.className = "mono";
-      row.appendChild(runCell);
-      return row;
-    });
-  }
-
-  function renderClearances(clearances) {
-    renderSection("clearances", clearances, function (c) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(c.template_code));
-      row.appendChild(textCell(c.risk_band));
-      row.appendChild(textCell(c.valid_until ? c.valid_until : "no expiry set"));
-      return row;
-    });
-  }
-
-  function renderEnclosures(enclosures) {
-    renderSection("enclosures", enclosures, function (e) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(e.name));
-      row.appendChild(textCell(e.permit_status));
-      row.className = "clickable-row";
-      row.addEventListener("click", function () {
-        showEnclosureTimeline(e.enclosure_id);
-      });
-      return row;
-    });
-  }
-
-  function renderDecisions(decisions) {
-    renderSection("decisions", decisions, function (d) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(d.choice));
-      row.appendChild(textCell(d.confidence_band ? d.confidence_band : "n/a"));
-      var byCell = textCell(shortId(d.decided_by));
-      byCell.className = "mono";
-      row.appendChild(byCell);
-      row.appendChild(textCell(d.created_at ? new Date(d.created_at).toLocaleTimeString() : ""));
-      return row;
-    });
   }
 
   function renderBanner() {
@@ -997,6 +767,40 @@
     (DOMAIN_TYPES[d] = DOMAIN_TYPES[d] || []).push(t);
   });
 
+  // One line per channel: "812 / 1500, 54%". The table this replaces drew a
+  // bar, which a chart made mostly of bars cannot afford a second meaning
+  // for: every other bar here is a span of TIME, and one that was a fraction
+  // of work instead would be read as the first.
+  function progressLines(progress) {
+    var roles = progress ? Object.keys(progress) : [];
+    return roles.sort().map(function (role) {
+      var r = progress[role];
+      if (!r.commanded_total) return [role, String(r.value)];
+      var pct = Math.round((r.value / r.commanded_total) * 100);
+      return [role, r.value + " / " + r.commanded_total + ", " + pct + "%"];
+    });
+  }
+
+  // Named, not counted. "685 events" says a lane is busy; "tomo-4471-a,
+  // Registered, from R-4471" is the row the dropped table carried.
+  // Guarded against a null snapshot, not just a missing list: the page paints
+  // once before the first one lands, which is the whole reason `buildRows`
+  // reads every list through an accessor rather than off the object.
+  function datasetLines(snap) {
+    return ((snap && snap.datasets) || []).map(function (d) {
+      return [d.name, d.status];
+    });
+  }
+  function decisionLines(snap) {
+    return ((snap && snap.decisions) || []).map(function (d) {
+      return [
+        d.choice,
+        (d.confidence_band || "no band") +
+          (d.created_at ? ", " + clockOf(d.created_at) : ""),
+      ];
+    });
+  }
+
   function clockOf(iso) {
     if (!iso) return null;
     var d = new Date(iso);
@@ -1289,6 +1093,18 @@
               : null,
           about: {
             head: DOMAIN_LABEL[key],
+            // The instances behind the marks, where the snapshot names them
+            // and the set is bounded. Datasets are capped by the open-run
+            // count and decisions by the producer's own ring, so neither can
+            // run away; no other domain ships instances at all, and inventing
+            // a list for one that does not would be worse than the marks
+            // alone.
+            list:
+              key === "datasets"
+                ? datasetLines(snap)
+                : key === "decisions"
+                  ? decisionLines(snap)
+                  : null,
             note: tracked
               ? "Events whose instance has no row of its own above: it ended before " +
                 "this window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap. " +
@@ -1348,7 +1164,14 @@
         note:
           "One measurement, from the moment it started to now. The marks on the bar are " +
           "its own events; the rows indented under it are its phases.",
-        facts: [["status", r.status]],
+        facts: [["status", r.status]]
+          // A Plan is a TEMPLATE. It has no lifetime during a shift, so it
+          // never earns a row of its own, and a row per template would be a
+          // page of empty bars. What is worth knowing is the other direction:
+          // which template THIS run is an instance of. Absent reads as
+          // unknown, never as a run with no plan, because every run has one.
+          .concat(r.plan_name ? [["executing", r.plan_name]] : [])
+          .concat(progressLines(r.progress)),
       });
       (procsOfRun[r.run_id] || []).forEach(function (pr) {
         // A Procedure that has reached a terminal status stops where it
@@ -1741,13 +1564,7 @@
     // object cannot drop a field that is on it.
     flowing.snapshot = msg;
     if (flowing.following && !flowingIsBusy()) renderFlowing();
-    renderRuns(msg.runs);
-    renderSubjects(msg.subjects);
-    renderCampaigns(msg.campaigns);
-    renderDatasets(msg.datasets);
-    renderClearances(msg.clearances);
-    renderEnclosures(msg.enclosures);
-    renderDecisions(msg.decisions);
+    renderRewindPicker(null, msg.enclosures);
     renderBanner();
   }
 
@@ -1779,7 +1596,7 @@
         handleSnapshot(msg);
         break;
       case "run_history_index":
-        renderRewindPicker(msg.runs);
+        renderRewindPicker(msg.runs, null);
         break;
       case "enclosure_timeline":
         handleEnclosureTimeline(msg);
@@ -1797,19 +1614,41 @@
   var rewindStageEl = document.getElementById("rewind-stage");
   var rewindEmptyEl = document.getElementById("rewind-empty");
 
-  function renderRewindPicker(runs) {
+  // REWIND has TWO subjects and they arrive on different messages, so each
+  // call updates one side and keeps the other. An enclosure's timeline used
+  // to be reachable only by clicking its row in a table; with the tables gone
+  // it needs a way in, and the picker already is one.
+  var rewindRuns = [];
+  var rewindEnclosures = [];
+  function renderRewindPicker(runs, enclosures) {
+    if (runs) rewindRuns = runs;
+    if (enclosures) rewindEnclosures = enclosures;
     var selected = rewindPickerEl.value;
     while (rewindPickerEl.options.length > 1) {
       rewindPickerEl.remove(1);
     }
-    runs.forEach(function (run) {
-      var opt = document.createElement("option");
-      opt.value = run.run_id;
+    var group = function (label, items, build) {
+      if (!items.length) return;
+      var g = document.createElement("optgroup");
+      g.label = label;
+      items.forEach(function (item) {
+        var opt = document.createElement("option");
+        build(opt, item);
+        g.appendChild(opt);
+      });
+      rewindPickerEl.appendChild(g);
+    };
+    group("Runs", rewindRuns, function (opt, run) {
+      opt.value = "run:" + run.run_id;
       opt.textContent = run.name + " (" + run.status + (run.terminal ? ", finished" : "") + ")";
-      rewindPickerEl.appendChild(opt);
+    });
+    group("Enclosures", rewindEnclosures, function (opt, enc) {
+      opt.value = "enclosure:" + enc.enclosure_id;
+      opt.textContent = enc.name + " (" + enc.permit_status + ")";
     });
     rewindPickerEl.value = selected;
-    rewindEmptyEl.style.display = runs.length === 0 ? "block" : "none";
+    rewindEmptyEl.style.display =
+      rewindRuns.length + rewindEnclosures.length === 0 ? "block" : "none";
   }
 
   // Maps a RunHistoryEvent's event_type to the state it puts the Run into,
@@ -1926,7 +1765,10 @@
   }
 
   function showEnclosureTimeline(enclosureId) {
-    rewindPickerEl.value = "";
+    // The picker keeps its selection. It used to be blanked here because a
+    // table row was what opened this view and the picker had nothing to do
+    // with it; now the picker IS the control, and blanking it would say
+    // "nothing selected" over an enclosure timeline.
     activeEnclosureId = enclosureId;
     var doc = enclosureTimelines[enclosureId];
     if (!doc) {
@@ -1950,11 +1792,19 @@
   }
 
   rewindPickerEl.addEventListener("change", function () {
-    if (rewindPickerEl.value) {
-      showRewind(rewindPickerEl.value);
-    } else {
+    var v = rewindPickerEl.value;
+    if (!v) {
       backToLive();
+      return;
     }
+    // Prefixed rather than guessed from the id's shape: both are uuids, and
+    // deciding which of two views to open by inspecting an opaque identifier
+    // is the kind of thing that works until a run and an enclosure collide.
+    var at = v.indexOf(":");
+    var kind = v.slice(0, at);
+    var id = v.slice(at + 1);
+    if (kind === "enclosure") showEnclosureTimeline(id);
+    else showRewind(id);
   });
   rewindBackEl.addEventListener("click", backToLive);
 
@@ -1963,7 +1813,7 @@
       return resp.json();
     })
     .then(function (body) {
-      renderRewindPicker(body.runs || []);
+      renderRewindPicker(body.runs || [], null);
     })
     .catch(function () {
       /* the /watch socket's own index frame will populate this shortly */
