@@ -277,6 +277,7 @@ from cora.trust import (
     register_trust_routes,
     register_trust_tools,
     verify_bootstrap_seed_present,
+    verify_in_process_policy_matches_surface,
     verify_local_conduit_matches_policy,
     verify_local_conduit_seed_present,
     warn_if_verdict_log_dormant,
@@ -1075,6 +1076,14 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # project_authorization_envelope_design watch item 6.
             await verify_local_conduit_seed_present(deps)
             await verify_local_conduit_matches_policy(deps)
+
+            # Boot-time fail-fast for `trust_in_process_policy_id`: a
+            # backdoor policy configured but bound to the wrong Surface
+            # (or, once `trust_conduit_id` is set, the wrong Conduit)
+            # would deny every in-process call at that check, looking
+            # identical to no backdoor policy having been configured at
+            # all. No-op when `trust_in_process_policy_id` is unset.
+            await verify_in_process_policy_matches_surface(deps)
 
             # Heads-up (non-fatal): when authz is enforced but the
             # per-Conduit Verdict audit log cannot populate yet (conduit

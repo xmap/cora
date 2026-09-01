@@ -28,6 +28,13 @@ the composition root wires BCs into the kernel.
     for the same reason `policy_posture='shadow'` does: `AllowAllAuthorize`
     is never constructed with a conduit_id, so a configured conduit with
     no policy would be read by nothing.
+  - `Settings.trust_in_process_policy_id`, when also set, is passed
+    through so a call arriving through the in-process Surface is
+    governed by that second policy instead -- see
+    `TrustAuthorize._effective_policy_id`. Same requirement, same
+    reason: `AllowAllAuthorize` is never constructed with a second
+    policy id, so one configured with no `trust_policy_id` would be
+    read by nothing.
 
 ## VerdictStore wiring
 
@@ -118,6 +125,21 @@ def build_authorize(
             "trust_conduit_id to say so deliberately."
         )
         raise ValueError(msg)
+    # Same shape again for the backdoor policy knob. AllowAllAuthorize is
+    # returned below and never constructed with a second policy id at all,
+    # so a configured trust_in_process_policy_id with no trust_policy_id
+    # would be read by nothing: every in-process call would keep resolving
+    # to no gate at all, not the backdoor rulebook an operator thinks they
+    # just turned on.
+    if settings.trust_in_process_policy_id is not None and settings.trust_policy_id is None:
+        msg = (
+            "trust_in_process_policy_id is configured but has no effect "
+            "without trust_policy_id: AllowAllAuthorize is never constructed "
+            "with a second policy id, so no in-process call would resolve to "
+            "it. Set trust_policy_id, or unset trust_in_process_policy_id to "
+            "say so deliberately."
+        )
+        raise ValueError(msg)
 
     if settings.trust_policy_id is None:
         return AllowAllAuthorize()
@@ -135,6 +157,7 @@ def build_authorize(
         liveness_enforced=posture == "enforce",
         policy_enforced=settings.policy_posture == "enforce",
         conduit_id=settings.trust_conduit_id,
+        in_process_policy_id=settings.trust_in_process_policy_id,
     )
 
 

@@ -27,6 +27,20 @@ This deliberately ships the smallest useful gating wire-up:
 Multi-policy resolution + caching + LISTEN/NOTIFY invalidation land
 in later phases when projection-worker infrastructure exists.
 
+## A second, optional rulebook for the in-process door
+
+`in_process_policy_id` adds exactly one exception to "one policy per
+deployment": when set, a call whose `surface_id` is
+`SYSTEM_IN_PROCESS_SURFACE_ID` (CORA's own background agents, never a
+human, never an external caller) is evaluated against THAT policy
+instead of `policy_id`. Every other surface, and an in-process call
+when this is left unset, resolves to `policy_id` exactly as before --
+`_effective_policy_id` is the single place this is decided, mirroring
+`_effective_conduit_id`. This is deliberately not a general multi-
+surface widening of `Policy` itself (`Policy.surface_id` stays a single
+scalar); it is the smallest change that lets the front door and the
+backdoor be governed by two different rulebooks on one deployment.
+
 ## Conduit semantics
 
 The port passes `conduit_id: UUID`. TrustAuthorize forwards the
@@ -136,7 +150,7 @@ from cora.infrastructure.ports import (
     PrincipalLiveness,
     PrincipalLivenessLookup,
 )
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.shared.liveness import is_liveness_exempt
 from cora.trust._authorization_decision import (
     AuthorizationRequest,
@@ -174,6 +188,7 @@ class TrustAuthorize:
         liveness_enforced: bool = False,
         policy_enforced: bool = True,
         conduit_id: UUID | None = None,
+        in_process_policy_id: UUID | None = None,
     ) -> None:
         if liveness_enforced and liveness_lookup is None:
             msg = "TrustAuthorize: liveness_enforced requires a liveness_lookup to be wired"
@@ -188,6 +203,12 @@ class TrustAuthorize:
         # passed, which for every handler today means nil — today's
         # behaviour, unchanged. See `_effective_conduit_id`.
         self._conduit_id = conduit_id
+        # The second, optional rulebook: governs calls that arrive through
+        # the in-process Surface (`SYSTEM_IN_PROCESS_SURFACE_ID`) when set,
+        # leaving every other surface -- and an in-process call when this
+        # is unset -- resolved to `policy_id` exactly as before. See
+        # `_effective_policy_id`.
+        self._in_process_policy_id = in_process_policy_id
         # Defaults to True so that adding this knob cannot weaken a
         # deployment that already gates: an existing config that sets
         # `trust_policy_id` and nothing else keeps enforcing exactly as it
@@ -288,6 +309,19 @@ class TrustAuthorize:
             return self._conduit_id
         return conduit_id
 
+    def _effective_policy_id(self, surface_id: UUID) -> UUID:
+        """Resolve which configured Policy governs this call.
+
+        The backdoor rulebook applies only when BOTH hold: the call
+        arrived through the in-process Surface, and a backdoor policy is
+        actually configured. Every other surface -- and an in-process
+        call when no backdoor policy is set -- resolves to the one front
+        policy, today's single-rulebook behaviour unchanged.
+        """
+        if self._in_process_policy_id is not None and surface_id == SYSTEM_IN_PROCESS_SURFACE_ID:
+            return self._in_process_policy_id
+        return self._policy_id
+
     async def authorize(
         self,
         principal_id: UUID,
@@ -296,12 +330,13 @@ class TrustAuthorize:
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> AuthzResult:
         conduit_id = self._effective_conduit_id(conduit_id)
+        policy_id = self._effective_policy_id(surface_id)
         liveness = await self._resolve_liveness(principal_id, command_name)
-        policy = await load_policy(self._event_store, self._policy_id)
+        policy = await load_policy(self._event_store, policy_id)
         if policy is None:
             _log.warning(
                 "trust_authorize.policy_missing",
-                policy_id=str(self._policy_id),
+                policy_id=str(policy_id),
                 principal_id=str(principal_id),
                 command_name=command_name,
                 conduit_id=str(conduit_id),
@@ -309,9 +344,7 @@ class TrustAuthorize:
                 correlation_id=str(current_correlation_id()),
             )
             result: AuthzResult = Deny(
-                reason=(
-                    f"Configured TrustAuthorize policy {self._policy_id} not found in event store"
-                )
+                reason=(f"Configured TrustAuthorize policy {policy_id} not found in event store")
             )
         else:
             # Forward the EFFECTIVE conduit_id (was policy.conduit_id
@@ -333,12 +366,14 @@ class TrustAuthorize:
 
         result, shadow_reason = self._apply_policy_posture(
             result,
+            policy_id=policy_id,
             principal_id=principal_id,
             command_name=command_name,
             surface_id=surface_id,
         )
         self._log_decision(
             result,
+            policy_id=policy_id,
             principal_id=principal_id,
             command_name=command_name,
             surface_id=surface_id,
@@ -360,6 +395,7 @@ class TrustAuthorize:
         self,
         result: AuthzResult,
         *,
+        policy_id: UUID,
         principal_id: UUID,
         command_name: str,
         surface_id: UUID,
@@ -383,7 +419,7 @@ class TrustAuthorize:
         if isinstance(result, Deny):
             _log.info(
                 "trust_authorize.deny",
-                policy_id=str(self._policy_id),
+                policy_id=str(policy_id),
                 principal_id=str(principal_id),
                 command_name=command_name,
                 surface_id=str(surface_id),
@@ -393,7 +429,7 @@ class TrustAuthorize:
             return
         _log.info(
             "trust_authorize.allow",
-            policy_id=str(self._policy_id),
+            policy_id=str(policy_id),
             principal_id=str(principal_id),
             command_name=command_name,
             surface_id=str(surface_id),
@@ -405,6 +441,7 @@ class TrustAuthorize:
         self,
         result: AuthzResult,
         *,
+        policy_id: UUID,
         principal_id: UUID,
         command_name: str,
         surface_id: UUID,
@@ -432,7 +469,7 @@ class TrustAuthorize:
             return result, None
         _log.warning(
             "trust_authorize.policy_shadow_near_miss",
-            policy_id=str(self._policy_id),
+            policy_id=str(policy_id),
             principal_id=str(principal_id),
             command_name=command_name,
             surface_id=str(surface_id),

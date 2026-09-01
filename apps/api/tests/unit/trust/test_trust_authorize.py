@@ -27,6 +27,7 @@ from cora.infrastructure.ports import (
     FixedIdGenerator,
     PrincipalLiveness,
 )
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.shared.liveness import LIVENESS_EXEMPT_COMMANDS
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.trust.aggregates.conduit import (
@@ -47,6 +48,7 @@ from tests._authz import seed_policy
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 _POLICY_ID = UUID("01900000-0000-7000-8000-000000000601")
+_IN_PROCESS_POLICY_ID = UUID("01900000-0000-7000-8000-000000000602")
 # Post-3h: handlers pass `UUID(int=0)` (nil sentinel) as conduit_id by
 # default; the gating policy must use the same conduit_id to match.
 _CONDUIT_ID = UUID(int=0)
@@ -60,6 +62,7 @@ async def _seed_policy(
     *,
     policy_id: UUID = _POLICY_ID,
     conduit_id: UUID = _CONDUIT_ID,
+    surface_id: UUID = NIL_SENTINEL_ID,
     principals: frozenset[UUID] = frozenset({_ALLOWED_PRINCIPAL}),
     commands: frozenset[str] = frozenset({"RegisterActor"}),
 ) -> None:
@@ -69,6 +72,7 @@ async def _seed_policy(
         permitted_principal_ids=principals,
         permitted_commands=commands,
         conduit_id=conduit_id,
+        surface_id=surface_id,
         occurred_at=_NOW,
     )
 
@@ -875,3 +879,119 @@ async def test_the_verdict_row_names_the_same_conduit_the_policy_was_evaluated_a
     rows = verdicts.all()
     assert len(rows) == 1
     assert rows[0].conduit_id == _TARGET_CONDUIT_ID
+
+
+# --- resolving a second, backdoor policy for the in-process surface -----
+#
+# `in_process_policy_id` lets a deployment give the in-process door
+# (`SYSTEM_IN_PROCESS_SURFACE_ID`, CORA's own background agents) its own
+# rulebook, separate from the one policy that has always governed
+# everything else. The property under test: only an in-process call with a
+# backdoor policy actually configured resolves to it; every other
+# combination keeps today's single-policy behaviour.
+
+
+@pytest.mark.unit
+async def test_in_process_call_falls_through_to_the_front_policy_when_unconfigured() -> None:
+    """Today's behaviour, unchanged: no backdoor policy set.
+
+    The front policy is bound to the nil surface, so an in-process call
+    still resolves to IT (not `AllowAllAuthorize`, not a silent bypass)
+    and is denied on the front policy's OWN surface-mismatch terms --
+    exactly the outcome #760 documented before any backdoor policy existed.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID)
+
+    result = await authorize.authorize(
+        _ALLOWED_PRINCIPAL,
+        "RegisterActor",
+        UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+
+    assert isinstance(result, Deny)
+    assert "surface" in result.reason.lower()
+
+
+@pytest.mark.unit
+async def test_in_process_call_resolves_to_the_configured_backdoor_policy() -> None:
+    """A backdoor policy configured for the in-process surface governs it."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=UUID(int=0))
+    await _seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        conduit_id=UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+        principals=frozenset({_OTHER_PRINCIPAL}),
+        commands=frozenset({"RecordWitnessedRun"}),
+    )
+    authorize = TrustAuthorize(
+        store, policy_id=_POLICY_ID, in_process_policy_id=_IN_PROCESS_POLICY_ID
+    )
+
+    # Permitted by the backdoor policy, not the front one.
+    result = await authorize.authorize(
+        _OTHER_PRINCIPAL,
+        "RecordWitnessedRun",
+        UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_a_configured_backdoor_policy_still_denies_what_it_does_not_permit() -> None:
+    """The backdoor is a real rulebook, not a bypass for the in-process door."""
+    store = InMemoryEventStore()
+    await _seed_policy(store, conduit_id=UUID(int=0))
+    await _seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        conduit_id=UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+        principals=frozenset({_OTHER_PRINCIPAL}),
+        commands=frozenset({"RecordWitnessedRun"}),
+    )
+    authorize = TrustAuthorize(
+        store, policy_id=_POLICY_ID, in_process_policy_id=_IN_PROCESS_POLICY_ID
+    )
+
+    # _ALLOWED_PRINCIPAL is permitted by the FRONT policy, not the backdoor
+    # one -- an in-process call must not fall back to the front policy just
+    # because the backdoor one refuses it.
+    result = await authorize.authorize(
+        _ALLOWED_PRINCIPAL,
+        "RecordWitnessedRun",
+        UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+
+    assert isinstance(result, Deny)
+
+
+@pytest.mark.unit
+async def test_a_configured_backdoor_policy_never_governs_other_surfaces() -> None:
+    """A backdoor policy is scoped to the in-process surface only."""
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    await _seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        conduit_id=UUID(int=0),
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+        principals=frozenset({_ALLOWED_PRINCIPAL}),
+        commands=frozenset({"RegisterActor"}),
+    )
+    authorize = TrustAuthorize(
+        store, policy_id=_POLICY_ID, in_process_policy_id=_IN_PROCESS_POLICY_ID
+    )
+
+    # A call through the nil (unspecified) surface must still resolve to
+    # the front policy, never the backdoor one.
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)

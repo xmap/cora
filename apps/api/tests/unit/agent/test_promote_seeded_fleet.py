@@ -26,7 +26,7 @@ from cora.agent.promote_seeded_fleet import (
     promote_seeded_fleet,
 )
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from tests.unit._helpers import build_deps
+from tests.unit._helpers import DenyAllAuthorize, build_deps
 from tests.unit.agent._helpers import seed_defined_agent, seed_versioned_agent
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
@@ -151,6 +151,40 @@ async def test_an_unseeded_member_is_reported_absent_not_skipped_silently() -> N
     assert len(summary.outcomes) == len(SEEDED_FLEET), "every member is accounted for"
     assert summary.count(OUTCOME_ABSENT) == len(SEEDED_FLEET)
     assert _outcome_for(summary, _SECOND.agent_id) == OUTCOME_ABSENT
+
+
+@pytest.mark.unit
+async def test_promotes_even_when_the_deployments_configured_gate_denies_everything() -> None:
+    """A rare, explicitly-operator-run bulk recovery outside every request
+    surface, matching pilot_seed.py's own kernel construction: it always
+    promotes through AllowAllAuthorize, never the caller's `kernel.authz`,
+    so it cannot be starved by a deployment's own gate."""
+    store = InMemoryEventStore()
+    await seed_defined_agent(
+        store,
+        agent_id=_FIRST.agent_id,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+    )
+    deps = build_deps(
+        ids=[uuid4() for _ in range(64)],
+        now=_NOW,
+        event_store=store,
+        authz=DenyAllAuthorize(),
+    )
+
+    summary = await promote_seeded_fleet(
+        deps,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert _outcome_for(summary, _FIRST.agent_id) == OUTCOME_PROMOTED
+    agent = await load_agent(store, _FIRST.agent_id)
+    assert agent is not None
+    assert agent.status is AgentStatus.VERSIONED
 
 
 @pytest.mark.unit

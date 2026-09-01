@@ -26,6 +26,16 @@ outside the request surfaces. It also keeps promotion off MCP, which
 matters because promotion is what grants an Agent authority to act, and
 an agent able to call it could grant that to itself.
 
+## Bypasses the deployment's configured gate, on purpose
+
+Same shelf as `pilot_seed.py`'s own kernel construction: this always
+promotes through `AllowAllAuthorize`, never the caller's `kernel.authz`.
+It arrives in-process either way (`SYSTEM_IN_PROCESS_SURFACE_ID` below),
+so a deployment's backdoor Policy could in principle already permit it;
+but this is a rare, explicitly-operator-run bulk recovery outside every
+request surface, not everyday agent traffic, and it should not need a
+principal enrolled in that Policy's permitted set to run at all.
+
 ## Semantics
 
 Per-agent rather than atomic: the promotions are independent, a partial
@@ -42,7 +52,7 @@ a silent zero.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from cora.agent._seeded_fleet import SEEDED_FLEET
@@ -50,6 +60,7 @@ from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.features.version_agent import VersionAgent
 from cora.agent.features.version_agent import bind as bind_version_agent
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.ports import AllowAllAuthorize
 from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 
 if TYPE_CHECKING:
@@ -105,7 +116,7 @@ async def promote_seeded_fleet(
     operator can see what a live run would touch before it touches a
     record that cannot be edited afterwards.
     """
-    version_agent = bind_version_agent(kernel)
+    version_agent = bind_version_agent(replace(kernel, authz=AllowAllAuthorize()))
     outcomes: list[FleetMemberOutcome] = []
 
     for member in SEEDED_FLEET:

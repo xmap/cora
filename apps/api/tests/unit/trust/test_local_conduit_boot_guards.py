@@ -20,9 +20,10 @@ import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
-from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.trust._bootstrap import (
+    verify_in_process_policy_matches_surface,
     verify_local_conduit_matches_policy,
     verify_local_conduit_seed_present,
 )
@@ -45,6 +46,7 @@ _CONDUIT_ID = UUID("01900000-0000-7000-8000-0000000000e1")
 _LOGBOOK_ID = UUID("01900000-0000-7000-8000-0000000000e2")
 _OTHER_CONDUIT_ID = UUID("01900000-0000-7000-8000-0000000000e3")
 _POLICY_ID = UUID("01900000-0000-7000-8000-0000000000e4")
+_IN_PROCESS_POLICY_ID = UUID("01900000-0000-7000-8000-0000000000e5")
 
 
 async def _seed_conduit(
@@ -202,3 +204,104 @@ async def test_nil_conduit_matches_a_nil_bound_policy() -> None:
         event_store=store,
     )
     await verify_local_conduit_matches_policy(deps)  # must not raise
+
+
+# --- verify_in_process_policy_matches_surface ----------------------------
+
+
+@pytest.mark.unit
+async def test_no_op_when_trust_in_process_policy_id_is_unset() -> None:
+    """Default: every existing deployment's behaviour, unchanged."""
+    deps = build_deps(trust_policy_id=_POLICY_ID, trust_in_process_policy_id=None)
+    await verify_in_process_policy_matches_surface(deps)  # must not raise
+
+
+@pytest.mark.unit
+async def test_no_op_when_the_configured_backdoor_policy_stream_is_missing() -> None:
+    """A missing policy stream is the operator's responsibility to define;
+    this guard must not also raise on it."""
+    deps = build_deps(trust_policy_id=_POLICY_ID, trust_in_process_policy_id=_IN_PROCESS_POLICY_ID)
+    await verify_in_process_policy_matches_surface(deps)  # must not raise
+
+
+@pytest.mark.unit
+async def test_refuses_boot_when_the_backdoor_policy_governs_a_different_surface() -> None:
+    """The lockout this guard exists to prevent: every in-process call
+    would be denied at the surface check, looking identical to no
+    backdoor policy having been configured at all."""
+    store = InMemoryEventStore()
+    await seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        permitted_principal_ids=[uuid4()],
+        permitted_commands=["RecordWitnessedRun"],
+        surface_id=NIL_SENTINEL_ID,
+    )
+    deps = build_deps(
+        trust_policy_id=_POLICY_ID,
+        trust_in_process_policy_id=_IN_PROCESS_POLICY_ID,
+        event_store=store,
+    )
+    with pytest.raises(RuntimeError, match="not SYSTEM_IN_PROCESS_SURFACE_ID"):
+        await verify_in_process_policy_matches_surface(deps)
+
+
+@pytest.mark.unit
+async def test_boots_when_the_backdoor_policy_governs_the_in_process_surface() -> None:
+    store = InMemoryEventStore()
+    await seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        permitted_principal_ids=[uuid4()],
+        permitted_commands=["RecordWitnessedRun"],
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+    deps = build_deps(
+        trust_policy_id=_POLICY_ID,
+        trust_in_process_policy_id=_IN_PROCESS_POLICY_ID,
+        event_store=store,
+    )
+    await verify_in_process_policy_matches_surface(deps)  # must not raise
+
+
+@pytest.mark.unit
+async def test_refuses_boot_when_the_backdoor_policy_governs_a_different_conduit() -> None:
+    """Once `trust_conduit_id` is also set, the backdoor policy must
+    govern that SAME conduit, not just the right surface."""
+    store = InMemoryEventStore()
+    await seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        permitted_principal_ids=[uuid4()],
+        permitted_commands=["RecordWitnessedRun"],
+        conduit_id=_OTHER_CONDUIT_ID,
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+    deps = build_deps(
+        trust_policy_id=_POLICY_ID,
+        trust_conduit_id=_CONDUIT_ID,
+        trust_in_process_policy_id=_IN_PROCESS_POLICY_ID,
+        event_store=store,
+    )
+    with pytest.raises(RuntimeError, match="a different one"):
+        await verify_in_process_policy_matches_surface(deps)
+
+
+@pytest.mark.unit
+async def test_boots_when_the_backdoor_policy_governs_the_configured_conduit() -> None:
+    store = InMemoryEventStore()
+    await seed_policy(
+        store,
+        policy_id=_IN_PROCESS_POLICY_ID,
+        permitted_principal_ids=[uuid4()],
+        permitted_commands=["RecordWitnessedRun"],
+        conduit_id=_CONDUIT_ID,
+        surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+    )
+    deps = build_deps(
+        trust_policy_id=_POLICY_ID,
+        trust_conduit_id=_CONDUIT_ID,
+        trust_in_process_policy_id=_IN_PROCESS_POLICY_ID,
+        event_store=store,
+    )
+    await verify_in_process_policy_matches_surface(deps)  # must not raise
