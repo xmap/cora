@@ -140,10 +140,15 @@
     const events = [];
     const span = 24 * 60 * 60 * 1000;
     for (let t = NOW - span; t < NOW; ) {
-      // Hour of day drives the rate: a beamline runs hot in shift hours and
-      // ticks over between them.
+      // Hour of day drives the rate over the deep backlog: a beamline runs hot
+      // in shift hours and ticks over between them. The most recent hour is
+      // always busy regardless, because everything that reads this fixture --
+      // the eye and every check -- looks at the live window, and a fixture
+      // that goes quiet at 3am makes those checks pass or fail by the clock
+      // rather than by the code.
       const hour = new Date(t).getHours();
-      const busy = hour >= 8 && hour < 22;
+      const recent = NOW - t < 60 * 60 * 1000;
+      const busy = recent || (hour >= 8 && hour < 22);
       t += (busy ? 8000 : 40000) + rnd() * (busy ? 25000 : 90000);
       if (t < NOW) events.push(...burst(t));
     }

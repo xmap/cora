@@ -237,7 +237,13 @@
     border: 1px solid var(--cs-line); border-radius: 3px; padding: 0 3px;
   }
   .cs-baseline, .cs-axis, .cs-tick { stroke: var(--cs-line); stroke-width: 1; }
-  .cs-lane-label { fill: var(--cs-sub); font-size: 11px; }
+  /* Same treatment as a track's KIND column: small mono caps. A flat lane
+     has no instance to name, so the domain IS its identity and one word in
+     the same voice as the rest of the gutter is the whole label. */
+  .cs-lane-label {
+    fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 8px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
   /* A zone caption groups the rows under it by the SHAPE of the relation they
      carry, not by name. It is the reason the rows are in that order, so it
      stays quiet once the eye has learned them. */
@@ -905,7 +911,7 @@
         if (!isJudgement && !points.length) return;
         lanes.push({
           lane_id: "domain:" + key,
-          label: isJudgement ? DOMAIN_LABEL[key] : DOMAIN_LABEL[key] + " (elsewhere)",
+          label: isJudgement ? DOMAIN_LABEL[key] : DOMAIN_LABEL[key] + " \u00b7 elsewhere",
           render: "markers",
           points: points,
         });
@@ -1012,7 +1018,7 @@
       }
       lanes.push({
         lane_id: "domain:permit:" + encId,
-        label: encName + " observed",
+        label: encName + " \u00b7 observed",
         render: "markers",
         points: pointsFor(encId),
       });
