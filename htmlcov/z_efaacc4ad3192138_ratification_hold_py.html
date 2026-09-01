@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_efaacc4ad3192138_ratification_release_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-01 18:20 +0000
+            created at 2026-09-01 20:04 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -114,7 +114,7 @@
     <p class="run"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">event_envelope</span> <span class="key">import</span> <span class="nam">to_new_event</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">logging</span> <span class="key">import</span> <span class="nam">get_logger</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span> <span class="key">import</span> <span class="nam">ConcurrencyError</span><span class="op">,</span> <span class="nam">Deny</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">routing</span> <span class="key">import</span> <span class="nam">NIL_SENTINEL_ID</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">routing</span> <span class="key">import</span> <span class="nam">NIL_SENTINEL_ID</span><span class="op">,</span> <span class="nam">SYSTEM_IN_PROCESS_SURFACE_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span> <span class="key">import</span> <span class="nam">HOLD_CAUSE_RATIFICATION</span><span class="op">,</span> <span class="nam">RunHeld</span><span class="op">,</span> <span class="nam">RunStatus</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span> <span class="key">import</span> <span class="nam">event_type_name</span> <span class="key">as</span> <span class="nam">run_event_type_name</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span> <span class="key">import</span> <span class="nam">fold</span> <span class="key">as</span> <span class="nam">fold_run</span>&nbsp;</span><span class="r"></span></p>
@@ -192,7 +192,7 @@
     <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">            <span class="nam">principal_id</span><span class="op">=</span><span class="nam">RATIFICATION_ENFORCER_AGENT_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">            <span class="nam">command_name</span><span class="op">=</span><span class="nam">HOLD_COMMAND_NAME</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">            <span class="nam">conduit_id</span><span class="op">=</span><span class="nam">NIL_SENTINEL_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">            <span class="nam">surface_id</span><span class="op">=</span><span class="nam">NIL_SENTINEL_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">            <span class="nam">surface_id</span><span class="op">=</span><span class="nam">SYSTEM_IN_PROCESS_SURFACE_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="par run show_par"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">        <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">authz</span><span class="op">,</span> <span class="nam">Deny</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">113&#x202F;&#x219B;&#x202F;114</span><span class="annotate long">line 113 didn't jump to line 114 because the condition on line 113 was never true</span></span></p>
     <p class="mis show_mis"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">            <span class="nam">_log</span><span class="op">.</span><span class="nam">info</span><span class="op">(</span><span class="str">&quot;ratification_hold.unauthorized&quot;</span><span class="op">,</span> <span class="nam">run_id</span><span class="op">=</span><span class="nam">str</span><span class="op">(</span><span class="nam">run_id</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -248,7 +248,7 @@
             <a class="nav" href="z_efaacc4ad3192138_ratification_release_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-01 18:20 +0000
+            created at 2026-09-01 20:04 +0000
         </p>
     </div>
 </footer>
