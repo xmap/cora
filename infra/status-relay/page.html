@@ -152,7 +152,10 @@
   .cora-scrubber__svg.cs-grabbing { cursor: grabbing; }
   .cora-scrubber__svg:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
   .cora-scrubber__svg * { pointer-events: none; }
-  .cs-hit, .cs-mark { pointer-events: auto; }
+  .cs-hit, .cs-mark, .cs-gutter-hit { pointer-events: auto; }
+  /* The whole gutter cell, not the 9px label in it. `help` rather than
+     `pointer`: hovering explains the row, clicking does nothing. */
+  .cs-gutter-hit { fill: transparent; cursor: help; }
   .cs-hit { fill: transparent; cursor: pointer; }
   .cs-mark--hit { cursor: pointer; }
   /* Follows the pointer, so it must never be under it. */
@@ -185,6 +188,14 @@
      hue rather than borrowing one of theirs: a bound row is not something the
      event caused. */
   .cs-tip-row--kin .cs-tip-v { color: var(--cs-mark); }
+  /* A row card leads with a sentence, an event card with a clock. The note
+     wraps and the rows below it do not, so the shape of the two cards stays
+     recognisably the same. */
+  .cs-tip-note {
+    font-size: 0.68rem; line-height: 1.45; color: var(--cs-sub);
+    margin-bottom: 0.45rem; padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--cs-line);
+  }
   .cs-tip-list {
     max-height: 8.4rem; overflow-y: auto; margin-bottom: 0.35rem;
     padding-bottom: 0.3rem; border-bottom: 1px solid var(--cs-line);
@@ -914,6 +925,62 @@
   // one thing they had to scroll for. And because the row cap is spent in
   // this order, a busy tree can no longer crowd the ribbon off the chart.
   var ZONE_ORDER = ["governance", "participants", "execution", "judgement"];
+  // What the gutter cannot say in one word. A zone caption is one word, a
+  // KIND is a four-letter abbreviation, and a flat lane's label says nothing
+  // about which of the record's forty-two stream types land on it. All three
+  // are hoverable, and this is what they say.
+  var ZONE_ABOUT = {
+    governance: {
+      note:
+        "A condition over a range, so it is drawn as a ribbon rather than as dots. " +
+        "From dots you would learn that something was sampled, never whether it held.",
+      reads: "must hold before anything runs",
+    },
+    participants: {
+      note:
+        "Things with a lifetime of their own that a run involves. Many-to-many: " +
+        "one sample can be measured by several runs, and one run can involve several.",
+      reads: "must exist before a run can measure it",
+    },
+    execution: {
+      note:
+        "A containment tree. A campaign holds runs, a run holds procedures, and bar " +
+        "thickness carries the depth so the nesting reads without a second colour.",
+      reads: "what is happening",
+    },
+    judgement: {
+      note:
+        "Point conclusions with no lifetime of their own, so these are flat lanes of " +
+        "marks rather than bars.",
+      reads: "what came out",
+    },
+  };
+  // The abbreviation in the KIND column, spelled out.
+  var KIND_NAME = {
+    CAMP: "Campaign",
+    RUN: "Run",
+    PROC: "Procedure",
+    SUBJ: "Subject",
+    ENCL: "Enclosure permit",
+    CLR: "Clearance",
+  };
+  // Which stream types land on each flat lane, inverted from the table that
+  // files them. Read off that table rather than written out again, so the two
+  // can never drift: the lane card answers "what counts as Equipment" with
+  // the list the page actually routes by.
+  var DOMAIN_TYPES = {};
+  Object.keys(STREAM_TYPE_TO_DOMAIN).forEach(function (t) {
+    var d = STREAM_TYPE_TO_DOMAIN[t];
+    (DOMAIN_TYPES[d] = DOMAIN_TYPES[d] || []).push(t);
+  });
+
+  function clockOf(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d)) return null;
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
   // Which zone each domain's flat lane belongs to. A leftover event -- one
   // whose instance is not on screen -- lands in its OWN zone rather than at
   // the bottom of the page: a stray Run event is execution, not a judgement,
@@ -1132,10 +1199,48 @@
       if (extra) {
         for (var k in extra) row[k] = extra[k];
       }
+      // Assembled here rather than at each call site so every track row gets
+      // the same three facts in the same order, and a caller only has to
+      // supply what is particular to its own kind.
+      row.about = {
+        head: label,
+        note: (extra && extra.note) || null,
+        rows: [["kind", KIND_NAME[kind] || kind]]
+          .concat((extra && extra.facts) || [])
+          .concat([
+            ["begins", clockOf(from) || "before this window"],
+            ["ends", clockOf(to) || "open, still running"],
+            ["events on this row", String(row.points.length)],
+          ]),
+      };
+      delete row.facts;
+      delete row.note;
       lanes.push(row);
     }
     function zone(key) {
-      lanes.push({ lane_id: "zone:" + key, label: ZONES[key], render: "zone", points: [] });
+      var a = ZONE_ABOUT[key];
+      var mine = DOMAIN_ORDER.filter(function (k) { return DOMAIN_ZONE[k] === key; });
+      lanes.push({
+        lane_id: "zone:" + key,
+        label: ZONES[key],
+        render: "zone",
+        points: [],
+        about: {
+          head: ZONES[key],
+          note: a.note,
+          rows: [
+            ["reads as", a.reads],
+            // Why THIS zone is at this height, which is the question a
+            // reordered page invites and the one a caption cannot answer.
+            [
+              "position",
+              ZONE_ORDER.indexOf(key) + 1 + " of " + ZONE_ORDER.length +
+                ", each a precondition for the next",
+            ],
+            ["groups", mine.map(function (k) { return DOMAIN_LABEL[k]; }).join(", ")],
+          ],
+        },
+      });
     }
     // Called at the END of each zone, once its tracks have claimed what they
     // can, so a leftover sits under the heading it actually belongs to.
@@ -1159,6 +1264,29 @@
               ? "Stream types this page has no domain for. Not a zone, because " +
                 "there is no honest zone for an unknown."
               : null,
+          about: {
+            head: DOMAIN_LABEL[key],
+            note: tracked
+              ? "Events whose instance has no row of its own above: it ended before " +
+                "this window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap. " +
+                "Nothing is dropped for want of a home."
+              : key === "other"
+                ? "The catch-all for a stream type this page has no domain for. It sits " +
+                  "under no zone heading, because there is no honest zone for an unknown."
+                : "These have no lifetime of their own on this chart, so every event in " +
+                  "the domain lands on one lane rather than on a row per instance.",
+            rows: [
+              [
+                "records",
+                (DOMAIN_TYPES[key] || []).join(", ") || "anything this page cannot file",
+              ],
+              ["events on this lane", String(points.length)],
+              [
+                "zone",
+                DOMAIN_ZONE[key] ? ZONES[DOMAIN_ZONE[key]] : "none, by design",
+              ],
+            ],
+          },
         });
       });
     }
@@ -1193,7 +1321,12 @@
       else loose.push(r);
     });
     function emitRun(r, depth) {
-      track("RUN", instanceLabel(r.name, r.run_id), depth, r.started_at, null, r.run_id);
+      track("RUN", instanceLabel(r.name, r.run_id), depth, r.started_at, null, r.run_id, {
+        note:
+          "One measurement, from the moment it started to now. The marks on the bar are " +
+          "its own events; the rows indented under it are its phases.",
+        facts: [["status", r.status]],
+      });
       (procsOfRun[r.run_id] || []).forEach(function (pr) {
         // A Procedure that has reached a terminal status stops where it
         // stopped. `last_status_changed_at` is when that happened; without it
@@ -1205,7 +1338,17 @@
           depth + 1,
           pr.registered_at,
           open ? null : pr.last_status_changed_at,
-          pr.procedure_id
+          pr.procedure_id,
+          {
+            note:
+              "A phase of the run above it. A procedure that has stopped stops where it " +
+              "stopped, so a bar ending mid-chart is a phase that finished, not one cut off.",
+            facts: [
+              ["kind of phase", pr.kind],
+              ["status", pr.status],
+              ["iterations", pr.iteration_count === undefined ? null : String(pr.iteration_count)],
+            ],
+          }
         );
       });
     }
@@ -1218,7 +1361,12 @@
         .map(function (r) { return r.started_at; })
         .filter(Boolean)
         .sort();
-      track("CAMP", instanceLabel(c.name, c.campaign_id), 0, starts[0] || null, null, c.campaign_id);
+      track("CAMP", instanceLabel(c.name, c.campaign_id), 0, starts[0] || null, null, c.campaign_id, {
+        note:
+          "A programme of work. The runs indented under it belong to it; a campaign with " +
+          "nothing running is a table row rather than a bar, so an empty one never appears here.",
+        facts: [["intent", c.intent], ["status", c.status], ["runs", String(mine.length)]],
+      });
       mine.forEach(function (r) { emitRun(r, 1); });
     });
     loose.forEach(function (r) { emitRun(r, 0); });
@@ -1228,6 +1376,10 @@
     rows("subjects").forEach(function (sj) {
       track("SUBJ", instanceLabel(sj.name, sj.subject_id), 0, sj.created_at, null, sj.subject_id, {
         tone: sj.status === "Mounted" || sj.status === "Measured" ? "good" : null,
+        note:
+          "What is being measured. A sample has its own lifetime and several runs can " +
+          "involve it, which is why it is a row of its own rather than a field on a run.",
+        facts: [["status", sj.status]],
       });
     });
 
@@ -1257,6 +1409,21 @@
           to: null,
           segments: segs,
           points: [],
+          about: {
+            head: encName,
+            note:
+              "Whether the hutch was safe to be in, over time. Each segment runs to the " +
+              "next observation, because a permit is a standing claim rather than a " +
+              "reading that expires the moment it was taken. Unknown is its own state " +
+              "and is never blended into a neighbour.",
+            rows: [
+              ["kind", KIND_NAME.ENCL],
+              ["now", segs[segs.length - 1].tone === "good" ? "Permitted"
+                : segs[segs.length - 1].tone === "bad" ? "Not permitted" : "Unknown"],
+              ["changes held", String(segs.length)],
+              ["observations", String((byStream[encId] || []).length)],
+            ],
+          },
         });
       }
       lanes.push({
@@ -1264,6 +1431,18 @@
         label: encName + " \u00b7 observed",
         render: "markers",
         points: pointsFor(encId),
+        about: {
+          head: encName + ", observed",
+          note:
+            "The observations the ribbon above was folded from, kept on their own row. " +
+            "On one row they would pack into a bar covering the very condition they " +
+            "describe, and a causal arrow into a permit drop has to land on one of them.",
+          rows: [
+            ["records", "Enclosure"],
+            ["events on this lane", String((byStream[encId] || []).length)],
+            ["zone", ZONES.governance],
+          ],
+        },
       });
     });
 
@@ -1287,7 +1466,17 @@
         cl.valid_from || cl.registered_at || null,
         until,
         cl.clearance_id,
-        { tone: cl.status === "Active" ? "good" : "unknown" }
+        {
+          tone: cl.status === "Active" ? "good" : "unknown",
+          note:
+            "Cover over a range. The bar is when it is in force; what it reaches is " +
+            "listed below, and a clearance that reaches nothing on screen lists nothing.",
+          facts: [
+            ["status", cl.status],
+            ["risk band", cl.risk_band],
+            ["expires", clockOf(cl.valid_until) || "no expiry set"],
+          ],
+        }
       );
     });
     }

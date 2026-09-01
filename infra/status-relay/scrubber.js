@@ -230,6 +230,12 @@
       to: lane.to || null,
       segments: lane.segments || null,
       tone: lane.tone || null,
+      // What this row IS, for the gutter card. Structured rather than one
+      // string, so it renders in the same card the events use: a heading, a
+      // sentence of what the row's shape means, then facts. The document
+      // supplies every word of it; this module knows what a row looks like
+      // and nothing about what one means.
+      about: lane.about || null,
       // Rows this row is bound to, as `{ <other lane_id>: "why" }`. The
       // document supplies the graph and the reason; this module knows only
       // that lanes can name kin, never what a run or a subject is. Both
@@ -585,10 +591,12 @@
     // caption, a lifetime and a series of instants are not the same kind of
     // row (see ROW_H).
     const rowY = new Map();
+    const rowH = new Map();
     let stackY = LANE_START;
     for (const lane of model.lanes) {
       const h = ROW_H[lane.render] || LANE_HEIGHT;
       rowY.set(lane, stackY + h / 2);
+      rowH.set(lane, h);
       stackY += h;
     }
     const axisY = (model.lanes.length ? stackY : LANE_START + LANE_HEIGHT) + 10;
@@ -648,6 +656,23 @@
     model.lanes.forEach((lane) => {
       const y = rowY.get(lane);
       laneY.set(lane.lane_id, y);
+      // The gutter is the one part of the chart that names things without
+      // explaining them: KIND is a four-letter abbreviation, a zone caption is
+      // one word, and a flat lane's label says nothing about which stream
+      // types land on it. A hit target over the whole gutter cell answers all
+      // three, on the text AND on the space around it, because a 9px label is
+      // a poor thing to have to aim at.
+      if (lane.about) {
+        const hit = svg("rect", {
+          x: 0,
+          y: y - rowH.get(lane) / 2,
+          width: PAD_L - 4,
+          height: rowH.get(lane),
+          class: "cs-gutter-hit",
+        });
+        hit._csAbout = lane;
+        g.appendChild(hit);
+      }
       if (lane.render === "zone") {
         // A caption then a rule to the right of it. The rule has to START
         // clear of the text: run from the plot edge it passes straight under
@@ -1102,6 +1127,38 @@
     return (lane && lane.kin) || null;
   }
 
+  // Same card as an event's, deliberately: a page with two tooltip designs
+  // has the reader learning two. What differs is that this one describes a
+  // ROW rather than an instant, so it leads with a sentence about the shape
+  // and never carries a clock.
+  function aboutHtml(model, lane) {
+    const esc = (v) =>
+      String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    const about = lane.about;
+    const out = [`<div class="cs-tip-head">${esc(about.head)}</div>`];
+    if (about.note) out.push(`<div class="cs-tip-note">${esc(about.note)}</div>`);
+    for (const [k, v] of about.rows || []) {
+      if (v === null || v === undefined || v === "") continue;
+      out.push(
+        `<div class="cs-tip-row"><span class="cs-tip-k">${esc(k)}</span>` +
+          `<span class="cs-tip-v">${esc(v)}</span></div>`
+      );
+    }
+    // Kinship is a property of the ROW, so it belongs on the row's card as
+    // much as on an event's. Resolved here rather than in the document,
+    // because only the render knows which lanes are on screen to be named.
+    if (lane.kin) {
+      for (const other of model.lanes) {
+        if (!lane.kin[other.lane_id]) continue;
+        out.push(
+          `<div class="cs-tip-row cs-tip-row--kin"><span class="cs-tip-k">${esc(lane.kin[other.lane_id])}</span>` +
+            `<span class="cs-tip-v">${esc(other.label)}</span></div>`
+        );
+      }
+    }
+    return out.join("");
+  }
+
   function tipHtml(model, cluster, focus) {
     const esc = (v) =>
       String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -1388,6 +1445,7 @@
       }
       return null;
     };
+    const aboutFor = (target) => (target && target._csAbout) || null;
 
     let pan = null;
     const onDown = (e) => {
@@ -1457,6 +1515,16 @@
     // forever; a rebuild generates no `pointermove`, so this cannot loop.
     svgEl.addEventListener("pointermove", (e) => {
       if (pan) return;
+      // The gutter never traces or pins, so it never rebuilds the scene: it
+      // only opens the card. A pin still wins, the same way it does over a
+      // mark, because releasing someone's pin to explain a row heading would
+      // be the tooltip taking work away from them.
+      const lane = aboutFor(e.target);
+      if (lane) {
+        if (state.selected) return;
+        state.showAbout(lane, e.clientX, e.clientY);
+        return;
+      }
       const cluster = clusterFor(e.target);
       if (state.selected) return;
       state.setHover(cluster, e.clientX, e.clientY);
@@ -1925,6 +1993,17 @@
     // that changes which clusters exist. Guarded on the anchor POINT so
     // sweeping within one mark costs nothing, and so the rebuild's own
     // re-entry cannot recurse.
+    // No rebuild and no focus: a row card describes what is already drawn.
+    state.showAbout = (lane, clientX, clientY) => {
+      if (hover !== null) {
+        hover = null;
+        rerender();
+      }
+      tip.innerHTML = aboutHtml(model, lane);
+      tip.setAttribute("data-on", "1");
+      placeTip(clientX, clientY);
+    };
+
     state.setHover = (cluster, clientX, clientY) => {
       const point = cluster ? cluster.items[0] : null;
       if (point !== hover) {
