@@ -13,6 +13,7 @@
     --stale: #d29922;
     --dead: #da3633;
     --row-border: #262b33;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   body {
     margin: 0;
@@ -45,42 +46,7 @@
   #banner.stale { background: var(--stale); color: #2b1c00; }
   #banner.dead { background: var(--dead); color: #2b0a09; }
   #content.dimmed { opacity: 0.5; }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    max-width: 60rem;
-  }
-  th, td {
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--row-border);
-    font-size: 0.9rem;
-    vertical-align: top;
-  }
-  th { color: var(--muted); font-weight: 600; }
   .empty { color: var(--muted); font-style: italic; padding: 0.25rem 0 0.75rem 0; }
-  .progress-role {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.15rem 0;
-    white-space: nowrap;
-  }
-  .progress-role .role-label { color: var(--muted); width: 8rem; flex-shrink: 0; }
-  .progress-bar-track {
-    background: var(--row-border);
-    border-radius: 3px;
-    width: 8rem;
-    height: 0.5rem;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-  .progress-bar-fill { background: var(--live); height: 100%; }
-  .progress-count { color: var(--fg); font-variant-numeric: tabular-nums; }
-  .no-progress { color: var(--muted); font-style: italic; }
-  .mono { font-variant-numeric: tabular-nums; color: var(--muted); }
-  tr.clickable-row { cursor: pointer; }
-  tr.clickable-row:hover { background: var(--row-border); }
 
   /* ---- Rewind scrubber, adapted from docs/stylesheets/extra.css's
      .cora-scrubber block (the paper demo's own styling). Font stacks
@@ -95,6 +61,17 @@
     --cs-ink: #e7ecf2;
     --cs-sub: #aab4c2;
     --cs-mute: #768091;
+    /* Marks wear a mark colour, never the text colour. Routine traffic was
+       drawn in --cs-ink, the same near-white as a heading, which made every
+       ordinary event as loud as an alarm and left the severity tiers nothing
+       to escalate FROM. Measured against the rest of what is on screen at
+       once (validate_palette, dark, surface #10141b): normal-vision floor
+       18.0 against the permit green, worst CVD pair 7.5 deutan between the
+       green ribbon and the red mark, which are a bar and a square on
+       different rows. #3f9dc9 -- the hue the prototype used -- fails that
+       floor at 14.9 against the same green. */
+    --cs-mark: #4c86c4;
+    --cs-mark-dim: #33556f;
     --cs-good: #3fb985;
     --cs-warn: #e6b24a;
     --cs-alarm: #f0644b;
@@ -123,7 +100,17 @@
   }
   .cs-title { font-weight: 600; font-size: 1.02rem; }
   .cs-subtitle { font-family: var(--cs-mono); font-size: 0.7rem; color: var(--cs-mute); }
-  .cs-controls { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .cs-controls { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .cs-depth { display: flex; align-items: center; gap: 0.35rem; }
+  .cs-depth-label {
+    font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--cs-mute);
+  }
+  .cs-depth-pick {
+    background: transparent; color: var(--cs-sub); font: inherit; font-size: 0.72rem;
+    border: 1px solid var(--cs-line); border-radius: 4px; padding: 0.15rem 0.3rem;
+  }
+  .cs-depth-pick:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
   .cs-btn {
     font-size: 0.72rem; font-weight: 500; color: var(--cs-sub); background: var(--cs-panel-2);
     border: 1px solid var(--cs-line); border-radius: 7px; padding: 0.34rem 0.66rem;
@@ -132,40 +119,284 @@
   .cs-btn:hover { color: var(--cs-ink); border-color: color-mix(in srgb, var(--cs-warn) 60%, var(--cs-line)); }
   .cs-play[aria-pressed="true"] { color: #1a130a; background: var(--cs-warn); border-color: var(--cs-warn); }
   .cs-btn:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
-  .cs-slider:focus-visible { outline: none; }
-  .cs-slider:focus-visible .cs-slider-thumb { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
-  .cs-stage { overflow-x: auto; margin-top: 0.7rem; }
-  .cora-scrubber__svg { display: block; width: 100%; min-width: 640px; height: auto; touch-action: none; cursor: ew-resize; }
+  .cs-stage { overflow-x: auto; margin-top: 0.7rem; position: relative; }
+  /* `grab` announces the one gesture that is not discoverable: that the chart
+     body can be dragged. Marks override it back to a pointer so a clickable
+     thing still looks clickable. */
+  .cora-scrubber__svg { display: block; width: 100%; min-width: 640px; height: auto; touch-action: none; cursor: grab; }
+  .cora-scrubber__svg.cs-grabbing { cursor: grabbing; }
+  .cora-scrubber__svg:focus-visible { outline: 2px solid var(--cs-warn); outline-offset: 2px; }
+  .cora-scrubber__svg * { pointer-events: none; }
+  .cs-hit, .cs-mark, .cs-gutter-hit { pointer-events: auto; }
+  /* The whole gutter cell, not the 9px label in it. `help` rather than
+     `pointer`: hovering explains the row, clicking does nothing. */
+  .cs-gutter-hit { fill: transparent; cursor: help; }
+  .cs-hit { fill: transparent; cursor: pointer; }
+  .cs-mark--hit { cursor: pointer; }
+  /* Follows the pointer, so it must never be under it. */
+  .cs-tip {
+    position: absolute; z-index: 3; pointer-events: none; opacity: 0;
+    transition: opacity 0.09s ease; min-width: 190px; max-width: 300px;
+    background: var(--cs-panel); border: 1px solid var(--cs-line);
+    border-radius: 9px; padding: 0.5rem 0.6rem;
+    box-shadow: 0 6px 22px rgb(0 0 0 / 45%);
+  }
+  .cs-tip[data-on="1"] { opacity: 1; }
+  .cs-tip-head {
+    font-size: 0.78rem; font-weight: 600; color: var(--cs-ink);
+    margin-bottom: 0.35rem;
+  }
+  .cs-tip-row, .cs-tip-item {
+    display: flex; justify-content: space-between; gap: 0.8rem;
+    padding: 0.1rem 0; font-size: 0.7rem;
+  }
+  /* The key never wraps: a long value pushing "caused by" onto two lines
+     turns the card into a paragraph. The value wraps instead. */
+  .cs-tip-k { color: var(--cs-sub); white-space: nowrap; }
+  .cs-tip-v {
+    font-family: var(--cs-mono); color: var(--cs-ink); text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .cs-tip-row--up .cs-tip-v { color: var(--cs-alarm); }
+  .cs-tip-row--down .cs-tip-v { color: var(--cs-warn); }
+  /* Kinship is a THIRD relation beside cause and effect, so it gets its own
+     hue rather than borrowing one of theirs: a bound row is not something the
+     event caused. */
+  .cs-tip-row--kin .cs-tip-v { color: var(--cs-mark); }
+  /* A row card leads with a sentence, an event card with a clock. The note
+     wraps and the rows below it do not, so the shape of the two cards stays
+     recognisably the same. */
+  .cs-tip-note {
+    font-size: 0.68rem; line-height: 1.45; color: var(--cs-sub);
+    margin-bottom: 0.45rem; padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--cs-line);
+  }
+  .cs-tip-list {
+    max-height: 8.4rem; overflow-y: auto; margin-bottom: 0.35rem;
+    padding-bottom: 0.3rem; border-bottom: 1px solid var(--cs-line);
+  }
+  /* The traced chain, in words. Its own block rather than more .cs-tip-rows:
+     these are events with clocks, not facts about one event, and a scroll cap
+     keeps a deep trace from turning the card into a page. */
+  .cs-tip-chain {
+    max-height: 7.6rem; overflow-y: auto;
+    margin: 0.25rem 0 0.35rem 0; padding: 0.2rem 0;
+    border-top: 1px solid var(--cs-line); border-bottom: 1px solid var(--cs-line);
+  }
+  .cs-tip-chain .cs-tip-k { overflow-wrap: anywhere; white-space: normal; }
+  .cs-tip-item .cs-tip-k { color: var(--cs-mute); }
+  .cs-tip-item--head .cs-tip-k { color: var(--cs-ink); font-weight: 600; }
+  /* The same two hues the arrows use, so a row in the card and the edge it
+     stands for are recognisably the same relation. All three are the same
+     specificity as `.cs-tip-item .cs-tip-k`, so they have to sit BELOW it:
+     written above they lost every hue to it without any warning. */
+  .cs-tip-item--up .cs-tip-k { color: color-mix(in srgb, var(--cs-alarm) 72%, var(--cs-sub)); }
+  .cs-tip-item--down .cs-tip-k { color: color-mix(in srgb, var(--cs-warn) 66%, var(--cs-sub)); }
+  .cs-tip-item--cut .cs-tip-k { color: var(--cs-mute); font-style: italic; }
+  /* The second channel. Opacity already says "something on this row is in
+     the chain you are tracing"; this says "the record binds this row to the
+     pinned event's row", which is a different claim from a different source
+     and must stay tellable apart from it. */
+  .cs-kin-tick { fill: var(--cs-mark); }
+  .cs-selected { stroke: var(--cs-ink); stroke-width: 1.6; }
+  /* The pack a pinned event came out of. A fill, not a second ring: the ring
+     already means "this event", and two strokes a few units apart would read
+     as one thick box round the wrong thing. */
+  .cs-sel-group {
+    fill: color-mix(in srgb, var(--cs-ink) 13%, transparent);
+    stroke: color-mix(in srgb, var(--cs-ink) 34%, transparent);
+    stroke-width: 1;
+  }
+  /* Everything outside the pinned event's chain and correlation group recedes
+     rather than disappearing: the shape of the surrounding traffic is still
+     context, it just stops competing. */
+  .cs-dim { opacity: 0.14; }
+  /* A bar recedes further than a mark would let it: 0.14 on a lifetime that
+     spans the whole chart erases the skeleton, and the shape of the tree is
+     what tells you WHERE the lit part sits. */
+  .cs-track.cs-dim, .cs-track-cap.cs-dim { opacity: 0.24; }
+  /* Direction is never in doubt, the head always sits at the effect. Hue
+     separates "why this happened" from "what it set off". */
+  .cs-edge { fill: none; }
+  .cs-edge--up { stroke: var(--cs-alarm); }
+  .cs-edge--down { stroke: var(--cs-warn); opacity: 0.85; }
+  .cs-edge--stub { stroke-dasharray: 3 3; }
+  .cs-edge-note {
+    fill: var(--cs-alarm); font-family: var(--cs-mono); font-size: 8.5px;
+  }
+  .cs-root-ring { fill: none; stroke: var(--cs-ink); stroke-width: 1.3; }
+  .cs-row-val.cs-tone--tier2 { color: var(--cs-alarm); }
+  .cs-row-val.cs-tone--tier1 { color: var(--cs-warn); }
+  /* Page scope, so only the :root tokens are in reach: the --cs-* set is
+     declared on .cora-scrubber and does not resolve out here. */
+  #flowing-controls {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+  }
+  .flowing-controls__label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  #flowing-controls .seg {
+    display: flex; border: 1px solid var(--row-border); border-radius: 5px; overflow: hidden;
+  }
+  #flowing-controls .seg button {
+    font-family: var(--mono); font-size: 0.72rem; padding: 0.25rem 0.6rem;
+    border: 0; border-right: 1px solid var(--row-border); background: transparent;
+    color: var(--muted); cursor: pointer;
+  }
+  #flowing-controls .seg button:last-child { border-right: 0; }
+  #flowing-controls .seg button:hover { color: var(--fg); }
+  #flowing-controls .seg button[aria-pressed="true"] {
+    background: var(--stale); color: #1a130a; font-weight: 600;
+  }
+  #flowing-controls .seg button:focus-visible { outline: 2px solid var(--stale); outline-offset: -2px; }
+  .cs-hint {
+    font-family: var(--cs-mono); font-size: 0.62rem; color: var(--cs-mute);
+    margin-top: 0.6rem; letter-spacing: 0.02em;
+  }
+  .cs-hint kbd {
+    font-family: var(--cs-mono); background: var(--cs-panel-2);
+    border: 1px solid var(--cs-line); border-radius: 3px; padding: 0 3px;
+  }
   .cs-baseline, .cs-axis, .cs-tick { stroke: var(--cs-line); stroke-width: 1; }
-  .cs-lane-label { fill: var(--cs-sub); font-size: 11px; }
+  .cs-baseline--track { opacity: 0.45; }
+  /* Same treatment as a track's KIND column: small mono caps. A flat lane
+     has no instance to name, so the domain IS its identity and one word in
+     the same voice as the rest of the gutter is the whole label. */
+  .cs-lane-label {
+    fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 8px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  /* A zone caption groups the rows under it by the SHAPE of the relation they
+     carry, not by name. It is the reason the rows are in that order, so it
+     stays quiet once the eye has learned them. */
+  .cs-zone {
+    fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 7.6px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .cs-zone-rule { stroke: var(--cs-line); stroke-width: 1; opacity: 0.5; }
+  .cs-row-kind {
+    fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 7.6px;
+    letter-spacing: 0.1em;
+  }
+  /* An instance name identifies a row; it is not the row's content. At 10px
+     near-white it was the loudest thing on the chart, so a gutter of names
+     outshouted the events they were there to label. Depth still reads,
+     through a two-step ramp rather than through weight. */
+  .cs-track-label { fill: var(--cs-mute); font-size: 8.6px; letter-spacing: 0.01em; }
+  .cs-track-label--d0 { fill: var(--cs-sub); font-weight: 500; }
+  .cs-track-label--d2 { font-size: 8.2px; }
+  /* Thickness carries depth, so containment reads without a second colour or
+     an extra rule: the campaign is visibly the thing holding the runs, which
+     hold the procedures. */
+  /* Same hue as the marks that sit on them, so a track and its events read as
+     one thing; depth is carried by thickness and weight, not by another hue. */
+  .cs-track { fill: var(--cs-mark-dim); }
+  .cs-track--d0 { fill: color-mix(in srgb, var(--cs-mark-dim) 70%, transparent); }
+  .cs-track--d1 { fill: var(--cs-mark-dim); }
+  .cs-track--d2 { fill: color-mix(in srgb, var(--cs-mark-dim) 75%, transparent); }
+  /* Tones are STATES OF A CONDITION over a range, which is what separates a
+     permit ribbon from a row of samples. Unknown is its own state and never
+     blended into either neighbour: not-observed is not the same as fine. */
+  /* Measured against the plain track it sits among, not picked. At 70% a
+     good bar composited to luminance 0.191 where every other bar on the chart
+     is 0.083, so the quietest state on the page was more than twice the
+     weight of everything around it -- and colour spent on "nothing is wrong"
+     is colour the alarm tiers no longer have to escalate from. At 45% it
+     lands on 0.089, the same weight as a plain bar, still unmistakably
+     green. */
+  .cs-track--good { fill: color-mix(in srgb, var(--cs-good) 32%, transparent); }
+  .cs-track--bad { fill: var(--cs-alarm); }
+  .cs-track--warn { fill: var(--cs-warn); }
+  .cs-track--unknown {
+    fill: color-mix(in srgb, var(--cs-mute) 40%, transparent);
+    stroke: var(--cs-line); stroke-width: 1; stroke-dasharray: 2 3;
+  }
+  .cs-track-cap { fill: var(--cs-mute); opacity: 0.7; }
   .cs-tick-label { fill: var(--cs-mute); font-family: var(--cs-mono); font-size: 10px; }
   .cs-run-line { stroke: var(--cs-sub); stroke-width: 1.6; fill: none; }
   .cs-life-label { font-size: 9.5px; font-weight: 500; fill: var(--cs-sub); }
-  .cs-mark { stroke: var(--cs-surface); stroke-width: 1; transition: opacity 0.12s ease; }
-  .cs-mark--setpoint { fill: var(--cs-ink); }
+  /* One mark family: every event is the same small square, and a burst is
+     those squares packed side by side into a bar whose length is how many
+     happened. No stroke -- the MARK_GAP between them is real space, so the
+     squares read as separate without a ring thickening each one. */
+  .cs-mark { transition: opacity 0.12s ease; }
+  .cs-mark--single, .cs-mark--packed, .cs-mark--many { fill: var(--cs-mark); }
+  /* A mark drawn ON a bar needs the bar held off it. Blue on the old green
+     was a contrast ratio of 1.15, which is not a mark on a bar, it is one
+     colour: the events on a subject or a clearance row were invisible. A ring
+     in the surface colour separates a mark from whatever it sits on and
+     leaves the ratio a property of mark-against-ring, so it holds whatever
+     the bar underneath is doing. Only on tracks -- on open chart the ring
+     would just thicken every square against its own background. */
+  .cs-mark--on-track { stroke: var(--cs-surface); stroke-width: 0.9; }
   .cs-mark--acquire { fill: var(--cs-sub); }
   .cs-mark--check { fill: var(--cs-warn); }
+  /* Severity, reusing the page's existing status hues rather than a new set.
+     Tier 0 is deliberately the neutral ink: colour here means "this is worth
+     your attention", so routine traffic must not spend any. */
+  .cs-tier--1 { fill: var(--cs-warn); }
+  .cs-tier--2 { fill: var(--cs-alarm); }
+  text.cs-tier--1 { fill: var(--cs-warn); font-weight: 600; }
+  text.cs-tier--2 { fill: var(--cs-alarm); font-weight: 700; }
+  /* Hop distance, on the tone channel. Two-class selectors so the ramp sits
+     above the tier fills without touching them: tier owns HUE, depth owns
+     TONE, and the two never contend for the same property.
+
+     Seven steps, one per reachable hop, spaced by PERCEPTION rather than by
+     even alpha. Composited over the surface these land about four L* apart
+     at every step (5.7, 4.9, 4.6, 4.2, 4.3, 3.9), which even alpha does not:
+     the same alpha delta near the top of the range is worth far more L* than
+     near the bottom.
+
+     Hops 4, 5 and 6 shared one value until the fixture could reach past hop
+     3, and then the whole tail of the ramp said "far" and nothing else. The
+     dial goes to six, so the ramp has to.
+
+     The floor is 0.40 against a .cs-dim of 0.14: three times the luminance,
+     L* 27 against 14. That margin is the point. The far end of a traced chain
+     and an event outside it entirely are opposite answers, and a ramp running
+     down into the dim level would make the deepest hop indistinguishable from
+     a bystander exactly when the dial is turned up to look at it. */
+  .cs-mark.cs-hop-0 { opacity: 1; }
+  .cs-mark.cs-hop-1 { opacity: 0.87; }
+  .cs-mark.cs-hop-2 { opacity: 0.76; }
+  .cs-mark.cs-hop-3 { opacity: 0.66; }
+  .cs-mark.cs-hop-4 { opacity: 0.57; }
+  .cs-mark.cs-hop-5 { opacity: 0.48; }
+  .cs-mark.cs-hop-6 { opacity: 0.4; }
+  /* `stroke-opacity`, not `opacity`, so an edge keeps the direction tone set
+     by .cs-edge--down instead of having it overwritten by whichever rule the
+     cascade happened to see last. */
+  .cs-edge.cs-hop-1 { stroke-opacity: 0.87; }
+  .cs-edge.cs-hop-2 { stroke-opacity: 0.76; }
+  .cs-edge.cs-hop-3 { stroke-opacity: 0.66; }
+  .cs-edge.cs-hop-4 { stroke-opacity: 0.57; }
+  .cs-edge.cs-hop-5 { stroke-opacity: 0.48; }
+  .cs-edge.cs-hop-6 { stroke-opacity: 0.4; }
+  /* Correlation is a set with no depth, so it must not land anywhere on the
+     ramp above. Hollow is the signal; the tone only keeps it behind the chain
+     it is sharing a screen with. */
+  .cs-mark.cs-mark--corr {
+    fill: var(--cs-surface); stroke: var(--cs-mark); stroke-width: 1.2; opacity: 0.75;
+  }
+  .cs-cluster-count {
+    font-family: var(--cs-mono); font-size: 7.5px; font-weight: 700;
+    fill: var(--cs-surface); pointer-events: none;
+  }
   .cs-future { opacity: 0.25; }
+  /* The present, in a flowing window: a quiet dashed rule at the right edge
+     and nothing else. Green because that is what LIVE means on this page;
+     the alarm hue below belongs to REWIND's cursor, which is a control the
+     viewer drives rather than a fact about the record. */
+  .cs-now { stroke: var(--cs-good); stroke-width: 1.2; stroke-dasharray: 3 4; opacity: 0.75; }
+  .cs-now-label {
+    fill: var(--cs-good); font-family: var(--cs-mono); font-size: 8.5px;
+    letter-spacing: 0.14em; opacity: 0.9;
+  }
   .cs-cursor { stroke: var(--cs-alarm); stroke-width: 1.4; stroke-dasharray: 4 3; }
   .cs-cursor-handle { fill: var(--cs-alarm); stroke: var(--cs-surface); stroke-width: 1.2; }
-  .cs-slider {
-    position: relative; height: 22px; margin: 0.4rem 0 0.2rem; display: flex;
-    align-items: center; cursor: pointer; touch-action: none;
-  }
-  .cs-slider-track {
-    position: relative; flex: 1; margin: 0 2.61% 0 9.13%; height: 5px; border-radius: 3px;
-    background: var(--cs-panel-2); border: 1px solid var(--cs-line);
-  }
-  .cs-slider-fill {
-    position: absolute; inset: 0 auto 0 0; width: 0;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--cs-alarm) 55%, var(--cs-warn)), var(--cs-alarm));
-  }
-  .cs-slider-thumb {
-    position: absolute; top: 50%; left: 0; width: 16px; height: 16px; border-radius: 50%;
-    background: var(--cs-alarm); border: 2px solid var(--cs-surface);
-    transform: translate(-50%, -50%); transition: transform 0.1s ease; pointer-events: none;
-  }
-  .cs-slider:hover .cs-slider-thumb, .cs-slider:focus-visible .cs-slider-thumb { transform: translate(-50%, -50%) scale(1.18); }
   .cs-panels { display: grid; grid-template-columns: 1fr; gap: 0.7rem; margin-top: 0.6rem; }
   .cs-readout { background: var(--cs-panel); border: 1px solid var(--cs-line); border-radius: 10px; padding: 0.7rem 0.85rem; }
   .cs-readout-head { font-family: var(--cs-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--cs-mute); margin-bottom: 0.55rem; }
@@ -176,8 +407,25 @@
   .cs-tone--good { color: var(--cs-good); }
   .cs-tone--warn { color: var(--cs-warn); }
   .cs-omitted-note { font-size: 0.7rem; color: var(--cs-mute); margin-top: 0.5rem; }
+  /* Title left, rewind right, on one line. Rewind is a way IN to a second
+     view rather than a section of this one, so it belongs with the page's
+     own chrome and not at the bottom of a stack of tables. */
+  #page-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  #page-head h1 { margin: 0; }
+  #rewind-control { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+  .rewind-label {
+    font-family: var(--mono); font-size: 0.68rem;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  }
   #rewind-picker { background: var(--row-border); color: var(--fg); border: 1px solid var(--row-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.9rem; }
-  #rewind-back { margin-left: 0.5rem; }
+  /* The whole width of the control when it wraps, so the note sits under the
+     picker it is about rather than beside it. */
+  #rewind-control .empty { flex-basis: 100%; text-align: right; font-size: 0.75rem; margin: 0; }
+  #rewind-stage:empty { display: none; }
+  #rewind-stage { margin-bottom: 1.2rem; }
   #flowing-status { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.5rem 0; min-height: 1.1em; }
   /* Not `.cs-btn`: that class reads `--cs-*` custom properties scoped to
      `.cora-scrubber`, and this button sits outside it (scaffold()
@@ -196,77 +444,36 @@
 </style>
 </head>
 <body>
-  <h1>CORA / 2-BM: live status</h1>
+  <div id="page-head">
+    <h1>CORA / 2-BM: live status</h1>
+    <div id="rewind-control">
+      <label class="rewind-label" for="rewind-picker">Rewind</label>
+      <select id="rewind-picker">
+        <option value="">Pick a run...</option>
+      </select>
+      <button type="button" id="rewind-back" class="cs-btn" style="display: none;">Back to live</button>
+      <div id="rewind-empty" class="empty">
+        no runs pushed since the relay started
+      </div>
+    </div>
+  </div>
   <div id="banner">connecting</div>
+
+  <!-- Directly under the control that opens it. Rewind used to be the last
+       thing on the page, so picking a run from anywhere above it changed
+       something off screen. -->
+  <div id="rewind-stage"></div>
 
   <div id="content">
     <h2>Live activity</h2>
-    <div id="flowing-status"></div>
-    <button type="button" id="flowing-resume">Resume following</button>
+    <div id="flowing-controls">
+      <span class="flowing-controls__label">Window</span>
+      <div class="seg" id="flowing-window" role="group" aria-label="Visible time window"></div>
+      <span id="flowing-status"></span>
+      <button type="button" id="flowing-resume">Resume following</button>
+    </div>
     <div id="flowing-stage"></div>
 
-    <h2>Runs</h2>
-    <table id="runs-table">
-      <thead><tr><th>Run</th><th>Status</th><th>Progress</th></tr></thead>
-      <tbody id="runs-body"></tbody>
-    </table>
-    <div id="runs-empty" class="empty" style="display: none;">no open runs</div>
-
-    <h2>Subjects</h2>
-    <table id="subjects-table">
-      <thead><tr><th>Subject</th><th>Status</th></tr></thead>
-      <tbody id="subjects-body"></tbody>
-    </table>
-    <div id="subjects-empty" class="empty" style="display: none;">no open subjects</div>
-
-    <h2>Campaigns</h2>
-    <table id="campaigns-table">
-      <thead><tr><th>Campaign</th><th>Intent</th><th>Status</th><th>Runs</th></tr></thead>
-      <tbody id="campaigns-body"></tbody>
-    </table>
-    <div id="campaigns-empty" class="empty" style="display: none;">no open campaigns</div>
-
-    <h2>Datasets from runs on screen</h2>
-    <table id="datasets-table">
-      <thead><tr><th>Dataset</th><th>Status</th><th>Run</th></tr></thead>
-      <tbody id="datasets-body"></tbody>
-    </table>
-    <div id="datasets-empty" class="empty" style="display: none;">no datasets from an open run yet</div>
-
-    <h2>Active clearances</h2>
-    <table id="clearances-table">
-      <thead><tr><th>Template</th><th>Risk</th><th>Valid until</th></tr></thead>
-      <tbody id="clearances-body"></tbody>
-    </table>
-    <div id="clearances-empty" class="empty" style="display: none;">no active clearances</div>
-
-    <h2>Enclosures</h2>
-    <table id="enclosures-table">
-      <thead><tr><th>Enclosure</th><th>Permit status</th></tr></thead>
-      <tbody id="enclosures-body"></tbody>
-    </table>
-    <div id="enclosures-empty" class="empty" style="display: none;">no active enclosures</div>
-
-    <h2>Recent decisions</h2>
-    <table id="decisions-table">
-      <thead><tr><th>Choice</th><th>Confidence</th><th>Decided by</th><th>When</th></tr></thead>
-      <tbody id="decisions-body"></tbody>
-    </table>
-    <div id="decisions-empty" class="empty" style="display: none;">
-      no decisions since this page's producer started
-    </div>
-
-    <h2>Rewind</h2>
-    <div>
-      <select id="rewind-picker">
-        <option value="">Pick a run to rewind...</option>
-      </select>
-      <button type="button" id="rewind-back" class="cs-btn" style="display: none;">Back to live</button>
-    </div>
-    <div id="rewind-empty" class="empty">
-      no runs pushed since the relay started -- rewind only reaches runs seen while this relay has been up
-    </div>
-    <div id="rewind-stage"></div>
   </div>
 
 <script src="/scrubber.js"></script>
@@ -302,150 +509,6 @@
 
   function shortId(id) {
     return id ? String(id).slice(0, 8) : "";
-  }
-
-  function textCell(text) {
-    var cell = document.createElement("td");
-    cell.textContent = text === null || text === undefined ? "" : String(text);
-    return cell;
-  }
-
-  function renderProgressCell(progress) {
-    var cell = document.createElement("td");
-    var roles = progress ? Object.keys(progress) : [];
-    if (roles.length === 0) {
-      cell.className = "no-progress";
-      cell.textContent = "no progress reported";
-      return cell;
-    }
-    roles.sort().forEach(function (role) {
-      var reading = progress[role];
-      var line = document.createElement("div");
-      line.className = "progress-role";
-
-      var label = document.createElement("span");
-      label.className = "role-label";
-      label.textContent = role;
-      line.appendChild(label);
-
-      if (reading.commanded_total) {
-        var track = document.createElement("div");
-        track.className = "progress-bar-track";
-        var fill = document.createElement("div");
-        fill.className = "progress-bar-fill";
-        var pct = Math.max(0, Math.min(100, (reading.value / reading.commanded_total) * 100));
-        fill.style.width = pct + "%";
-        track.appendChild(fill);
-        line.appendChild(track);
-      }
-
-      var count = document.createElement("span");
-      count.className = "progress-count";
-      count.textContent = reading.commanded_total
-        ? reading.value + " / " + reading.commanded_total
-        : String(reading.value);
-      line.appendChild(count);
-
-      cell.appendChild(line);
-    });
-    return cell;
-  }
-
-  // Generic section renderer for every domain except Runs, which alone
-  // needs the progress-bar cell above.
-  function renderSection(name, items, rowBuilder) {
-    var tableEl = document.getElementById(name + "-table");
-    var bodyEl = document.getElementById(name + "-body");
-    var emptyEl = document.getElementById(name + "-empty");
-    bodyEl.innerHTML = "";
-    if (!items || items.length === 0) {
-      tableEl.style.display = "none";
-      emptyEl.style.display = "block";
-      return;
-    }
-    tableEl.style.display = "table";
-    emptyEl.style.display = "none";
-    items.forEach(function (item) {
-      bodyEl.appendChild(rowBuilder(item));
-    });
-  }
-
-  function renderRuns(runs) {
-    renderSection("runs", runs, function (run) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(run.name));
-      row.appendChild(textCell(run.status));
-      row.appendChild(renderProgressCell(run.progress));
-      return row;
-    });
-  }
-
-  function renderSubjects(subjects) {
-    renderSection("subjects", subjects, function (s) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(s.name));
-      row.appendChild(textCell(s.status));
-      return row;
-    });
-  }
-
-  function renderCampaigns(campaigns) {
-    renderSection("campaigns", campaigns, function (c) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(c.name));
-      row.appendChild(textCell(c.intent));
-      row.appendChild(textCell(c.status));
-      row.appendChild(textCell(c.run_count));
-      return row;
-    });
-  }
-
-  function renderDatasets(datasets) {
-    renderSection("datasets", datasets, function (d) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(d.name));
-      row.appendChild(textCell(d.status));
-      var runCell = textCell(shortId(d.producing_run_id));
-      runCell.className = "mono";
-      row.appendChild(runCell);
-      return row;
-    });
-  }
-
-  function renderClearances(clearances) {
-    renderSection("clearances", clearances, function (c) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(c.template_code));
-      row.appendChild(textCell(c.risk_band));
-      row.appendChild(textCell(c.valid_until ? c.valid_until : "no expiry set"));
-      return row;
-    });
-  }
-
-  function renderEnclosures(enclosures) {
-    renderSection("enclosures", enclosures, function (e) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(e.name));
-      row.appendChild(textCell(e.permit_status));
-      row.className = "clickable-row";
-      row.addEventListener("click", function () {
-        showEnclosureTimeline(e.enclosure_id);
-      });
-      return row;
-    });
-  }
-
-  function renderDecisions(decisions) {
-    renderSection("decisions", decisions, function (d) {
-      var row = document.createElement("tr");
-      row.appendChild(textCell(d.choice));
-      row.appendChild(textCell(d.confidence_band ? d.confidence_band : "n/a"));
-      var byCell = textCell(shortId(d.decided_by));
-      byCell.className = "mono";
-      row.appendChild(byCell);
-      row.appendChild(textCell(d.created_at ? new Date(d.created_at).toLocaleTimeString() : ""));
-      return row;
-    });
   }
 
   function renderBanner() {
@@ -484,8 +547,15 @@
   // update) and there is no single subject with a "current status" -- a
   // busy hour touches many Runs, many Decisions -- so every lane here is
   // read the same generic "last event" way, none of them primary.
-  var FLOWING_WINDOW_MS = 15 * 60 * 1000;
-  var FLOWING_RESLIDE_MS = 60 * 1000;
+  // How much record the page RETAINS, which since panning exists is no longer
+  // the same question as how much it shows. The relay backfills this much on
+  // connect (`_ACTIVITY_BUFFER_SECONDS`), so a viewer can drag back through a
+  // whole shift rather than through the last quarter hour. What is on screen
+  // at once is `flowing.viewSpanSecs`, chosen from the window picker.
+  var FLOWING_WINDOW_MS = 24 * 60 * 60 * 1000;
+  // Sub-pixel per step at a 15-minute window (0.45 of a user unit), so the
+  // right edge creeps rather than ticking, at half the rebuild cost of 250ms.
+  var FLOWING_RESLIDE_MS = 500;
 
   // Many-to-one by design, not one lane per stream_type: the measured
   // 2-BM record has 25 distinct stream types, but `Run` and `Decision`
@@ -500,38 +570,169 @@
   // catch-all below with Actor, Agent, Calibration, Allocation, and the
   // rest of the 42-type event vocabulary. Lane count is still fixed
   // either way, so the layout never reflows.
+  // Every one of the record's 42 aggregate types is filed here, not just the
+  // twelve the tables happen to show. An unmapped type used to fall into
+  // "Other", and "Other" sits under the last zone heading, so a Mount or an
+  // Allocation was being drawn as a JUDGEMENT -- the same category error the
+  // zones exist to prevent. Mapping one costs nothing at rest: a domain with
+  // no events in the buffer emits no lane, so the quiet ones are invisible
+  // until the day they are not.
   var STREAM_TYPE_TO_DOMAIN = {
     Run: "runs",
     Procedure: "procedures",
-    Subject: "subjects",
     Campaign: "campaigns",
+    Plan: "recipes",
+    Recipe: "recipes",
+    Method: "recipes",
+    Practice: "recipes",
+    Capability: "recipes",
+
+    Subject: "subjects",
+    Asset: "equipment",
+    Assembly: "equipment",
+    Mount: "equipment",
+    Frame: "equipment",
+    Fixture: "equipment",
+    Family: "equipment",
+    Model: "equipment",
+    Role: "equipment",
+    Supply: "supplies",
+    Actor: "actors",
+    Agent: "actors",
+    LanguageModel: "actors",
+    Credential: "actors",
+
+    Enclosure: "enclosures",
+    Clearance: "clearances",
+    ClearanceTemplate: "clearances",
+    Visit: "visits",
+    Allocation: "allocations",
+    Policy: "authority",
+    Ratification: "authority",
+    Surface: "authority",
+    Zone: "authority",
+    Conduit: "authority",
+    Permit: "authority",
+    Seal: "authority",
+    Facility: "authority",
+
     Dataset: "datasets",
     Distribution: "datasets",
     Acquisition: "datasets",
-    Clearance: "clearances",
-    ClearanceTemplate: "clearances",
+    Edition: "datasets",
     Caution: "cautions",
-    Enclosure: "enclosures",
     Decision: "decisions",
+    Attestation: "attestations",
+    Calibration: "calibrations",
   };
   var DOMAIN_ORDER = [
-    "runs", "procedures", "subjects", "campaigns", "datasets", "clearances", "cautions",
-    "enclosures", "decisions", "other",
+    "runs", "procedures", "campaigns", "recipes",
+    "subjects", "equipment", "supplies", "actors",
+    "enclosures", "clearances", "visits", "allocations", "authority",
+    "datasets", "decisions", "cautions", "attestations", "calibrations",
+    "other",
   ];
+  // Short enough to sit in a gutter that also has to hold an indent and an
+  // instance name. These are set in the same small mono caps as a track's
+  // KIND column, so they are read as a column and not as prose.
   var DOMAIN_LABEL = {
     runs: "Runs",
-    procedures: "Procedures",
+    procedures: "Procs",
+    campaigns: "Camps",
+    recipes: "Recipes",
     subjects: "Subjects",
-    campaigns: "Campaigns",
-    datasets: "Datasets",
-    clearances: "Clearances",
-    cautions: "Cautions",
+    equipment: "Equipment",
+    supplies: "Supplies",
+    actors: "Actors",
     enclosures: "Enclosures",
+    clearances: "Clearances",
+    visits: "Visits",
+    allocations: "Budget",
+    authority: "Authority",
+    datasets: "Datasets",
     decisions: "Decisions",
-    other: "Other",
+    cautions: "Cautions",
+    attestations: "Attests",
+    calibrations: "Calibs",
+    other: "Unfiled",
+  };
+  // The aggregate's own name, which is what an event type is prefixed with.
+  // Separate from the label because a label is written to fit the gutter:
+  // "Calibs" leaves the stem "Calib", and stripping that off
+  // "CalibrationRecorded" leaves the word fragment "rationRecorded". Only the
+  // domains whose label is not already the noun need an entry.
+  var DOMAIN_NOUN = {
+    procedures: "Procedure",
+    campaigns: "Campaign",
+    attestations: "Attestation",
+    calibrations: "Calibration",
+    allocations: "Allocation",
   };
 
-  var flowing = { buffer: [], following: true, pausedAtMs: 0 };
+  // Severity rank per event type: 1 notable, 2 critical, absent means routine.
+  // It lives here and not in scrubber.js because which events matter is domain
+  // vocabulary, and that module is deliberately subject-neutral. An event type
+  // missing from this table renders as routine, which is the safe default for
+  // a vocabulary that grows: a new event is quiet, never falsely loud.
+  //
+  // Tier 2 is reserved for "an operator would want to know within seconds".
+  // Keep it small. Everything promoted here competes for the same label slots
+  // as a real alarm, so a generous tier 2 is the same as no tier 2 at all.
+  var EVENT_TIER = {
+    RunAborted: 2,
+    ProcedureAborted: 2,
+    CautionRegistered: 2,
+    ClearanceExpired: 2,
+    ClearanceRejected: 2,
+    DatasetDiscarded: 2,
+    EnclosureDecommissioned: 2,
+    RunHeld: 1,
+    RunStopped: 1,
+    RunTruncated: 1,
+    RunResumed: 1,
+    ProcedureTruncated: 1,
+    ProcedureResumed: 1,
+    CampaignHeld: 1,
+    CampaignAbandoned: 1,
+    ClearanceSuperseded: 1,
+    SubjectDiscarded: 1,
+    DatasetDemoted: 1,
+    DistributionDiscarded: 1,
+    CautionRetired: 1,
+    CautionDraftConflicted: 1,
+    DecisionDebriefRequested: 1,
+  };
+
+  // How much of the buffer is on screen at once, and therefore also how far a
+  // drag travels per pixel: a narrow window pans slowly and precisely, a wide
+  // one covers ground. Nothing here selects the whole 24 hours, because 812
+  // plot units over a day is about 106 seconds each and every burst would
+  // collapse into one pill; a day is something to drag THROUGH, not to look
+  // at. 15m stays the default, which is what the page showed before it could
+  // pan at all.
+  var FLOWING_WINDOWS = [
+    ["2m", 120],
+    ["5m", 300],
+    ["15m", 900],
+    ["1h", 3600],
+    ["6h", 6 * 3600],
+  ];
+
+  var flowing = {
+    buffer: [],
+    following: true,
+    pausedAtMs: 0,
+    viewSpanSecs: 900,
+    // Set from the relay's replay when its own cap dropped events. The left
+    // edge then does not mean "nothing happened before this", and the page
+    // has to say which of the two it is.
+    replayTruncated: false,
+    // Latest snapshot rows, or empty until the first one lands. Empty is a
+    // real state and not an error: the chart then has no instance tracks and
+    // falls back to one flat lane per domain, which is what it drew before
+    // any of this existed.
+    snapshot: null,
+  };
   var flowingStageEl = document.getElementById("flowing-stage");
   var flowingResumeEl = document.getElementById("flowing-resume");
   var flowingStatusEl = document.getElementById("flowing-status");
@@ -543,20 +744,707 @@
     });
   }
 
-  function activityToTimelineDocument(buffer, domainFromIso, domainToIso) {
-    var lanesByDomain = {};
-    DOMAIN_ORDER.forEach(function (key) {
-      lanesByDomain[key] = {
-        lane_id: "domain:" + key,
-        label: DOMAIN_LABEL[key],
-        render: "markers",
-        points: [],
+  // ---- Four zones, grouped by the SHAPE of the relation each carries ----
+  //
+  // Not by name and not by how the record is filed, because the shape is what
+  // decides the mark:
+  //
+  //   EXECUTION    campaign > run > procedure   containment tree -> nest it,
+  //                                             thickness carries depth
+  //   PARTICIPANTS subjects, equipment,         own lifetime, many-to-many
+  //                supplies, actors             with runs -> their own bars
+  //   GOVERNANCE   enclosure permits,           a CONDITION over a range ->
+  //                clearances, visits,          a ribbon. As dots you learn
+  //                allocations                  it was sampled; as a ribbon
+  //                                             you learn whether it held
+  //   JUDGEMENT    datasets, decisions,         point conclusions, no
+  //                cautions, attestations       lifetime -> flat lanes
+  //
+  // A row per instance costs vertical space, so the tree is capped and the
+  // subtitle reports what the cap dropped.
+  var MAX_TRACK_ROWS = 26;
+  // One word each. A caption used to carry its own rule ("a condition over a
+  // range"), which is worth reading once and is then four lines of standing
+  // text competing with the rows underneath it. The rule is written above, in
+  // the place that decides it.
+  var ZONES = {
+    execution: "Execution",
+    participants: "Participants",
+    governance: "Governance",
+    judgement: "Judgement",
+  };
+  // Each zone is a PRECONDITION for the next, and the page is read downward.
+  // Cover and a permit have to hold before a sample can be mounted; a sample
+  // has to be mounted before a run can measure it; a run has to have run
+  // before there is anything to conclude. Reading down the chart is reading
+  // the order in which things have to become true.
+  //
+  // It also puts the two short, slow-changing blocks at the top and the tall
+  // one in the middle: the permit ribbon used to sit below a tree that can
+  // reach twenty-six rows, so the one thing an operator glances at was the
+  // one thing they had to scroll for. And because the row cap is spent in
+  // this order, a busy tree can no longer crowd the ribbon off the chart.
+  var ZONE_ORDER = ["governance", "participants", "execution", "judgement"];
+  // What the gutter cannot say in one word. A zone caption is one word, a
+  // KIND is a four-letter abbreviation, and a flat lane's label says nothing
+  // about which of the record's forty-two stream types land on it. All three
+  // are hoverable, and this is what they say.
+  var ZONE_ABOUT = {
+    governance: {
+      note:
+        "A condition over a range, so it is drawn as a ribbon rather than as dots. " +
+        "From dots you would learn that something was sampled, never whether it held.",
+      reads: "must hold before anything runs",
+    },
+    participants: {
+      note:
+        "Things with a lifetime of their own that a run involves. Many-to-many: " +
+        "one sample can be measured by several runs, and one run can involve several.",
+      reads: "must exist before a run can measure it",
+    },
+    execution: {
+      note:
+        "A containment tree. A campaign holds runs, a run holds procedures, and bar " +
+        "thickness carries the depth so the nesting reads without a second colour.",
+      reads: "what is happening",
+    },
+    judgement: {
+      note:
+        "Point conclusions with no lifetime of their own, so these are flat lanes of " +
+        "marks rather than bars.",
+      reads: "what came out",
+    },
+  };
+  // The abbreviation in the KIND column, spelled out.
+  var KIND_NAME = {
+    CAMP: "Campaign",
+    RUN: "Run",
+    PROC: "Procedure",
+    SUBJ: "Subject",
+    ENCL: "Enclosure permit",
+    CLR: "Clearance",
+  };
+  // Which stream types land on each flat lane, inverted from the table that
+  // files them. Read off that table rather than written out again, so the two
+  // can never drift: the lane card answers "what counts as Equipment" with
+  // the list the page actually routes by.
+  var DOMAIN_TYPES = {};
+  Object.keys(STREAM_TYPE_TO_DOMAIN).forEach(function (t) {
+    var d = STREAM_TYPE_TO_DOMAIN[t];
+    (DOMAIN_TYPES[d] = DOMAIN_TYPES[d] || []).push(t);
+  });
+
+  // One line per channel: "812 / 1500, 54%". The table this replaces drew a
+  // bar, which a chart made mostly of bars cannot afford a second meaning
+  // for: every other bar here is a span of TIME, and one that was a fraction
+  // of work instead would be read as the first.
+  function progressLines(progress) {
+    var roles = progress ? Object.keys(progress) : [];
+    return roles.sort().map(function (role) {
+      var r = progress[role];
+      if (!r.commanded_total) return [role, String(r.value)];
+      var pct = Math.round((r.value / r.commanded_total) * 100);
+      return [role, r.value + " / " + r.commanded_total + ", " + pct + "%"];
+    });
+  }
+
+  // Named, not counted. "685 events" says a lane is busy; "tomo-4471-a,
+  // Registered, from R-4471" is the row the dropped table carried.
+  // Guarded against a null snapshot, not just a missing list: the page paints
+  // once before the first one lands, which is the whole reason `buildRows`
+  // reads every list through an accessor rather than off the object.
+  function datasetLines(snap) {
+    return ((snap && snap.datasets) || []).map(function (d) {
+      return [d.name, d.status];
+    });
+  }
+  function decisionLines(snap) {
+    return ((snap && snap.decisions) || []).map(function (d) {
+      return [
+        d.choice,
+        (d.confidence_band || "no band") +
+          (d.created_at ? ", " + clockOf(d.created_at) : ""),
+      ];
+    });
+  }
+
+  function clockOf(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d)) return null;
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+  // Which zone each domain's flat lane belongs to. A leftover event -- one
+  // whose instance is not on screen -- lands in its OWN zone rather than at
+  // the bottom of the page: a stray Run event is execution, not a judgement,
+  // and filing it under the last heading would make the zones lie about what
+  // they group.
+  //
+  // `other` deliberately has NO zone. It is the catch-all for a stream type
+  // this page has never heard of, and there is no honest zone for that:
+  // filing an unknown under the last heading is how a Mount came to be drawn
+  // as a judgement. It renders after every zone, under no caption.
+  var DOMAIN_ZONE = {
+    runs: "execution",
+    procedures: "execution",
+    campaigns: "execution",
+    recipes: "execution",
+    subjects: "participants",
+    equipment: "participants",
+    supplies: "participants",
+    actors: "participants",
+    enclosures: "governance",
+    clearances: "governance",
+    visits: "governance",
+    allocations: "governance",
+    authority: "governance",
+    datasets: "judgement",
+    decisions: "judgement",
+    cautions: "judgement",
+    attestations: "judgement",
+    calibrations: "judgement",
+    other: null,
+  };
+  // A lane whatever happens, so its zone is never a bare caption and so an
+  // empty one reads as "nothing happened here" rather than as a row nobody
+  // drew. Every other domain appears only when it holds something.
+  var ALWAYS_ON = ["datasets", "decisions", "cautions", "other"];
+  // Domains that get instance TRACKS above their flat lane. Only for these
+  // can a flat lane mean "the ones with no row of their own"; for the rest it
+  // is the domain's only home, and calling it elsewhere would be a lie.
+  var TRACKED_DOMAINS = ["runs", "procedures", "campaigns", "subjects", "enclosures", "clearances"];
+  // `Unknown` is its own state, never blended into a neighbour: not-observed
+  // is not the same as fine, and smoothing over it would assert a safety
+  // condition nobody measured.
+  var PERMIT_TONE = { Permitted: "good", NotPermitted: "bad", Unknown: "unknown" };
+
+  // `shortId` returns "" for a missing id, which is right for a table cell
+  // and wrong for a row heading: a blank row says nothing.
+  function instanceLabel(name, id) {
+    return name || shortId(id) || "unnamed";
+  }
+
+  function eventPoint(e, kin) {
+    return {
+      kin: (kin && kin[e.stream_id]) || null,
+      t: e.occurred_at,
+      label: e.event_type,
+      tier: EVENT_TIER[e.event_type] || 0,
+      // Relationship fields ride through untouched. A producer older than
+      // this page simply omits them and every one reads undefined, which is
+      // the same state as an event that genuinely has no cause: the chart
+      // then behaves exactly as it did before they existed.
+      id: e.event_id,
+      corr: e.correlation_id,
+      cause: e.causation_id,
+      cause_at: e.cause_occurred_at,
+    };
+  }
+
+  // Each observation opens a segment running to the next, and the last runs
+  // open to now: a permit is a standing claim, not a reading that expires the
+  // moment it was taken.
+  function permitSegments(doc) {
+    if (!doc || !doc.lanes) return null;
+    var lane = null;
+    doc.lanes.forEach(function (l) {
+      if (l.lane_id === "permit") lane = l;
+    });
+    if (!lane || !lane.points.length) return null;
+    return lane.points.map(function (p, i) {
+      var next = lane.points[i + 1];
+      return {
+        from: p.t,
+        to: next ? next.t : null,
+        tone: PERMIT_TONE[p.state] || "unknown",
+        h: 9,
       };
     });
-    buffer.forEach(function (e) {
-      var domain = STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other";
-      lanesByDomain[domain].points.push({ t: e.occurred_at, label: e.event_type });
+  }
+
+  // Every activity event lands somewhere: on its instance's track when that
+  // instance is on screen, otherwise in its domain's flat lane. Nothing is
+  // dropped for want of a home -- an event vanishing because its Run had
+  // already finished would make a busy window look quiet.
+  // ---- What the record BINDS to what ----------------------------------
+  //
+  // A second channel beside the causal chain, and a strictly separate one:
+  // causation comes off an event, kinship comes off the projection, and
+  // merging them into one visual would leave no way to tell "this caused
+  // that" from "the record says these belong together".
+  //
+  // Only relations the read models actually carry are drawn. Three that a
+  // viewer would reasonably expect are NOT here, because the record does not
+  // hold them, and inferring one from co-occurrence in time would be the
+  // chart asserting a fact CORA never recorded:
+  //
+  //   permit <-> run       EnclosureSummaryItem has no run and a run has no
+  //                        enclosure. They share a clock, nothing more.
+  //   decision <-> run     DecisionSummaryItem carries `decided_by` and
+  //                        `parent_id`. Neither is a run or a subject.
+  //   caution <-> anything Cautions are not in the snapshot at all; the page
+  //                        sees them only as events on a flat lane.
+  //
+  // Containment is absent too, deliberately. Campaign holds run holds
+  // procedure is already drawn, by nesting and by bar thickness, so a tick
+  // repeating it would spend the channel on the one thing the layout already
+  // answers.
+  // Keyed by STREAM id, not by lane. A run has a row of its own and a
+  // dataset does not, so kinship has to be able to hang off one event sitting
+  // on a lane it shares with hundreds of others. The two directions are
+  // recorded independently, because a relation can be drawable one way and
+  // not the other: a dataset event can tick the run that wrote it, and the
+  // run cannot tick back at a row that does not exist.
+  function buildKin(snap, laneIdFor) {
+    var kin = {};
+    function point(fromId, toId, why) {
+      var lane = laneIdFor(toId);
+      if (!fromId || !lane) return;
+      if (laneIdFor(fromId) === lane) return;
+      (kin[fromId] = kin[fromId] || {})[lane] = why;
+    }
+    // Each side says its own half. The card prints the phrase belonging to
+    // whatever is pinned, so a run reads "measuring SMP-115" and the sample
+    // reads "measured by R-4471" -- one relation, stated from wherever the
+    // reader happens to be standing.
+    function bind(aId, bId, aSays, bSays) {
+      point(aId, bId, aSays);
+      point(bId, aId, bSays);
+    }
+    var rows = function (key) {
+      return (snap && snap[key]) || [];
+    };
+    rows("runs").forEach(function (r) {
+      bind(r.run_id, r.subject_id, "measuring", "measured by");
     });
+    rows("datasets").forEach(function (d) {
+      bind(d.dataset_id, d.producing_run_id, "written by", "wrote");
+      bind(d.dataset_id, d.subject_id, "written from", "source of");
+    });
+    // Cover either reaches a row or it does not. This is the question anyone
+    // looking at a clearance on a live page is actually asking, and until the
+    // bindings rode the wire the ribbon could not answer it.
+    rows("clearances").forEach(function (cl) {
+      ["run_binding_ids", "procedure_binding_ids", "subject_binding_ids"].forEach(function (k) {
+        (cl[k] || []).forEach(function (id) {
+          bind(cl.clearance_id, id, "covers", "covered by");
+        });
+      });
+    });
+    return kin;
+  }
+
+  function buildRows(buffer, snap, nowIso) {
+    // Every list is read through `rows`, never off `snap` directly. The page
+    // renders once before the first snapshot lands, so `flowing.snapshot`
+    // starts as a stub, and each list this function learns to use has to be
+    // added to that stub too or the first paint throws. Reading them here
+    // instead means the stub can never fall behind: the day a new list is
+    // added, an old producer that does not send it and the pre-snapshot paint
+    // both take the same empty path.
+    var rows = function (key) {
+      return (snap && snap[key]) || [];
+    };
+    var lanes = [];
+    var byStream = {};
+    var pendingFlat = {};
+    buffer.forEach(function (e) {
+      (byStream[e.stream_id] = byStream[e.stream_id] || []).push(e);
+    });
+    var claimed = {};
+    var trackCount = 0;
+    var dropped = 0;
+
+    // Which streams get a row of their own. Built before anything is drawn,
+    // because kinship names the lane it points AT and a relation to a row
+    // that will not exist cannot be drawn either way.
+    var hasRow = {};
+    ["runs", "procedures", "campaigns", "subjects", "clearances"].forEach(function (key) {
+      var idKey = { runs: "run_id", procedures: "procedure_id", campaigns: "campaign_id",
+                    subjects: "subject_id", clearances: "clearance_id" }[key];
+      rows(key).forEach(function (r) { hasRow[r[idKey]] = true; });
+    });
+    var kin = buildKin(snap, function (id) {
+      return id && hasRow[id] ? "track:" + id : null;
+    });
+
+    function pointsFor(streamId) {
+      claimed[streamId] = true;
+      return (byStream[streamId] || []).map(function (e) { return eventPoint(e, kin); });
+    }
+    function track(kind, label, depth, from, to, streamId, extra) {
+      if (trackCount >= MAX_TRACK_ROWS) {
+        dropped += 1;
+        return;
+      }
+      trackCount += 1;
+      var row = {
+        lane_id: "track:" + streamId,
+        label: label,
+        render: "track",
+        kin: kin[streamId] || null,
+        kind: kind,
+        depth: depth,
+        from: from,
+        to: to || null,
+        points: pointsFor(streamId),
+      };
+      if (extra) {
+        for (var k in extra) row[k] = extra[k];
+      }
+      // Assembled here rather than at each call site so every track row gets
+      // the same three facts in the same order, and a caller only has to
+      // supply what is particular to its own kind.
+      row.about = {
+        head: label,
+        note: (extra && extra.note) || null,
+        rows: [["kind", KIND_NAME[kind] || kind]]
+          .concat((extra && extra.facts) || [])
+          .concat([
+            ["begins", clockOf(from) || "before this window"],
+            ["ends", clockOf(to) || "open, still running"],
+            ["events on this row", String(row.points.length)],
+          ]),
+      };
+      delete row.facts;
+      delete row.note;
+      lanes.push(row);
+    }
+    function zone(key) {
+      var a = ZONE_ABOUT[key];
+      var mine = DOMAIN_ORDER.filter(function (k) { return DOMAIN_ZONE[k] === key; });
+      lanes.push({
+        lane_id: "zone:" + key,
+        label: ZONES[key],
+        render: "zone",
+        points: [],
+        about: {
+          head: ZONES[key],
+          note: a.note,
+          rows: [
+            ["reads as", a.reads],
+            // Why THIS zone is at this height, which is the question a
+            // reordered page invites and the one a caption cannot answer.
+            [
+              "position",
+              ZONE_ORDER.indexOf(key) + 1 + " of " + ZONE_ORDER.length +
+                ", each a precondition for the next",
+            ],
+            ["groups", mine.map(function (k) { return DOMAIN_LABEL[k]; }).join(", ")],
+          ],
+        },
+      });
+    }
+    // Called at the END of each zone, once its tracks have claimed what they
+    // can, so a leftover sits under the heading it actually belongs to.
+    function flatFor(zoneKey) {
+      DOMAIN_ORDER.forEach(function (key) {
+        if (DOMAIN_ZONE[key] !== zoneKey) return;
+        var points = pendingFlat[key] || [];
+        if (ALWAYS_ON.indexOf(key) === -1 && !points.length) return;
+        var tracked = TRACKED_DOMAINS.indexOf(key) !== -1;
+        lanes.push({
+          lane_id: "domain:" + key,
+          label: tracked ? DOMAIN_LABEL[key] + " \u00b7 elsewhere" : DOMAIN_LABEL[key],
+          noun: DOMAIN_NOUN[key] || DOMAIN_LABEL[key],
+          render: "markers",
+          points: points,
+          hint: tracked
+            ? DOMAIN_LABEL[key] +
+              " with no row of their own above: the instance ended before this " +
+              "window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap."
+            : key === "other"
+              ? "Stream types this page has no domain for. Not a zone, because " +
+                "there is no honest zone for an unknown."
+              : null,
+          about: {
+            head: DOMAIN_LABEL[key],
+            // The instances behind the marks, where the snapshot names them
+            // and the set is bounded. Datasets are capped by the open-run
+            // count and decisions by the producer's own ring, so neither can
+            // run away; no other domain ships instances at all, and inventing
+            // a list for one that does not would be worse than the marks
+            // alone.
+            list:
+              key === "datasets"
+                ? datasetLines(snap)
+                : key === "decisions"
+                  ? decisionLines(snap)
+                  : null,
+            note: tracked
+              ? "Events whose instance has no row of its own above: it ended before " +
+                "this window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap. " +
+                "Nothing is dropped for want of a home."
+              : key === "other"
+                ? "The catch-all for a stream type this page has no domain for. It sits " +
+                  "under no zone heading, because there is no honest zone for an unknown."
+                : "These have no lifetime of their own on this chart, so every event in " +
+                  "the domain lands on one lane rather than on a row per instance.",
+            rows: [
+              [
+                "records",
+                (DOMAIN_TYPES[key] || []).join(", ") || "anything this page cannot file",
+              ],
+              ["events on this lane", String(points.length)],
+              [
+                "zone",
+                DOMAIN_ZONE[key] ? ZONES[DOMAIN_ZONE[key]] : "none, by design",
+              ],
+            ],
+          },
+        });
+      });
+    }
+
+    // Every track claims its own stream first. Only then is it known which
+    // events have no home, and a flat lane emitted before that pass would
+    // claim events a later track was about to take.
+    function claimAll() {
+      rows("runs").forEach(function (r) { claimed[r.run_id] = true; });
+      rows("procedures").forEach(function (pr) { claimed[pr.procedure_id] = true; });
+      rows("campaigns").forEach(function (c) { claimed[c.campaign_id] = true; });
+      rows("subjects").forEach(function (sj) { claimed[sj.subject_id] = true; });
+      Object.keys(enclosureTimelines).forEach(function (id) { claimed[id] = true; });
+      rows("clearances").forEach(function (cl) { claimed[cl.clearance_id] = true; });
+      DOMAIN_ORDER.forEach(function (key) { pendingFlat[key] = []; });
+      buffer.forEach(function (e) {
+        if (claimed[e.stream_id]) return;
+        pendingFlat[STREAM_TYPE_TO_DOMAIN[e.stream_type] || "other"].push(eventPoint(e, kin));
+      });
+    }
+    claimAll();
+
+    function execution() {
+    var procsOfRun = {};
+    rows("procedures").forEach(function (pr) {
+      (procsOfRun[pr.parent_run_id] = procsOfRun[pr.parent_run_id] || []).push(pr);
+    });
+    var runsOfCampaign = {};
+    var loose = [];
+    rows("runs").forEach(function (r) {
+      if (r.campaign_id) (runsOfCampaign[r.campaign_id] = runsOfCampaign[r.campaign_id] || []).push(r);
+      else loose.push(r);
+    });
+    function emitRun(r, depth) {
+      track("RUN", instanceLabel(r.name, r.run_id), depth, r.started_at, null, r.run_id, {
+        note:
+          "One measurement, from the moment it started to now. The marks on the bar are " +
+          "its own events; the rows indented under it are its phases.",
+        facts: [["status", r.status]]
+          // A Plan is a TEMPLATE. It has no lifetime during a shift, so it
+          // never earns a row of its own, and a row per template would be a
+          // page of empty bars. What is worth knowing is the other direction:
+          // which template THIS run is an instance of. Absent reads as
+          // unknown, never as a run with no plan, because every run has one.
+          .concat(r.plan_name ? [["executing", r.plan_name]] : [])
+          .concat(progressLines(r.progress)),
+      });
+      (procsOfRun[r.run_id] || []).forEach(function (pr) {
+        // A Procedure that has reached a terminal status stops where it
+        // stopped. `last_status_changed_at` is when that happened; without it
+        // the bar would run to now and claim the phase is still going.
+        var open = pr.status === "Running" || pr.status === "Held" || pr.status === "Defined";
+        track(
+          "PROC",
+          instanceLabel(pr.name || pr.kind, pr.procedure_id),
+          depth + 1,
+          pr.registered_at,
+          open ? null : pr.last_status_changed_at,
+          pr.procedure_id,
+          {
+            note:
+              "A phase of the run above it. A procedure that has stopped stops where it " +
+              "stopped, so a bar ending mid-chart is a phase that finished, not one cut off.",
+            facts: [
+              ["kind of phase", pr.kind],
+              ["status", pr.status],
+              ["iterations", pr.iteration_count === undefined ? null : String(pr.iteration_count)],
+            ],
+          }
+        );
+      });
+    }
+    rows("campaigns").forEach(function (c) {
+      var mine = runsOfCampaign[c.campaign_id];
+      // A Campaign with nothing running under it is a table row, not a track:
+      // an empty bar spanning the window says only that the record has one.
+      if (!mine || !mine.length) return;
+      var starts = mine
+        .map(function (r) { return r.started_at; })
+        .filter(Boolean)
+        .sort();
+      track("CAMP", instanceLabel(c.name, c.campaign_id), 0, starts[0] || null, null, c.campaign_id, {
+        note:
+          "A programme of work. The runs indented under it belong to it; a campaign with " +
+          "nothing running is a table row rather than a bar, so an empty one never appears here.",
+        facts: [["intent", c.intent], ["status", c.status], ["runs", String(mine.length)]],
+      });
+      mine.forEach(function (r) { emitRun(r, 1); });
+    });
+    loose.forEach(function (r) { emitRun(r, 0); });
+    }
+
+    function participants() {
+    rows("subjects").forEach(function (sj) {
+      track("SUBJ", instanceLabel(sj.name, sj.subject_id), 0, sj.created_at, null, sj.subject_id, {
+        tone: sj.status === "Mounted" || sj.status === "Measured" ? "good" : null,
+        note:
+          "What is being measured. A sample has its own lifetime and several runs can " +
+          "involve it, which is why it is a row of its own rather than a field on a run.",
+        facts: [["status", sj.status]],
+      });
+    });
+
+    }
+
+    var permitRows = 0;
+    function governance() {
+    Object.keys(enclosureTimelines).forEach(function (encId) {
+      var segs = permitSegments(enclosureTimelines[encId]);
+      if (!segs) return;
+      permitRows += 1;
+      var encName = instanceLabel(enclosureTimelines[encId].title, encId);
+      // Ribbon and observations get SEPARATE rows. On one row the
+      // observations pack into a bar that covers the very condition they were
+      // folded into. The ribbon answers "did it hold"; the row under it keeps
+      // each observation pickable, which is what a causal edge into a permit
+      // drop has to land on.
+      if (trackCount < MAX_TRACK_ROWS) {
+        trackCount += 1;
+        lanes.push({
+          lane_id: "ribbon:" + encId,
+          label: encName,
+          render: "track",
+          kind: "ENCL",
+          depth: 0,
+          from: segs[0].from,
+          to: null,
+          segments: segs,
+          points: [],
+          about: {
+            head: encName,
+            note:
+              "Whether the hutch was safe to be in, over time. Each segment runs to the " +
+              "next observation, because a permit is a standing claim rather than a " +
+              "reading that expires the moment it was taken. Unknown is its own state " +
+              "and is never blended into a neighbour.",
+            rows: [
+              ["kind", KIND_NAME.ENCL],
+              ["now", segs[segs.length - 1].tone === "good" ? "Permitted"
+                : segs[segs.length - 1].tone === "bad" ? "Not permitted" : "Unknown"],
+              ["changes held", String(segs.length)],
+              ["observations", String((byStream[encId] || []).length)],
+            ],
+          },
+        });
+      }
+      lanes.push({
+        lane_id: "domain:permit:" + encId,
+        label: encName + " \u00b7 observed",
+        render: "markers",
+        points: pointsFor(encId),
+        about: {
+          head: encName + ", observed",
+          note:
+            "The observations the ribbon above was folded from, kept on their own row. " +
+            "On one row they would pack into a bar covering the very condition they " +
+            "describe, and a causal arrow into a permit drop has to land on one of them.",
+          rows: [
+            ["records", "Enclosure"],
+            ["events on this lane", String((byStream[encId] || []).length)],
+            ["zone", ZONES.governance],
+          ],
+        },
+      });
+    });
+
+    // A clearance is a CONDITION OVER A RANGE, the same shape as a permit and
+    // not the shape of a conclusion: it carries `valid_from` and
+    // `valid_until`, and drawn as dots you learn only that somebody touched
+    // it, never whether cover was in force while a run was going. It was in
+    // Judgement, which was the wrong zone for it.
+    rows("clearances").forEach(function (cl) {
+      // Cover already granted and not yet expired runs OPEN to the right
+      // edge. An expiry in the future is a date, not an ending, and drawing
+      // the bar to it would stop it somewhere inside the chart and read as
+      // cover that has already lapsed.
+      var until = cl.valid_until && Date.parse(cl.valid_until) <= Date.parse(nowIso)
+        ? cl.valid_until
+        : null;
+      track(
+        "CLR",
+        instanceLabel(cl.template_code, cl.clearance_id),
+        0,
+        cl.valid_from || cl.registered_at || null,
+        until,
+        cl.clearance_id,
+        {
+          tone: cl.status === "Active" ? "good" : "unknown",
+          note:
+            "Cover over a range. The bar is when it is in force; what it reaches is " +
+            "listed below, and a clearance that reaches nothing on screen lists nothing.",
+          facts: [
+            ["status", cl.status],
+            ["risk band", cl.risk_band],
+            ["expires", clockOf(cl.valid_until) || "no expiry set"],
+          ],
+        }
+      );
+    });
+    }
+
+    // Judgement has no instance rows at all, only its flat lanes.
+    function judgement() {}
+
+    var ZONE_BODY = {
+      execution: execution,
+      participants: participants,
+      governance: governance,
+      judgement: judgement,
+    };
+    ZONE_ORDER.forEach(function (key) {
+      zone(key);
+      ZONE_BODY[key]();
+      // At the END of each zone, once its tracks have claimed what they can,
+      // so a leftover sits under the heading it actually belongs to.
+      flatFor(key);
+    });
+
+    // Under no zone at all: see DOMAIN_ZONE.
+    flatFor(null);
+
+    return { lanes: lanes, dropped: dropped, tracks: trackCount, permits: permitRows };
+  }
+
+  function activityToTimelineDocument(buffer, domainFromIso, domainToIso) {
+    var built = buildRows(buffer, flowing.snapshot, domainToIso);
+    var runStarts = 0;
+    buffer.forEach(function (e) {
+      if (e.event_type === "RunStarted") runStarts++;
+    });
+    var retainedHours = Math.round(FLOWING_WINDOW_MS / 3600000);
+    var subtitle =
+      buffer.length +
+      " event" +
+      (buffer.length === 1 ? "" : "s") +
+      " retained over " +
+      retainedHours +
+      "h";
+    // A "run started here" cue without the cost of a track per run. It counts
+    // only starts INSIDE the window: a run already under way when the window
+    // opened emitted its RunStarted before the buffer began and is invisible
+    // here, the same blind spot the flowing view has for anything older.
+    var note = retentionNote(buffer);
+    if (note) subtitle += " \u00b7 " + note;
+    if (runStarts > 0) {
+      subtitle += " · " + runStarts + " run" + (runStarts === 1 ? "" : "s") + " started";
+    }
+    // The tree is capped, and a cap that says nothing turns a trimmed picture
+    // into a complete-looking one.
+    if (built.dropped > 0) {
+      subtitle += " · " + built.dropped + " track" + (built.dropped === 1 ? "" : "s") + " not shown";
+    }
     return {
       // No lane here represents one subject's current status the way
       // REWIND's Run lifecycle lane does, so this deliberately names a
@@ -565,12 +1453,35 @@
       // through the generic "last event" path in renderReadout.
       subject_lane_id: "__no_subject__",
       title: "Live activity",
-      subtitle: buffer.length + " event" + (buffer.length === 1 ? "" : "s") + " in the last 15m",
+      subtitle: subtitle,
+      // The right edge of a flowing window is now, not the last event. Without
+      // this the scrubber cannot tell the two apart and would label a closed
+      // REWIND timeline LIVE as well.
+      live: true,
       domain: { from: domainFromIso, to: domainToIso },
-      lanes: DOMAIN_ORDER.map(function (key) {
-        return lanesByDomain[key];
-      }),
+      lanes: built.lanes,
     };
+  }
+
+  // What the left edge of the buffer actually means. Panning into empty space
+  // looks exactly like a quiet beamline, so the page says which it is rather
+  // than letting the absence speak. Reported in the subtitle because that is
+  // the one line always on screen no matter where the chart is panned.
+  function retentionNote(buffer) {
+    if (flowing.replayTruncated) return "relay buffer capped, earlier events dropped";
+    if (buffer.length === 0) return "";
+    var oldest = Infinity;
+    buffer.forEach(function (e) {
+      var t = Date.parse(e.occurred_at);
+      if (t < oldest) oldest = t;
+    });
+    var ageMin = Math.round((Date.now() - oldest) / 60000);
+    // Comfortably short of the retention window means the relay has not been
+    // up long enough to fill it, so there is nothing older to pan to.
+    if (ageMin < FLOWING_WINDOW_MS / 60000 - 30) {
+      return "nothing retained before " + ageMin + "m ago";
+    }
+    return "";
   }
 
   function updateFlowingStatus() {
@@ -603,18 +1514,54 @@
   }
   flowingResumeEl.addEventListener("click", resumeFollowing);
 
+  // Narrowing the window is a deliberate move to look closely, so it snaps
+  // back to the live edge rather than leaving the viewer somewhere arbitrary
+  // in the middle of the buffer.
+  var flowingWindowEl = document.getElementById("flowing-window");
+  function renderFlowingWindowPicker() {
+    flowingWindowEl.innerHTML = "";
+    FLOWING_WINDOWS.forEach(function (opt) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = opt[0];
+      b.setAttribute("aria-pressed", String(flowing.viewSpanSecs === opt[1]));
+      b.addEventListener("click", function () {
+        flowing.viewSpanSecs = opt[1];
+        renderFlowingWindowPicker();
+        resumeFollowing();
+      });
+      flowingWindowEl.appendChild(b);
+    });
+  }
+  renderFlowingWindowPicker();
+
+  // The domain starts at the oldest event actually held, not a flat 24 hours
+  // back. A relay that came up ten minutes ago holds ten minutes; letting the
+  // domain claim a day would let a viewer drag through 23 hours of blank
+  // chart, which is indistinguishable from a beamline that sat idle all
+  // night. Never later than the view span, or there is nothing to pan.
+  function flowingDomainStartMs(nowMs) {
+    var floor = nowMs - FLOWING_WINDOW_MS;
+    var oldest = nowMs - flowing.viewSpanSecs * 1000;
+    flowing.buffer.forEach(function (e) {
+      var t = Date.parse(e.occurred_at);
+      if (t >= floor && t < oldest) oldest = t;
+    });
+    return Math.max(floor, oldest);
+  }
+
   function renderFlowing() {
     var nowMs = Date.now();
     pruneFlowingBuffer(nowMs);
     var doc = activityToTimelineDocument(
       flowing.buffer,
-      new Date(nowMs - FLOWING_WINDOW_MS).toISOString(),
+      new Date(flowingDomainStartMs(nowMs)).toISOString(),
       new Date(nowMs).toISOString()
     );
     window.CoraScrubber.mount(flowingStageEl, doc, {
       chromeTitle: "Live activity",
       subtitle: doc.subtitle,
-      sliderLabel: "Fold cursor: time within the last 15 minutes",
+      viewSpanSecs: flowing.viewSpanSecs,
       follow: true,
       showPlay: false,
       showJumpLast: false,
@@ -625,6 +1572,7 @@
 
   function handleActivity(msg) {
     var events = msg.events || [];
+    if (msg.replay_truncated) flowing.replayTruncated = true;
     if (events.length === 0) return;
     flowing.buffer = flowing.buffer.concat(events);
     pruneFlowingBuffer(Date.now());
@@ -636,24 +1584,54 @@
   }
 
   // The window keeps sliding even with no NEW activity: an event that
-  // scrolled out the left edge an hour ago should disappear from view on
-  // its own, not wait for a fresh event to trigger the re-render that
-  // would notice it.
+  // scrolled out the left edge should disappear from view on its own, not
+  // wait for a fresh event to trigger the re-render that would notice it.
+  //
+  // This used to re-slide once a MINUTE, and since every re-slide is a full
+  // mount() teardown and rebuild, a quiet page sat perfectly still and then
+  // jumped a sixtieth of its width in one frame. That is what made a feed
+  // arriving every 2s read as a page that updates once a minute. Data rate was
+  // never the problem; the absence of visible motion was. Re-sliding several
+  // times a second costs one rebuild of a few hundred SVG nodes and makes the
+  // right edge visibly creep, which is the whole signal that says "running".
+  // Re-sliding is a full mount() teardown, so anything the viewer is currently
+  // touching would be destroyed under them: a native <title> tooltip needs its
+  // element to survive about a second before it ever appears, and keyboard
+  // focus on the slider would be thrown away twice a second. The rule is that
+  // the window slides only while nobody is interacting with it. A held pointer
+  // costs at most a few seconds of staleness, and the moment it leaves, the
+  // next tick catches the window up in one step.
+  var flowingHovered = false;
+  flowingStageEl.addEventListener("pointerenter", function () { flowingHovered = true; });
+  flowingStageEl.addEventListener("pointerleave", function () { flowingHovered = false; });
+
+  function flowingIsBusy() {
+    if (flowingHovered || document.hidden) return true;
+    var active = document.activeElement;
+    return !!active && active !== document.body && flowingStageEl.contains(active);
+  }
+
   renderFlowing();
   setInterval(function () {
-    if (flowing.following) renderFlowing();
+    if (flowing.following && !flowingIsBusy()) renderFlowing();
   }, FLOWING_RESLIDE_MS);
 
   function handleSnapshot(msg) {
     producerConnected = true;
     generatedAt = Date.parse(msg.generated_at);
-    renderRuns(msg.runs);
-    renderSubjects(msg.subjects);
-    renderCampaigns(msg.campaigns);
-    renderDatasets(msg.datasets);
-    renderClearances(msg.clearances);
-    renderEnclosures(msg.enclosures);
-    renderDecisions(msg.decisions);
+    // Kept, not just rendered into tables. The structure the chart lays out
+    // with -- which Run belongs to which Campaign, which Procedure is a phase
+    // of which Run -- arrives ONLY here; the activity stream can tell one
+    // instance from another by `stream_id` and nothing more.
+    // The message IS the snapshot, so it is kept whole rather than copied
+    // list by list. The copy that used to stand here named four lists, and
+    // when clearances started being drawn as ribbons the wire carried them,
+    // the tables rendered them and the chart still saw nothing: the field was
+    // dropped in transit by a list that had never been updated. Keeping the
+    // object cannot drop a field that is on it.
+    flowing.snapshot = msg;
+    if (flowing.following && !flowingIsBusy()) renderFlowing();
+    renderRewindPicker(null, msg.enclosures);
     renderBanner();
   }
 
@@ -685,7 +1663,7 @@
         handleSnapshot(msg);
         break;
       case "run_history_index":
-        renderRewindPicker(msg.runs);
+        renderRewindPicker(msg.runs, null);
         break;
       case "enclosure_timeline":
         handleEnclosureTimeline(msg);
@@ -703,19 +1681,41 @@
   var rewindStageEl = document.getElementById("rewind-stage");
   var rewindEmptyEl = document.getElementById("rewind-empty");
 
-  function renderRewindPicker(runs) {
+  // REWIND has TWO subjects and they arrive on different messages, so each
+  // call updates one side and keeps the other. An enclosure's timeline used
+  // to be reachable only by clicking its row in a table; with the tables gone
+  // it needs a way in, and the picker already is one.
+  var rewindRuns = [];
+  var rewindEnclosures = [];
+  function renderRewindPicker(runs, enclosures) {
+    if (runs) rewindRuns = runs;
+    if (enclosures) rewindEnclosures = enclosures;
     var selected = rewindPickerEl.value;
     while (rewindPickerEl.options.length > 1) {
       rewindPickerEl.remove(1);
     }
-    runs.forEach(function (run) {
-      var opt = document.createElement("option");
-      opt.value = run.run_id;
+    var group = function (label, items, build) {
+      if (!items.length) return;
+      var g = document.createElement("optgroup");
+      g.label = label;
+      items.forEach(function (item) {
+        var opt = document.createElement("option");
+        build(opt, item);
+        g.appendChild(opt);
+      });
+      rewindPickerEl.appendChild(g);
+    };
+    group("Runs", rewindRuns, function (opt, run) {
+      opt.value = "run:" + run.run_id;
       opt.textContent = run.name + " (" + run.status + (run.terminal ? ", finished" : "") + ")";
-      rewindPickerEl.appendChild(opt);
+    });
+    group("Enclosures", rewindEnclosures, function (opt, enc) {
+      opt.value = "enclosure:" + enc.enclosure_id;
+      opt.textContent = enc.name + " (" + enc.permit_status + ")";
     });
     rewindPickerEl.value = selected;
-    rewindEmptyEl.style.display = runs.length === 0 ? "block" : "none";
+    rewindEmptyEl.style.display =
+      rewindRuns.length + rewindEnclosures.length === 0 ? "block" : "none";
   }
 
   // Maps a RunHistoryEvent's event_type to the state it puts the Run into,
@@ -812,7 +1812,6 @@
       .then(function (history) {
         mountTimelineInStage(runHistoryToTimelineDocument(history), {
           chromeTitle: "Rewind",
-          sliderLabel: "Fold cursor: time within the run",
         });
       })
       .catch(function (err) {
@@ -833,7 +1832,10 @@
   }
 
   function showEnclosureTimeline(enclosureId) {
-    rewindPickerEl.value = "";
+    // The picker keeps its selection. It used to be blanked here because a
+    // table row was what opened this view and the picker had nothing to do
+    // with it; now the picker IS the control, and blanking it would say
+    // "nothing selected" over an enclosure timeline.
     activeEnclosureId = enclosureId;
     var doc = enclosureTimelines[enclosureId];
     if (!doc) {
@@ -843,7 +1845,6 @@
     }
     mountTimelineInStage(doc, {
       chromeTitle: "Rewind",
-      sliderLabel: "Fold cursor: time within the enclosure's history",
     });
   }
 
@@ -858,11 +1859,19 @@
   }
 
   rewindPickerEl.addEventListener("change", function () {
-    if (rewindPickerEl.value) {
-      showRewind(rewindPickerEl.value);
-    } else {
+    var v = rewindPickerEl.value;
+    if (!v) {
       backToLive();
+      return;
     }
+    // Prefixed rather than guessed from the id's shape: both are uuids, and
+    // deciding which of two views to open by inspecting an opaque identifier
+    // is the kind of thing that works until a run and an enclosure collide.
+    var at = v.indexOf(":");
+    var kind = v.slice(0, at);
+    var id = v.slice(at + 1);
+    if (kind === "enclosure") showEnclosureTimeline(id);
+    else showRewind(id);
   });
   rewindBackEl.addEventListener("click", backToLive);
 
@@ -871,7 +1880,7 @@
       return resp.json();
     })
     .then(function (body) {
-      renderRewindPicker(body.runs || []);
+      renderRewindPicker(body.runs || [], null);
     })
     .catch(function () {
       /* the /watch socket's own index frame will populate this shortly */

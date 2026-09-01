@@ -70,6 +70,15 @@ from cora.infrastructure.ports.event_activity_trail import EventActivityRow
 from cora.infrastructure.ports.event_store import NewEvent
 from cora.infrastructure.projection import decode_cursor, encode_cursor
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation.features.list_procedures import ListProcedures
+from cora.operation.features.list_procedures.handler import (
+    ProcedureListPage,
+    ProcedureSummaryItem,
+)
+from cora.recipe.features.list_plans import (
+    ListPlans,
+)
+from cora.recipe.features.list_plans.handler import PlanListPage, PlanSummaryItem
 from cora.run.errors import UnauthorizedError as RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.get_run_history.handler import RunHistoryEvent, RunHistoryView
@@ -96,6 +105,7 @@ def test_build_snapshot_shape() -> None:
         subjects=[],
         campaigns=[],
         datasets=[],
+        procedures=[],
         clearances=[],
         enclosures=[],
         decisions=[],
@@ -113,6 +123,7 @@ def test_build_snapshot_shape() -> None:
         "subjects": [],
         "campaigns": [],
         "datasets": [],
+        "procedures": [],
         "clearances": [],
         "enclosures": [],
         "decisions": [],
@@ -367,6 +378,37 @@ def _make_list_datasets(items: list[DatasetSummaryItem]):
     return list_datasets
 
 
+def _make_list_procedures(items: list[ProcedureSummaryItem]):
+    async def list_procedures(
+        query: ListProcedures,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ProcedureListPage:
+        matching = [
+            i
+            for i in items
+            if query.parent_run_id is None or i.parent_run_id == query.parent_run_id
+        ]
+        return ProcedureListPage(items=matching, next_cursor=None)
+
+    return list_procedures
+
+
+def _make_list_plans(items: list[PlanSummaryItem]):
+    async def list_plans(
+        query: ListPlans,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID,
+    ) -> PlanListPage:
+        return PlanListPage(items=list(items), next_cursor=None)
+
+    return list_plans
+
+
 def _make_list_clearances(items: list[ClearanceSummaryItem]):
     async def list_clearances(
         query: ListClearances,
@@ -460,7 +502,9 @@ def _default_handlers(**overrides: Any) -> dict[str, Any]:
         "list_subjects": _make_list_subjects([]),
         "list_campaigns": _make_list_campaigns([]),
         "list_datasets": _make_list_datasets([]),
+        "list_procedures": _make_list_procedures([]),
         "list_clearances": _make_list_clearances([]),
+        "list_plans": _make_list_plans([]),
         "list_enclosures": _make_list_enclosures([]),
         "list_decisions": _make_list_decisions([]),
         "get_run_history": _make_get_run_history(),
@@ -1395,14 +1439,20 @@ async def test_run_history_tail_on_reconnect_repushes_a_still_open_run_promptly(
 
 
 @pytest.mark.unit
-def test_build_activity_message_shape() -> None:
+def test_build_activity_message_shape_for_an_operator_originated_event() -> None:
     stream_id = uuid4()
+    correlation_id = uuid4()
+    event_id = uuid4()
     row = EventActivityRow(
+        event_id=event_id,
         stream_type="Run",
         stream_id=stream_id,
         event_type="RunStarted",
         occurred_at=_NOW,
         recorded_at=_NOW,
+        correlation_id=correlation_id,
+        causation_id=None,
+        cause_occurred_at=None,
     )
 
     message = build_activity_message(rows=[row], generated_at="t0", producer_id="p1")
@@ -1414,14 +1464,84 @@ def test_build_activity_message_shape() -> None:
         "generated_at": "t0",
         "events": [
             {
+                "event_id": str(event_id),
                 "stream_type": "Run",
                 "stream_id": str(stream_id),
                 "event_type": "RunStarted",
                 "occurred_at": _NOW.isoformat(),
                 "recorded_at": _NOW.isoformat(),
+                "correlation_id": str(correlation_id),
+                "causation_id": None,
+                "cause_occurred_at": None,
             }
         ],
     }
+
+
+@pytest.mark.unit
+def test_build_activity_message_lets_a_receiver_match_a_cause_to_the_event_that_caused_it() -> None:
+    """A `causation_id` names an event's `event_id`. Shipping the first without
+    the second hands a receiver a pointer with nothing to point at: it can tell
+    an event was caused, but not by which of the events it already holds. This
+    asserts the two are resolvable against each other, which the shape test
+    above cannot, since it only ever looks at one row."""
+    cause = EventActivityRow(
+        event_id=uuid4(),
+        stream_type="Enclosure",
+        stream_id=uuid4(),
+        event_type="EnclosurePermitObserved",
+        occurred_at=_NOW - timedelta(seconds=2),
+        recorded_at=_NOW,
+        correlation_id=uuid4(),
+        causation_id=None,
+        cause_occurred_at=None,
+    )
+    effect = EventActivityRow(
+        event_id=uuid4(),
+        stream_type="Run",
+        stream_id=uuid4(),
+        event_type="RunAborted",
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        correlation_id=cause.correlation_id,
+        causation_id=cause.event_id,
+        cause_occurred_at=cause.occurred_at,
+    )
+
+    events = build_activity_message(rows=[cause, effect], generated_at="t0", producer_id="p1")[
+        "events"
+    ]
+
+    by_id = {e["event_id"]: e for e in events}
+    caused = next(e for e in events if e["event_type"] == "RunAborted")
+    assert by_id[caused["causation_id"]]["event_type"] == "EnclosurePermitObserved"
+
+
+@pytest.mark.unit
+def test_build_activity_message_carries_a_reacted_event_s_cause_and_its_time() -> None:
+    """A subscriber reacting to an event sets `causation_id`, and the cause is
+    usually older than the receiver's own window. Both the id and the cause's
+    time have to ride out, or a viewer holding fifteen minutes cannot tell an
+    event whose cause scrolled away from one that never had a cause at all."""
+    causation_id = uuid4()
+    cause_at = _NOW - timedelta(minutes=40)
+    row = EventActivityRow(
+        event_id=uuid4(),
+        stream_type="Caution",
+        stream_id=uuid4(),
+        event_type="CautionRegistered",
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        correlation_id=uuid4(),
+        causation_id=causation_id,
+        cause_occurred_at=cause_at,
+    )
+
+    message = build_activity_message(rows=[row], generated_at="t0", producer_id="p1")
+
+    event = message["events"][0]
+    assert event["causation_id"] == str(causation_id)
+    assert event["cause_occurred_at"] == cause_at.isoformat()
 
 
 # ---------- _ActivityTail ----------
@@ -1519,20 +1639,50 @@ async def test_activity_tail_never_ships_the_event_payload() -> None:
 # ---------- real socket: push against a local WebSocket server ----------
 
 
+def _procedure_item(
+    procedure_id: UUID,
+    *,
+    parent_run_id: UUID | None,
+    name: str = "center_alignment",
+    kind: str = "alignment",
+) -> ProcedureSummaryItem:
+    return ProcedureSummaryItem(
+        procedure_id=procedure_id,
+        name=name,
+        kind=kind,
+        target_asset_ids=[],
+        parent_run_id=parent_run_id,
+        status="Running",
+        activity_logbook_id=None,
+        registered_at=_NOW,
+        last_status_changed_at=None,
+        last_status_reason="operator said something private",
+        interrupted_at=None,
+        iteration_count=3,
+    )
+
+
 def _run_item(
-    run_id: UUID, *, name: str = "smoke-run", status: RunStatusFilter = "Running"
+    run_id: UUID,
+    *,
+    name: str = "smoke-run",
+    status: RunStatusFilter = "Running",
+    campaign_id: UUID | None = None,
+    subject_id: UUID | None = None,
+    running_since: datetime | None = _NOW,
+    plan_id: UUID | None = None,
 ) -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
         name=name,
-        plan_id=uuid4(),
-        subject_id=None,
+        plan_id=plan_id or uuid4(),
+        subject_id=subject_id,
         raid=None,
         status=status,
         created_at=_NOW,
-        running_since=_NOW,
+        running_since=running_since,
         override_parameters_present=False,
-        campaign_id=None,
+        campaign_id=campaign_id,
         snr_limit=None,
         expected_observation_interval_seconds=None,
         conduct_mode="Witnessed",
@@ -1573,6 +1723,12 @@ async def test_lifespan_pushes_a_snapshot_to_a_real_relay() -> None:
                 "run_id": str(run_id),
                 "name": "smoke-run",
                 "status": "Running",
+                "campaign_id": None,
+                "subject_id": None,
+                # No plan in the projection for this run, which is unknown
+                # rather than "this run has no plan": every run has one.
+                "plan_name": None,
+                "started_at": _NOW.isoformat(),
                 "progress": {},
                 "progress_trail": {},
             }
@@ -1780,6 +1936,219 @@ async def test_lifespan_pushes_datasets_only_for_onscreen_runs() -> None:
         assert [d["name"] for d in snapshot["datasets"]] == ["onscreen-ds"]
 
 
+async def _first_snapshot(**handlers: Any) -> dict[str, Any]:
+    """Boot the push loop against a throwaway relay and return the first
+    snapshot it sends, so a test asserting on payload SHAPE does not have to
+    restate the socket plumbing."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=f"ws://127.0.0.1:{port}/ingest",
+            status_push_tick_seconds=0.1,
+        )
+        async with status_push_lifespan(kernel, **_default_handlers(**handlers)):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+    result: dict[str, Any] = json.loads(raw)
+    return result
+
+
+@pytest.mark.unit
+async def test_run_rows_carry_what_places_a_run_among_the_others() -> None:
+    """A Run row without `campaign_id` and `subject_id` can be listed but not
+    PLACED: nothing else on the wire says what it belongs to or what it is
+    measuring. Both are already on the projection; this asserts they reach
+    the payload."""
+    run_id, campaign_id, subject_id = uuid4(), uuid4(), uuid4()
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs(
+            [_run_item(run_id, campaign_id=campaign_id, subject_id=subject_id)]
+        )
+    )
+    (row,) = snapshot["runs"]
+    assert row["campaign_id"] == str(campaign_id)
+    assert row["subject_id"] == str(subject_id)
+    assert row["started_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_run_row_membership_is_null_for_a_standalone_run() -> None:
+    """The absence has to arrive as an explicit null rather than a missing
+    key: a consumer that saw no `campaign_id` could not tell "standalone"
+    from "this producer is too old to send it"."""
+    snapshot = await _first_snapshot(list_runs=_make_list_runs([_run_item(uuid4())]))
+    (row,) = snapshot["runs"]
+    assert row["campaign_id"] is None
+    assert row["subject_id"] is None
+
+
+@pytest.mark.unit
+async def test_run_started_at_falls_back_to_created_at_before_it_runs() -> None:
+    """A Held-from-genesis Run has no `running_since`. A span still needs a
+    left edge, and a missing one would draw as a track starting at the window
+    edge, which reads as "started when you opened the page"."""
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs([_run_item(uuid4(), status="Held", running_since=None)])
+    )
+    (row,) = snapshot["runs"]
+    assert row["started_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_procedures_are_pushed_for_onscreen_runs_only() -> None:
+    """Bounded by the open-run count, exactly as datasets are: a live page
+    needs the phases of the runs on screen, never every Procedure the
+    facility has registered."""
+    onscreen, offscreen = uuid4(), uuid4()
+    mine, theirs = uuid4(), uuid4()
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs([_run_item(onscreen)]),
+        list_procedures=_make_list_procedures(
+            [
+                _procedure_item(mine, parent_run_id=onscreen, name="center_alignment"),
+                _procedure_item(theirs, parent_run_id=offscreen, name="dark_field"),
+            ]
+        ),
+    )
+    assert [p["name"] for p in snapshot["procedures"]] == ["center_alignment"]
+    (row,) = snapshot["procedures"]
+    assert row["parent_run_id"] == str(onscreen)
+    assert row["kind"] == "alignment"
+    assert row["iteration_count"] == 3
+    assert row["registered_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_procedure_rows_never_carry_operator_reason_text() -> None:
+    """`last_status_reason` is operator free text, which is the shape that
+    carries incidental personal data. Nothing on a status page needs it, so
+    it must not be on the wire -- and the fixture sets it to a recognisable
+    string so this cannot pass by the field merely being empty."""
+    run_id = uuid4()
+    snapshot = await _first_snapshot(
+        list_runs=_make_list_runs([_run_item(run_id)]),
+        list_procedures=_make_list_procedures([_procedure_item(uuid4(), parent_run_id=run_id)]),
+    )
+    (row,) = snapshot["procedures"]
+    assert "last_status_reason" not in row
+    assert "private" not in json.dumps(snapshot)
+
+
+@pytest.mark.unit
+async def test_subject_rows_carry_their_own_left_edge() -> None:
+    snapshot = await _first_snapshot(
+        list_subjects=_make_list_subjects(
+            [
+                SubjectSummaryItem(
+                    subject_id=uuid4(), name="SMP-115", status="Mounted", created_at=_NOW
+                )
+            ]
+        )
+    )
+    (row,) = snapshot["subjects"]
+    assert row["created_at"] == _NOW.isoformat()
+
+
+@pytest.mark.unit
+async def test_procedures_section_is_present_and_empty_with_no_runs() -> None:
+    """An empty list, not a missing key. A consumer branching on presence
+    would read "no open runs" as "this producer does not send procedures"."""
+    snapshot = await _first_snapshot()
+    assert snapshot["procedures"] == []
+
+
+@pytest.mark.unit
+async def test_lifespan_names_the_plan_a_run_is_executing() -> None:
+    """A Plan is a template with no lifetime, so it never earns a row on a
+    live view. Naming it on the run that is an instance of it is the only way
+    the template layer becomes visible at all."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=f"ws://127.0.0.1:{port}/ingest",
+            status_push_tick_seconds=0.1,
+        )
+        plan_id = uuid4()
+        run = _run_item(uuid4(), name="R-1", plan_id=plan_id)
+        # A second plan the run is NOT executing, so a lookup that simply took
+        # the first row would pass without matching anything.
+        other = PlanSummaryItem(
+            plan_id=uuid4(),
+            name="not-this-one",
+            practice_id=uuid4(),
+            method_id=uuid4(),
+            status="Versioned",
+            version_tag=None,
+            created_at=_NOW,
+            default_parameters_present=False,
+        )
+        mine = PlanSummaryItem(
+            plan_id=plan_id,
+            name="tomography-standard",
+            practice_id=uuid4(),
+            method_id=uuid4(),
+            status="Versioned",
+            version_tag=None,
+            created_at=_NOW,
+            default_parameters_present=False,
+        )
+
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(
+                list_runs=_make_list_runs([run]),
+                list_plans=_make_list_plans([other, mine]),
+            ),
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        assert json.loads(raw)["runs"][0]["plan_name"] == "tomography-standard"
+
+
+@pytest.mark.unit
+async def test_lifespan_run_with_no_plan_in_the_projection_pushes_a_null_plan_name() -> None:
+    """Absent must not read as a positive finding: a plan missing from the
+    projection is unknown, never "this run has no plan"."""
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        kernel = _kernel(
+            status_push_enabled=True,
+            status_push_url=f"ws://127.0.0.1:{port}/ingest",
+            status_push_tick_seconds=0.1,
+        )
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(
+                list_runs=_make_list_runs([_run_item(uuid4(), name="R-1")]),
+                list_plans=_make_list_plans([]),
+            ),
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        row = json.loads(raw)["runs"][0]
+        assert "plan_name" in row
+        assert row["plan_name"] is None
+
+
 @pytest.mark.unit
 async def test_lifespan_pushes_active_clearances_only() -> None:
     received: asyncio.Queue[str] = asyncio.Queue()
@@ -1847,6 +2216,83 @@ async def test_lifespan_pushes_active_clearances_only() -> None:
         snapshot = json.loads(raw)
         assert len(snapshot["clearances"]) == 1
         assert snapshot["clearances"][0]["template_code"] == "ESAF"
+
+
+@pytest.mark.unit
+async def test_lifespan_clearance_row_carries_its_range_and_no_free_text() -> None:
+    received: asyncio.Queue[str] = asyncio.Queue()
+    bound_run = uuid4()
+    bound_subject = uuid4()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True, status_push_url=url, status_push_tick_seconds=0.1
+        )
+        started = _NOW + timedelta(minutes=5)
+        ends = _NOW + timedelta(hours=8)
+        item = ClearanceSummaryItem(
+            clearance_id=uuid4(),
+            template_id=uuid4(),
+            template_code="ESAF",
+            facility_code="cora",
+            title="Beryllium handling, hutch B",
+            external_id=None,
+            status="Active",
+            risk_band="Yellow",
+            subject_binding_ids=[bound_subject],
+            asset_binding_ids=[uuid4()],
+            run_binding_ids=[bound_run],
+            procedure_binding_ids=[],
+            parent_id=None,
+            registered_at=_NOW,
+            last_status_changed_at=None,
+            last_status_reason="raised by the floor coordinator after the swap",
+            last_reviewed_by=uuid4(),
+            valid_from=started,
+            valid_until=ends,
+            next_review_due_at=None,
+        )
+
+        async with status_push_lifespan(
+            kernel, **_default_handlers(list_clearances=_make_list_clearances([item]))
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        row = json.loads(raw)["clearances"][0]
+        # Pinned as a SET, not field by field. A clearance is drawn as a bar
+        # over a range, and a dropped end silently turns it back into a dot;
+        # asserting only the fields this test remembers to name is how a field
+        # goes missing without a red test.
+        assert set(row) == {
+            "clearance_id",
+            "template_code",
+            "risk_band",
+            "status",
+            "valid_from",
+            "valid_until",
+            "registered_at",
+            "run_binding_ids",
+            "procedure_binding_ids",
+            "subject_binding_ids",
+        }
+        assert row["valid_from"] == started.isoformat()
+        assert row["valid_until"] == ends.isoformat()
+        # What the cover covers, so a viewer can ask whether it reaches the
+        # run on screen. Asset bindings stay off: nothing on that page draws
+        # an asset, so the ids would resolve to nothing.
+        assert row["run_binding_ids"] == [str(bound_run)]
+        assert row["subject_binding_ids"] == [str(bound_subject)]
+        assert row["procedure_binding_ids"] == []
+        # Operator free text and reviewer identity never leave the API host.
+        assert "Beryllium" not in raw
+        assert "floor coordinator" not in raw
+        assert str(item.last_reviewed_by) not in raw
 
 
 @pytest.mark.unit

@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>page preview</title>
+<!--
+  Loads the REAL page.html in an iframe with the WebSocket stubbed, so the
+  whole page can be exercised without a relay, a producer or a database.
+  The harness beside this one covers the renderer in isolation; this one
+  covers the page's own wiring: the window picker, follow/pause, the domain
+  tables, and that page.html and scrubber.js still agree with each other.
+
+  Serve the parent directory and open /design/page-preview.html.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #0e1117; }
+  iframe { border: 0; width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+<script>
+  // Feed the page a synthetic producer before its own script runs.
+  const SRC = "../page.html";
+  const NOW = Date.now();
+  const LANES = [
+    ["Run", ["RunStarted", "RunAdjusted", "RunAborted", "RunCompleted", "RunResumed"]],
+    ["Decision", ["DecisionRegistered", "DecisionRated", "DecisionDebriefRequested"]],
+    ["Procedure", ["ProcedureStarted", "ProcedureIterationStarted", "ProcedureCompleted"]],
+    ["Caution", ["CautionRegistered"]],
+    ["Enclosure", ["EnclosurePermitObserved"]],
+    ["Dataset", ["DatasetRegistered", "DatasetPromoted"]],
+    // Zones other than Execution and Judgement were exercised by a permit
+    // ribbon and nothing else, so every lane the page can now file -- an
+    // equipment change, a clearance review, a budget draw -- went undrawn
+    // here while the fixture looked complete.
+    ["Clearance", ["ClearanceReviewed", "ClearanceExtended"]],
+    ["Mount", ["MountRegistered", "MountDismounted"]],
+    ["Supply", ["SupplyLevelObserved"]],
+    ["Visit", ["VisitStarted"]],
+    ["Allocation", ["AllocationDrawnDown"]],
+    ["Calibration", ["CalibrationRecorded"]],
+    // Deliberately not in the page's domain table: the "Unfiled" lane has to
+    // be reachable, or the one row that catches an unknown stream type is
+    // the one row nothing ever tests.
+    ["Sprocket", ["SprocketWidened"]],
+  ];
+
+  let seed = 11;
+  function rnd() {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  }
+
+  // Ids and causation, not just event types. Without them `hasCausation` is
+  // false for the whole document and the page renders its relations-free
+  // path, so every hover, edge and highlight went unexercised here while the
+  // preview looked healthy. A fixture that cannot produce the positive case
+  // makes any test written against it unfalsifiable.
+  let evSeq = 0;
+  const uuid = (n) => "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
+
+  // Events have to carry the SAME instance ids the snapshot does, or every
+  // track renders as an empty bar with its events piled into a catch-all lane
+  // instead. A stream_id pool that matched nothing was the whole reason to
+  // check this rather than assume it.
+  // Ids AND lifetimes. An event has to belong to an instance that was alive
+  // when it happened, or marks land outside their own track's bar and the
+  // preview shows a geometry the real feed can never produce -- which is
+  // exactly the kind of plausible-looking fixture that has already sent this
+  // work down two wrong turns.
+  //
+  // "r0" and "p0" have no snapshot row at all: a run that finished before the
+  // window opened still has events inside it, and they must reach the
+  // "elsewhere" lane rather than vanish.
+  const LIVES = {
+    Run: [
+      ["r1", 52, 0], ["r2", 21, 0], ["r3", 9, 0], ["r0", 24 * 60, 55],
+    ],
+    Procedure: [
+      ["p1", 50, 44], ["p2", 43, 30], ["p3", 29, 0],
+      ["p4", 19, 12], ["p5", 8, 0], ["p0", 24 * 60, 58],
+    ],
+    Subject: [["s1", 55, 0], ["s2", 24, 0]],
+    Campaign: [["c1", 52, 0]],
+    Enclosure: [["enc1", 60, 0]],
+    Clearance: [["cl1", 24 * 60, 0], ["cl2", 24 * 60, 0]],
+    // Kinship for a dataset hangs off the EVENT, so a Dataset event has to
+    // carry a dataset_id the snapshot names. A random id per event would walk
+    // the flat-lane path and never the bound one, and the preview would look
+    // right while testing nothing.
+    Dataset: [["ds1", 24 * 60, 0], ["ds2", 24 * 60, 0], ["ds3", 24 * 60, 0]],
+  };
+  function streamIdFor(stream, ms) {
+    const lives = LIVES[stream];
+    if (!lives) {
+      // Judgement domains have no instance track, so their ids only ever have
+      // to tell one stream from another.
+      return uuid(100 + Math.floor(rnd() * 12));
+    }
+    const minsAgo = (NOW - ms) / 60000;
+    const alive = lives.filter((l) => minsAgo <= l[1] && minsAgo >= l[2]);
+    const pool = alive.length ? alive : lives;
+    return pool[Math.floor(rnd() * pool.length)][0];
+  }
+
+  function event(stream, types, ms) {
+    return {
+      event_id: uuid(900000 + evSeq++),
+      stream_type: stream,
+      stream_id: streamIdFor(stream, ms),
+      event_type: types[Math.floor(rnd() * types.length)],
+      occurred_at: new Date(ms).toISOString(),
+      recorded_at: new Date(ms).toISOString(),
+      // One per command, near enough: a correlation group is the handful of
+      // events one operator action produced, not a bucket a whole day falls
+      // into. Forty ids over a day put 200 events in each and made the card's
+      // "correlated with" row read as noise.
+      correlation_id: uuid(500000 + evSeq),
+      causation_id: null,
+      cause_occurred_at: null,
+    };
+  }
+
+  function burst(atMs) {
+    const [stream, types] = LANES[Math.floor(rnd() * LANES.length)];
+    const n = rnd() < 0.45 ? 1 + Math.floor(rnd() * 5) : 1;
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(event(stream, types, atMs + i * 400));
+
+    // A REACTION tail. Only a subscriber sets causation_id in production, and
+    // it fires within a couple of seconds of its cause and on a different
+    // stream, so the chain has to be built that way here or the fixture keeps
+    // producing roots forever. An earlier version tried to chain within a
+    // burst, which cannot work: a burst is one stream and the next is eight
+    // seconds away, so no candidate was ever both foreign and recent.
+    // The tail must FORK, not just run. It used to reassign `cause = re` on
+    // every hop, which can only ever produce a thread -- so no node in this
+    // fixture ever had two children, and the renderer's branching walk (the
+    // whole reason downstream is a frontier and not a pointer chase) had never
+    // once been exercised by the fixture written to exercise it. Production
+    // branches freely: one event wakes a projector, a policy watcher and an
+    // expirer, and all three append against the same causation_id.
+    if (rnd() < 0.55) {
+      const root = out[Math.floor(rnd() * out.length)];
+      let cause = root;
+      let ms = atMs + n * 400;
+      const hops = 2 + Math.floor(rnd() * 4);
+      for (let h = 0; h < hops; h++) {
+        const other = LANES.filter((l) => l[0] !== cause.stream_type);
+        const [rStream, rTypes] = other[Math.floor(rnd() * other.length)];
+        ms += 300 + rnd() * 1500;
+        const re = event(rStream, rTypes, ms);
+        re.causation_id = cause.event_id;
+        re.cause_occurred_at = cause.occurred_at;
+        re.correlation_id = cause.correlation_id;
+        out.push(re);
+        // Deepen, or hang a sibling off the same cause. Both shapes have to
+        // occur: a fixture that only forks tests depth no better than one
+        // that only threads tested branching.
+        cause = rnd() < 0.42 ? cause : re;
+      }
+    }
+
+    if (rnd() < 0.1) fanOut(out, out[Math.floor(rnd() * out.length)], atMs + n * 400 + 900);
+    return out;
+  }
+
+  // A WIDE fan: one event waking a whole rank of subscribers at once, each of
+  // which wakes one or two more. The reaction tail cannot reach this shape --
+  // a 42% sibling rate mostly deepens, so a long cascade is still a
+  // near-thread, and the card's row cap of twelve stayed unreachable no matter
+  // how many hops were added. A cap that can never be hit makes every
+  // assertion about how it reports itself reconcile trivially.
+  function fanOut(out, hub, atMs) {
+    let fms = atMs;
+    const width = 5 + Math.floor(rnd() * 4);
+    for (let w = 0; w < width; w++) {
+      const pool = LANES.filter((l) => l[0] !== hub.stream_type);
+      const [wStream, wTypes] = pool[Math.floor(rnd() * pool.length)];
+      fms += 120 + rnd() * 400;
+      const kid = event(wStream, wTypes, fms);
+      kid.causation_id = hub.event_id;
+      kid.cause_occurred_at = hub.occurred_at;
+      kid.correlation_id = hub.correlation_id;
+      out.push(kid);
+      for (let g = 0, gn = 1 + Math.floor(rnd() * 2); g < gn; g++) {
+        const gpool = LANES.filter((l) => l[0] !== kid.stream_type);
+        const [gStream, gTypes] = gpool[Math.floor(rnd() * gpool.length)];
+        fms += 100 + rnd() * 300;
+        const gk = event(gStream, gTypes, fms);
+        gk.causation_id = kid.event_id;
+        gk.cause_occurred_at = kid.occurred_at;
+        gk.correlation_id = kid.correlation_id;
+        out.push(gk);
+      }
+    }
+    return out;
+  }
+
+  // A full retention window, at the measured 2-BM shape: 228 events in the
+  // busiest hour, quieter overnight. This is the load the relay now replays
+  // on connect and the page then holds, so the preview has to carry it or the
+  // only thing ever exercised is the fifteen minutes the page used to keep.
+  function backlog() {
+    const events = [];
+    const span = 24 * 60 * 60 * 1000;
+    for (let t = NOW - span; t < NOW; ) {
+      // Hour of day drives the rate over the deep backlog: a beamline runs hot
+      // in shift hours and ticks over between them. The most recent hour is
+      // always busy regardless, because everything that reads this fixture --
+      // the eye and every check -- looks at the live window, and a fixture
+      // that goes quiet at 3am makes those checks pass or fail by the clock
+      // rather than by the code.
+      const hour = new Date(t).getHours();
+      const recent = NOW - t < 60 * 60 * 1000;
+      const busy = recent || (hour >= 8 && hour < 22);
+      t += (busy ? 8000 : 40000) + rnd() * (busy ? 25000 : 90000);
+      if (t < NOW) events.push(...burst(t));
+    }
+
+    // One guaranteed wide fan, placed in the live window. The same reasoning
+    // as the `recent` rate above: at a 10% chance per burst, whether a fan
+    // lands where the flowing chart is looking depends on the wall clock, so
+    // the check that needs one passed in the afternoon and reported "none
+    // found" an hour later. A shape a check requires cannot be left to a dice
+    // roll whose landing spot moves with the time of day.
+    const hubAt = NOW - 4 * 60 * 1000;
+    const [hStream, hTypes] = LANES[Math.floor(rnd() * LANES.length)];
+    const hub = event(hStream, hTypes, hubAt);
+    events.push(hub);
+    fanOut(events, hub, hubAt + 800);
+    events.sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : 0));
+    return events;
+  }
+
+  // A shape the LAYOUT can be built from, not just tables: two runs under one
+  // campaign and one standalone, procedures under each, and subjects the runs
+  // point at. Without `campaign_id` / `subject_id` / `parent_run_id` the
+  // execution zone renders as a flat list of runs and the nesting the chart
+  // exists to show goes unexercised, while the preview looks healthy.
+  const iso = (msAgo) => new Date(NOW - msAgo).toISOString();
+  const RUNS = [
+    // `plan_name` is the template layer. A run with one and a run without
+    // both have to be here: absent means the plan is not in the projection,
+    // which reads as unknown rather than as a run with no plan, and a fixture
+    // where every run has one would never exercise that.
+    { run_id: "r1", name: "R-4471", status: "Running", campaign_id: "c1", subject_id: "s1",
+      plan_name: "tomography-standard", started_at: iso(52 * 60 * 1000),
+      progress: { detector: { value: 812, commanded_total: 1500 } } },
+    { run_id: "r2", name: "R-4472", status: "Held", campaign_id: "c1", subject_id: "s2",
+      plan_name: "tomography-standard", started_at: iso(21 * 60 * 1000),
+      progress: { detector: { value: 240, commanded_total: 900 }, ring_current: { value: 101 } } },
+    { run_id: "r3", name: "R-4480", status: "Running", campaign_id: null, subject_id: null,
+      plan_name: null, started_at: iso(9 * 60 * 1000), progress: {} },
+  ];
+  const PROCEDURES = [
+    { procedure_id: "p1", name: "center_alignment", kind: "alignment", parent_run_id: "r1",
+      status: "Completed", registered_at: iso(50 * 60 * 1000),
+      last_status_changed_at: iso(44 * 60 * 1000), iteration_count: 2 },
+    { procedure_id: "p2", name: "flat_field", kind: "calibration", parent_run_id: "r1",
+      status: "Completed", registered_at: iso(43 * 60 * 1000),
+      last_status_changed_at: iso(30 * 60 * 1000), iteration_count: 5 },
+    { procedure_id: "p3", name: "tomography", kind: "acquisition", parent_run_id: "r1",
+      status: "Running", registered_at: iso(29 * 60 * 1000),
+      last_status_changed_at: null, iteration_count: 41 },
+    { procedure_id: "p4", name: "dark_field", kind: "calibration", parent_run_id: "r2",
+      status: "Held", registered_at: iso(19 * 60 * 1000),
+      last_status_changed_at: iso(12 * 60 * 1000), iteration_count: 1 },
+    { procedure_id: "p5", name: "center_alignment", kind: "alignment", parent_run_id: "r3",
+      status: "Running", registered_at: iso(8 * 60 * 1000),
+      last_status_changed_at: null, iteration_count: 3 },
+  ];
+
+  function snapshot() {
+    return {
+      kind: "snapshot",
+      generated_at: new Date().toISOString(),
+      runs: RUNS,
+      procedures: PROCEDURES,
+      subjects: [
+        { subject_id: "s1", name: "SMP-115", status: "Mounted", created_at: iso(55 * 60 * 1000) },
+        { subject_id: "s2", name: "SMP-116", status: "Received", created_at: iso(24 * 60 * 1000) },
+      ],
+      campaigns: [
+        { campaign_id: "c1", name: "CMP-2211", intent: "Tomography", status: "Active", run_count: 2 },
+      ],
+      // Datasets have no row of their own, so their bindings are the case
+      // that proves kinship can hang off ONE event on a shared lane. d3 is
+      // written from a subject with no producing run left open, which is the
+      // reason `subject_id` rides the wire beside `producing_run_id`.
+      datasets: [
+        { dataset_id: "ds1", name: "tomo-4471-a", status: "Registered",
+          producing_run_id: "r1", subject_id: "s1" },
+        { dataset_id: "ds2", name: "tomo-4472-a", status: "Promoted",
+          producing_run_id: "r2", subject_id: "s2" },
+        { dataset_id: "ds3", name: "tomo-old-b", status: "Registered",
+          producing_run_id: null, subject_id: "s1" },
+      ],
+      // Two ranges, deliberately different: one open-ended and one that
+      // expires later today. Both are cover IN FORCE, so both draw to the
+      // right edge, and a bar that stopped mid-chart would be the bug.
+      clearances: [
+        { clearance_id: "cl1", template_code: "ESAF-7741", risk_band: "Yellow",
+          status: "Active", valid_from: iso(20 * 60 * 60 * 1000),
+          valid_until: iso(-6 * 60 * 60 * 1000), registered_at: iso(21 * 60 * 60 * 1000),
+          run_binding_ids: ["r1", "r2"], procedure_binding_ids: [],
+          subject_binding_ids: ["s1"] },
+        // Cover that reaches NOTHING on screen. A clearance with no bindings
+        // has to stay tickless, or "covered" would be what the chart says
+        // about every clearance whether or not it reaches anything.
+        { clearance_id: "cl2", template_code: "RAD-118", risk_band: "Green",
+          status: "Active", valid_from: null, valid_until: null,
+          registered_at: iso(5 * 60 * 60 * 1000),
+          run_binding_ids: [], procedure_binding_ids: [], subject_binding_ids: [] },
+      ],
+      // The enclosure the timeline message is about. These used to disagree:
+      // the chart drew a hutch ribbon while the dropped table said "no active
+      // enclosures", because they come from two different messages and only
+      // one of them was ever populated here.
+      enclosures: [
+        { enclosure_id: "enc1", name: "2-BM-B hutch", permit_status: "Permitted",
+          facility_code: "aps" },
+      ],
+      decisions: [
+        { decision_id: "d1", choice: "continue", confidence_band: "High",
+          decided_by: "00000000-0000-4000-8000-000000000042", created_at: iso(14 * 60 * 1000) },
+        { decision_id: "d2", choice: "hold for review", confidence_band: "Low",
+          decided_by: "00000000-0000-4000-8000-000000000043", created_at: iso(6 * 60 * 1000) },
+      ],
+    };
+  }
+
+  // A permit that actually changes, so the ribbon has something to be a
+  // ribbon ABOUT. Unknown at the start, good, a drop, and a recovery: drawn
+  // as dots this is four samples, drawn as a ribbon it is whether the hutch
+  // was safe.
+  function enclosureTimeline() {
+    return {
+      kind: "enclosure_timeline",
+      enclosure_id: "enc1",
+      document: {
+        domain: { from: iso(60 * 60 * 1000), to: new Date(NOW).toISOString() },
+        title: "2-BM-B hutch",
+        subtitle: "Permitted",
+        subject_lane_id: "permit",
+        lanes: [
+          { lane_id: "permit", label: "Permit", render: "markers", points: [
+            { t: iso(60 * 60 * 1000), label: "Unknown", state: "Unknown", tone: "warn" },
+            { t: iso(57 * 60 * 1000), label: "Permitted", state: "Permitted", tone: "good" },
+            { t: iso(26 * 60 * 1000), label: "NotPermitted", state: "NotPermitted", tone: "warn" },
+            { t: iso(22 * 60 * 1000), label: "Permitted", state: "Permitted", tone: "good" },
+          ] },
+          { lane_id: "lifecycle", label: "Lifecycle", render: "markers", points: [
+            { t: iso(60 * 60 * 1000), label: "Active", state: "Active" },
+          ] },
+        ],
+      },
+    };
+  }
+
+  // Rewind went entirely unexercised here: the picker is filled from a
+  // `run_history_index` this stub never sent, and the history itself comes
+  // from a fetch the stub answered with an empty list. So the second of the
+  // page's two timeline views rendered nothing in the preview, and moving its
+  // control could not be checked by looking.
+  function runHistoryIndex() {
+    return {
+      kind: "run_history_index",
+      runs: [
+        { run_id: "r1", name: "R-4471", status: "Running", terminal: false },
+        { run_id: "r2", name: "R-4472", status: "Held", terminal: false },
+        { run_id: "r0", name: "R-4390", status: "Completed", terminal: true },
+      ],
+    };
+  }
+
+  // A closed history, which is the shape REWIND exists for: a fold cursor
+  // rather than a live edge, and observations to fold.
+  function runHistory(runId) {
+    const t0 = NOW - 60 * 60 * 1000;
+    const at = (min) => new Date(t0 + min * 60000).toISOString();
+    const events = [
+      { event_type: "RunStarted", occurred_at: at(0) },
+      { event_type: "RunAdjusted", occurred_at: at(11) },
+      { event_type: "RunHeld", occurred_at: at(26) },
+      { event_type: "RunResumed", occurred_at: at(33) },
+      { event_type: "RunCompleted", occurred_at: at(52) },
+    ];
+    const observations = [];
+    for (let i = 0; i <= 52; i += 2) {
+      observations.push({
+        channel_name: "detector",
+        sampled_at: at(i),
+        value: Math.round(i * 28.8),
+        commanded_total: 1500,
+      });
+      observations.push({
+        channel_name: "ring_current",
+        sampled_at: at(i),
+        value: 101 - (i % 7) * 0.4,
+        commanded_total: null,
+      });
+    }
+    return { run_id: runId, events, observations, observations_truncated: false };
+  }
+
+  class StubSocket {
+    constructor() {
+      this.readyState = 1;
+      setTimeout(() => {
+        this.onopen && this.onopen();
+        this._send({ producer_connected: true });
+        this._send(snapshot());
+        this._send(runHistoryIndex());
+        this._send(enclosureTimeline());
+        this._send({ kind: "activity", events: backlog() });
+        this._tick = setInterval(() => {
+          this._send(snapshot());
+          if (rnd() < 0.7) this._send({ kind: "activity", events: burst(Date.now()) });
+        }, 2000);
+      }, 80);
+    }
+    _send(obj) { this.onmessage && this.onmessage({ data: JSON.stringify(obj) }); }
+    close() { clearInterval(this._tick); }
+    send() {}
+  }
+
+  const frame = document.createElement("iframe");
+  document.body.appendChild(frame);
+  fetch(SRC)
+    .then((r) => r.text())
+    .then((html) => {
+      const doc = frame.contentDocument;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      // Replace before page.html's own connect() runs on DOMContentLoaded-ish
+      // timing; its script is inline at the end of body, so patching the
+      // iframe's global here beats it to the first connect attempt.
+      frame.contentWindow.WebSocket = StubSocket;
+      frame.contentWindow.fetch = (url) => {
+        const m = String(url).match(/^\/run-history\/(.+)$/);
+        const body = m ? runHistory(decodeURIComponent(m[1])) : runHistoryIndex();
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+      };
+    });
+</script>
+</body>
+</html>

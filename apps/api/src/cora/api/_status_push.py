@@ -200,6 +200,9 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.projection import encode_cursor
 from cora.infrastructure.record_export import render_value
 from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_PRINCIPAL_ID
+from cora.operation.errors import UnauthorizedError as _OperationUnauthorizedError
+from cora.operation.features.list_procedures import ListProcedures
+from cora.recipe.features.list_plans import ListPlans
 from cora.run.errors import UnauthorizedError as _RunUnauthorizedError
 from cora.run.features.get_run_history import GetRunHistory
 from cora.run.features.list_runs import ListRuns
@@ -229,6 +232,10 @@ if TYPE_CHECKING:
         EventActivityRow,
         EventActivityTrail,
     )
+    from cora.operation.features.list_procedures.handler import (
+        Handler as ListProceduresHandler,
+    )
+    from cora.recipe.features.list_plans.handler import Handler as ListPlansHandler
     from cora.run.features.get_run_history.handler import Handler as GetRunHistoryHandler
     from cora.run.features.get_run_history.handler import RunHistoryView
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
@@ -312,6 +319,7 @@ _UNAUTHORIZED_ERRORS = (
     _DecisionUnauthorizedError,
     _SafetyUnauthorizedError,
     _EnclosureUnauthorizedError,
+    _OperationUnauthorizedError,
 )
 
 
@@ -382,8 +390,36 @@ def _render_progress_trail(
     }
 
 
+async def _plan_names(list_plans: ListPlansHandler, deps: Kernel) -> dict[UUID, str]:
+    """Every plan's name, by id.
+
+    A Plan is a TEMPLATE: it has no lifetime of its own during a shift, so it
+    is never a row on a live view. What a viewer needs is the other direction,
+    which run is executing which plan, and that is an attribute of the run.
+    Only the name travels; a `plan_id` alone would be an opaque uuid the page
+    could only print back.
+
+    Drained whole rather than looked up per run. The set is small, static
+    across a shift, and `ListPlans` has no id filter, so N lookups for a
+    handful of open runs would be more queries for the same rows.
+    """
+    items = await _drain_all(
+        lambda cursor: list_plans(
+            ListPlans(cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=SYSTEM_PRINCIPAL_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    )
+    return {item.plan_id: item.name for item in items}
+
+
 async def _drain_open_runs(
-    list_runs: ListRunsHandler, deps: Kernel, *, witness_recorder: RunWitnessRecorder | None
+    list_runs: ListRunsHandler,
+    deps: Kernel,
+    *,
+    witness_recorder: RunWitnessRecorder | None,
+    plan_names: dict[UUID, str],
 ) -> tuple[list[dict[str, Any]], list[UUID]]:
     """Returns the rendered (JSON-safe) rows AND the raw run_id UUIDs.
 
@@ -409,6 +445,23 @@ async def _drain_open_runs(
                     "run_id": render_value(item.run_id),
                     "name": item.name,
                     "status": item.status,
+                    # Structure, not decoration. `campaign_id` is what a Run
+                    # belongs to and `subject_id` is what it is measuring, both
+                    # already on the projection (they back `list_runs`'s own
+                    # `?campaign_id=` filter); a consumer without them can show
+                    # a Run but cannot place it among the others. `started_at`
+                    # is `running_since` where the Run has actually started and
+                    # `created_at` otherwise, so a span always has a left edge.
+                    "campaign_id": render_value(item.campaign_id),
+                    "subject_id": render_value(item.subject_id),
+                    # The template this run is an instance OF, by name. A plan
+                    # has no lifetime during a shift and so never earns a row
+                    # of its own; naming it here is how the template layer
+                    # becomes visible at all. Absent when the plan is not in
+                    # the projection, which reads as unknown rather than as
+                    # a run with no plan.
+                    "plan_name": plan_names.get(item.plan_id),
+                    "started_at": render_value(item.running_since or item.created_at),
                     "progress": _render_progress(item.run_id, witness_recorder),
                     "progress_trail": _render_progress_trail(item.run_id, witness_recorder),
                 }
@@ -431,7 +484,12 @@ async def _drain_open_subjects(
             )
         )
         rows.extend(
-            {"subject_id": render_value(item.subject_id), "name": item.name, "status": item.status}
+            {
+                "subject_id": render_value(item.subject_id),
+                "name": item.name,
+                "status": item.status,
+                "created_at": render_value(item.created_at),
+            }
             for item in items
         )
     return rows
@@ -485,7 +543,61 @@ async def _drain_datasets_for_runs(
                 "dataset_id": render_value(item.dataset_id),
                 "name": item.name,
                 "status": item.status,
+                # Both ends of what a dataset came from. `producing_run_id`
+                # was already here; `subject_id` is the same class of fact and
+                # answers the question the run id cannot, which is what was
+                # being measured when a dataset that no longer has an open run
+                # was written.
                 "producing_run_id": render_value(item.producing_run_id),
+                "subject_id": render_value(item.subject_id),
+            }
+            for item in items
+        )
+    return rows
+
+
+async def _drain_procedures_for_runs(
+    list_procedures: ListProceduresHandler, deps: Kernel, *, run_ids: list[UUID]
+) -> list[dict[str, Any]]:
+    """Procedures belonging to an on-screen Run, one query per run_id.
+
+    Bounded by the open-run count exactly as `_drain_datasets_for_runs` is,
+    and for the same reason: what a live page needs is the phases of the runs
+    on screen, never every Procedure the facility has ever registered.
+
+    This is the third level of the containment tree -- campaign holds runs
+    hold procedures -- and it is the level a consumer cannot reconstruct from
+    the activity stream alone. That stream carries a Procedure's `stream_id`
+    and so can tell one Procedure from another, but nothing in it says which
+    Run a Procedure is a phase OF: `parent_run_id` lives on the projection and
+    only here.
+
+    `last_status_reason` is deliberately NOT sent. It is operator free text
+    (see `cora.shared.text_bounds`), which is exactly the shape that carries
+    incidental personal data, and nothing on a status page needs it. `kind`
+    is a deployment-declared discriminator and `name` is the same class of
+    value as the Run `name` already on this payload.
+    """
+    rows: list[dict[str, Any]] = []
+    for run_id in run_ids:
+        items = await _drain_all(
+            lambda cursor, run_id=run_id: list_procedures(
+                ListProcedures(parent_run_id=run_id, cursor=cursor, limit=_PAGE_LIMIT),
+                principal_id=SYSTEM_PRINCIPAL_ID,
+                correlation_id=deps.id_generator.new_id(),
+                surface_id=NIL_SENTINEL_ID,
+            )
+        )
+        rows.extend(
+            {
+                "procedure_id": render_value(item.procedure_id),
+                "name": item.name,
+                "kind": item.kind,
+                "parent_run_id": render_value(item.parent_run_id),
+                "status": item.status,
+                "registered_at": render_value(item.registered_at),
+                "last_status_changed_at": render_value(item.last_status_changed_at),
+                "iteration_count": item.iteration_count,
             }
             for item in items
         )
@@ -508,7 +620,32 @@ async def _drain_active_clearances(
             "clearance_id": render_value(item.clearance_id),
             "template_code": item.template_code,
             "risk_band": item.risk_band,
+            "status": item.status,
+            # A clearance is cover over a RANGE, so the viewer needs both ends
+            # of it, not just when it runs out. `registered_at` is the
+            # fallback the page draws from when cover was granted without an
+            # explicit start.
+            #
+            # `title` and `last_status_reason` stay off the wire. The title is
+            # operator-authored and the reason is free text written at the
+            # moment of an incident, which is the shape that carries
+            # incidental personal data; `template_code` names the clearance
+            # without either.
+            "valid_from": render_value(item.valid_from),
             "valid_until": render_value(item.valid_until),
+            "registered_at": render_value(item.registered_at),
+            # WHAT the cover covers. A clearance drawn as a bar over a range
+            # says only that cover existed; these say whether it reaches the
+            # run on screen, which is the question anyone looking at a
+            # clearance on a live page is actually asking. Opaque ids of
+            # entities the same payload already names.
+            #
+            # `asset_binding_ids` is left off: nothing on this page draws an
+            # asset, so it would be a field on the wire that no consumer can
+            # resolve to anything.
+            "run_binding_ids": [render_value(i) for i in item.run_binding_ids],
+            "procedure_binding_ids": [render_value(i) for i in item.procedure_binding_ids],
+            "subject_binding_ids": [render_value(i) for i in item.subject_binding_ids],
         }
         for item in items
     ]
@@ -1075,6 +1212,7 @@ def build_snapshot(
     subjects: list[dict[str, Any]],
     campaigns: list[dict[str, Any]],
     datasets: list[dict[str, Any]],
+    procedures: list[dict[str, Any]],
     clearances: list[dict[str, Any]],
     enclosures: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
@@ -1094,6 +1232,7 @@ def build_snapshot(
         "subjects": subjects,
         "campaigns": campaigns,
         "datasets": datasets,
+        "procedures": procedures,
         "clearances": clearances,
         "enclosures": enclosures,
         "decisions": decisions,
@@ -1282,8 +1421,17 @@ def build_activity_message(
     """Assemble one activity push -- flowing mode's entire feed. The
     browser accumulates these into its own rolling window; this producer
     holds no window of its own, only the tail cursor. Event metadata only
-    (`stream_type`, `stream_id`, `event_type`, timestamps): never
-    `event.payload`, see `EventActivityTrail`'s own module docstring.
+    (`stream_type`, `stream_id`, `event_type`, timestamps, and the three
+    relationship fields): never `event.payload`, see `EventActivityTrail`'s
+    own module docstring for why those three are not a breach of that rule.
+
+    `schema_version` stays 1. Adding keys is additive by the repo's own
+    versioning stance, and the relay and the producer deploy to different
+    hosts, so a page served by an older relay must keep working against a
+    newer producer and vice versa. Every consumer treats `correlation_id`,
+    `causation_id` and `cause_occurred_at` as absent-by-default rather than
+    required, which is also what makes this safe to roll out to the live
+    2-BM page one host at a time.
 
     Unlike `build_snapshot`, never sent when `rows` is empty: there is no
     heartbeat need here, since "no message this tick" already means
@@ -1296,11 +1444,21 @@ def build_activity_message(
         "generated_at": generated_at,
         "events": [
             {
+                "event_id": render_value(row.event_id),
                 "stream_type": row.stream_type,
                 "stream_id": render_value(row.stream_id),
                 "event_type": row.event_type,
                 "occurred_at": render_value(row.occurred_at),
                 "recorded_at": render_value(row.recorded_at),
+                "correlation_id": render_value(row.correlation_id),
+                "causation_id": (
+                    render_value(row.causation_id) if row.causation_id is not None else None
+                ),
+                "cause_occurred_at": (
+                    render_value(row.cause_occurred_at)
+                    if row.cause_occurred_at is not None
+                    else None
+                ),
             }
             for row in rows
         ],
@@ -1314,7 +1472,9 @@ async def _build_payload_fields(
     list_subjects: ListSubjectsHandler,
     list_campaigns: ListCampaignsHandler,
     list_datasets: ListDatasetsHandler,
+    list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
+    list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     decision_tail: _DecisionTail,
     list_decisions: ListDecisionsHandler,
@@ -1340,13 +1500,19 @@ async def _build_payload_fields(
     `_RunHistoryTail`'s, `_EnclosureTimelineTail`'s, and `_ActivityTail`'s
     module docstrings), so none of them may enter `_content_hash`'s
     change-detection input."""
-    runs, raw_run_ids = await _drain_open_runs(list_runs, deps, witness_recorder=witness_recorder)
+    runs, raw_run_ids = await _drain_open_runs(
+        list_runs,
+        deps,
+        witness_recorder=witness_recorder,
+        plan_names=await _plan_names(list_plans, deps),
+    )
     enclosures, raw_enclosure_ids = await _drain_active_enclosures(list_enclosures, deps)
     fields = {
         "runs": runs,
         "subjects": await _drain_open_subjects(list_subjects, deps),
         "campaigns": await _drain_open_campaigns(list_campaigns, deps),
         "datasets": await _drain_datasets_for_runs(list_datasets, deps, run_ids=raw_run_ids),
+        "procedures": await _drain_procedures_for_runs(list_procedures, deps, run_ids=raw_run_ids),
         "clearances": await _drain_active_clearances(list_clearances, deps),
         "enclosures": enclosures,
         "decisions": await decision_tail.poll(list_decisions, deps),
@@ -1384,7 +1550,9 @@ async def _push_loop(
     list_subjects: ListSubjectsHandler,
     list_campaigns: ListCampaignsHandler,
     list_datasets: ListDatasetsHandler,
+    list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
+    list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
@@ -1456,7 +1624,9 @@ async def _push_loop(
                             list_subjects=list_subjects,
                             list_campaigns=list_campaigns,
                             list_datasets=list_datasets,
+                            list_procedures=list_procedures,
                             list_clearances=list_clearances,
+                            list_plans=list_plans,
                             list_enclosures=list_enclosures,
                             decision_tail=decision_tail,
                             list_decisions=list_decisions,
@@ -1531,7 +1701,9 @@ async def status_push_lifespan(
     list_subjects: ListSubjectsHandler,
     list_campaigns: ListCampaignsHandler,
     list_datasets: ListDatasetsHandler,
+    list_procedures: ListProceduresHandler,
     list_clearances: ListClearancesHandler,
+    list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
@@ -1594,7 +1766,9 @@ async def status_push_lifespan(
             list_subjects=list_subjects,
             list_campaigns=list_campaigns,
             list_datasets=list_datasets,
+            list_procedures=list_procedures,
             list_clearances=list_clearances,
+            list_plans=list_plans,
             list_enclosures=list_enclosures,
             list_decisions=list_decisions,
             get_run_history=get_run_history,

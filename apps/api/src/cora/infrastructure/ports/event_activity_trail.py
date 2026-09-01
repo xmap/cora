@@ -9,13 +9,22 @@ directly inside `cora.api._status_push`), so it is not a `Kernel` field:
 promoting a single-consumer port to the shared kernel would be the reverse
 of the rule-of-three this codebase applies to new cross-cutting primitives.
 
-Ships `stream_type`, `stream_id`, `event_type`, `occurred_at`, `recorded_at`
-only. NEVER `payload`. `test_run_events_carry_no_pii.py` (and its Access-BC
-sibling) are the only two fitness tests that guard event field names against
-personal data, and they cover exactly two of the twenty-five stream types
-this port's data spans; shipping raw payloads across every BC would carry
-that guarantee somewhere it does not hold. A lane needs to know THAT
-something happened and WHAT KIND, never the values inside it.
+Ships `event_id`, `stream_type`, `stream_id`, `event_type`, `occurred_at`,
+`recorded_at`, `correlation_id`, `causation_id` and `cause_occurred_at` only.
+NEVER `payload`. `test_run_events_carry_no_pii.py` (and its Access-BC sibling) are
+the only two fitness tests that guard event field names against personal
+data, and they cover exactly two of the twenty-five stream types this port's
+data spans; shipping raw payloads across every BC would carry that guarantee
+somewhere it does not hold. A lane needs to know THAT something happened and
+WHAT KIND, never the values inside it.
+
+The three relationship columns do not weaken that. They are opaque
+identifiers and one timestamp drawn from the envelope, never from
+`payload`, so no BC's field names ride out on them and the guarantee the two
+fitness tests actually make is unchanged. They answer "which events belong to
+one operator action" and "which event caused this one", both of which are
+structure, not content. Anything requiring a VALUE from inside an event still
+has to come from a domain-specific read, not from here.
 
 Cursor discipline mirrors `cora.infrastructure.ports.event_store`'s own
 documented rule: `position` alone is unsafe (sequences advance on rollback,
@@ -51,11 +60,25 @@ class EventActivityCursor:
 
 @dataclass(frozen=True)
 class EventActivityRow:
+    event_id: UUID
+    """This event's own identity, and the thing a `causation_id` points AT.
+    Without it a consumer holds a cause it can never resolve: it can tell that
+    an event was caused, but not by which of the events it already has."""
+
     stream_type: str
     stream_id: UUID
     event_type: str
     occurred_at: datetime
     recorded_at: datetime
+    correlation_id: UUID
+    causation_id: UUID | None
+    cause_occurred_at: datetime | None
+    """When the causing event happened, resolved by the query rather than left
+    to the reader. A consumer holding a bounded window cannot resolve a
+    `causation_id` older than that window, and without this it can only say
+    "no cause" for an event that certainly had one. Carrying the time turns an
+    unresolvable parent into "caused by something at 14:31:30, before this
+    window" instead of silence. `None` only when `causation_id` is."""
 
 
 class EventActivityTrail(Protocol):
