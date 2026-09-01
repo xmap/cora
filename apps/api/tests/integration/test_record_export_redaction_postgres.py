@@ -30,6 +30,7 @@ from cora.infrastructure.record_export import (
 )
 from cora.infrastructure.record_export._redact_tier2 import TIER2_DISPOSITIONS
 from cora.infrastructure.record_export._registry import all_specs
+from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.operation.aggregates.procedure import (
     PostgresActivityStore,
     ProcedureRegistered,
@@ -39,6 +40,7 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features.append_activities import ActivityInput, AppendProcedureActivities
 from cora.operation.features.append_activities import bind as bind_append
+from tests._authz import seed_policy
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
@@ -231,9 +233,26 @@ async def test_unfired_tier1_fields_is_empty_for_a_realistic_export(db_pool: asy
     event type it carries: a stored payload includes a key, even as
     `null`, on any `schema_version` that still declares it. The tier-1
     completeness twin to tier-2's `unfired_tier2_clearances` should be
-    empty for a normal fixture, not merely small."""
+    empty for a normal fixture, not merely small.
+
+    The policy below is load-bearing, not scenery. Every database carries
+    two migration-seeded PolicyDefined rows written before `grants`
+    existed, so they hold the pre-pairs two-list shape forever. With only
+    those, `grants` is a declared field no row supplies and this
+    assertion fails for a reason that is neither a leak nor a defect,
+    just narrow coverage. Defining one policy the way a deployment
+    actually defines them is what makes the export representative.
+    """
     procedure_id = uuid4()
     await _seed_running_procedure_with_activity(db_pool, procedure_id)
+    await seed_policy(
+        build_postgres_deps(db_pool, now=_NOW, ids=[]).event_store,
+        policy_id=uuid4(),
+        permitted_principal_ids=[_PRINCIPAL_ID],
+        permitted_commands=["StartProcedure"],
+        surface_id=SYSTEM_HTTP_SURFACE_ID,
+        occurred_at=_NOW,
+    )
 
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]

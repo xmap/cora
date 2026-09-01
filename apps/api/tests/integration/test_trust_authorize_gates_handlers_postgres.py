@@ -94,7 +94,7 @@ async def test_trust_authorize_allows_handler_call_for_permitted_principal(
     # 1) Define a policy permitting only `_PERMITTED_PRINCIPAL` to DefineZone.
     bootstrap = _bootstrap_deps(db_pool, ids=[policy_id, policy_event_id])
     await define_policy.bind(bootstrap)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="GateA-PermitDefineZone",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
@@ -137,7 +137,7 @@ async def test_trust_authorize_denies_handler_call_for_other_principal(
 
     bootstrap = _bootstrap_deps(db_pool, ids=[policy_id, policy_event_id])
     await define_policy.bind(bootstrap)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="GateA-DenyOthers",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
@@ -177,7 +177,7 @@ async def test_trust_authorize_denies_handler_call_when_command_not_permitted(
 
     bootstrap = _bootstrap_deps(db_pool, ids=[policy_id, policy_event_id])
     await define_policy.bind(bootstrap)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="GateA-WrongCommand",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),
@@ -254,7 +254,7 @@ async def test_trust_authorize_denies_when_policy_conduit_does_not_match_handler
     # module-level _CONDUIT_ID = nil) to exercise the mismatch path.
     bootstrap = _bootstrap_deps(db_pool, ids=[policy_id, policy_event_id])
     await define_policy.bind(bootstrap)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="GateA-OtherConduit",
             conduit_id=other_conduit_id,
             permitted_principal_ids=frozenset({_PERMITTED_PRINCIPAL}),

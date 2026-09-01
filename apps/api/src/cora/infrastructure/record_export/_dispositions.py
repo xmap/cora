@@ -1348,10 +1348,9 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "PolicyDefined": {
         "conduit_id": "token:uuid",
+        "grants": "drop:opaque",
         "name": "drop:text",
         "occurred_at": "keep:time",
-        "permitted_commands": "drop:text",
-        "permitted_principal_ids": "token:uuid",
         "policy_id": "token:uuid",
         "surface_id": "token:uuid",
     },

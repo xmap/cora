@@ -11,30 +11,49 @@ Policy is intentionally minimal:
   - `conduit_id` — the single Conduit this policy governs (one
     policy per conduit; cross-policy resolution is the
     `TrustAuthorize` adapter's problem)
-  - `permitted_principal_ids: frozenset[UUID]` — explicit allow-list
-  - `permitted_commands: frozenset[str]` — command-name allow-list
-    (matches the discriminator string used by the Authorize port and
-    the `event_type_name` everywhere else)
+  - `grants: frozenset[tuple[UUID, str]]` — explicit (principal,
+    command) pairs. The command name matches the discriminator string
+    used by the Authorize port and `event_type_name` everywhere else.
 
-Frozensets in domain state (deduplicated, hashable, set-membership
-in O(1) for `evaluate`); plain lists in event payloads (JSON-friendly,
-sorted for determinism). The evolver bridges the two.
+## Pairs, not two lists multiplied
+
+`grants` holds PAIRS deliberately. The earlier shape was two
+independent sets, `permitted_principal_ids` and `permitted_commands`,
+and `evaluate` checked membership in each separately — which grants
+every principal every command, the full N x M cross-product. A rulebook
+listing a read-only status feed alongside a supervisor that may abort a
+run granted the feed permission to abort runs. Nothing exercised that
+authority, but the rulebook said more than the code it governed did,
+and a rulebook that overstates is the one artifact that must not.
+
+The two sets survive as DERIVED properties so existing readers keep
+working; neither is stored, and neither can disagree with `grants`
+because both are computed from it.
+
+A frozenset in domain state (deduplicated, hashable, set-membership
+in O(1) for `evaluate`); a sorted list of two-element arrays in event
+payloads (JSON-friendly, deterministic). The evolver bridges the two.
+
+A `PolicyDefined` written before pairs existed carries the two lists
+and no `grants` key. `events.from_stored` cross-products them at the
+deserialization boundary, so such a policy folds to exactly the
+permissions it has always had — the same place, and the same reason,
+that a legacy event's missing `surface_id` defaults there.
 
 Status lifecycle (`Drafted → Approved → Active → Superseded`, per
 BC-map) and modify/revoke slices defer to later sub-phases per the
 same additive-state pattern as Zone and Conduit.
 
 **No referential integrity at command time.** `conduit_id` and
-each entry in `permitted_principal_ids` are stored as bare UUIDs
+each principal named in `grants` are stored as bare UUIDs
 without verifying the referenced Conduits / Actors exist. Same
 event-sourcing posture as Conduit→Zone: typos produce
 "dangling" policies; downstream evaluation just denies because
 the conduit_id mismatch surfaces at evaluate-time.
 
-Empty `permitted_principal_ids` or empty `permitted_commands` is
-allowed and produces a deny-all policy by construction (every
-evaluation hits the "not in {empty}" branch). Useful for
-temporarily revoking access without deleting the policy.
+Empty `grants` is allowed and produces a deny-all policy by
+construction (every evaluation hits the "not in {empty}" branch).
+Useful for temporarily revoking access without deleting the policy.
 """
 
 from dataclasses import dataclass
@@ -130,9 +149,41 @@ class Policy:
     id: UUID
     name: PolicyName
     conduit_id: UUID
-    permitted_principal_ids: frozenset[UUID]
-    permitted_commands: frozenset[str]
+    grants: frozenset[tuple[UUID, str]]
     surface_id: UUID = NIL_SENTINEL_ID
+
+    @property
+    def permitted_principal_ids(self) -> frozenset[UUID]:
+        """Every principal this policy grants anything to.
+
+        Derived, never stored. Answers "is this principal known here at
+        all", which is what `revoke_grant` asks and what `evaluate` uses
+        to pick between its two refusal reasons. It deliberately does
+        NOT answer what that principal may do; `grants` does.
+
+        O(len(grants)), recomputed on every read. Fine for the callers
+        above, which read it once; do not put it inside a loop or on a
+        per-request path. `evaluate` reads it only after a refusal is
+        already certain, for exactly this reason.
+        """
+        return frozenset(principal_id for principal_id, _ in self.grants)
+
+    @property
+    def permitted_commands(self) -> frozenset[str]:
+        """Every command this policy grants to SOMEONE.
+
+        Derived, never stored. This is a UNION across principals, not a
+        per-principal answer: a command appearing here means at least
+        one principal may issue it, never that any given principal may.
+        Callers narrowing to one principal must go through `evaluate`
+        (or `decide_authorization`), which consults the pair.
+
+        O(len(grants)), recomputed on every read; see the sibling
+        property. `list_permissions` reads it once to get its candidate
+        set and then asks the real decision per candidate, which is the
+        intended shape.
+        """
+        return frozenset(command_name for _, command_name in self.grants)
 
 
 _POLICY_EVALUATED: Final[frozenset[Conjunct]] = frozenset({Conjunct.POLICY})
@@ -176,14 +227,31 @@ def evaluate(
             reason=(f"Policy {policy.id} governs surface {policy.surface_id}, not {surface_id}"),
             evaluated=_POLICY_EVALUATED,
         )
+    # One hash lookup settles the permitted case, which is the case
+    # every served request takes. Deciding WHICH refusal to report needs
+    # `permitted_principal_ids`, and that property is O(len(grants)):
+    # it rebuilds a set from every pair each time it is read. Asking it
+    # first, as the two-set version could afford to, put that scan on
+    # the hot path and made a 64-principal policy measurably slower per
+    # decision (caught by the authz-latency benchmark, not by review).
+    # Refusals pay it instead, where an extra microsecond is free beside
+    # the logging and Verdict write that follow.
+    if (principal_id, command_name) in policy.grants:
+        return Allow(evaluated=_POLICY_EVALUATED)
     if principal_id not in policy.permitted_principal_ids:
         return Deny(
             reason=f"Principal {principal_id} not in policy {policy.id}'s permitted set",
             evaluated=_POLICY_EVALUATED,
         )
-    if command_name not in policy.permitted_commands:
-        return Deny(
-            reason=(f"Command {command_name!r} not in policy {policy.id}'s permitted set"),
-            evaluated=_POLICY_EVALUATED,
-        )
-    return Allow(evaluated=_POLICY_EVALUATED)
+    # The principal IS granted something here, just not this. The reason
+    # names it because the same command may well be permitted to a
+    # different principal under this very policy, and a reader who saw
+    # only the command name would reasonably conclude the policy forbids
+    # it outright.
+    return Deny(
+        reason=(
+            f"Command {command_name!r} not granted to principal "
+            f"{principal_id} by policy {policy.id}"
+        ),
+        evaluated=_POLICY_EVALUATED,
+    )

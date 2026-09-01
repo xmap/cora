@@ -52,7 +52,7 @@ async def test_policy_defined_inserts_with_conduit_ref(
     conduit_id = uuid4()
     deps = _build_deps(db_pool, [policy_id, uuid4()])
     await bind_define_policy(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="OperatorAccess",
             conduit_id=conduit_id,
             permitted_principal_ids=frozenset({_PRINCIPAL_ID}),
@@ -84,7 +84,7 @@ async def test_conduit_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None:
     policy_a = uuid4()
     deps_a = _build_deps(db_pool, [policy_a, uuid4()])
     await bind_define_policy(deps_a)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="for-conduit-a",
             conduit_id=conduit_a,
             permitted_principal_ids=frozenset(),
@@ -98,7 +98,7 @@ async def test_conduit_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None:
     policy_b = uuid4()
     deps_b = _build_deps(db_pool, [policy_b, uuid4()])
     await bind_define_policy(deps_b)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="for-conduit-b",
             conduit_id=conduit_b,
             permitted_principal_ids=frozenset(),

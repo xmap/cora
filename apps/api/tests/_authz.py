@@ -63,16 +63,33 @@ def make_policy_event(
     surface_id: UUID = NIL_SENTINEL_ID,
     name: str = "Test-policy",
     occurred_at: datetime | None = None,
+    grants: Iterable[tuple[UUID, str]] | None = None,
 ) -> NewEvent:
     """Build one envelope-wrapped `PolicyDefined` for a permissive (or
     narrow) test policy. Shared by every tier; the tier-specific append
-    is done by the callers below."""
+    is done by the callers below.
+
+    Keeps the two-list signature because almost every caller wants a
+    policy where the listed principals really do share the listed
+    commands, and cross-producting them here is what this helper always
+    did. Pass `grants` instead when a test needs principals with
+    DIFFERENT command sets, which is the case pairs exist to express and
+    the two lists cannot state.
+    """
+    resolved_grants = (
+        tuple(grants)
+        if grants is not None
+        else tuple(
+            (principal_id, command_name)
+            for principal_id in permitted_principal_ids
+            for command_name in permitted_commands
+        )
+    )
     event = PolicyDefined(
         policy_id=policy_id,
         name=name,
         conduit_id=conduit_id,
-        permitted_principal_ids=tuple(permitted_principal_ids),
-        permitted_commands=tuple(permitted_commands),
+        grants=resolved_grants,
         occurred_at=occurred_at if occurred_at is not None else datetime.now(tz=UTC),
         surface_id=surface_id,
     )

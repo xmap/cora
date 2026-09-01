@@ -11,9 +11,9 @@ that each `permitted_principal_ids` UUID corresponds to a registered
 Actor — see `cora.trust.aggregates.policy.state` for the eventual-
 consistency rationale.
 
-Permission sets are converted to `list[UUID]` / `list[str]` for the
-event payload (events carry primitives; lists JSON-serialize cleanly
-and `to_payload` sorts them deterministically).
+Grants are converted to a sorted tuple of `(UUID, str)` pairs for the
+event payload (events carry primitives; `to_payload` serializes each
+pair as a two-element array).
 """
 
 from datetime import datetime
@@ -57,8 +57,7 @@ def decide(
             policy_id=new_id,
             name=name.value,
             conduit_id=command.conduit_id,
-            permitted_principal_ids=tuple(command.permitted_principal_ids),
-            permitted_commands=tuple(command.permitted_commands),
+            grants=tuple(sorted(command.grants)),
             occurred_at=now,
             surface_id=command.surface_id,
         )

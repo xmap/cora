@@ -23,7 +23,7 @@ _ALLOWED_PRINCIPAL = UUID("01900000-0000-7000-8000-000000000a01")
 
 
 def _command(name: str = "Beam-team") -> DefinePolicy:
-    return DefinePolicy(
+    return DefinePolicy.from_cross_product(
         name=name,
         conduit_id=_CONDUIT_ID,
         permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),
@@ -69,8 +69,7 @@ async def test_handler_appends_policy_defined_event_to_store() -> None:
         "name": "Beam-team",
         "conduit_id": str(_CONDUIT_ID),
         "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
-        "permitted_principal_ids": [str(_ALLOWED_PRINCIPAL)],
-        "permitted_commands": ["RegisterActor"],
+        "grants": [[str(_ALLOWED_PRINCIPAL), "RegisterActor"]],
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID

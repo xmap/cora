@@ -4,9 +4,13 @@ Mirror of the Zone / Conduit evolvers. The terminal `assert_never`
 case forces pyright (and the runtime) to error if a new event type
 is added to `PolicyEvent` without a matching match arm.
 
-Folds the `list[UUID]` / `list[str]` from event payloads into
-`frozenset[UUID]` / `frozenset[str]` on the Policy state — set
-semantics matter for `evaluate`'s O(1) membership checks.
+Folds the `(principal_id, command_name)` pairs from event payloads
+into a `frozenset` of tuples on the Policy state — set semantics
+matter for `evaluate`'s O(1) membership check.
+
+Nothing here knows about the pre-pairs event shape. `events.from_stored`
+resolves that at the deserialization boundary, so this evolver sees
+pairs whether the stream was written before or after they existed.
 """
 
 from collections.abc import Sequence
@@ -28,8 +32,7 @@ def evolve(state: Policy | None, event: PolicyEvent) -> Policy:
             policy_id=policy_id,
             name=name,
             conduit_id=conduit_id,
-            permitted_principal_ids=permitted_principal_ids,
-            permitted_commands=permitted_commands,
+            grants=grants,
             surface_id=surface_id,
         ):
             _ = state  # PolicyDefined is the genesis event; prior state ignored
@@ -37,15 +40,23 @@ def evolve(state: Policy | None, event: PolicyEvent) -> Policy:
                 id=policy_id,
                 name=PolicyName(name),
                 conduit_id=conduit_id,
-                permitted_principal_ids=frozenset(permitted_principal_ids),
-                permitted_commands=frozenset(permitted_commands),
+                grants=frozenset(grants),
                 surface_id=surface_id,
             )
         case PolicyGrantRevoked(principal_id=principal_id):
             assert state is not None, "PolicyGrantRevoked requires prior state"
+            # Revocation is per-PRINCIPAL, not per-pair: the kill switch
+            # removes an actor's authority entirely, so every pair naming
+            # it goes. Filtering pairs rather than subtracting from a
+            # principal set is the same semantics expressed against the
+            # new shape.
             return replace(
                 state,
-                permitted_principal_ids=state.permitted_principal_ids - {principal_id},
+                grants=frozenset(
+                    (granted_principal_id, command_name)
+                    for granted_principal_id, command_name in state.grants
+                    if granted_principal_id != principal_id
+                ),
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

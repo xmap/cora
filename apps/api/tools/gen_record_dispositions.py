@@ -100,9 +100,32 @@ _OVERRIDE_WIRE_KEYS: dict[tuple[str, str], str] = {
 # modeling; no `str` coercion) while overriding their export disposition
 # to match the precedent this table already sets for the same class of
 # reading.
+#
+# `PolicyDefined.grants` is a different kind of override: not a judgment
+# about sensitivity, but a shape the `{"[]": [...]}` positional-record
+# rule cannot express. `tuple[tuple[UUID, str], ...]` is a COLLECTION of
+# pairs, and `_classify` erases the outer collection (the variadic branch
+# unwraps to its single element type), so the emitted disposition claims
+# the field IS one pair. `_redact_tier1` then zips two dispositions
+# against a list of N pairs, which raises for any N != 2 and silently
+# mis-redacts at N == 2.
+#
+# `PartitionRule.partition_parameters` (`tuple[tuple[str, float], ...]`,
+# serialized the same way) has the same latent defect and is the reason
+# this is described as a limitation rather than a one-off. Neither the
+# generator's collection-erasure nor the redactor's zip is fixed here:
+# that is a change to what published records disclose for a second,
+# unrelated aggregate, and it deserves its own reviewed diff rather than
+# riding along inside a Trust change. Dropping the field whole is the
+# fail-closed reading in the meantime, and it is a narrowing: `grants`
+# supersedes `permitted_principal_ids` (`token:uuid`) and
+# `permitted_commands` (`drop:text`), so an exported policy record now
+# discloses nothing about its grants instead of pseudonymised principals
+# with no commands beside them.
 _OVERRIDE_DISPOSITIONS: dict[tuple[str, str], str] = {
     ("SafetyEnvelopeVerdict", "enclosure_permitted"): DROP_TEXT,
     ("SafetyEnvelopeVerdict", "beam_available"): DROP_TEXT,
+    ("PolicyDefined", "grants"): DROP_OPAQUE,
 }
 # `CapturePreconditionBypassSnapshot.beam_preconditions_bypassed` (slice 11)
 # is deliberately NOT added here, despite being a bool that reads as the

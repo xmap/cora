@@ -15,7 +15,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -41,20 +41,33 @@ class DefinePolicyRequest(BaseModel):
         ...,
         description=("UUID of the Conduit this policy governs (not validated for existence)."),
     )
-    permitted_principal_ids: list[UUID] = Field(
-        ...,
+    grants: dict[UUID, list[str]] | None = Field(
+        default=None,
         description=(
-            "Principals (UUIDs) allowed to act via this conduit. "
-            "Empty list yields a deny-all policy."
+            "Exact grants: which command names each principal may issue. "
+            "Give this OR the permitted_principal_ids/permitted_commands "
+            "pair, not both. An empty mapping yields a deny-all policy."
         ),
     )
-    permitted_commands: list[str] = Field(
-        ...,
+    permitted_principal_ids: list[UUID] | None = Field(
+        default=None,
+        description=(
+            "Principals (UUIDs) allowed to act via this conduit. Grants "
+            "EVERY listed principal EVERY name in permitted_commands; "
+            "supply 'grants' instead when they should differ. Must be "
+            "given together with permitted_commands. Empty list yields a "
+            "deny-all policy."
+        ),
+    )
+    permitted_commands: list[str] | None = Field(
+        default=None,
         description=(
             "Command names (for example 'RegisterActor', 'DefineZone') allowed via this "
-            "conduit. Empty list yields a deny-all policy."
+            "conduit, to every principal in permitted_principal_ids. Must "
+            "be given together with it. Empty list yields a deny-all policy."
         ),
     )
+
     surface_id: UUID = Field(
         description=(
             "UUID of the Surface this policy governs. Required: every "
@@ -64,11 +77,62 @@ class DefinePolicyRequest(BaseModel):
         ),
     )
 
+    @model_validator(mode="after")
+    def _exactly_one_grant_shape(self) -> "DefinePolicyRequest":
+        """Reject a body that gives both shapes, or neither.
+
+        Accepting both would mean silently picking a winner, and the two
+        express different intents: a cross-product grants far more than
+        an equivalent-looking explicit mapping. Neither leaves the policy
+        undefined rather than deny-all, which is a typo, not an intent.
+        """
+        pair_given = self.permitted_principal_ids is not None or self.permitted_commands is not None
+        if self.grants is not None and pair_given:
+            msg = (
+                "Give either 'grants' or the permitted_principal_ids/"
+                "permitted_commands pair, not both."
+            )
+            raise ValueError(msg)
+        if self.grants is None and (
+            self.permitted_principal_ids is None or self.permitted_commands is None
+        ):
+            msg = "Provide 'grants', or both 'permitted_principal_ids' and 'permitted_commands'."
+            raise ValueError(msg)
+        return self
+
 
 class DefinePolicyResponse(BaseModel):
     """Response body for `POST /policies`."""
 
     policy_id: UUID
+
+
+def _to_command(body: DefinePolicyRequest) -> DefinePolicy:
+    """Translate either accepted body shape into the one command shape.
+
+    The validator above has already guaranteed exactly one is present,
+    so the domain never sees two ways of saying this.
+    """
+    if body.grants is not None:
+        return DefinePolicy(
+            name=body.name,
+            conduit_id=body.conduit_id,
+            grants=frozenset(
+                (principal_id, command_name)
+                for principal_id, command_names in body.grants.items()
+                for command_name in command_names
+            ),
+            surface_id=body.surface_id,
+        )
+    assert body.permitted_principal_ids is not None  # guaranteed by the validator
+    assert body.permitted_commands is not None
+    return DefinePolicy.from_cross_product(
+        name=body.name,
+        conduit_id=body.conduit_id,
+        permitted_principal_ids=body.permitted_principal_ids,
+        permitted_commands=body.permitted_commands,
+        surface_id=body.surface_id,
+    )
 
 
 def _get_handler(request: Request) -> IdempotentHandler:
@@ -120,13 +184,7 @@ async def post_policies(
     ] = None,
 ) -> DefinePolicyResponse:
     policy_id = await handler(
-        DefinePolicy(
-            name=body.name,
-            conduit_id=body.conduit_id,
-            permitted_principal_ids=frozenset(body.permitted_principal_ids),
-            permitted_commands=frozenset(body.permitted_commands),
-            surface_id=body.surface_id,
-        ),
+        _to_command(body),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

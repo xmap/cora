@@ -167,3 +167,106 @@ def test_post_policies_accepts_dangling_conduit_reference() -> None:
             json=_body(conduit_id=str(uuid4())),
         )
     assert response.status_code == 201
+
+
+# ---------- the two grant shapes ----------
+#
+# The body accepts either an exact `grants` mapping or the two
+# cross-producted lists. Exactly one, because they mean different things:
+# the pair form grants every listed principal every listed command, and
+# quietly preferring one over the other would let a caller ask for a
+# narrow mapping and receive a cross-product.
+
+
+def _grants_body(**overrides: object) -> dict[str, object]:
+    base: dict[str, object] = {
+        "name": "Beam-team",
+        "conduit_id": _CONDUIT,
+        "grants": {_PRINCIPAL: ["RegisterActor"]},
+        "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+    }
+    base.update(overrides)
+    return base
+
+
+@pytest.mark.contract
+def test_post_policies_accepts_an_exact_grants_mapping() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post("/policies", json=_grants_body())
+
+    assert response.status_code == 201
+    UUID(response.json()["policy_id"])
+
+
+@pytest.mark.contract
+def test_post_policies_accepts_grants_naming_different_commands_per_principal() -> None:
+    """The shape the two-list form cannot express, and the reason for it."""
+    other = "01900000-0000-7000-8000-000000000a02"
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/policies",
+            json=_grants_body(grants={_PRINCIPAL: ["ListRuns"], other: ["AbortRun"]}),
+        )
+
+    assert response.status_code == 201
+
+
+@pytest.mark.contract
+def test_post_policies_accepts_an_empty_grants_mapping_as_deny_all() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post("/policies", json=_grants_body(grants={}))
+
+    assert response.status_code == 201
+
+
+@pytest.mark.contract
+def test_post_policies_rejects_both_grant_shapes_with_422() -> None:
+    """Refused rather than resolved: a caller sending both has one of the
+    two in mind, and guessing which would silently over- or under-grant."""
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/policies",
+            json=_grants_body(
+                permitted_principal_ids=[_PRINCIPAL],
+                permitted_commands=["RegisterActor"],
+            ),
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_policies_rejects_neither_grant_shape_with_422() -> None:
+    """Omitting both is a typo, not a request for a deny-all policy.
+
+    A deny-all policy is still expressible, and unambiguously: send an
+    empty `grants` mapping, or empty lists for the pair.
+    """
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/policies",
+            json={
+                "name": "Beam-team",
+                "conduit_id": _CONDUIT,
+                "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+            },
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_policies_rejects_half_the_pair_shape_with_422() -> None:
+    """One list without the other cannot be cross-producted into anything."""
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/policies",
+            json={
+                "name": "Beam-team",
+                "conduit_id": _CONDUIT,
+                "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
+                "permitted_principal_ids": [_PRINCIPAL],
+            },
+        )
+
+    assert response.status_code == 422

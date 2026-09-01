@@ -81,8 +81,9 @@ def _policy(
         id=uuid4(),
         name=PolicyName("Test"),
         conduit_id=conduit_id,
-        permitted_principal_ids=principals,
-        permitted_commands=commands,
+        grants=frozenset(
+            (principal_id, command_name) for principal_id in principals for command_name in commands
+        ),
     )
 
 
@@ -173,6 +174,103 @@ def test_evaluate_check_order_conduit_first() -> None:
     assert "conduit" in result.reason.lower()
 
 
+# ---------- grants are pairs, not two lists multiplied ----------
+#
+# The reason `grants` exists. A policy holding two principals with
+# DIFFERENT command sets is the only shape that can tell the two designs
+# apart: under the old two-set check, every principal got the union of
+# every command, so the read-only one silently gained the dangerous
+# one's authority.
+#
+# Every other test in this file uses a single principal or a shared
+# command list, where both designs agree. Without the cases below,
+# reverting `evaluate` to the union check leaves the whole suite green
+# (verified by doing exactly that).
+
+
+def _split_policy() -> Policy:
+    """One principal may only read; the other may only abort."""
+    return Policy(
+        id=uuid4(),
+        name=PolicyName("Split"),
+        conduit_id=_CONDUIT_OK,
+        grants=frozenset(
+            {
+                (_PRINCIPAL_OK, "ListRuns"),
+                (_PRINCIPAL_OTHER, "AbortRun"),
+            }
+        ),
+    )
+
+
+@pytest.mark.unit
+def test_evaluate_denies_a_command_granted_only_to_a_different_principal() -> None:
+    """The reader must not inherit the aborter's authority."""
+    result = evaluate(
+        _split_policy(),
+        principal_id=_PRINCIPAL_OK,
+        command_name="AbortRun",
+        conduit_id=_CONDUIT_OK,
+    )
+
+    assert isinstance(result, Deny)
+    # Not the "principal unknown" branch: this principal IS in the
+    # policy, just not for this command. Distinguishing the two is what
+    # makes the refusal diagnosable.
+    assert "not granted to principal" in result.reason
+    assert str(_PRINCIPAL_OK) in result.reason
+
+
+@pytest.mark.unit
+def test_evaluate_denies_in_both_directions_across_a_split_policy() -> None:
+    """Symmetric: neither principal borrows the other's grant."""
+    policy = _split_policy()
+
+    assert isinstance(
+        evaluate(
+            policy,
+            principal_id=_PRINCIPAL_OTHER,
+            command_name="ListRuns",
+            conduit_id=_CONDUIT_OK,
+        ),
+        Deny,
+    )
+    assert isinstance(
+        evaluate(
+            policy,
+            principal_id=_PRINCIPAL_OK,
+            command_name="AbortRun",
+            conduit_id=_CONDUIT_OK,
+        ),
+        Deny,
+    )
+
+
+@pytest.mark.unit
+def test_evaluate_still_allows_each_principal_its_own_grant() -> None:
+    """The narrowing must not deny what the policy actually permits."""
+    policy = _split_policy()
+
+    assert isinstance(
+        evaluate(
+            policy,
+            principal_id=_PRINCIPAL_OK,
+            command_name="ListRuns",
+            conduit_id=_CONDUIT_OK,
+        ),
+        Allow,
+    )
+    assert isinstance(
+        evaluate(
+            policy,
+            principal_id=_PRINCIPAL_OTHER,
+            command_name="AbortRun",
+            conduit_id=_CONDUIT_OK,
+        ),
+        Allow,
+    )
+
+
 @pytest.mark.unit
 def test_evaluate_is_pure_same_inputs_same_outputs() -> None:
     policy = _policy()
@@ -206,8 +304,7 @@ def _nil_surface_policy() -> Policy:
         id=uuid4(),
         name=PolicyName("nil surface"),
         conduit_id=_CONDUIT_OK,
-        permitted_principal_ids=frozenset({_PRINCIPAL_OK}),
-        permitted_commands=frozenset({"RegisterActor"}),
+        grants=frozenset({(_PRINCIPAL_OK, "RegisterActor")}),
         surface_id=_NIL_SURFACE,
     )
 
@@ -218,8 +315,7 @@ def _http_policy() -> Policy:
         id=uuid4(),
         name=PolicyName("HTTP"),
         conduit_id=_CONDUIT_OK,
-        permitted_principal_ids=frozenset({_PRINCIPAL_OK}),
-        permitted_commands=frozenset({"RegisterActor"}),
+        grants=frozenset({(_PRINCIPAL_OK, "RegisterActor")}),
         surface_id=_SURFACE_HTTP,
     )
 

@@ -34,7 +34,7 @@ async def test_handler_persists_policy_defined_to_postgres(
     handler = define_policy.bind(deps)
 
     policy_id = await handler(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="Beam-team",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),
@@ -58,8 +58,7 @@ async def test_handler_persists_policy_defined_to_postgres(
         "name": "Beam-team",
         "conduit_id": str(_CONDUIT_ID),
         "surface_id": str(SYSTEM_HTTP_SURFACE_ID),
-        "permitted_principal_ids": [str(_ALLOWED_PRINCIPAL)],
-        "permitted_commands": ["RegisterActor"],
+        "grants": [[str(_ALLOWED_PRINCIPAL), "RegisterActor"]],
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.correlation_id == _CORRELATION_ID

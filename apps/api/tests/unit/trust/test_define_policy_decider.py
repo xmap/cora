@@ -27,7 +27,7 @@ def test_decide_emits_policy_defined_when_stream_is_empty() -> None:
     p1 = uuid4()
     events = define_policy.decide(
         state=None,
-        command=DefinePolicy(
+        command=DefinePolicy.from_cross_product(
             name="Beam-team",
             conduit_id=conduit_id,
             permitted_principal_ids=frozenset({p1}),
@@ -43,8 +43,7 @@ def test_decide_emits_policy_defined_when_stream_is_empty() -> None:
     assert e.policy_id == new_id
     assert e.name == "Beam-team"
     assert e.conduit_id == conduit_id
-    assert set(e.permitted_principal_ids) == {p1}
-    assert set(e.permitted_commands) == {"RegisterActor"}
+    assert set(e.grants) == {(p1, "RegisterActor")}
     assert e.occurred_at == _NOW
 
 
@@ -52,7 +51,7 @@ def test_decide_emits_policy_defined_when_stream_is_empty() -> None:
 def test_decide_trims_name_via_value_object() -> None:
     events = define_policy.decide(
         state=None,
-        command=DefinePolicy(
+        command=DefinePolicy.from_cross_product(
             name="  Beam-team  ",
             conduit_id=uuid4(),
             permitted_principal_ids=frozenset({uuid4()}),
@@ -70,7 +69,7 @@ def test_decide_rejects_invalid_name() -> None:
     with pytest.raises(InvalidPolicyNameError):
         define_policy.decide(
             state=None,
-            command=DefinePolicy(
+            command=DefinePolicy.from_cross_product(
                 name="",
                 conduit_id=uuid4(),
                 permitted_principal_ids=frozenset({uuid4()}),
@@ -88,13 +87,12 @@ def test_decide_rejects_existing_state() -> None:
         id=uuid4(),
         name=PolicyName("Existing"),
         conduit_id=uuid4(),
-        permitted_principal_ids=frozenset({uuid4()}),
-        permitted_commands=frozenset({"RegisterActor"}),
+        grants=frozenset({(uuid4(), "RegisterActor")}),
     )
     with pytest.raises(PolicyAlreadyExistsError) as exc_info:
         define_policy.decide(
             state=existing,
-            command=DefinePolicy(
+            command=DefinePolicy.from_cross_product(
                 name="Other",
                 conduit_id=uuid4(),
                 permitted_principal_ids=frozenset(),
@@ -114,7 +112,7 @@ def test_decide_allows_empty_permission_sets() -> None:
     "must have at least one principal" rule has to flip this."""
     events = define_policy.decide(
         state=None,
-        command=DefinePolicy(
+        command=DefinePolicy.from_cross_product(
             name="Locked",
             conduit_id=uuid4(),
             permitted_principal_ids=frozenset(),
@@ -124,8 +122,7 @@ def test_decide_allows_empty_permission_sets() -> None:
         now=_NOW,
         new_id=uuid4(),
     )
-    assert events[0].permitted_principal_ids == ()
-    assert events[0].permitted_commands == ()
+    assert events[0].grants == ()
 
 
 @pytest.mark.unit
@@ -137,7 +134,7 @@ def test_decide_rejects_nil_surface_id() -> None:
     with pytest.raises(InvalidPolicySurfaceError):
         define_policy.decide(
             state=None,
-            command=DefinePolicy(
+            command=DefinePolicy.from_cross_product(
                 name="Nil-surface",
                 conduit_id=uuid4(),
                 permitted_principal_ids=frozenset({uuid4()}),
@@ -157,7 +154,7 @@ def test_decide_does_not_validate_conduit_existence() -> None:
     has to flip this."""
     events = define_policy.decide(
         state=None,
-        command=DefinePolicy(
+        command=DefinePolicy.from_cross_product(
             name="Dangling",
             conduit_id=uuid4(),  # random — no corresponding Conduit events
             permitted_principal_ids=frozenset({uuid4()}),
@@ -175,7 +172,7 @@ def test_decide_is_pure_same_inputs_same_outputs() -> None:
     new_id = uuid4()
     conduit = uuid4()
     p1 = uuid4()
-    command = DefinePolicy(
+    command = DefinePolicy.from_cross_product(
         name="Beam-team",
         conduit_id=conduit,
         permitted_principal_ids=frozenset({p1}),

@@ -5,16 +5,33 @@ classes, discriminated union, `event_type_name`, `to_payload`,
 `from_stored`. The persistence-envelope construction (`NewEvent`)
 lives at `cora.infrastructure.event_envelope.to_new_event`.
 
-`PolicyDefined.permitted_principal_ids` / `.permitted_commands` are
-stored as `list[UUID]` / `list[str]` here (events carry primitives
-per CONTRIBUTING.md; lists JSON-serialize cleanly). The evolver
-converts them to `frozenset` when folding into Policy state, where
-set-membership semantics matter for `evaluate`. `to_payload` sorts
-both lists by string form so the same logical permission set
-serializes deterministically across runs (important for hash-based
-idempotency and any future content-addressed lookup).
+`PolicyDefined.grants` is stored as a list of two-element
+`[principal_id, command_name]` arrays (events carry primitives per
+CONTRIBUTING.md; lists JSON-serialize cleanly). The evolver converts
+them to a `frozenset` of tuples when folding into Policy state, where
+set-membership semantics matter for `evaluate`. `to_payload` sorts the
+pairs so the same logical permission set serializes deterministically
+across runs (important for hash-based idempotency and any future
+content-addressed lookup).
+
+## Reading a pre-pairs event
+
+Events written before `grants` existed carry `permitted_principal_ids`
+and `permitted_commands` as two independent lists, which `evaluate`
+then multiplied. `from_stored` reconstructs those as the full
+cross-product of pairs, so such an event folds to exactly the
+permissions it has always granted: identical `evaluate` results, by
+construction, for every policy stream already on disk.
+
+The cross-product lives HERE, at the deserialization boundary, and
+nowhere else. That is the same place, and for the same reason, that a
+legacy event's missing `surface_id` gets its default: one function owns
+the difference between what is on disk and what the domain works with,
+so no downstream code has to know two shapes exist. `to_payload` never
+writes the legacy pair of lists, so the shape is read-only history.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, assert_never
@@ -29,6 +46,10 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 class PolicyDefined:
     """A new authorization Policy was defined for a Conduit + Surface pair.
 
+    `grants`: the (principal, command) pairs this policy permits. Events
+    written before pairs existed carry two independent lists instead;
+    `from_stored` cross-products them, per this module's docstring.
+
     `surface_id`: additive. The legacy V1 bootstrap PolicyDefined event
     on disk lacks this field; `from_stored` defaults the missing value to
     `UUID(int=0)` so that immutable seed still folds cleanly. New events
@@ -39,8 +60,7 @@ class PolicyDefined:
     policy_id: UUID
     name: str
     conduit_id: UUID
-    permitted_principal_ids: tuple[UUID, ...]
-    permitted_commands: tuple[str, ...]
+    grants: tuple[tuple[UUID, str], ...]
     occurred_at: datetime
     surface_id: UUID = NIL_SENTINEL_ID
 
@@ -49,7 +69,9 @@ class PolicyDefined:
 class PolicyGrantRevoked:
     """One principal's grant was revoked from a Policy's allow-list.
 
-    Drops `principal_id` from `Policy.permitted_principal_ids`. `revoked_by`
+    Drops every grant naming `principal_id` from `Policy.grants`, so the
+    revocation removes that actor's authority entirely rather than one
+    command of it. `revoked_by`
     is the invoking principal (the operator or observer that issued the
     revocation), handler-injected from the request envelope, distinct from
     `principal_id` (the grant being removed). `reason` is operator free text
@@ -89,8 +111,7 @@ def to_payload(event: PolicyEvent) -> dict[str, Any]:
             policy_id=policy_id,
             name=name,
             conduit_id=conduit_id,
-            permitted_principal_ids=permitted_principal_ids,
-            permitted_commands=permitted_commands,
+            grants=grants,
             occurred_at=occurred_at,
             surface_id=surface_id,
         ):
@@ -99,8 +120,9 @@ def to_payload(event: PolicyEvent) -> dict[str, Any]:
                 "name": name,
                 "conduit_id": str(conduit_id),
                 "surface_id": str(surface_id),
-                "permitted_principal_ids": sorted(str(p) for p in permitted_principal_ids),
-                "permitted_commands": sorted(permitted_commands),
+                "grants": sorted(
+                    [str(principal_id), command_name] for principal_id, command_name in grants
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case PolicyGrantRevoked(
@@ -121,6 +143,37 @@ def to_payload(event: PolicyEvent) -> dict[str, Any]:
             assert_never(event)
 
 
+def _grants_from_payload(payload: Mapping[str, Any]) -> tuple[tuple[UUID, str], ...]:
+    """Read `grants`, or reconstruct it from a pre-pairs payload.
+
+    The ONLY place the legacy two-list shape is understood. A payload
+    carrying `grants` is authoritative and its pairs are returned as
+    written. A payload without one predates pairs, and its two
+    independent lists are cross-producted, which is precisely what the
+    old `evaluate` did with them at decision time: every listed
+    principal was permitted every listed command. Moving that
+    multiplication from the check to the fold changes where it happens,
+    never what it yields.
+
+    Both branches sort, so a fold is deterministic regardless of which
+    shape produced it.
+    """
+    stored_grants = payload.get("grants")
+    if stored_grants is not None:
+        return tuple(
+            sorted(
+                (UUID(principal_id), command_name) for principal_id, command_name in stored_grants
+            )
+        )
+    return tuple(
+        sorted(
+            (UUID(principal_id), command_name)
+            for principal_id in payload["permitted_principal_ids"]
+            for command_name in payload["permitted_commands"]
+        )
+    )
+
+
 def from_stored(stored: StoredEvent) -> PolicyEvent:
     """Rebuild a Policy event from a StoredEvent loaded from the event store."""
     payload = stored.payload
@@ -132,10 +185,7 @@ def from_stored(stored: StoredEvent) -> PolicyEvent:
                     policy_id=UUID(payload["policy_id"]),
                     name=payload["name"],
                     conduit_id=UUID(payload["conduit_id"]),
-                    permitted_principal_ids=tuple(
-                        UUID(p) for p in payload["permitted_principal_ids"]
-                    ),
-                    permitted_commands=tuple(payload["permitted_commands"]),
+                    grants=_grants_from_payload(payload),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     surface_id=UUID(payload.get("surface_id", str(NIL_SENTINEL_ID))),
                 ),

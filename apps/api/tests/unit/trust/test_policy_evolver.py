@@ -25,8 +25,7 @@ def test_evolve_policy_defined_from_empty_state() -> None:
             policy_id=policy_id,
             name="Beam-team",
             conduit_id=conduit,
-            permitted_principal_ids=(p1,),
-            permitted_commands=("RegisterActor",),
+            grants=((p1, "RegisterActor"),),
             occurred_at=_NOW,
         ),
     )
@@ -34,8 +33,7 @@ def test_evolve_policy_defined_from_empty_state() -> None:
         id=policy_id,
         name=PolicyName("Beam-team"),
         conduit_id=conduit,
-        permitted_principal_ids=frozenset({p1}),
-        permitted_commands=frozenset({"RegisterActor"}),
+        grants=frozenset({(p1, "RegisterActor")}),
     )
 
 
@@ -51,11 +49,11 @@ def test_evolve_converts_lists_to_frozensets() -> None:
             policy_id=policy_id,
             name="X",
             conduit_id=uuid4(),
-            permitted_principal_ids=(p1, p2, p1),  # duplicate intentionally
-            permitted_commands=("A", "B", "A"),
+            grants=((p1, "A"), (p2, "B"), (p1, "A")),  # duplicate intentionally
             occurred_at=_NOW,
         ),
     )
+    assert state.grants == frozenset({(p1, "A"), (p2, "B")})
     assert state.permitted_principal_ids == frozenset({p1, p2})
     assert state.permitted_commands == frozenset({"A", "B"})
 
@@ -69,8 +67,7 @@ def test_evolve_grant_revoked_drops_principal_from_permitted_set() -> None:
         policy_id=policy_id,
         name="Beam-team",
         conduit_id=conduit,
-        permitted_principal_ids=(p1, p2),
-        permitted_commands=("RegisterActor",),
+        grants=((p1, "RegisterActor"), (p2, "RegisterActor")),
         occurred_at=_NOW,
     )
     state = evolve(
@@ -94,8 +91,7 @@ def test_evolve_grant_revoked_of_absent_principal_leaves_set_unchanged() -> None
         policy_id=policy_id,
         name="Beam-team",
         conduit_id=uuid4(),
-        permitted_principal_ids=(p1,),
-        permitted_commands=("RegisterActor",),
+        grants=((p1, "RegisterActor"),),
         occurred_at=_NOW,
     )
     state = evolve(
@@ -126,8 +122,7 @@ def test_fold_single_policy_defined_returns_policy() -> None:
                 policy_id=policy_id,
                 name="Beam-team",
                 conduit_id=conduit,
-                permitted_principal_ids=(),
-                permitted_commands=(),
+                grants=(),
                 occurred_at=_NOW,
             )
         ]
@@ -136,8 +131,7 @@ def test_fold_single_policy_defined_returns_policy() -> None:
         id=policy_id,
         name=PolicyName("Beam-team"),
         conduit_id=conduit,
-        permitted_principal_ids=frozenset(),
-        permitted_commands=frozenset(),
+        grants=frozenset(),
     )
 
 
@@ -148,8 +142,7 @@ def test_fold_is_pure_same_input_same_output() -> None:
             policy_id=uuid4(),
             name="X",
             conduit_id=uuid4(),
-            permitted_principal_ids=(uuid4(),),
-            permitted_commands=("X",),
+            grants=((uuid4(), "X"),),
             occurred_at=_NOW,
         )
     ]
@@ -162,7 +155,7 @@ def test_decider_and_evolver_round_trip() -> None:
     new_id = uuid4()
     conduit = uuid4()
     p1, p2 = uuid4(), uuid4()
-    command = DefinePolicy(
+    command = DefinePolicy.from_cross_product(
         name="  Beam-team  ",  # whitespace exercises the VO trim
         conduit_id=conduit,
         permitted_principal_ids=frozenset({p1, p2}),
@@ -177,7 +170,13 @@ def test_decider_and_evolver_round_trip() -> None:
         id=new_id,
         name=PolicyName("Beam-team"),
         conduit_id=conduit,
-        permitted_principal_ids=frozenset({p1, p2}),
-        permitted_commands=frozenset({"RegisterActor", "DefineZone"}),
+        grants=frozenset(
+            {
+                (p1, "RegisterActor"),
+                (p1, "DefineZone"),
+                (p2, "RegisterActor"),
+                (p2, "DefineZone"),
+            }
+        ),
         surface_id=SYSTEM_HTTP_SURFACE_ID,
     )

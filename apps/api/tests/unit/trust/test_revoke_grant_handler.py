@@ -43,8 +43,7 @@ async def _seed_policy(store: InMemoryEventStore) -> None:
         policy_id=_POLICY_ID,
         name="Beam-team",
         conduit_id=_CONDUIT_ID,
-        permitted_principal_ids=(_PRINCIPAL_IN,),
-        permitted_commands=("RegisterActor",),
+        grants=((_PRINCIPAL_IN, "RegisterActor"),),
         occurred_at=_NOW,
         surface_id=_SURFACE_ID,
     )

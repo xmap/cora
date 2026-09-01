@@ -44,7 +44,7 @@ async def test_evaluate_policy_loads_and_evaluates_through_real_postgres(
     # PolicyDefined event with the expected jsonb shape. Binds the HTTP
     # Surface (define_policy requires a real Surface).
     await define_policy.bind(deps)(
-        DefinePolicy(
+        DefinePolicy.from_cross_product(
             name="Beam-team",
             conduit_id=_CONDUIT_ID,
             permitted_principal_ids=frozenset({_ALLOWED_PRINCIPAL}),
