@@ -163,6 +163,21 @@ from cora.recipe.features.define_recipe.command import DefineRecipe
 from cora.recipe.features.define_recipe.decider import decide as decide_recipe
 from cora.recipe.features.deprecate_plan.command import DeprecatePlan
 from cora.recipe.features.deprecate_plan.decider import decide as decide_deprecate_plan
+from cora.recipe.features.update_method_parameters_schema.command import (
+    UpdateMethodParametersSchema,
+)
+from cora.recipe.features.update_method_parameters_schema.decider import (
+    decide as decide_update_method_parameters_schema,
+)
+from cora.recipe.features.update_plan_default_parameters.command import (
+    UpdatePlanDefaultParameters,
+)
+from cora.recipe.features.update_plan_default_parameters.context import (
+    PlanDefaultParametersContext,
+)
+from cora.recipe.features.update_plan_default_parameters.decider import (
+    decide as decide_update_plan_default_parameters,
+)
 from cora.shared.deprecation import DeprecationReason
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
@@ -195,6 +210,53 @@ ASSET_SEED_NAMESPACE = UUID("6c1f4a52-8f2e-4bb0-9d59-1a4c9be1a23d")
 RECIPE_SEED_NAMESPACE = UUID("48eb0d48-8fc2-482c-9e9e-d3547b1ff37b")
 
 _COMMAND_NAME = "SeedPilotBeamline"
+
+#: `fly_scan` Method.parameters_schema, in CORA's constrained JSON Schema
+#: subset (`cora.shared.json_schema_subset.ALLOWED_SCHEMA_KEYS`). Declares
+#: the shape a witnessed Run's `effective_parameters` should carry, so
+#: `record_witnessed_run` stops binding every 2-BM capture to a Plan whose
+#: declared defaults are empty (see `project_2bm_live_pilot_rung` memory).
+#: Field names mirror `cora.operation.acquisitions.CollectParams`
+#: (`dwell`, `repetitions`) where that vocabulary already exists;
+#: `rotation_*` / `*_field_count` are new names for TomoScan-side
+#: concepts CollectParams does not model. `repetitions` is intentionally
+#: NOT given a default below: 2-BM's angle count depends on the scan
+#: (see `project_2bm_live_pilot_rung`'s per-run-selector deferral), so
+#: no single number is honest as a Plan-level default.
+_FLY_SCAN_PARAMETERS_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "dwell": {"type": "number", "minimum": 0, "unit": {"system": "udunits", "code": "s"}},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "rotation_start": {"type": "number", "unit": {"system": "udunits", "code": "deg"}},
+        "rotation_stop": {"type": "number", "unit": {"system": "udunits", "code": "deg"}},
+        "rotation_step": {
+            "type": "number",
+            "minimum": 0,
+            "unit": {"system": "udunits", "code": "deg"},
+        },
+        "flat_field_count": {"type": "integer", "minimum": 0},
+        "dark_field_count": {"type": "integer", "minimum": 0},
+    },
+}
+
+#: `fly_scan` Plan.default_parameters. UNCONFIRMED: these values were
+#: READ from `entries_run_observations` (sampling_procedure="baseline")
+#: on the live arcturus host, last written 2026-08-19, not declared by
+#: 2-BM staff. Using an OBSERVED reading as a DECLARED default risks the
+#: two sides of a later declared-vs-observed comparison agreeing by
+#: construction (`project_independent_check_principle`); treat this as a
+#: placeholder to confirm with staff before the 2026-09-09 beamtime, not
+#: as ground truth.
+_FLY_SCAN_DEFAULT_PARAMETERS: dict[str, Any] = {
+    "dwell": 0.1,
+    "rotation_start": 0,
+    "rotation_stop": 180.0,
+    "rotation_step": 0.12,
+    "flat_field_count": 10,
+    "dark_field_count": 10,
+}
 
 _EXIT_CLEAN = 0
 _EXIT_ERROR = 1
@@ -813,6 +875,8 @@ async def seed_pilot_beamline(
             plan_name: str,
             *,
             include_rotary: bool = False,
+            parameters_schema: dict[str, Any] | None = None,
+            default_parameters: dict[str, Any] | None = None,
         ) -> None:
             needed_family_ids = (
                 recipe_family_ids_with_rotary if include_rotary else recipe_family_ids
@@ -918,7 +982,108 @@ async def seed_pilot_beamline(
                 label=f"plan {plan_name}",
                 reload=lambda: load_plan(kernel.event_store, plan_id),
             )
-            _ = plan
+
+            # `parameters_schema` / `default_parameters` are update-slice
+            # inputs, not genesis: unlike everything above, DefinePlan
+            # cannot carry them (default_parameters are set later via
+            # update_plan_default_parameters; see that slice's own
+            # docstring), and re-running this ceremony against an
+            # ALREADY-seeded deployment must still converge the schema
+            # and defaults onto the declared values here, not just
+            # leave a stale genesis in place. Both deciders already
+            # no-op when the proposed value equals the current one, so
+            # this is safe to run on every ceremony invocation.
+            # `None` here means "the caller did not request a change",
+            # NOT the command's own "clear the schema" intent.
+            if not dry_run and parameters_schema is not None:
+                assert method is not None
+                schema_events = decide_update_method_parameters_schema(
+                    state=method,
+                    command=UpdateMethodParametersSchema(
+                        method_id=method_id,
+                        parameters_schema=parameters_schema,
+                    ),
+                    capability=capability,
+                    now=clock.now(),
+                )
+                if not schema_events:
+                    report.note("exists", f"method {method_name} parameters_schema")
+                else:
+                    _, method_version = await kernel.event_store.load("Method", method_id)
+                    schema_envelopes = [
+                        to_new_event(
+                            event_type=method_event_type_name(event),
+                            payload=method_to_payload(event),
+                            occurred_at=event.occurred_at,
+                            event_id=ids.new_id(),
+                            command_name=_COMMAND_NAME,
+                            correlation_id=run_correlation_id,
+                            principal_id=SYSTEM_PRINCIPAL_ID,
+                        )
+                        for event in schema_events
+                    ]
+                    await kernel.event_store.append(
+                        stream_type="Method",
+                        stream_id=method_id,
+                        expected_version=method_version,
+                        events=schema_envelopes,
+                    )
+                    report.note("seeded", f"method {method_name} parameters_schema")
+            elif dry_run and parameters_schema is not None:
+                report.note(
+                    "seeded", f"method {method_name} parameters_schema", "dry-run, not written"
+                )
+
+            if not dry_run and default_parameters is not None:
+                assert plan is not None
+                assert method is not None
+                defaults_events = decide_update_plan_default_parameters(
+                    state=plan,
+                    command=UpdatePlanDefaultParameters(
+                        plan_id=plan_id,
+                        default_parameters_patch=default_parameters,
+                    ),
+                    context=PlanDefaultParametersContext(
+                        # If this same call also set the schema above,
+                        # `method` (loaded before that write) has not
+                        # observed it yet; the just-proposed schema is
+                        # what will actually govern by the time this
+                        # PATCH would run against a live deployment.
+                        method_parameters_schema=(
+                            parameters_schema
+                            if parameters_schema is not None
+                            else method.parameters_schema
+                        ),
+                    ),
+                    now=clock.now(),
+                )
+                if not defaults_events:
+                    report.note("exists", f"plan {plan_name} default_parameters")
+                else:
+                    _, plan_version = await kernel.event_store.load("Plan", plan_id)
+                    defaults_envelopes = [
+                        to_new_event(
+                            event_type=plan_event_type_name(event),
+                            payload=plan_to_payload(event),
+                            occurred_at=event.occurred_at,
+                            event_id=ids.new_id(),
+                            command_name=_COMMAND_NAME,
+                            correlation_id=run_correlation_id,
+                            principal_id=SYSTEM_PRINCIPAL_ID,
+                        )
+                        for event in defaults_events
+                    ]
+                    await kernel.event_store.append(
+                        stream_type="Plan",
+                        stream_id=plan_id,
+                        expected_version=plan_version,
+                        events=defaults_envelopes,
+                    )
+                    report.note("seeded", f"plan {plan_name} default_parameters")
+            elif dry_run and default_parameters is not None:
+                report.note(
+                    "seeded", f"plan {plan_name} default_parameters", "dry-run, not written"
+                )
 
         async def deprecate_plan_if_present(old_plan_name: str) -> None:
             """One-time migration step, permanent in this file: the Plans
@@ -988,6 +1153,8 @@ async def seed_pilot_beamline(
             "2BM_fly_scan_practice",
             "2BM_fly_scan_plan_v1",
             include_rotary=True,
+            parameters_schema=_FLY_SCAN_PARAMETERS_SCHEMA,
+            default_parameters=_FLY_SCAN_DEFAULT_PARAMETERS,
         )
 
         # ----- Recipe BC: the dark_field Recipe (the conductible step list) -----
