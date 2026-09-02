@@ -28,8 +28,9 @@ and touches nothing at import time.
 ## Where the names come from
 
 Each pinned slot resolves its display name from a CLI flag, defaulting
-to a same-named environment variable (`BEAMLINE_STAFF_OPERATOR_A_NAME` /
-`BEAMLINE_STAFF_OPERATOR_B_NAME`) that the deploy host sets outside this
+to a same-named environment variable (`BEAMLINE_STAFF_ADMIN_NAME` /
+`BEAMLINE_STAFF_GROUP_MANAGER_NAME` / `BEAMLINE_STAFF_STAFF_NAME`) that
+the deploy host sets outside this
 repository. Neither name is read into `Settings`: promoting them to the
 shared configuration schema would put a 2-BM-specific PII concern in
 front of every other deployment's config surface. `_require_all_names_
@@ -43,9 +44,26 @@ The name is written to the `actor_profile` PII vault via
 event payload, matching the PII vault pattern documented on
 `cora.access.aggregates.actor.events.ActorRegistered`.
 
+## Slots are ROLES, not seats
+
+The labels name what a holder is at this facility (`2-bm-admin`,
+`2-bm-group-manager`, `2-bm-staff`) rather than an anonymous seat letter.
+A role is not personal data, so it is safe in a public repo, and it is
+the thing a Policy grant should be read against: `operator-a` tells a
+future reader nothing about why that principal may do anything.
+
+What a role does NOT carry today is SCOPE. Policy holds
+`(principal, command)` pairs gated by a Conduit and a Surface, with no
+beamline dimension, so "manages three beamlines" and "staffs one" are
+the same grant here. That costs nothing while CORA runs at one beamline
+and becomes real at the second; it is a gap in the Policy model, not
+something a slot label can fix, and pretending otherwise by handing the
+two roles different COMMANDS would encode a scope difference as a
+capability difference and be wrong in a way that is hard to unpick.
+
 ## Identity
 
-Two pinned ids, one per operator slot, under a namespace distinct from
+Three pinned ids, one per role slot, under a namespace distinct from
 the seeded-agent range (`01900000-0000-7000-8000-...`): agent ids and
 staff-actor ids must never collide, and using a visibly different top
 segment plus a different fourth-group nibble (`9000` here vs `8000`
@@ -125,6 +143,17 @@ class BeamlineStaffSlot:
     event_id: UUID
     correlation_id: UUID
     env_var: str
+    flag: str
+    """The CLI flag this slot's name may be given on directly.
+
+    Carried here rather than derived from `slot`, and rather than
+    hand-written next to the parser: the parser and the slot->name map
+    are both BUILT from this tuple, so a new slot cannot be added
+    without one, and cannot be added with a flag that only reaches one
+    of the two places. The previous shape listed every slot three times
+    (here, an `add_argument` call, and a dict literal), which is the
+    hand-copied-list shape that drops an entry the third time somebody
+    edits it."""
 
 
 #: Distinct from the seeded-agent range (`01900000-0000-7000-8000-...`)
@@ -132,23 +161,39 @@ class BeamlineStaffSlot:
 #: `8000`), so a human-staff id is visibly not an agent id on sight.
 #: Verified against every literal UUID checked into the repo before
 #: being picked (see the module docstring's Identity section).
-OPERATOR_A_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000a0010")
-OPERATOR_B_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000b0010")
+#:
+#: The `a` / `b` / `c` nibble is minting order and nothing else. It is
+#: deliberately NOT re-lettered when a slot's role label changes: the id
+#: IS the person as far as the record is concerned, and every grant made
+#: to them hangs off it. Renaming a slot must never mint a new one.
+ADMIN_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000a0010")
+GROUP_MANAGER_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000b0010")
+STAFF_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000c0010")
 
 BEAMLINE_STAFF_SLOTS: Final[tuple[BeamlineStaffSlot, ...]] = (
     BeamlineStaffSlot(
-        slot="2-bm-operator-a",
-        actor_id=OPERATOR_A_ACTOR_ID,
+        slot="2-bm-admin",
+        actor_id=ADMIN_ACTOR_ID,
         event_id=UUID("02900000-0000-7000-9000-0000000a0012"),
         correlation_id=UUID("02900000-0000-7000-9000-0000000a0014"),
-        env_var="BEAMLINE_STAFF_OPERATOR_A_NAME",
+        env_var="BEAMLINE_STAFF_ADMIN_NAME",
+        flag="--admin-name",
     ),
     BeamlineStaffSlot(
-        slot="2-bm-operator-b",
-        actor_id=OPERATOR_B_ACTOR_ID,
+        slot="2-bm-group-manager",
+        actor_id=GROUP_MANAGER_ACTOR_ID,
         event_id=UUID("02900000-0000-7000-9000-0000000b0012"),
         correlation_id=UUID("02900000-0000-7000-9000-0000000b0014"),
-        env_var="BEAMLINE_STAFF_OPERATOR_B_NAME",
+        env_var="BEAMLINE_STAFF_GROUP_MANAGER_NAME",
+        flag="--group-manager-name",
+    ),
+    BeamlineStaffSlot(
+        slot="2-bm-staff",
+        actor_id=STAFF_ACTOR_ID,
+        event_id=UUID("02900000-0000-7000-9000-0000000c0012"),
+        correlation_id=UUID("02900000-0000-7000-9000-0000000c0014"),
+        env_var="BEAMLINE_STAFF_STAFF_NAME",
+        flag="--staff-name",
     ),
 )
 
@@ -307,7 +352,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m cora.api.beamline_staff_seed",
         description=(
-            "Register the two 2-BM beamline staff as CORA human Actors under "
+            "Register 2-BM's named human roles as CORA Actors under "
             "pinned, deployment-stable ids, so they exist as usable principals "
             "for hands-on testing. Display names come from the flags below "
             "(or their matching environment variables) and land only in the "
@@ -316,26 +361,26 @@ def build_parser() -> argparse.ArgumentParser:
             "nothing."
         ),
     )
-    parser.add_argument(
-        "--operator-a-name",
-        default=os.environ.get("BEAMLINE_STAFF_OPERATOR_A_NAME"),
-        help="Display name for slot '2-bm-operator-a' (default: $BEAMLINE_STAFF_OPERATOR_A_NAME).",
-    )
-    parser.add_argument(
-        "--operator-b-name",
-        default=os.environ.get("BEAMLINE_STAFF_OPERATOR_B_NAME"),
-        help="Display name for slot '2-bm-operator-b' (default: $BEAMLINE_STAFF_OPERATOR_B_NAME).",
-    )
+    for member in BEAMLINE_STAFF_SLOTS:
+        parser.add_argument(
+            member.flag,
+            dest=_dest(member),
+            default=os.environ.get(member.env_var),
+            help=f"Display name for slot '{member.slot}' (default: ${member.env_var}).",
+        )
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
 
+def _dest(member: BeamlineStaffSlot) -> str:
+    """Argparse destination for a slot's flag, derived once so the parser
+    and the reader below cannot disagree about where a value landed."""
+    return member.flag.removeprefix("--").replace("-", "_")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    names_by_slot = {
-        "2-bm-operator-a": args.operator_a_name,
-        "2-bm-operator-b": args.operator_b_name,
-    }
+    names_by_slot = {member.slot: getattr(args, _dest(member)) for member in BEAMLINE_STAFF_SLOTS}
     return asyncio.run(seed_beamline_staff(names_by_slot=names_by_slot, dry_run=args.dry_run))
 
 

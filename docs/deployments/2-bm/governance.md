@@ -5,19 +5,32 @@ the per-run [decisions](experiment.md) operators and agents make are live, not h
 
 ## Who acts
 
-Two beamline staff hold operator principals at 2-BM today, seeded as `human` Actors by the
+Three named roles hold human principals at 2-BM today, seeded as `human` Actors by the
 `cora.api.beamline_staff_seed` ceremony under pinned, deployment-stable ids. Their display names are personal
 data: the ceremony writes each name only to the `actor_profile` PII vault, supplied at deploy time from the host
-environment. The repository carries the pinned seat ids and nothing else about these two people: an id is opaque,
-and no name, badge, ORCID, or address is checked in anywhere. Facility-process
-principals (proposal PIs, the safety review board, the beamline scientist acting in a review-chain capacity) are
-facility-wide and live at [APS](../aps/index.md#safety-and-governance). See [Model](../../architecture/model.md)
-for the aggregate shape.
+environment. The repository carries the pinned ids and the role labels and nothing else about these people: an id
+is opaque, a role is not personal data, and no name, badge, ORCID, or address is checked in anywhere.
+Facility-process principals (proposal PIs, the safety review board, the beamline scientist acting in a
+review-chain capacity) are facility-wide and live at [APS](../aps/index.md#safety-and-governance). See
+[Model](../../architecture/model.md) for the aggregate shape.
 
-| Actor | Kind |
-| --- | --- |
-| 2-BM operator (seat A) | `human` |
-| 2-BM operator (seat B) | `human` |
+| Slot | Kind | Holds |
+| --- | --- | --- |
+| `2-bm-admin` | `human` | deployment administration |
+| `2-bm-group-manager` | `human` | the imaging group, across more than one beamline |
+| `2-bm-staff` | `human` | 2-BM itself |
+
+The slots were `2-bm-operator-a` / `2-bm-operator-b` until the third role arrived. Only the labels changed: the
+pinned ids are literals and did not move, because an id is what every grant already made hangs off, and re-pinning
+one would leave a second Actor for the same person. That has happened here once already.
+
+**A role carries no scope, and today that is a gap.** A `Policy` holds `(principal, command)` pairs gated by a
+Conduit and a Surface; there is no beamline dimension in a grant. So "manages the imaging group across several
+beamlines" and "staffs this one" are indistinguishable to authorization, and the group manager and the beamline
+staff hold the same commands here. That costs nothing while CORA runs at a single beamline and becomes real at
+the second. It is a gap in the Policy model rather than something a slot label can close, and it must not be
+papered over by giving the two roles different COMMANDS: that would record a difference of scope as a difference
+of capability, which is both false and hard to unpick later.
 
 ## The trust boundary
 

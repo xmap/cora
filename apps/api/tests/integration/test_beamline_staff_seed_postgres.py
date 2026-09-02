@@ -20,9 +20,10 @@ import pytest_asyncio
 from testcontainers.postgres import PostgresContainer
 
 from cora.api.beamline_staff_seed import (
+    ADMIN_ACTOR_ID,
     BEAMLINE_STAFF_SLOTS,
-    OPERATOR_A_ACTOR_ID,
-    OPERATOR_B_ACTOR_ID,
+    GROUP_MANAGER_ACTOR_ID,
+    STAFF_ACTOR_ID,
     seed_beamline_staff,
 )
 from cora.infrastructure.postgres.pool import create_pool
@@ -33,8 +34,9 @@ pytestmark = pytest.mark.integration
 SeedDatabase = tuple[asyncpg.Pool, str]
 
 _NAMES: dict[str, str | None] = {
-    "2-bm-operator-a": "Test Operator A",
-    "2-bm-operator-b": "Test Operator B",
+    "2-bm-admin": "Test Admin",
+    "2-bm-group-manager": "Test Manager",
+    "2-bm-staff": "Test Staff",
 }
 
 
@@ -84,7 +86,7 @@ async def test_ceremony_seeds_both_actors_with_pinned_ids_and_human_kind(
     exit_code = await _run_ceremony(url)
     assert exit_code == 2
 
-    for actor_id in (OPERATOR_A_ACTOR_ID, OPERATOR_B_ACTOR_ID):
+    for actor_id in (ADMIN_ACTOR_ID, GROUP_MANAGER_ACTOR_ID, STAFF_ACTOR_ID):
         row = await pool.fetchrow(
             "SELECT event_type, payload FROM events WHERE stream_id = $1", actor_id
         )
@@ -112,7 +114,7 @@ async def test_seeded_event_payload_carries_no_name(seed_database: SeedDatabase)
     pool, url = seed_database
     assert await _run_ceremony(url) == 2
 
-    for actor_id in (OPERATOR_A_ACTOR_ID, OPERATOR_B_ACTOR_ID):
+    for actor_id in (ADMIN_ACTOR_ID, GROUP_MANAGER_ACTOR_ID, STAFF_ACTOR_ID):
         payload = await pool.fetchval("SELECT payload FROM events WHERE stream_id = $1", actor_id)
         assert "name" not in payload
 
@@ -121,17 +123,15 @@ async def test_seeded_name_lands_only_in_the_profile_vault(seed_database: SeedDa
     pool, url = seed_database
     assert await _run_ceremony(url) == 2
 
-    row = await pool.fetchrow(
-        "SELECT name FROM actor_profile WHERE actor_id = $1", OPERATOR_A_ACTOR_ID
-    )
+    row = await pool.fetchrow("SELECT name FROM actor_profile WHERE actor_id = $1", ADMIN_ACTOR_ID)
     assert row is not None
-    assert row["name"] == "Test Operator A"
+    assert row["name"] == "Test Admin"
 
     row_b = await pool.fetchrow(
-        "SELECT name FROM actor_profile WHERE actor_id = $1", OPERATOR_B_ACTOR_ID
+        "SELECT name FROM actor_profile WHERE actor_id = $1", GROUP_MANAGER_ACTOR_ID
     )
     assert row_b is not None
-    assert row_b["name"] == "Test Operator B"
+    assert row_b["name"] == "Test Manager"
 
 
 async def test_dry_run_writes_nothing(seed_database: SeedDatabase) -> None:
@@ -155,7 +155,7 @@ async def test_dry_run_writes_nothing(seed_database: SeedDatabase) -> None:
 async def test_missing_name_fails_loudly_and_writes_nothing(seed_database: SeedDatabase) -> None:
     pool, url = seed_database
 
-    exit_code = await _run_ceremony(url, names={"2-bm-operator-a": "Test Operator A"})
+    exit_code = await _run_ceremony(url, names={"2-bm-admin": "Test Admin"})
     assert exit_code == 1
 
     stream_ids = [slot.actor_id for slot in BEAMLINE_STAFF_SLOTS]
@@ -169,7 +169,7 @@ async def test_blank_name_fails_loudly_and_writes_nothing(seed_database: SeedDat
     _, url = seed_database
 
     exit_code = await _run_ceremony(
-        url, names={"2-bm-operator-a": "Test Operator A", "2-bm-operator-b": "   "}
+        url, names={"2-bm-admin": "Test Admin", "2-bm-group-manager": "   "}
     )
     assert exit_code == 1
 
