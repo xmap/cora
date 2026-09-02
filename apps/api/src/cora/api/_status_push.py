@@ -177,6 +177,7 @@ from uuid import UUID
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed, InvalidStatus
 
+from cora.agent.fleet_readiness import read_fleet_readiness
 from cora.agent.seed_status_publisher import STATUS_PUBLISHER_AGENT_ID
 from cora.campaign.errors import UnauthorizedError as _CampaignUnauthorizedError
 from cora.campaign.features.list_campaigns import ListCampaigns
@@ -273,6 +274,20 @@ _RUN_HISTORY_REFRESH_TICKS = 15
 REWIND timeline refreshed at the same 2Hz cadence; the terminal push (see
 `_RunHistoryTail.poll`) guarantees the final version is always complete
 regardless of where this clock happened to be when the run closed."""
+_FLEET_READINESS_REFRESH_TICKS = 150
+"""How often (in ticks) the agent fleet's readiness is re-read: 5 minutes at
+the 2.0s default tick.
+
+Reading it costs one event-store load per shipped agent, and the answer only
+changes when an operator promotes, suspends or deprecates one, which is a rare
+deliberate gesture rather than beamline traffic. Re-reading twenty streams at
+2Hz to watch a value that moves monthly would be the most expensive thing in
+the tick loop by a wide margin.
+
+Not cached for the process's lifetime either, which is the other obvious
+choice and the wrong one: an operator who has just run `promote_seeded_fleet`
+is looking at this page to see whether it worked, and "restart the API to find
+out" is not an answer."""
 _ACTIVITY_PAGE_LIMIT = 500
 """Per-`read_since` call cap for `_ActivityTail`. Measured against the real
 2-BM deployment (2026-08-28): 13,822 events total, ever, across 25 stream
@@ -679,6 +694,47 @@ async def _drain_active_enclosures(
         )
         raw_enclosure_ids.append(item.enclosure_id)
     return rows, raw_enclosure_ids
+
+
+class _FleetReadinessTail:
+    """Holds the fleet's readiness across ticks, re-reading it rarely.
+
+    Unlike every other domain here this is not beamline traffic: it is a
+    standing fact about the deployment, true between operator gestures
+    and expensive to ask (one stream load per shipped agent). So it is
+    read on the first tick and then only every
+    `_FLEET_READINESS_REFRESH_TICKS`, and the held value rides every
+    snapshot in between.
+
+    Deliberately NOT skipped when the fleet is healthy. A page that shows
+    the row only when something is wrong teaches its reader that an
+    absent row means nothing to see, which is the same lesson that let a
+    stranded fleet sit unnoticed for three months. "20 of 20 ready" is
+    the row earning trust for the one day it says 4.
+    """
+
+    def __init__(self) -> None:
+        self._held: dict[str, Any] | None = None
+        self._ticks_since_read = 0
+
+    async def poll(self, deps: Kernel) -> dict[str, Any]:
+        due = self._held is None or self._ticks_since_read >= _FLEET_READINESS_REFRESH_TICKS
+        if not due:
+            self._ticks_since_read += 1
+            return self._held if self._held is not None else {}
+        readiness = await read_fleet_readiness(deps.event_store)
+        self._ticks_since_read = 0
+        # Names, never ids: this row exists to tell an operator which
+        # agents will not act, and `RunWitness` answers that where a uuid
+        # does not. Nothing on the page can resolve an agent id anyway.
+        self._held = {
+            "ready": len(readiness.ready),
+            "total": readiness.total,
+            "not_ready": list(readiness.not_ready),
+            "held": list(readiness.held),
+            "absent": list(readiness.absent),
+        }
+        return self._held
 
 
 class _DecisionTail:
@@ -1214,6 +1270,7 @@ def build_snapshot(
     clearances: list[dict[str, Any]],
     enclosures: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
+    agents: dict[str, Any],
     sequence: int,
     generated_at: str,
     producer_id: str,
@@ -1234,6 +1291,7 @@ def build_snapshot(
         "clearances": clearances,
         "enclosures": enclosures,
         "decisions": decisions,
+        "agents": agents,
     }
 
 
@@ -1475,6 +1533,7 @@ async def _build_payload_fields(
     list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
     decision_tail: _DecisionTail,
+    fleet_tail: _FleetReadinessTail,
     list_decisions: ListDecisionsHandler,
     run_history_tail: _RunHistoryTail,
     get_run_history: GetRunHistoryHandler,
@@ -1485,13 +1544,20 @@ async def _build_payload_fields(
     witness_recorder: RunWitnessRecorder | None,
     generated_at: str,
     producer_id: str,
-) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Every domain's rows for one tick, plus any extra messages (run
     history, enclosure timelines, activity) that are new this tick. Each
     drain is independently guarded by the caller's
     `except _UNAUTHORIZED_ERRORS` (per-domain, not caught here) so a
     missing grant on one command blinds only that section of the page,
     never the whole tick.
+
+    `fields` is `dict[str, Any]` rather than a dict of row lists because
+    `agents` is not rows. Every other field answers "which instances are
+    open"; that one answers "can this deployment's fleet act", which is a
+    single standing fact and would be a lie as a list (a healthy fleet
+    would have to be an empty one, and an empty list is exactly how every
+    other field spells "none").
 
     Returns `(fields, extra_messages)`, not one dict: none of run
     history, enclosure timelines, or activity is a snapshot field (see
@@ -1514,6 +1580,7 @@ async def _build_payload_fields(
         "clearances": await _drain_active_clearances(list_clearances, deps),
         "enclosures": enclosures,
         "decisions": await decision_tail.poll(list_decisions, deps),
+        "agents": await fleet_tail.poll(deps),
     }
     extra_messages = await run_history_tail.poll(
         get_run_history,
@@ -1584,6 +1651,7 @@ async def _push_loop(
     token = deps.settings.status_push_token
     headers = {"Authorization": f"Bearer {token.get_secret_value()}"} if token is not None else {}
 
+    fleet_tail = _FleetReadinessTail()
     decision_tail = _DecisionTail(
         started_at_cursor=encode_cursor(created_at=deps.clock.now(), item_id=_MIN_UUID)
     )
@@ -1627,6 +1695,7 @@ async def _push_loop(
                             list_plans=list_plans,
                             list_enclosures=list_enclosures,
                             decision_tail=decision_tail,
+                            fleet_tail=fleet_tail,
                             list_decisions=list_decisions,
                             run_history_tail=run_history_tail,
                             get_run_history=get_run_history,

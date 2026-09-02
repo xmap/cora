@@ -110,6 +110,7 @@ def test_build_snapshot_shape() -> None:
         clearances=[],
         enclosures=[],
         decisions=[],
+        agents={"ready": 2, "total": 2, "not_ready": [], "held": [], "absent": []},
         sequence=3,
         generated_at="2026-06-22T12:00:00+00:00",
         producer_id="p1",
@@ -128,6 +129,7 @@ def test_build_snapshot_shape() -> None:
         "clearances": [],
         "enclosures": [],
         "decisions": [],
+        "agents": {"ready": 2, "total": 2, "not_ready": [], "held": [], "absent": []},
     }
 
 

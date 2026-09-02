@@ -82,6 +82,7 @@ from cora.agent import (
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
+from cora.agent.fleet_readiness import log_fleet_readiness, read_fleet_readiness
 from cora.api._bleps_supply_observer import BlepsChannel, BlepsSupplyObserver
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
@@ -1264,6 +1265,14 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # so that broad multi-BC read grant can be revoked without
             # touching any other seeded agent's authority).
             await seed_status_publisher_agent(deps)
+
+            # Every seed above lands a member; this says whether the fleet
+            # that resulted can act. A deployment seeded before the bootstrap
+            # promoted carries agents stuck at `Defined`, and the subscribers
+            # refuse those without a word, so the only difference between a
+            # healthy boot and seventeen inert agents used to be nothing at
+            # all. Read-only, and the last thing the agent block does.
+            log_fleet_readiness(await read_fleet_readiness(deps.event_store))
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row

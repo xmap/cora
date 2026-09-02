@@ -853,6 +853,43 @@
   // Guarded against a null snapshot, not just a missing list: the page paints
   // once before the first one lands, which is the whole reason `buildRows`
   // reads every list through an accessor rather than off the object.
+  // An Agent registered but never promoted is INERT: the subscribers refuse
+  // anything below Versioned and say nothing when they do, which is how a
+  // fleet sat stranded at this beamline for three months behind a clean log.
+  // The page is the surface an operator already has open, so it says so here.
+  function fleetRows(snap) {
+    var f = snap && snap.agents;
+    if (!f || typeof f.total !== "number") return [];
+    // Drawn whether or not anything is wrong. A row that appears only on a
+    // bad day teaches its reader that no row means nothing to check, which is
+    // the same lesson that hid the problem in the first place.
+    var out = [["ready to act", f.ready + " of " + f.total]];
+    if ((f.not_ready || []).length) {
+      out.push(["registered but inert", String(f.not_ready.length) + ", run promote_seeded_fleet"]);
+    }
+    // Paused is somebody's decision and absent is a half-seeded deployment.
+    // Neither is the inert case, and folding them into it would report a
+    // fault where a person made a choice.
+    if ((f.held || []).length) out.push(["paused by an operator", String(f.held.length)]);
+    if ((f.absent || []).length) out.push(["never seeded", String(f.absent.length)]);
+    return out;
+  }
+
+  function agentLines(snap) {
+    var f = snap && snap.agents;
+    if (!f) return null;
+    return (f.not_ready || [])
+      .map(function (n) { return [n, "inert"]; })
+      .concat((f.held || []).map(function (n) { return [n, "paused"]; }))
+      .concat((f.absent || []).map(function (n) { return [n, "not seeded"]; }));
+  }
+
+  function fleetNote(snap) {
+    var f = snap && snap.agents;
+    if (!f || !(f.not_ready || []).length) return "";
+    return f.not_ready.length + " of " + f.total + " agents registered but inert";
+  }
+
   function datasetLines(snap) {
     return ((snap && snap.datasets) || []).map(function (d) {
       return [d.name, d.status];
@@ -909,7 +946,13 @@
   // A lane whatever happens, so its zone is never a bare caption and so an
   // empty one reads as "nothing happened here" rather than as a row nobody
   // drew. Every other domain appears only when it holds something.
-  var ALWAYS_ON = ["datasets", "decisions", "cautions", "other"];
+  // `actors` earns its place here for a different reason from the rest. The
+  // others are always drawn so an empty one reads as "nothing happened" rather
+  // than as a row nobody drew. This one is always drawn because its CARD
+  // carries whether the agent fleet can act at all, and that answer matters
+  // most on exactly the days no agent has emitted anything, which is when a
+  // presence-gated lane would be missing.
+  var ALWAYS_ON = ["datasets", "decisions", "cautions", "other", "actors"];
   // Domains that get instance TRACKS above their flat lane. Only for these
   // can a flat lane mean "the ones with no row of their own"; for the rest it
   // is the domain's only home, and calling it elsewhere would be a lie.
@@ -1171,7 +1214,9 @@
                 ? datasetLines(snap)
                 : key === "decisions"
                   ? decisionLines(snap)
-                  : null,
+                  : key === "actors"
+                    ? agentLines(snap)
+                    : null,
             note: tracked
               ? "Events whose instance has no row of its own above: it ended before " +
                 "this window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap. " +
@@ -1187,11 +1232,14 @@
                 (DOMAIN_TYPES[key] || []).join(", ") || "anything this page cannot file",
               ],
               ["events on this lane", String(points.length)],
+            ]
+              .concat(key === "actors" ? fleetRows(snap) : [])
+              .concat([
               [
                 "zone",
                 DOMAIN_ZONE[key] ? ZONES[DOMAIN_ZONE[key]] : "none, by design",
               ],
-            ],
+            ]),
           },
         });
       });
@@ -1437,6 +1485,12 @@
     // here, the same blind spot the flowing view has for anything older.
     var note = retentionNote(buffer);
     if (note) subtitle += " \u00b7 " + note;
+    // In the subtitle and not only on the lane card, because the card needs a
+    // hover and this is the sentence that should reach someone who never
+    // thought to ask. Silent when the fleet is fine: an always-on warning is
+    // one nobody reads.
+    var fleet = fleetNote(flowing.snapshot);
+    if (fleet) subtitle += " \u00b7 " + fleet;
     if (runStarts > 0) {
       subtitle += " · " + runStarts + " run" + (runStarts === 1 ? "" : "s") + " started";
     }
