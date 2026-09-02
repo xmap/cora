@@ -166,24 +166,33 @@ class BeamlineStaffSlot:
 #: deliberately NOT re-lettered when a slot's role label changes: the id
 #: IS the person as far as the record is concerned, and every grant made
 #: to them hangs off it. Renaming a slot must never mint a new one.
-ADMIN_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000a0010")
-GROUP_MANAGER_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000b0010")
+#:
+#: Which is why the letters here look out of order. When the role labels
+#: replaced `operator-a` / `operator-b`, they were attached in source
+#: order rather than by asking WHICH PERSON each id already held: `a0010`
+#: was minted for the group manager and `b0010` for the admin, so
+#: alphabetical assignment put both roles on the wrong human. The ids are
+#: correct and stay put; the labels moved to match them. Reversing this
+#: pairing to make the letters ascending would re-point two roles at two
+#: different people, which is the mistake, not the fix.
+ADMIN_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000b0010")
+GROUP_MANAGER_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000a0010")
 STAFF_ACTOR_ID: Final[UUID] = UUID("02900000-0000-7000-9000-0000000c0010")
 
 BEAMLINE_STAFF_SLOTS: Final[tuple[BeamlineStaffSlot, ...]] = (
     BeamlineStaffSlot(
         slot="2-bm-admin",
         actor_id=ADMIN_ACTOR_ID,
-        event_id=UUID("02900000-0000-7000-9000-0000000a0012"),
-        correlation_id=UUID("02900000-0000-7000-9000-0000000a0014"),
+        event_id=UUID("02900000-0000-7000-9000-0000000b0012"),
+        correlation_id=UUID("02900000-0000-7000-9000-0000000b0014"),
         env_var="BEAMLINE_STAFF_ADMIN_NAME",
         flag="--admin-name",
     ),
     BeamlineStaffSlot(
         slot="2-bm-group-manager",
         actor_id=GROUP_MANAGER_ACTOR_ID,
-        event_id=UUID("02900000-0000-7000-9000-0000000b0012"),
-        correlation_id=UUID("02900000-0000-7000-9000-0000000b0014"),
+        event_id=UUID("02900000-0000-7000-9000-0000000a0012"),
+        correlation_id=UUID("02900000-0000-7000-9000-0000000a0014"),
         env_var="BEAMLINE_STAFF_GROUP_MANAGER_NAME",
         flag="--group-manager-name",
     ),
@@ -243,6 +252,29 @@ async def _seed_one_beamline_staff_actor(
 ) -> None:
     existing = await load_actor(kernel.event_store, slot.actor_id)
     if existing is not None:
+        # Presence is not correctness. This used to stop at "exists", which
+        # made the ceremony blind to the one thing it is uniquely placed to
+        # notice: a slot whose configured name is not the name the vault
+        # already holds for that id. That is what a mis-assigned role looks
+        # like from here, and it happened -- two role labels were attached
+        # to two pinned ids in source order without checking which human
+        # each id held, and this reported `exists` twice and said nothing.
+        #
+        # It reports and does not repair. Overwriting the vault would make
+        # the id mean a different person, and an id is the only thing every
+        # grant already made hangs off; the fix for a mismatch is to move
+        # the LABEL, never the human. So this hands the operator the fact
+        # and stops.
+        vaulted = await kernel.profile_store.get(slot.actor_id)
+        if vaulted is not None and vaulted.name != name:
+            report.note(
+                "MISMATCH",
+                f"actor {slot.slot}",
+                "the vault holds a different name for this id; the label is on the "
+                "wrong person, or the configured name is wrong. Nothing was changed",
+            )
+            report.failed = True
+            return
         report.note("exists", f"actor {slot.slot}")
         return
     if dry_run:
