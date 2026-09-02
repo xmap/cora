@@ -36,7 +36,10 @@ from cora.agent.features import regenerate_run_debrief
 from cora.agent.features.regenerate_run_debrief import RegenerateRunDebrief
 from cora.agent.features.regenerate_run_debrief.handler import bind
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
+)
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_DEBRIEF,
     DecisionParentAgentMismatchError,
@@ -75,11 +78,11 @@ _NEW_DECISION_ID = UUID("01900000-0000-7000-8000-00000000fc01")
 async def _seed_actor(store: InMemoryEventStore, *, deactivated: bool = False) -> None:
     # PII vault: V2 payload carries no `name`; the display name lives
     # in actor_profile. These tests don't read the display surface, so
-    # they don't seed the vault — RUN_DEBRIEFER_AGENT_NAME stays unused
+    # they don't seed the vault — RUN_DEBRIEFER_EXTERNAL_AGENT_NAME stays unused
     # by the event itself.
-    _ = RUN_DEBRIEFER_AGENT_NAME
+    _ = RUN_DEBRIEFER_EXTERNAL_AGENT_NAME
     event = ActorRegistered(
-        actor_id=RUN_DEBRIEFER_AGENT_ID,
+        actor_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         occurred_at=_NOW,
         kind=ActorKind.AGENT,
     )
@@ -95,13 +98,13 @@ async def _seed_actor(store: InMemoryEventStore, *, deactivated: bool = False) -
     )
     await store.append(
         stream_type="Actor",
-        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        stream_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         expected_version=0,
         events=[new_event],
     )
     if deactivated:
         deactivated_event = ActorDeactivated(
-            actor_id=RUN_DEBRIEFER_AGENT_ID,
+            actor_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
             occurred_at=_NOW,
         )
         deactivated_new = to_new_event(
@@ -116,7 +119,7 @@ async def _seed_actor(store: InMemoryEventStore, *, deactivated: bool = False) -
         )
         await store.append(
             stream_type="Actor",
-            stream_id=RUN_DEBRIEFER_AGENT_ID,
+            stream_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
             expected_version=1,
             events=[deactivated_new],
         )
@@ -256,7 +259,7 @@ async def test_handler_writes_decision_on_success() -> None:
     assert decision is not None
     assert decision.context.value == DECISION_CONTEXT_RUN_DEBRIEF
     assert decision.choice.value == "NominalCompletion"
-    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+    assert decision.decided_by == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
     assert decision.parent_id is None
     # inputs carries the trigger discriminator so projection
     # consumers can distinguish on-demand vs auto-fired Decisions.
@@ -292,7 +295,7 @@ async def test_handler_envelope_principal_id_is_operator_not_agent() -> None:
     events, _ = await store.load("Decision", _NEW_DECISION_ID)
     assert len(events) == 1
     assert events[0].principal_id == _PRINCIPAL_ID
-    assert events[0].principal_id != RUN_DEBRIEFER_AGENT_ID
+    assert events[0].principal_id != RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
 
 @pytest.mark.unit
@@ -429,7 +432,7 @@ async def test_handler_raises_agent_suspended_when_agent_paused() -> None:
     await _seed_run(store, run_id)
     await seed_suspended_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         suspend_event_id=uuid4(),
@@ -470,7 +473,7 @@ async def test_handler_proceeds_when_agent_budget_is_exhausted() -> None:
     await _seed_run(store, run_id)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -805,7 +808,7 @@ async def test_handler_records_inference_on_success() -> None:
     assert call.trace.finish_reasons == ("tool_use",)
     # The inference is the agent's, attributed to the agent principal (not
     # the operator who issued the command).
-    assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
+    assert call.principal_id == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
     assert call.correlation_id == _CORRELATION_ID
     # Provenance columns previously written by nobody (see
     # [[project-inference-duration-unwritten]]); tool_type is derived from
@@ -947,7 +950,7 @@ async def test_handler_serves_the_model_the_agent_declares() -> None:
     await _seed_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -1146,7 +1149,7 @@ async def test_handler_without_a_named_agent_still_uses_the_seeded_singleton() -
 
     decision = await load_decision(store, decision_id)
     assert decision is not None
-    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+    assert decision.decided_by == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
 
 @pytest.mark.unit

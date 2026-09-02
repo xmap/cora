@@ -81,8 +81,8 @@ from typing import TYPE_CHECKING
 
 from cora.agent.aggregates.agent import load_agent
 from cora.agent.build_llm import llm_unwired_reason
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
-from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_ID
+from cora.agent.seed_caution_drafter_external import CAUTION_DRAFTER_EXTERNAL_AGENT_ID
+from cora.agent.seed_run_debriefer_external import RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 from cora.agent.subscribers.authority_revocation_holder import (
     make_authority_revocation_holder_subscriber,
 )
@@ -195,8 +195,11 @@ async def report_designated_agents(deps: Kernel) -> None:
     skips work for that case.
     """
     for subscriber_name, agent_id in (
-        ("run_debriefer", deps.settings.run_debriefer_agent_id or RUN_DEBRIEFER_AGENT_ID),
-        ("caution_drafter", deps.settings.caution_drafter_agent_id or CAUTION_DRAFTER_AGENT_ID),
+        ("run_debriefer", deps.settings.run_debriefer_agent_id or RUN_DEBRIEFER_EXTERNAL_AGENT_ID),
+        (
+            "caution_drafter",
+            deps.settings.caution_drafter_agent_id or CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
+        ),
     ):
         agent = await load_agent(deps.event_store, agent_id)
         if agent is None:

@@ -1,9 +1,22 @@
 """The set of Agents CORA ships with itself.
 
-Every deployment gets these nineteen at boot, seeded by the
+Every deployment gets these twenty-three at boot, seeded by the
 `seed_*_agent` functions. Until this file existed the set existed only
 as sequential calls in `cora.api.main`, which was enough to create them
 and not enough to ask a question ABOUT them.
+
+Four of the twenty-three are two "kind, split by which brain serves it"
+pairs: `RunDebriefer`/`RunDebriefer (External)` and
+`CautionDrafter`/`CautionDrafter (External)`. The bare name is the
+local/in-house arm, `(External)` marks the vendor-API arm; both members
+of a pair share `kind` and coexist `Versioned` (per
+`aggregates/agent/state.py`'s "Multiple Versioned Agents may exist
+concurrently... different `id`s sharing `kind`"). The two original
+singletons (`RUN_DEBRIEFER_AGENT_ID`/`CAUTION_DRAFTER_AGENT_ID`, from
+`seed.py`/`seed_caution_drafter.py`) stay in this tuple unchanged: they
+are no longer the compile-time default (see `_subscribers.py`), but
+per-id FOREVER-STABLE means they are retired via `deprecate_agent` on a
+deployment, never removed from source.
 
 The question that needed asking: which of these can actually act? A
 seeded Agent lands `Versioned` on a fresh bootstrap, but a deployment
@@ -59,6 +72,14 @@ from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_ID,
     CAUTION_DRAFTER_AGENT_NAME,
 )
+from cora.agent.seed_caution_drafter_external import (
+    CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_NAME,
+)
+from cora.agent.seed_caution_drafter_local import (
+    CAUTION_DRAFTER_LOCAL_AGENT_ID,
+    CAUTION_DRAFTER_LOCAL_AGENT_NAME,
+)
 from cora.agent.seed_caution_promoter import (
     CAUTION_PROMOTER_AGENT_ID,
     CAUTION_PROMOTER_AGENT_NAME,
@@ -86,6 +107,14 @@ from cora.agent.seed_procedure_watcher import (
 from cora.agent.seed_ratification_enforcer import (
     RATIFICATION_ENFORCER_AGENT_ID,
     RATIFICATION_ENFORCER_AGENT_NAME,
+)
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
+)
+from cora.agent.seed_run_debriefer_local import (
+    RUN_DEBRIEFER_LOCAL_AGENT_ID,
+    RUN_DEBRIEFER_LOCAL_AGENT_NAME,
 )
 from cora.agent.seed_run_initiator import (
     RUN_INITIATOR_AGENT_ID,
@@ -124,6 +153,8 @@ SEEDED_FLEET: Final[tuple[SeededAgent, ...]] = (
     SeededAgent(CAPTURE_PROGRESS_FEEDER_AGENT_ID, CAPTURE_PROGRESS_FEEDER_AGENT_NAME),
     SeededAgent(CAPTURE_SCAN_INGESTOR_AGENT_ID, CAPTURE_SCAN_INGESTOR_AGENT_NAME),
     SeededAgent(CAUTION_DRAFTER_AGENT_ID, CAUTION_DRAFTER_AGENT_NAME),
+    SeededAgent(CAUTION_DRAFTER_EXTERNAL_AGENT_ID, CAUTION_DRAFTER_EXTERNAL_AGENT_NAME),
+    SeededAgent(CAUTION_DRAFTER_LOCAL_AGENT_ID, CAUTION_DRAFTER_LOCAL_AGENT_NAME),
     SeededAgent(CAUTION_PROMOTER_AGENT_ID, CAUTION_PROMOTER_AGENT_NAME),
     SeededAgent(CLEARANCE_EXPIRER_AGENT_ID, CLEARANCE_EXPIRER_AGENT_NAME),
     SeededAgent(CLEARANCE_WATCHER_AGENT_ID, CLEARANCE_WATCHER_AGENT_NAME),
@@ -132,6 +163,8 @@ SEEDED_FLEET: Final[tuple[SeededAgent, ...]] = (
     SeededAgent(PROCEDURE_WATCHER_AGENT_ID, PROCEDURE_WATCHER_AGENT_NAME),
     SeededAgent(RATIFICATION_ENFORCER_AGENT_ID, RATIFICATION_ENFORCER_AGENT_NAME),
     SeededAgent(RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME),
+    SeededAgent(RUN_DEBRIEFER_EXTERNAL_AGENT_ID, RUN_DEBRIEFER_EXTERNAL_AGENT_NAME),
+    SeededAgent(RUN_DEBRIEFER_LOCAL_AGENT_ID, RUN_DEBRIEFER_LOCAL_AGENT_NAME),
     SeededAgent(RUN_INITIATOR_AGENT_ID, RUN_INITIATOR_AGENT_NAME),
     SeededAgent(RUN_SUPERVISOR_AGENT_ID, RUN_SUPERVISOR_AGENT_NAME),
     SeededAgent(RUN_WITNESS_AGENT_ID, RUN_WITNESS_AGENT_NAME),

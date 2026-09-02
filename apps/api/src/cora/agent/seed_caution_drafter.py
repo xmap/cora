@@ -1,5 +1,9 @@
 """Bootstrap-time seed for the CautionDrafter Agent.
 
+No longer the compile-time default: `cora.agent.seed_caution_drafter_external`
+now fills that role. See `cora.agent.seed`'s module docstring for the full
+supersession note (same reasoning applies here verbatim).
+
 The CautionDrafter subscriber needs an Agent record (and its
 co-registered Actor) to exist at the pinned
 `CAUTION_DRAFTER_AGENT_ID` so it can set `Decision.actor_id`
@@ -50,7 +54,7 @@ if TYPE_CHECKING:
 # their own `cccc00XX` / `dddd00XX` / etc ranges so the bootstrap
 # constants stay visually grouped per agent.
 CAUTION_DRAFTER_AGENT_ID = UUID("01900000-0000-7000-8000-0000bbbb0010")
-CAUTION_DRAFTER_AGENT_NAME = "CautionDrafter"
+CAUTION_DRAFTER_AGENT_NAME = "CautionDrafter (Legacy)"
 CAUTION_DRAFTER_AGENT_KIND = "CautionDrafter"
 CAUTION_DRAFTER_AGENT_VERSION = "1.0.0"
 CAUTION_DRAFTER_AGENT_DESCRIPTION = (

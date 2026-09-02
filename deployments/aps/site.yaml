@@ -133,8 +133,8 @@ actors:
 # Access BC Actor (kind=agent) via a cross-BC atomic write. This list mirrors
 # the code seeds and is drift-guarded against them.
 agents:
-  - {name: RunDebriefer, kind: RunDebriefer, version: 1.0.0, model_provider: anthropic, model_name: claude-haiku-4-5}
-  - {name: CautionDrafter, kind: CautionDrafter, version: 1.0.0, model_provider: anthropic, model_name: claude-sonnet-4-6}
+  - {name: "RunDebriefer (External)", kind: RunDebriefer, version: 1.0.0, model_provider: anthropic, model_name: claude-haiku-4-5}
+  - {name: "CautionDrafter (External)", kind: CautionDrafter, version: 1.0.0, model_provider: anthropic, model_name: claude-sonnet-4-6}
   - {name: RunSupervisor, kind: RunSupervisor, version: 1.0.0, model_provider: deterministic, model_name: "agent:RunSupervisor:v1", pending: true, note: "rule-based in-loop supervisor; identity seeded, runtime not yet operational"}
   - {name: CautionPromoter, kind: CautionPromoter, version: 1.0.0, model_provider: deterministic, model_name: "agent:CautionPromoter:v1", pending: true, note: "deterministic auto-promoter of Notice-only caution proposals; identity seeded, subscriber not yet operational"}
   - {name: ClearanceExpirer, kind: ClearanceExpirer, version: 1.0.0, model_provider: deterministic, model_name: "agent:ClearanceExpirer:v1", pending: true, note: "deterministic in-loop expirer of Active clearances past valid_until; identity seeded, runtime not yet operational"}

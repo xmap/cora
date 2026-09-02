@@ -1,5 +1,26 @@
 """Bootstrap-time seed for the RunDebriefer Agent.
 
+No longer the compile-time default: `cora.agent.seed_run_debriefer_external`
+now fills that role, and `RUN_DEBRIEFER_EXTERNAL_AGENT_ID` is what
+`report_designated_agents` and the subscriber fall back to when no
+deployment override is configured. This module and its call in
+`cora.api.main` stay exactly as they are anyway, per the id's own
+FOREVER-STABLE rule below: a deployment that already carries this
+agent retires it with `deprecate_agent`, and a fresh deployment simply
+ends up with an extra, Versioned-but-not-default sibling, which is the
+same shape `cora.agent.seed_language_models` already ships for its
+unused-by-default catalog entries.
+
+`RUN_DEBRIEFER_AGENT_NAME` changed from bare `"RunDebriefer"` to
+`"RunDebriefer (Legacy)"` for the same reason: the bare name now belongs
+to `cora.agent.seed_run_debriefer_local`'s sibling (the local/in-house
+arm carries no suffix; see that module's docstring for the naming
+convention), and `SEEDED_FLEET` requires every name to be unique. This
+is a source-level change only -- an id whose `AgentDefined` event was
+already appended (2-BM's) keeps whatever name that event recorded,
+immutably, regardless of what this constant says now. Only a stream
+that has never been defined reads the new value.
+
 The RunDebriefer subscriber needs an Agent record (and its
 co-registered Actor) to exist at the pinned
 `RUN_DEBRIEFER_AGENT_ID` so it can set `Decision.actor_id` without
@@ -73,7 +94,7 @@ if TYPE_CHECKING:
 # table in the file-level comment of `cora.agent.prompts.run_debrief`
 # for the allocation scheme.
 RUN_DEBRIEFER_AGENT_ID = UUID("01900000-0000-7000-8000-0000aaaa0010")
-RUN_DEBRIEFER_AGENT_NAME = "RunDebriefer"
+RUN_DEBRIEFER_AGENT_NAME = "RunDebriefer (Legacy)"
 RUN_DEBRIEFER_AGENT_KIND = "RunDebriefer"
 RUN_DEBRIEFER_AGENT_VERSION = "1.0.0"
 RUN_DEBRIEFER_AGENT_DESCRIPTION = (

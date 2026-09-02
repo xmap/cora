@@ -82,10 +82,10 @@ from cora.agent.prompts import (
     build_run_debrief_chat_request,
 )
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
-from cora.agent.seed import (
-    RUN_DEBRIEFER_AGENT_ID,
-    RUN_DEBRIEFER_AGENT_KIND,
-    RUN_DEBRIEFER_AGENT_NAME,
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
     extract_capture_progress,
@@ -178,7 +178,7 @@ def bind(deps: Kernel) -> Handler:
     ) -> UUID:
         # Which RunDebriefer performs this. Defaults to the seeded
         # singleton, so every existing caller is unaffected.
-        debriefer_agent_id = command.agent_id or RUN_DEBRIEFER_AGENT_ID
+        debriefer_agent_id = command.agent_id or RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
         log = _log.bind(
             command_name=_COMMAND_NAME,
@@ -219,7 +219,7 @@ def bind(deps: Kernel) -> Handler:
             # they made in a URL.
             if command.agent_id is not None:
                 raise AgentNotFoundError(debriefer_agent_id)
-            raise AgentNotSeededError(debriefer_agent_id, RUN_DEBRIEFER_AGENT_NAME)
+            raise AgentNotSeededError(debriefer_agent_id, RUN_DEBRIEFER_EXTERNAL_AGENT_NAME)
         if not actor.active:
             raise AgentDeactivatedError(debriefer_agent_id)
 
@@ -236,10 +236,10 @@ def bind(deps: Kernel) -> Handler:
         if command.agent_id is not None:
             if agent is None:
                 raise AgentNotFoundError(debriefer_agent_id)
-            if agent.kind.value != RUN_DEBRIEFER_AGENT_KIND:
+            if agent.kind.value != RUN_DEBRIEFER_EXTERNAL_AGENT_KIND:
                 raise AgentKindMismatchError(
                     debriefer_agent_id,
-                    RUN_DEBRIEFER_AGENT_KIND,
+                    RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
                     agent.kind.value,
                 )
 
@@ -407,7 +407,7 @@ def bind(deps: Kernel) -> Handler:
                 principal_id=debriefer_agent_id,
                 debriefer_agent_id=debriefer_agent_id,
                 debriefer_agent_name=(
-                    str(agent.name) if agent is not None else RUN_DEBRIEFER_AGENT_NAME
+                    str(agent.name) if agent is not None else RUN_DEBRIEFER_EXTERNAL_AGENT_NAME
                 ),
                 correlation_id=correlation_id,
                 causation_id=causation_id,

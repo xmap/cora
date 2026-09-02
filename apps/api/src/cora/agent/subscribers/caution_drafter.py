@@ -41,7 +41,7 @@ dependency materializes. None of those hold today.
 CautionDrafter writes `DecisionRegistered` with:
   - `context = "CautionProposal"`
   - `choice ∈ CAUTION_PROPOSAL_CHOICES`
-  - `actor_id = CAUTION_DRAFTER_AGENT_ID`
+  - `actor_id = CAUTION_DRAFTER_EXTERNAL_AGENT_ID`
   - `rule = "agent:CautionDrafter:v1"`
   - `confidence_source = "self_reported"`
   - `inputs` carries the proposed-Caution tuple + confidence_band
@@ -93,10 +93,10 @@ from cora.agent.prompts import (
     build_caution_drafter_chat_request,
 )
 from cora.agent.prompts.caution_drafter import DEFAULT_CAUTION_DRAFTER_MODEL
-from cora.agent.seed_caution_drafter import (
-    CAUTION_DRAFTER_AGENT_ID,
-    CAUTION_DRAFTER_AGENT_KIND,
-    CAUTION_DRAFTER_AGENT_NAME,
+from cora.agent.seed_caution_drafter_external import (
+    CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
     extract_interrupted_at,
@@ -213,7 +213,7 @@ class CautionDrafterSubscriber:
         inference_recorder: InferenceRecorder | None = None,
         spend_lookup: SpendLookup | None = None,
         allocation_lookup: AllocationLookup | None = None,
-        agent_id: UUID = CAUTION_DRAFTER_AGENT_ID,
+        agent_id: UUID = CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
@@ -308,7 +308,7 @@ class CautionDrafterSubscriber:
         # on the on-demand path: an explicitly named Agent is a
         # deliberate choice and gets checked; the approved-model catalog
         # gate is NOT re-checked here (`define_agent` already checked it).
-        is_designated = self._agent_id != CAUTION_DRAFTER_AGENT_ID
+        is_designated = self._agent_id != CAUTION_DRAFTER_EXTERNAL_AGENT_ID
         if is_designated:
             if agent is None:
                 log.warning(
@@ -316,12 +316,12 @@ class CautionDrafterSubscriber:
                     agent_id=str(self._agent_id),
                 )
                 return
-            if agent.kind.value != CAUTION_DRAFTER_AGENT_KIND:
+            if agent.kind.value != CAUTION_DRAFTER_EXTERNAL_AGENT_KIND:
                 log.warning(
                     "caution_drafter.skip.designated_agent_wrong_kind",
                     agent_id=str(self._agent_id),
                     agent_name=agent.name.value,
-                    expected_kind=CAUTION_DRAFTER_AGENT_KIND,
+                    expected_kind=CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
                     actual_kind=agent.kind.value,
                 )
                 return
@@ -346,7 +346,7 @@ class CautionDrafterSubscriber:
             self.event_store,
             run_id=run_id,
             debriefer_agent_id=self._agent_id,
-            debriefer_kind=CAUTION_DRAFTER_AGENT_KIND,
+            debriefer_kind=CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
             terminal_event=event,
             occurred_at=event.occurred_at,
             command_name=_COMMAND_NAME,
@@ -552,7 +552,9 @@ class CautionDrafterSubscriber:
         await self._record_inference(
             decision_id=decision_id,
             actor=actor,
-            agent_name=agent.name.value if agent is not None else CAUTION_DRAFTER_AGENT_NAME,
+            agent_name=agent.name.value
+            if agent is not None
+            else CAUTION_DRAFTER_EXTERNAL_AGENT_NAME,
             request=request,
             response=response,
             duration_ms=duration_ms,
@@ -979,7 +981,7 @@ def make_caution_drafter_subscriber(deps: Kernel) -> CautionDrafterSubscriber:
         inference_recorder=deps.inference_recorder,
         spend_lookup=deps.spend_lookup,
         allocation_lookup=deps.allocation_lookup,
-        agent_id=deps.settings.caution_drafter_agent_id or CAUTION_DRAFTER_AGENT_ID,
+        agent_id=deps.settings.caution_drafter_agent_id or CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
     )
 
 

@@ -27,10 +27,10 @@ from cora.access.aggregates.actor import to_payload as actor_to_payload
 from cora.agent.aggregates.agent import ModelRef as AgentModelRef
 from cora.agent.prompts.caution_drafter import DEFAULT_CAUTION_DRAFTER_MODEL
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_KIND
-from cora.agent.seed_caution_drafter import (
-    CAUTION_DRAFTER_AGENT_ID,
-    CAUTION_DRAFTER_AGENT_KIND,
-    CAUTION_DRAFTER_AGENT_NAME,
+from cora.agent.seed_caution_drafter_external import (
+    CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_NAME,
 )
 from cora.agent.subscribers.caution_drafter import (
     CautionDrafterSubscriber,
@@ -99,7 +99,7 @@ _ASSET_ID = UUID("01900000-0000-7000-8000-00000000dddd")
 async def _seed_caution_drafter_actor(
     store: InMemoryEventStore,
     *,
-    agent_id: UUID = CAUTION_DRAFTER_AGENT_ID,
+    agent_id: UUID = CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
     deactivated: bool = False,
 ) -> None:
     """Write the minimum Actor for a CautionDrafter agent (the seeded
@@ -109,7 +109,7 @@ async def _seed_caution_drafter_actor(
     `actor_profile`. Subscriber tests don't read the display
     surface, so the seed name stays unused at the event layer.
     """
-    _ = CAUTION_DRAFTER_AGENT_NAME
+    _ = CAUTION_DRAFTER_EXTERNAL_AGENT_NAME
     event = ActorRegistered(
         actor_id=agent_id,
         occurred_at=_NOW,
@@ -256,7 +256,7 @@ async def _build_subscriber(
     inference_recorder: FakeInferenceRecorder | None = None,
     spend_lookup: FakeSpendLookup | None = None,
     allocation_lookup: FakeAllocationLookup | None = None,
-    agent_id: UUID = CAUTION_DRAFTER_AGENT_ID,
+    agent_id: UUID = CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
 ) -> CautionDrafterSubscriber:
     return CautionDrafterSubscriber(
         event_store=event_store,
@@ -373,7 +373,7 @@ async def test_apply_emits_caution_proposal_decision_on_run_aborted() -> None:
     assert decision.context.value == "CautionProposal"
     assert decision.choice.value == "ProposeCaution"
     assert decision.confidence == pytest.approx(0.72)
-    assert decision.decided_by == CAUTION_DRAFTER_AGENT_ID
+    assert decision.decided_by == CAUTION_DRAFTER_EXTERNAL_AGENT_ID
     assert decision.rule is not None
     assert decision.rule.value == "agent:CautionDrafter:v1"
     # The proposed_caution tuple round-trips through inputs.
@@ -465,7 +465,7 @@ async def test_apply_skips_entirely_when_agent_suspended() -> None:
     await _seed_caution_drafter_actor(store)
     await seed_suspended_agent(
         store,
-        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        agent_id=CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         suspend_event_id=uuid4(),
@@ -498,7 +498,7 @@ async def test_apply_defers_noaction_when_monthly_usd_cap_exhausted() -> None:
     await _seed_caution_drafter_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        agent_id=CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -540,7 +540,7 @@ async def test_apply_defers_noaction_when_allocation_envelope_exhausted() -> Non
     await _seed_caution_drafter_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        agent_id=CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -593,7 +593,7 @@ async def test_apply_agent_cap_breach_wins_over_the_envelope() -> None:
     await _seed_caution_drafter_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        agent_id=CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -638,7 +638,7 @@ async def test_apply_proceeds_normally_when_spend_is_under_cap() -> None:
     await _seed_caution_drafter_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        agent_id=CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -1173,7 +1173,7 @@ async def test_apply_signs_decision_when_signer_configured() -> None:
     # The subscriber MUST pass the Agent's id to the signer; a regression
     # that dropped or renamed the `actor_id` kwarg would silently sign
     # with the wrong identity in production.
-    assert signer.received_actor_ids == [CAUTION_DRAFTER_AGENT_ID]
+    assert signer.received_actor_ids == [CAUTION_DRAFTER_EXTERNAL_AGENT_ID]
 
     async def _resolver(kid: str) -> bytes:
         assert kid == "kid-caution-drafter"
@@ -1251,7 +1251,7 @@ async def test_apply_fails_closed_when_signer_raises_and_writes_no_decision(
     elif failure == "inactive_key":
         exc = SignerKeyInactiveError("kid-caution-drafter-old")
     else:
-        exc = SignerKeyNotFoundError(CAUTION_DRAFTER_AGENT_ID)
+        exc = SignerKeyNotFoundError(CAUTION_DRAFTER_EXTERNAL_AGENT_ID)
 
     subscriber = CautionDrafterSubscriber(
         event_store=store,
@@ -1326,11 +1326,11 @@ async def test_apply_appends_lease_event_to_run_stream_on_happy_path() -> None:
     assert len(leases) == 1
     lease = leases[0]
     assert lease.payload["run_id"] == str(run_id)
-    assert lease.payload["debriefer_agent_id"] == str(CAUTION_DRAFTER_AGENT_ID)
+    assert lease.payload["debriefer_agent_id"] == str(CAUTION_DRAFTER_EXTERNAL_AGENT_ID)
     assert lease.payload["terminal_event_id"] == str(event.event_id)
     assert lease.event_id == derive_lease_event_id(
         run_id=run_id,
-        debriefer_agent_id=CAUTION_DRAFTER_AGENT_ID,
+        debriefer_agent_id=CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         terminal_event_id=event.event_id,
     )
 
@@ -1354,7 +1354,7 @@ async def test_apply_writes_caution_draft_conflicted_when_another_agent_holds_le
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
-        debriefer_kind=CAUTION_DRAFTER_AGENT_KIND,
+        debriefer_kind=CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
         debriefer_agent_id=foreign_agent_id,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1491,9 +1491,9 @@ async def test_apply_records_inference_on_proposal() -> None:
     # Sonnet 4.6 at $3/$15 per MTok: 2048 in + 320 out.
     assert call.trace.cost_usd == pytest.approx(0.006144 + 0.0048)
     assert call.trace.finish_reasons == ("tool_use",)
-    assert call.trace.agent_id == str(CAUTION_DRAFTER_AGENT_ID)
-    assert call.trace.agent_name == CAUTION_DRAFTER_AGENT_NAME
-    assert call.principal_id == CAUTION_DRAFTER_AGENT_ID
+    assert call.trace.agent_id == str(CAUTION_DRAFTER_EXTERNAL_AGENT_ID)
+    assert call.trace.agent_name == CAUTION_DRAFTER_EXTERNAL_AGENT_NAME
+    assert call.principal_id == CAUTION_DRAFTER_EXTERNAL_AGENT_ID
     assert call.correlation_id == event.correlation_id
     assert call.causation_id == event.event_id
     # Provenance columns previously written by nobody (see
@@ -1630,7 +1630,7 @@ async def test_apply_coexists_with_run_debriefer_on_same_terminal_event() -> Non
     scopes contention to agents of the same KIND, and a RunDebriefer
     lease must not push the CautionDrafter into a Conflicted decision
     (nor vice versa)."""
-    from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
+    from cora.agent.seed_run_debriefer_external import RUN_DEBRIEFER_EXTERNAL_AGENT_ID
     from cora.agent.subscribers.run_debriefer import (
         RunDebrieferSubscriber,
     )
@@ -1641,13 +1641,13 @@ async def test_apply_coexists_with_run_debriefer_on_same_terminal_event() -> Non
     store = InMemoryEventStore()
     await _seed_caution_drafter_actor(store)
     debrief_actor = ActorRegistered(
-        actor_id=RUN_DEBRIEFER_AGENT_ID,
+        actor_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         occurred_at=_NOW,
         kind=ActorKind.AGENT,
     )
     await store.append(
         stream_type="Actor",
-        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        stream_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         expected_version=0,
         events=[
             to_new_event(
@@ -1714,7 +1714,7 @@ def test_default_agent_id_is_the_seeded_singleton() -> None:
         llm=FakeLLM(),
         caution_lookup=AlwaysQuietCautionLookup(),
     )
-    assert subscriber._agent_id == CAUTION_DRAFTER_AGENT_ID
+    assert subscriber._agent_id == CAUTION_DRAFTER_EXTERNAL_AGENT_ID
 
 
 @pytest.mark.unit
@@ -1735,7 +1735,7 @@ async def test_apply_designation_honoured_on_actor_id_lease_and_inference_trace(
         principal_id=_PRINCIPAL_ID,
         defined_at=_NOW,
         versioned_at=_NOW,
-        kind=CAUTION_DRAFTER_AGENT_KIND,
+        kind=CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
     )
     await _seed_plan(store)
     run_id = uuid4()
@@ -1781,7 +1781,7 @@ async def test_apply_designation_serves_the_designated_agents_declared_model() -
         principal_id=_PRINCIPAL_ID,
         defined_at=_NOW,
         versioned_at=_NOW,
-        kind=CAUTION_DRAFTER_AGENT_KIND,
+        kind=CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
         model_ref=AgentModelRef(provider="argo", model="claude-sonnet-4-6"),
     )
     await _seed_plan(store)
@@ -1882,7 +1882,7 @@ async def test_apply_skips_when_designated_agent_not_versioned() -> None:
         correlation_id=_CORRELATION_ID,
         principal_id=_PRINCIPAL_ID,
         occurred_at=_NOW,
-        kind=CAUTION_DRAFTER_AGENT_KIND,
+        kind=CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
     )
     await _seed_plan(store)
     run_id = uuid4()
