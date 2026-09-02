@@ -205,6 +205,7 @@
 | src/cora/agent/features/version\_agent/handler.py                                        |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/version\_agent/route.py                                          |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/features/version\_agent/tool.py                                           |       17 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/agent/fleet\_readiness.py                                                       |       43 |        0 |       18 |        1 |     98.4% | 121-\>111 |
 | src/cora/agent/projections/\_\_init\_\_.py                                               |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/agent/projections/agent.py                                                      |       21 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/agent/projections/language\_model.py                                            |       28 |        0 |       10 |        0 |    100.0% |           |
@@ -275,12 +276,12 @@
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
 | src/cora/api/\_run\_supervisor.py                                                        |      490 |       27 |      194 |       21 |     92.7% |310, 332, 339, 494, 699-700, 860-861, 918, 944, 947, 953, 955, 981-982, 1165-\>1175, 1351, 1354, 1357, 1360, 1362-1363, 1366, 1369, 1372, 1570, 1579-\>1544, 1665, 1688 |
 | src/cora/api/\_run\_witness.py                                                           |      405 |       22 |      132 |        6 |     94.4% |680, 935-939, 981, 1043, 1074, 1118, 1136, 1138, 1163, 1186, 1273, 1369, 1439-1441, 1443-\>1445, 1450, 1461-1464, 1469 |
-| src/cora/api/\_status\_push.py                                                           |      427 |       12 |      100 |        9 |     96.0% |338, 731-732, 808-\>814, 974-\>966, 1012-1013, 1045, 1048-1049, 1179, 1183-\>exit, 1686-1687, 1754 |
-| src/cora/api/beamline\_staff\_seed.py                                                    |      108 |        3 |       16 |        0 |     97.6% |   233-235 |
+| src/cora/api/\_status\_push.py                                                           |      444 |       12 |      102 |        9 |     96.2% |353, 787-788, 864-\>870, 1030-\>1022, 1068-1069, 1101, 1104-1105, 1235, 1239-\>exit, 1755-1756, 1823 |
+| src/cora/api/beamline\_staff\_seed.py                                                    |      113 |        3 |       18 |        0 |     97.7% |   278-280 |
 | src/cora/api/capture\_watch\_preflight.py                                                |      217 |        3 |       82 |        1 |     98.7% |534, 642-643 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/in\_process\_grants.py                                                      |       25 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/main.py                                                                     |      436 |        7 |       66 |        4 |     97.8% |434-\>433, 859-860, 1353-1365, 1558-\>1563, 1565-\>1568 |
+| src/cora/api/main.py                                                                     |      438 |        7 |       66 |        4 |     97.8% |435-\>434, 860-861, 1362-1374, 1567-\>1572, 1574-\>1577 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/api/pilot\_seed.py                                                              |      367 |       43 |       64 |       10 |     85.8% |308-313, 331-337, 347-348, 381-383, 426-427, 470-507, 572-573, 584-585, 662, 666, 678-679, 764-766, 936-966 |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
@@ -2720,7 +2721,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **62520** | **1394** | **9532** |  **426** | **97.3%** |           |
+| **TOTAL**                                                                                | **62587** | **1394** | **9554** |  **427** | **97.3%** |           |
 
 
 ## Setup coverage badge
