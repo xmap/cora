@@ -31,9 +31,9 @@ import pytest
 
 from cora.agent.features import promote_caution_proposal
 from cora.agent.features.promote_caution_proposal import PromoteCautionProposal
-from cora.agent.seed_caution_drafter import (
-    CAUTION_DRAFTER_AGENT_ID,
-    seed_caution_drafter_agent,
+from cora.agent.seed_caution_drafter_external import (
+    CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
+    seed_caution_drafter_external_agent,
 )
 from cora.agent.subscribers.caution_drafter import (
     CautionDrafterSubscriber,
@@ -190,19 +190,19 @@ async def test_subscriber_writes_caution_proposal_decision_end_to_end(
 ) -> None:
     """Step 1-5 of the end-to-end walk: subscriber emits the Decision."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
-    await seed_caution_drafter_agent(deps)
+    await seed_caution_drafter_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        CAUTION_DRAFTER_AGENT_ID,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
     )
     # Idempotent on real PG.
-    await seed_caution_drafter_agent(deps)
+    await seed_caution_drafter_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        CAUTION_DRAFTER_AGENT_ID,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -228,7 +228,7 @@ async def test_subscriber_writes_caution_proposal_decision_end_to_end(
     assert decision is not None
     assert decision.context.value == "CautionProposal"
     assert decision.choice.value == "ProposeCaution"
-    assert decision.decided_by == CAUTION_DRAFTER_AGENT_ID
+    assert decision.decided_by == CAUTION_DRAFTER_EXTERNAL_AGENT_ID
     assert decision.inputs is not None
     proposed = decision.inputs["proposed_caution"]
     assert proposed["target_id"] == str(_ASSET_ID)
@@ -249,10 +249,10 @@ async def test_end_to_end_cross_bc_promotion_registers_real_caution(
     """Full design proof: subscriber emits Decision, operator
     promotes via Agent BC's slice, Caution lands in Caution BC's stream."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
-    await seed_caution_drafter_agent(deps)
+    await seed_caution_drafter_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        CAUTION_DRAFTER_AGENT_ID,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -298,7 +298,7 @@ async def test_end_to_end_cross_bc_promotion_registers_real_caution(
     # upstream Decision.actor_id. Guards against an accidental refactor
     # that flipped attribution to the agent.
     assert caution.authored_by == _PRINCIPAL_ID
-    assert caution.authored_by != CAUTION_DRAFTER_AGENT_ID
+    assert caution.authored_by != CAUTION_DRAFTER_EXTERNAL_AGENT_ID
 
 
 @pytest.mark.integration
@@ -308,10 +308,10 @@ async def test_subscriber_is_at_most_once_on_real_postgres(
     """Second apply with the same terminal event is a no-op on real PG
     (ConcurrencyError on the deterministic decision_id is caught)."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
-    await seed_caution_drafter_agent(deps)
+    await seed_caution_drafter_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        CAUTION_DRAFTER_AGENT_ID,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -391,10 +391,10 @@ async def _seed_supersede_decision(
     from cora.decision.aggregates.decision import event_type_name as decision_event_type_name
     from cora.decision.aggregates.decision import to_payload as decision_to_payload
 
-    await seed_caution_drafter_agent(deps)
+    await seed_caution_drafter_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        CAUTION_DRAFTER_AGENT_ID,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -413,9 +413,9 @@ async def _seed_supersede_decision(
         "tags": ["encoder", "rotary-stage"],
         "supersedes_caution_id": str(supersedes_caution_id),
     }
-    # CAUTION_DRAFTER_AGENT_ID so the promote handler's provenance
+    # CAUTION_DRAFTER_EXTERNAL_AGENT_ID so the promote handler's provenance
     # gate passes; callers seed the agent in their fixture.
-    actor_id = ActorId(CAUTION_DRAFTER_AGENT_ID)
+    actor_id = ActorId(CAUTION_DRAFTER_EXTERNAL_AGENT_ID)
     event = DecisionRegistered(
         decision_id=decision_id,
         decided_by=actor_id,
@@ -643,10 +643,10 @@ async def test_subscriber_records_inference_row_end_to_end(
     """A proposal lands one inference row in entries_decision_inferences
     carrying the CautionDrafter LLM call's provenance."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
-    await seed_caution_drafter_agent(deps)
+    await seed_caution_drafter_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        CAUTION_DRAFTER_AGENT_ID,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -691,4 +691,4 @@ async def test_subscriber_records_inference_row_end_to_end(
     assert row["input_tokens"] == 2048
     assert row["output_tokens"] == 320
     assert list(row["finish_reasons"]) == ["tool_use"]
-    assert row["agent_id"] == str(CAUTION_DRAFTER_AGENT_ID)
+    assert row["agent_id"] == str(CAUTION_DRAFTER_EXTERNAL_AGENT_ID)

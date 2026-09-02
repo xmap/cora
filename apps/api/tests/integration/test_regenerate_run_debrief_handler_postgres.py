@@ -15,7 +15,7 @@ import asyncpg
 import pytest
 
 from cora.agent.features.regenerate_run_debrief import RegenerateRunDebrief, bind
-from cora.agent.seed import seed_run_debriefer_agent
+from cora.agent.seed_run_debriefer_external import seed_run_debriefer_external_agent
 from cora.decision.aggregates.decision import load_decision
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import FakeLLM, FakeLLMResponse
@@ -87,7 +87,7 @@ async def test_regenerate_run_debrief_handler_writes_decision_on_real_postgres(
     )
 
     # Seed the RunDebriefer Agent + Actor (idempotent on PG).
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
 
     # Seed a Run.
     run_id = uuid4()
@@ -130,7 +130,7 @@ async def test_regenerate_run_debrief_chains_parent_via_inputs_lookup(
         ids=[parent_decision_id, child_decision_id],
         llm=llm,
     )
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     run_id = uuid4()
     await _seed_run(deps, run_id)
     handler = bind(deps)
@@ -175,7 +175,7 @@ async def test_regenerate_run_debrief_idempotency_key_replay_returns_same_decisi
         ids=[first_decision_id, second_decision_id],
         llm=llm,
     )
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     run_id = uuid4()
     await _seed_run(deps, run_id)
 

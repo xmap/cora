@@ -29,7 +29,7 @@ AAR". This is that scenario.
 
 First scenario-tier exercise of:
 
-  - `seed_run_debriefer_agent(kernel)` bootstrap (registers the
+  - `seed_run_debriefer_external_agent(kernel)` bootstrap (registers the
     RunDebriefer Agent aggregate at its pinned id + co-registers the
     Actor with kind=agent at the same id via cross-BC atomic write)
   - `RunDebrieferSubscriber.apply(terminal_event)` — the side-
@@ -39,7 +39,7 @@ First scenario-tier exercise of:
     key needed) being driven from a scenario-tier test
   - `Decision` aggregate genesis with `context=RunDebrief`,
     `rule=agent:RunDebriefer:v1`, `confidence_source=
-    self_reported`, `decided_by=RUN_DEBRIEFER_AGENT_ID`
+    self_reported`, `decided_by=RUN_DEBRIEFER_EXTERNAL_AGENT_ID`
 
 ## Why a separate scenario
 
@@ -93,7 +93,10 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, seed_run_debriefer_agent
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    seed_run_debriefer_external_agent,
+)
 from cora.agent.subscribers.run_debriefer import (
     RunDebrieferSubscriber,
     _derive_decision_id,
@@ -256,7 +259,7 @@ _RECIPE = RecipeSpec(
 def _id_queue() -> list[UUID]:
     """Pre-allocated FixedIdGenerator queue (head-first consumption).
 
-    Note: `seed_run_debriefer_agent` writes directly to the event store
+    Note: `seed_run_debriefer_external_agent` writes directly to the event store
     using SYSTEM_PRINCIPAL_ID and uuid4()-generated event ids; it does
     NOT consume from the FixedIdGenerator queue.
     """
@@ -350,10 +353,10 @@ async def test_run_debrief_agent_fires_on_terminal_run(
 
     # Bootstrap the agent (idempotent on re-invocation; uses SYSTEM_PRINCIPAL_ID
     # internally so the seed events bypass the FixedIdGenerator queue).
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -389,7 +392,7 @@ async def test_run_debrief_agent_fires_on_terminal_run(
     assert decision is not None
     assert decision.context.value == "RunDebrief"
     assert decision.choice.value == "NominalCompletion"
-    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+    assert decision.decided_by == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
     # ----- Assert: LLM was called exactly once with the run_id in context -----
 
@@ -407,4 +410,4 @@ async def test_run_debrief_agent_fires_on_terminal_run(
     assert decision_payload["choice"] == "NominalCompletion"
     assert decision_payload["rule"] == "agent:RunDebriefer:v1"
     assert decision_payload["confidence_source"] == "self_reported"
-    assert UUID(decision_payload["decided_by"]) == RUN_DEBRIEFER_AGENT_ID
+    assert UUID(decision_payload["decided_by"]) == RUN_DEBRIEFER_EXTERNAL_AGENT_ID

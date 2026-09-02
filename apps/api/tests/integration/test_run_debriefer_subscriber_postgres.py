@@ -24,9 +24,9 @@ from cora.access.aggregates.actor import (
 )
 from cora.access.aggregates.actor import event_type_name as actor_event_type_name
 from cora.access.aggregates.actor import to_payload as actor_to_payload
-from cora.agent.seed import (
-    RUN_DEBRIEFER_AGENT_ID,
-    seed_run_debriefer_agent,
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    seed_run_debriefer_external_agent,
 )
 from cora.agent.subscribers.run_debriefer import (
     RunDebrieferSubscriber,
@@ -123,19 +123,19 @@ async def test_seed_and_subscriber_write_decision_end_to_end(
     deps = build_postgres_deps(db_pool, now=_NOW)
 
     # Bootstrap: seed RunDebriefer Agent + Actor.
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
     )
     # Second call must be a no-op (idempotent on real PG).
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -163,7 +163,7 @@ async def test_seed_and_subscriber_write_decision_end_to_end(
     assert decision is not None
     assert decision.context.value == "RunDebrief"
     assert decision.choice.value == "NominalCompletion"
-    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+    assert decision.decided_by == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
     # LLM was called exactly once; payload contained the run_id.
     assert len(llm.received) == 1
@@ -178,10 +178,10 @@ async def test_subscriber_retry_is_at_most_once_on_real_postgres(
     Decision on PG (ConcurrencyError on second write is caught and
     treated as no-op)."""
     deps = build_postgres_deps(db_pool, now=_NOW)
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -216,15 +216,15 @@ async def test_subscriber_retry_is_at_most_once_on_real_postgres(
 async def test_seed_does_not_collide_with_pre_existing_actor(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """If someone manually seeded an Actor at RUN_DEBRIEFER_AGENT_ID
-    before the bootstrap ran, seed_run_debriefer_agent should still
+    """If someone manually seeded an Actor at RUN_DEBRIEFER_EXTERNAL_AGENT_ID
+    before the bootstrap ran, seed_run_debriefer_external_agent should still
     not raise (ConcurrencyError caught). Demonstrates partial-state
     recovery."""
     deps = build_postgres_deps(db_pool, now=_NOW)
 
     # Manually seed JUST the Actor (no Agent record).
     actor_event = ActorRegistered(
-        actor_id=RUN_DEBRIEFER_AGENT_ID,
+        actor_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         occurred_at=_NOW,
         kind=ActorKind.AGENT,
     )
@@ -240,17 +240,17 @@ async def test_seed_does_not_collide_with_pre_existing_actor(
     )
     await deps.event_store.append(
         stream_type="Actor",
-        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        stream_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         expected_version=0,
         events=[new_event],
     )
 
     # Now the seed runs. The Actor stream collides (rolls back the
     # whole append_streams batch), seed returns cleanly.
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -260,7 +260,7 @@ async def test_seed_does_not_collide_with_pre_existing_actor(
     # This is a documented edge case; future iteration can split the
     # writes for finer-grained recovery, but the current design accepts
     # the all-or-nothing semantics of append_streams.
-    _, agent_version = await deps.event_store.load("Agent", RUN_DEBRIEFER_AGENT_ID)
+    _, agent_version = await deps.event_store.load("Agent", RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
     assert agent_version == 0  # Agent stream is empty (batch rolled back)
 
 
@@ -325,10 +325,10 @@ async def test_subscriber_records_inference_row_end_to_end(
     entries_decision_inferences with the LLM call's provenance, and opens
     the inference logbook on the Decision stream."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_LOGBOOK_IDS)
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -355,7 +355,7 @@ async def test_subscriber_records_inference_row_end_to_end(
     assert row["input_tokens"] == 1280
     assert row["output_tokens"] == 214
     assert list(row["finish_reasons"]) == ["tool_use"]
-    assert row["agent_id"] == str(RUN_DEBRIEFER_AGENT_ID)
+    assert row["agent_id"] == str(RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
 
     # The inference logbook was opened on the Decision stream.
     decision = await load_decision(deps.event_store, decision_id)
@@ -370,10 +370,10 @@ async def test_subscriber_inference_write_is_idempotent_on_retry(
     """Re-applying the same terminal event re-derives the same inference
     event_id; the store's ON CONFLICT keeps exactly one row."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_LOGBOOK_IDS)
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
