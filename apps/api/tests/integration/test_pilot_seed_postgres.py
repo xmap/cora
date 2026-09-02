@@ -245,6 +245,55 @@ async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
     assert capability.code.value == "cora.capability.acquisition"
 
 
+async def test_fly_scan_plan_declares_non_empty_defaults(seed_database: SeedDatabase) -> None:
+    """Every witnessed Run at 2-BM binds `2BM_fly_scan_plan_v1`
+    (`cora.api._run_witness`'s `capture_watch_plan_id`). Before this
+    slice, that Plan's `default_parameters` was `{}`, so
+    `record_witnessed_run`'s `merge_patch(plan.default_parameters, {})`
+    produced an EMPTY `effective_parameters` on every one of the 2031
+    witnessed Runs measured live on 2026-09-01 -- the record said "this
+    followed the fly scan plan" and the fly scan plan said nothing. This
+    proves the ceremony now declares a real Method.parameters_schema and
+    non-empty Plan.default_parameters for a FRESH deployment, so a
+    witnessed Run's recipe binding carries actual content from the first
+    capture, not just a name. See `project_2bm_live_pilot_rung` memory."""
+    pool, url = seed_database
+    assert await _run_ceremony(url) == 2
+
+    event_store = build_postgres_deps(pool, now=_NOW).event_store
+    method_id = recipe_seed_id(_FACILITY, _BEAMLINE, "method", "fly_scan")
+    plan_id = recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_fly_scan_plan_v1")
+
+    method = await load_method(event_store, method_id)
+    assert method is not None
+    assert method.parameters_schema is not None
+    assert set(method.parameters_schema["properties"]) == {
+        "dwell",
+        "repetitions",
+        "rotation_start",
+        "rotation_stop",
+        "rotation_step",
+        "flat_field_count",
+        "dark_field_count",
+    }
+
+    plan = await load_plan(event_store, plan_id)
+    assert plan is not None
+    assert plan.default_parameters == {
+        "dwell": 0.1,
+        "rotation_start": 0,
+        "rotation_stop": 180.0,
+        "rotation_step": 0.12,
+        "flat_field_count": 10,
+        "dark_field_count": 10,
+    }
+
+    # `repetitions` is declared in the schema but deliberately carries no
+    # default: the angle count varies per scan, so no single number is
+    # honest as a Plan-level default (see the schema's own docstring).
+    assert "repetitions" not in plan.default_parameters
+
+
 async def test_ingest_against_the_seeded_beamline_records_the_dataset(
     seed_database: SeedDatabase, tmp_path: Path
 ) -> None:
