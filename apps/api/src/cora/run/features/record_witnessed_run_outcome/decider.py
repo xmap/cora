@@ -28,7 +28,7 @@ this command regardless of what `observed_at` says or what status the
 Run is in.
 
 For an `Aborted` outcome, the `RunAborted.reason` text is composed here
-from `capture_code`, never taken from the command: RunWitness has no
+from `capture_code`, never taken from the command: RunTranslator has no
 operator-injectable reason field to launder through this path.
 
 Invariants:
@@ -47,7 +47,7 @@ Invariants:
 
 `command.capture_progress_snapshot` is NOT validated, deliberately:
 its per-role timestamps are not checked against `now` the way
-`observed_at` is. A progress PV's clock skew is a fact RunWitness
+`observed_at` is. A progress PV's clock skew is a fact RunTranslator
 retained before this terminal ever fired; refusing the terminal over
 it would wedge the Run in `Running` forever with no path to close it,
 the exact failure this slice exists to prevent. The snapshot is
@@ -111,7 +111,7 @@ def decide(
 
     if state.status not in _TERMINABLE_STATUSES:
         raise RunCannotAbortError(state.id, current_status=state.status)
-    reason = RunAbortReason(f"RunWitness observed capture {command.capture_code} as Aborted")
+    reason = RunAbortReason(f"RunTranslator observed capture {command.capture_code} as Aborted")
     return [
         RunAborted(
             run_id=state.id,

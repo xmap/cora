@@ -1,5 +1,5 @@
 """Postgres integration test for `rebuild_open_captures`
-(cora.api._run_witness).
+(cora.api._run_translator).
 
 Proves the restart-rebuild query composes correctly end-to-end against
 real Postgres: the `conduct_mode` list_runs filter, the
@@ -17,7 +17,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.api._run_witness import rebuild_open_captures
+from cora.api._run_translator import rebuild_open_captures
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
@@ -42,7 +42,7 @@ _NOW = datetime(2026, 8, 14, 4, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000004caa01")
 
-# Scenario tag: 4caa (RunWitness restart-rebuild round-trip).
+# Scenario tag: 4caa (RunTranslator restart-rebuild round-trip).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-00000004caa2")
 
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))

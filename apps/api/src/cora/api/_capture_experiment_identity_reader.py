@@ -3,7 +3,7 @@ ESAF-DOI PVs once, at the instant a capture promotes to a Run.
 
 Slice 14a. Mirrors `_capture_baseline_reader.py`'s ONE-READ-NOT-A-FEED
 shape exactly: invoked exactly once per promotion by
-`RunWitnessRecorder._promote`, right after `record_witnessed_run`
+`RunTranslator._promote`, right after `record_witnessed_run`
 returns a `run_id`, alongside (not instead of) the genesis-baseline
 read. There is no buffer, no tick, and no ongoing liveness claim.
 
@@ -46,7 +46,7 @@ lets the sweep continue over the rest (mirroring
 `capture_watch_preflight.py`'s own per-PV independence), and the vault
 write's own failure must never unwind or retry the promotion that
 already committed (mirroring `_read_baseline`'s exact posture in
-`_run_witness.py`).
+`_run_translator.py`).
 
 Unlike `CaptureBaselineReader`, none of these three values is personal
 data, so a write failure's exception text is logged in full (no
@@ -147,7 +147,7 @@ class CaptureExperimentIdentityReader:
 
         Concurrent, not sequential: mirrors `CaptureBaselineReader.read`'s
         reasoning exactly -- this runs inline inside
-        `RunWitnessRecorder._promote`, on `run_witness_loop`'s single
+        `RunTranslator._promote`, on `run_translator_loop`'s single
         consumer path, so a slow or partially-unreachable control system
         must not block the loop from reacting to the next observation.
 

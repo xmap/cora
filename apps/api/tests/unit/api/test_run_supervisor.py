@@ -2694,7 +2694,7 @@ async def test_truncate_disabled_never_truncates_a_stale_run() -> None:
 async def test_truncate_never_fires_for_a_stale_witnessed_run_even_when_enabled() -> None:
     """The truncate act stays Conducted-only even with run_supervisor_truncate_enabled
     on and the settle window fully elapsed: a Witnessed Run's terminal belongs
-    to RunWitnessRecorder (it truncates a stale Witnessed Run itself on the
+    to RunTranslator (it truncates a stale Witnessed Run itself on the
     next BEGUN observation), not to the supervisor. The Run is still flagged
     (shadow), just never issued a command."""
     kernel = _kernel()

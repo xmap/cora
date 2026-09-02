@@ -247,7 +247,7 @@ async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
 
 async def test_fly_scan_plan_declares_non_empty_defaults(seed_database: SeedDatabase) -> None:
     """Every witnessed Run at 2-BM binds `2BM_fly_scan_plan_v1`
-    (`cora.api._run_witness`'s `capture_watch_plan_id`). Before this
+    (`cora.api._run_translator`'s `capture_watch_plan_id`). Before this
     slice, that Plan's `default_parameters` was `{}`, so
     `record_witnessed_run`'s `merge_patch(plan.default_parameters, {})`
     produced an EMPTY `effective_parameters` on every one of the 2031

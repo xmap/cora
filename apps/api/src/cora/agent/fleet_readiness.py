@@ -60,7 +60,7 @@ class FleetReadiness:
     """Fleet members by whether they can act, named rather than counted.
 
     Names and not ids: this is read by an operator deciding whether to
-    run a promotion, and `RunWitness` answers that question where
+    run a promotion, and `RunTranslator` answers that question where
     `01900000-0000-7000-8000-0000aaaa0010` does not. The ids stay
     reachable through `SEEDED_FLEET` for anything that needs to act on a
     member.

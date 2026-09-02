@@ -1,14 +1,14 @@
 """End-to-end replay tests: real `ControlPortCaptureObserver` classification
-feeding a real `RunWitnessRecorder` (and, for the progress-role tests, a
+feeding a real `RunTranslator` (and, for the progress-role tests, a
 real `CaptureProgressFeeder`), driven by the actual literal sequence
 measured on arcturus (2026-08-14, 431 real captures) rather than
 pre-classified phases.
 
-Unlike `test_capture_observer.py` (adapter alone) and `test_run_witness.py`
+Unlike `test_capture_observer.py` (adapter alone) and `test_run_translator.py`
 (recorder alone, fed pre-built `CaptureLifecycleObservation`s), this file wires both
 together so the deployment's real `CAPTURE_STATUS_PHASES` table and the
 recorder's dedup/terminal/truncate state machine are exercised as one
-pipeline, the way `run_witness_loop` actually runs them.
+pipeline, the way `run_translator_loop` actually runs them.
 """
 
 import asyncio
@@ -20,7 +20,7 @@ import pytest
 
 from cora.api._capture_observer import ControlPortCaptureObserver
 from cora.api._capture_progress_feeder import CaptureProgressFeeder
-from cora.api._run_witness import RunWitnessRecorder, run_witness_loop
+from cora.api._run_translator import RunTranslator, run_translator_loop
 from cora.infrastructure.config import Settings
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.ports.control_port import Measurement
@@ -199,13 +199,13 @@ def _recorder(
     outcome: _FakeOutcome,
     truncate: _FakeTruncate,
     capture_orchestrator_ref_recording_enabled: bool = False,
-) -> RunWitnessRecorder:
+) -> RunTranslator:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=True,
         capture_watch_plan_id=_PLAN_ID,
         capture_orchestrator_ref_recording_enabled=capture_orchestrator_ref_recording_enabled,
     )
-    return RunWitnessRecorder(
+    return RunTranslator(
         deps=build_deps(ids=[uuid4() for _ in range(200)]),
         record_witnessed_run=genesis,
         record_witnessed_run_outcome=outcome,
@@ -215,7 +215,7 @@ def _recorder(
 
 
 def _feeder(
-    recorder: RunWitnessRecorder, append_observations: _FakeAppendObservations
+    recorder: RunTranslator, append_observations: _FakeAppendObservations
 ) -> CaptureProgressFeeder:
     return CaptureProgressFeeder(
         deps=build_deps(ids=[uuid4() for _ in range(200)]),
@@ -228,7 +228,7 @@ def _feeder(
 
 async def _run_loop_over(
     port: _ScriptedPort,
-    recorder: RunWitnessRecorder,
+    recorder: RunTranslator,
     *,
     feeder: CaptureProgressFeeder | None = None,
     capture_pvs: dict[str, str] | None = None,
@@ -242,7 +242,7 @@ async def _run_loop_over(
         orchestrator_ref_schemes=orchestrator_ref_schemes,
     )
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=observer,
             capture_codes=frozenset({_CODE}),
             recorder=recorder,
@@ -339,7 +339,7 @@ async def test_replay_progress_readings_flush_before_the_outcome_lands() -> None
     """A real 2-BM ImagesSaved trail ("<done>/<total>" strings), buffered
     across one fly-scan cycle, is flushed and written against the
     promoted run_id BEFORE the recorder's own outcome command closes
-    that Run: `run_witness_loop` flushes on the terminal observation's
+    that Run: `run_translator_loop` flushes on the terminal observation's
     phase before dispatching it to the recorder, so the observation
     write for a cycle always precedes that cycle's outcome write."""
     order: list[str] = []
@@ -383,7 +383,7 @@ async def test_replay_a_late_progress_reading_after_close_is_dropped_not_written
     """A progress reading whose callback lands AFTER a capture has
     already closed must not resurrect a write against a Run that is no
     longer open. Decoupled from the two pumps' relative arrival timing
-    (an accepted residual documented in `_run_witness.py`, not
+    (an accepted residual documented in `_run_translator.py`, not
     something to assert on here): the closed-capture case is exercised
     directly against the real recorder + feeder pair once the cycle has
     genuinely finished, not raced against the status pump."""
@@ -466,7 +466,7 @@ async def test_replay_orchestrator_ref_attaches_when_written_before_begun() -> N
     """The live shape Francesco's BITS/Bluesky plan produces: the
     RunEngine writes its uid to the substrate, THEN triggers the
     capture this port watches. Both PVs are read with a real substrate
-    time (`_progress_reading`, not `_reading`), so `RunWitnessRecorder`
+    time (`_progress_reading`, not `_reading`), so `RunTranslator`
     's consume-once lead-time guard has a reference to compare against
     and accepts it, riding `RecordWitnessedRun` as a second external
     ref end to end: real adapter, real recorder, real merged queue.
@@ -476,7 +476,7 @@ async def test_replay_orchestrator_ref_attaches_when_written_before_begun() -> N
     the single-reading orchestrator_ref pump's uid is already retained
     by the time it lands -- this module's own documented "status and
     orchestrator-ref pumps have no enforced ordering" residual
-    (`_run_witness.py`) means a bare two-item race is NOT deterministic
+    (`_run_translator.py`) means a bare two-item race is NOT deterministic
     the other way around; this is the accept path, not a claim that
     ordering is guaranteed in production.
     """

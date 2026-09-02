@@ -1,4 +1,4 @@
-"""Tests for the RunWitness shadow runtime (cora.api._run_witness).
+"""Tests for the RunTranslator shadow runtime (cora.api._run_translator).
 
 Covers the no-op-when-unconfigured lifespan shape, that every observed
 phase (and the two no-phase cases, unreached and probe-only) logs the
@@ -26,13 +26,13 @@ from uuid import UUID, uuid4
 import pytest
 import structlog.testing
 
-from cora.api._run_witness import (
-    RUN_WITNESS_MONITOR_SOURCE_ID,
-    RunWitnessRecorder,
+from cora.api._run_translator import (
+    RUN_TRANSLATOR_MONITOR_SOURCE_ID,
+    RunTranslator,
     observe_capture,
     rebuild_open_captures,
-    run_witness_lifespan,
-    run_witness_loop,
+    run_translator_lifespan,
+    run_translator_loop,
 )
 from cora.infrastructure.config import Settings
 from cora.infrastructure.event_envelope import to_new_event
@@ -209,11 +209,11 @@ class _BoomObserver:
 @pytest.mark.parametrize(
     ("phase", "expected_event"),
     [
-        (CapturePhase.BEGUN, "run_witness.capture_begun"),
-        (CapturePhase.PROGRESSING, "run_witness.capture_progressing"),
-        (CapturePhase.ENDED, "run_witness.capture_ended"),
-        (CapturePhase.ABORTED, "run_witness.capture_aborted"),
-        (CapturePhase.UNRECOGNIZED, "run_witness.capture_unrecognized"),
+        (CapturePhase.BEGUN, "run_translator.capture_begun"),
+        (CapturePhase.PROGRESSING, "run_translator.capture_progressing"),
+        (CapturePhase.ENDED, "run_translator.capture_ended"),
+        (CapturePhase.ABORTED, "run_translator.capture_aborted"),
+        (CapturePhase.UNRECOGNIZED, "run_translator.capture_unrecognized"),
     ],
 )
 def test_observe_capture_logs_the_matching_event_per_phase(
@@ -230,7 +230,7 @@ def test_observe_capture_logs_unreached_for_a_probe_only_observation() -> None:
     than being silently dropped."""
     with structlog.testing.capture_logs() as logs:
         observe_capture(_obs(reported_status=None, phase=None))
-    assert [entry["event"] for entry in logs] == ["run_witness.capture_unreached"]
+    assert [entry["event"] for entry in logs] == ["run_translator.capture_unreached"]
 
 
 @pytest.mark.unit
@@ -257,15 +257,15 @@ def test_observe_capture_reports_no_substrate_time_as_none_not_a_string() -> Non
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_is_a_no_op_for_empty_capture_codes() -> None:
+async def test_run_translator_loop_is_a_no_op_for_empty_capture_codes() -> None:
     observer = _FakeObserver([_obs(reported_status="Scan complete", phase=CapturePhase.ENDED)])
-    await run_witness_loop(observer=observer, capture_codes=frozenset())
+    await run_translator_loop(observer=observer, capture_codes=frozenset())
     # No assertion needed beyond "returns": an observer never drained
     # would hang forever if the empty-scope short-circuit were missing.
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_logs_every_observation_in_sequence() -> None:
+async def test_run_translator_loop_logs_every_observation_in_sequence() -> None:
     observer = _FakeObserver(
         [
             _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN),
@@ -274,7 +274,7 @@ async def test_run_witness_loop_logs_every_observation_in_sequence() -> None:
         ]
     )
     task = asyncio.create_task(
-        run_witness_loop(observer=observer, capture_codes=frozenset({_CODE}))
+        run_translator_loop(observer=observer, capture_codes=frozenset({_CODE}))
     )
     with structlog.testing.capture_logs() as logs:
         await asyncio.sleep(0.05)  # one full drain of the fixed sequence
@@ -283,18 +283,18 @@ async def test_run_witness_loop_logs_every_observation_in_sequence() -> None:
         await task
     events = [entry["event"] for entry in logs]
     assert events == [
-        "run_witness.capture_begun",
-        "run_witness.capture_progressing",
-        "run_witness.capture_ended",
+        "run_translator.capture_begun",
+        "run_translator.capture_progressing",
+        "run_translator.capture_ended",
     ]
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_survives_an_observer_that_raises() -> None:
+async def test_run_translator_loop_survives_an_observer_that_raises() -> None:
     """The outer resilience branch logs and reconnects rather than the
     loop propagating the exception and dying silently."""
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=_BoomObserver(),
             capture_codes=frozenset({_CODE}),
             reconnect_delay_seconds=0.01,
@@ -306,17 +306,17 @@ async def test_run_witness_loop_survives_an_observer_that_raises() -> None:
     with contextlib.suppress(asyncio.CancelledError):
         await task
     events = [entry["event"] for entry in logs]
-    assert "run_witness.iteration_failed" in events
+    assert "run_translator.iteration_failed" in events
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_offers_a_progress_observation_to_the_feeder() -> None:
+async def test_run_translator_loop_offers_a_progress_observation_to_the_feeder() -> None:
     """A `CaptureProgressObservation` reaches `feeder.offer()`; with no
     `recorder` supplied (as here), it reaches nothing else."""
     feeder = _FakeCaptureProgressFeeder()
     observer = _FakeObserver([_progress_obs(role="images_saved", value=3.0)])
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=observer,
             capture_codes=frozenset({_CODE}),
             feeder=feeder,  # type: ignore[arg-type]
@@ -330,12 +330,12 @@ async def test_run_witness_loop_offers_a_progress_observation_to_the_feeder() ->
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_a_progress_observation_with_no_feeder_is_a_noop() -> None:
+async def test_run_translator_loop_a_progress_observation_with_no_feeder_is_a_noop() -> None:
     """`feeder=None` (recording off) makes a progress observation a
     silent no-op, same posture as `recorder=None` for a lifecycle one."""
     observer = _FakeObserver([_progress_obs()])
     task = asyncio.create_task(
-        run_witness_loop(observer=observer, capture_codes=frozenset({_CODE}))
+        run_translator_loop(observer=observer, capture_codes=frozenset({_CODE}))
     )
     await asyncio.sleep(0.02)  # would hang or crash if this branch mishandled feeder=None
     task.cancel()
@@ -344,7 +344,7 @@ async def test_run_witness_loop_a_progress_observation_with_no_feeder_is_a_noop(
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_routes_a_testing_observation_to_the_recorder_only() -> None:
+async def test_run_translator_loop_routes_a_testing_observation_to_the_recorder_only() -> None:
     """A `CapturePreconditionBypassObservation` reaches
     `recorder.observe_precondition_bypass()` and nothing else: no
     `feeder.offer()` (it is never written as an `AppendObservations`
@@ -364,7 +364,7 @@ async def test_run_witness_loop_routes_a_testing_observation_to_the_recorder_onl
     feeder = _FakeCaptureProgressFeeder()
     observer = _FakeObserver([_testing_obs(beam_preconditions_bypassed=True)])
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=observer,
             capture_codes=frozenset({_CODE}),
             recorder=_RecordingRecorder(),  # type: ignore[arg-type]
@@ -380,12 +380,12 @@ async def test_run_witness_loop_routes_a_testing_observation_to_the_recorder_onl
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_a_testing_observation_with_no_recorder_is_a_noop() -> None:
+async def test_run_translator_loop_a_testing_observation_with_no_recorder_is_a_noop() -> None:
     """`recorder=None` (shadow mode) makes a testing observation a
     silent no-op, same posture as a progress observation with no feeder."""
     observer = _FakeObserver([_testing_obs(beam_preconditions_bypassed=True)])
     task = asyncio.create_task(
-        run_witness_loop(observer=observer, capture_codes=frozenset({_CODE}))
+        run_translator_loop(observer=observer, capture_codes=frozenset({_CODE}))
     )
     await asyncio.sleep(0.02)  # would hang or crash if this branch mishandled recorder=None
     task.cancel()
@@ -394,7 +394,7 @@ async def test_run_witness_loop_a_testing_observation_with_no_recorder_is_a_noop
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_flushes_progress_before_the_recorder_acts_on_a_terminal() -> None:
+async def test_run_translator_loop_flushes_progress_before_translator_acts_on_terminal() -> None:
     """A BEGUN/ENDED/ABORTED observation must flush the capture's
     buffered progress trail BEFORE the recorder's own dispatch, so the
     trail is attributed to the Run before it can close or be replaced."""
@@ -410,7 +410,7 @@ async def test_run_witness_loop_flushes_progress_before_the_recorder_acts_on_a_t
 
     observer = _FakeObserver([_obs(reported_status="Scan complete", phase=CapturePhase.ENDED)])
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=observer,
             capture_codes=frozenset({_CODE}),
             recorder=_OrderingRecorder(),  # type: ignore[arg-type]
@@ -425,7 +425,7 @@ async def test_run_witness_loop_flushes_progress_before_the_recorder_acts_on_a_t
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_does_not_flush_on_a_non_flush_trigger_phase() -> None:
+async def test_run_translator_loop_does_not_flush_on_a_non_flush_trigger_phase() -> None:
     """PROGRESSING is not in `_FLUSH_TRIGGER_PHASES`: the recorder's own
     dedup state is untouched by it, so there is nothing to flush ahead
     of."""
@@ -434,7 +434,7 @@ async def test_run_witness_loop_does_not_flush_on_a_non_flush_trigger_phase() ->
         [_obs(reported_status="Collecting projections", phase=CapturePhase.PROGRESSING)]
     )
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=observer,
             capture_codes=frozenset({_CODE}),
             feeder=feeder,  # type: ignore[arg-type]
@@ -448,7 +448,7 @@ async def test_run_witness_loop_does_not_flush_on_a_non_flush_trigger_phase() ->
 
 
 @pytest.mark.unit
-async def test_run_witness_loop_survives_a_flush_failure_and_still_dispatches_to_recorder() -> None:
+async def test_run_translator_loop_survives_a_flush_failure_and_still_dispatches() -> None:
     """A flush failure is logged and swallowed; the recorder still gets
     the observation, matching the loop's own record_failed posture."""
     feeder = _FakeCaptureProgressFeeder(raises_on_flush=RuntimeError("flush boom"))
@@ -460,7 +460,7 @@ async def test_run_witness_loop_survives_a_flush_failure_and_still_dispatches_to
 
     observer = _FakeObserver([_obs(reported_status="Scan complete", phase=CapturePhase.ENDED)])
     task = asyncio.create_task(
-        run_witness_loop(
+        run_translator_loop(
             observer=observer,
             capture_codes=frozenset({_CODE}),
             recorder=_RecordingRecorder(),  # type: ignore[arg-type]
@@ -473,14 +473,14 @@ async def test_run_witness_loop_survives_a_flush_failure_and_still_dispatches_to
     with contextlib.suppress(asyncio.CancelledError):
         await task
     events = [entry["event"] for entry in logs]
-    assert "run_witness.progress_flush_failed" in events
+    assert "run_translator.progress_flush_failed" in events
     assert recorded == [_CODE]
 
 
 @pytest.mark.unit
 async def test_lifespan_is_a_no_op_when_no_capture_codes_configured() -> None:
     entered = False
-    async with run_witness_lifespan(observer=_FakeObserver([]), capture_codes=frozenset()):
+    async with run_translator_lifespan(observer=_FakeObserver([]), capture_codes=frozenset()):
         entered = True
     assert entered
 
@@ -489,10 +489,10 @@ async def test_lifespan_is_a_no_op_when_no_capture_codes_configured() -> None:
 async def test_lifespan_spawns_and_cleanly_cancels_the_background_task() -> None:
     observer = _FakeObserver([_obs(reported_status="Scan complete", phase=CapturePhase.ENDED)])
     with structlog.testing.capture_logs() as logs:
-        async with run_witness_lifespan(observer=observer, capture_codes=frozenset({_CODE})):
+        async with run_translator_lifespan(observer=observer, capture_codes=frozenset({_CODE})):
             await asyncio.sleep(0.02)
     events = [entry["event"] for entry in logs]
-    assert "run_witness.capture_ended" in events
+    assert "run_translator.capture_ended" in events
 
 
 class _FakeRecordWitnessedRun:
@@ -608,7 +608,7 @@ def _recorder(
     capture_orchestrator_ref_recording_enabled: bool = False,
     capture_orchestrator_ref_max_lead_seconds: float = 30.0,
     schema_posture: str = "matched",
-) -> RunWitnessRecorder:
+) -> RunTranslator:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=run_witness_recording_enabled,
         capture_watch_plan_id=capture_watch_plan_id,
@@ -639,7 +639,7 @@ def _recorder(
         )
     if schema_posture != "matched":
         deps = dataclasses.replace(deps, schema_posture=schema_posture)  # type: ignore[arg-type]
-    return RunWitnessRecorder(
+    return RunTranslator(
         deps=deps,
         record_witnessed_run=record_witnessed_run,
         record_witnessed_run_outcome=outcome,
@@ -654,7 +654,7 @@ def _recorder(
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> None:
+async def test_run_translator_promotes_a_begun_capture_while_idle() -> None:
     fake = _FakeRecordWitnessedRun()
     recorder = _recorder(record_witnessed_run=fake)
 
@@ -665,9 +665,9 @@ async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> Non
     assert command.capture_code == _CODE
     assert command.plan_id == _PLAN_ID
     assert command.trigger == "Monitor"
-    assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
+    assert command.monitor_source_id == RUN_TRANSLATOR_MONITOR_SOURCE_ID
     assert fake.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
-        "RunWitnessRecorder._promote must pass the internal Surface, not "
+        "RunTranslator._promote must pass the internal Surface, not "
         "fall through to NIL_SENTINEL_ID, so a Policy can gate this "
         "background promotion distinctly from an operator-driven call."
     )
@@ -803,7 +803,7 @@ async def test_capture_probe_written_alongside_a_successful_promotion() -> None:
         )
 
     assert len(store.all()) == 1
-    assert any(entry["event"] == "run_witness.capture_begun" for entry in logs)
+    assert any(entry["event"] == "run_translator.capture_begun" for entry in logs)
     assert len(fake.calls) == 1
 
 
@@ -852,7 +852,7 @@ async def test_capture_probe_skipped_with_a_log_line_when_schema_degraded() -> N
 
     assert store.all() == []
     assert any(
-        entry["event"] == "run_witness.capture_probe_skipped_degraded_schema" for entry in logs
+        entry["event"] == "run_translator.capture_probe_skipped_degraded_schema" for entry in logs
     )
 
 
@@ -874,7 +874,7 @@ async def test_capture_probe_write_failure_does_not_suppress_the_log_or_promotio
         )
 
     assert any(entry["log_level"] == "error" for entry in logs)  # _log.exception
-    assert any(entry["event"] == "run_witness.capture_begun" for entry in logs)
+    assert any(entry["event"] == "run_translator.capture_begun" for entry in logs)
     assert len(fake.calls) == 1  # promotion still happened
 
 
@@ -1454,7 +1454,7 @@ async def test_observe_capture_path_is_a_noop_when_recording_disabled() -> None:
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_truncates_stale_run_and_repromotes_on_a_second_begun() -> None:
+async def test_run_translator_truncates_stale_run_and_repromotes_on_a_second_begun() -> None:
     """A second BEGUN for a code that is already open means the previous
     terminal was missed: truncate the stale Run (interrupted_at=None,
     the moment it actually ended is unknown), then promote a new one."""
@@ -1476,13 +1476,13 @@ async def test_run_witness_recorder_truncates_stale_run_and_repromotes_on_a_seco
     assert truncate_command.run_id == stale_run_id
     assert truncate_command.interrupted_at is None
     assert truncate.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
-        "RunWitnessRecorder._truncate_stale must pass the internal "
+        "RunTranslator._truncate_stale must pass the internal "
         "Surface, not fall through to NIL_SENTINEL_ID."
     )
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_promotes_even_when_the_stale_truncate_fails() -> None:
+async def test_run_translator_promotes_even_when_the_stale_truncate_fails() -> None:
     """The new capture is a real fact regardless of whether the stale Run
     could be closed: a truncate failure must not block the promotion."""
     genesis = _FakeRecordWitnessedRun()
@@ -1498,7 +1498,7 @@ async def test_run_witness_recorder_promotes_even_when_the_stale_truncate_fails(
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_stays_idle_after_a_promotion_failure() -> None:
+async def test_run_translator_stays_idle_after_a_promotion_failure() -> None:
     fake = _FakeRecordWitnessedRun(raises=RuntimeError("clearance refused"))
     recorder = _recorder(record_witnessed_run=fake)
 
@@ -1512,7 +1512,7 @@ async def test_run_witness_recorder_stays_idle_after_a_promotion_failure() -> No
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_logs_a_distinct_event_on_unauthorized() -> None:
+async def test_run_translator_logs_a_distinct_event_on_unauthorized() -> None:
     fake = _FakeRecordWitnessedRun(raises=UnauthorizedError("not granted"))
     recorder = _recorder(record_witnessed_run=fake)
 
@@ -1521,11 +1521,11 @@ async def test_run_witness_recorder_logs_a_distinct_event_on_unauthorized() -> N
         await recorder.observe_capture(begun)
 
     events = [entry["event"] for entry in logs]
-    assert "run_witness.promotion_unauthorized" in events
+    assert "run_translator.promotion_unauthorized" in events
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_records_ended_outcome_while_open() -> None:
+async def test_run_translator_records_ended_outcome_while_open() -> None:
     run_id = uuid4()
     genesis = _FakeRecordWitnessedRun(run_id=run_id)
     outcome = _FakeRecordWitnessedRunOutcome()
@@ -1544,9 +1544,9 @@ async def test_run_witness_recorder_records_ended_outcome_while_open() -> None:
     assert command.observed_phase is CapturePhase.ENDED
     assert command.observed_at == _NOW
     assert command.trigger == "Monitor"
-    assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
+    assert command.monitor_source_id == RUN_TRANSLATOR_MONITOR_SOURCE_ID
     assert outcome.surface_ids == [SYSTEM_IN_PROCESS_SURFACE_ID], (
-        "RunWitnessRecorder._record_outcome must pass the internal "
+        "RunTranslator._record_outcome must pass the internal "
         "Surface, not fall through to NIL_SENTINEL_ID."
     )
 
@@ -1557,7 +1557,7 @@ async def test_run_witness_recorder_records_ended_outcome_while_open() -> None:
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_records_aborted_outcome_while_open() -> None:
+async def test_run_translator_records_aborted_outcome_while_open() -> None:
     run_id = uuid4()
     genesis = _FakeRecordWitnessedRun(run_id=run_id)
     outcome = _FakeRecordWitnessedRunOutcome()
@@ -1575,7 +1575,7 @@ async def test_run_witness_recorder_records_aborted_outcome_while_open() -> None
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_leaves_entry_open_after_a_failed_outcome() -> None:
+async def test_run_translator_leaves_entry_open_after_a_failed_outcome() -> None:
     """A failed outcome write leaves the entry open; the next BEGUN
     truncates it (recovering via the same path as a missed terminal)
     rather than the failure being silently swallowed."""
@@ -1599,7 +1599,7 @@ async def test_run_witness_recorder_leaves_entry_open_after_a_failed_outcome() -
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_logs_a_distinct_event_on_outcome_unauthorized() -> None:
+async def test_run_translator_logs_a_distinct_event_on_outcome_unauthorized() -> None:
     run_id = uuid4()
     outcome = _FakeRecordWitnessedRunOutcome(raises=UnauthorizedError("not granted"))
     recorder = _recorder(
@@ -1614,7 +1614,7 @@ async def test_run_witness_recorder_logs_a_distinct_event_on_outcome_unauthorize
         )
 
     events = [entry["event"] for entry in logs]
-    assert "run_witness.outcome_unauthorized" in events
+    assert "run_translator.outcome_unauthorized" in events
 
 
 # ---------- observe_orchestrator_ref / consume-once lead-time guard ----------
@@ -1676,7 +1676,7 @@ async def test_orchestrator_ref_absent_is_a_noop() -> None:
 
     assert fake.calls[0].orchestrator_ref is None
     assert not any(
-        entry["event"].startswith("run_witness.orchestrator_ref_rejected") for entry in logs
+        entry["event"].startswith("run_translator.orchestrator_ref_rejected") for entry in logs
     )
 
 
@@ -1769,7 +1769,7 @@ async def test_orchestrator_ref_rejected_when_stale_beyond_the_lead_bound() -> N
 
     assert fake.calls[0].orchestrator_ref is None
     events = [entry["event"] for entry in logs]
-    assert "run_witness.orchestrator_ref_rejected_stale" in events
+    assert "run_translator.orchestrator_ref_rejected_stale" in events
 
 
 @pytest.mark.unit
@@ -1791,7 +1791,7 @@ async def test_orchestrator_ref_rejected_when_reordered_after_begun() -> None:
 
     assert fake.calls[0].orchestrator_ref is None
     events = [entry["event"] for entry in logs]
-    assert "run_witness.orchestrator_ref_rejected_reordered" in events
+    assert "run_translator.orchestrator_ref_rejected_reordered" in events
 
 
 @pytest.mark.unit
@@ -1813,7 +1813,7 @@ async def test_orchestrator_ref_rejected_when_begun_has_no_substrate_time() -> N
 
     assert fake.calls[0].orchestrator_ref is None
     events = [entry["event"] for entry in logs]
-    assert "run_witness.orchestrator_ref_rejected_no_reference_time" in events
+    assert "run_translator.orchestrator_ref_rejected_no_reference_time" in events
 
 
 @pytest.mark.unit
@@ -1837,7 +1837,7 @@ async def test_orchestrator_ref_rejected_when_the_retained_reading_has_no_substr
 
     assert fake.calls[0].orchestrator_ref is None
     events = [entry["event"] for entry in logs]
-    assert "run_witness.orchestrator_ref_rejected_no_reference_time" in events
+    assert "run_translator.orchestrator_ref_rejected_no_reference_time" in events
 
 
 @pytest.mark.unit
@@ -1865,7 +1865,7 @@ async def test_orchestrator_ref_rejected_when_malformed() -> None:
 
     assert fake.calls[0].orchestrator_ref is None
     events = [entry["event"] for entry in logs]
-    assert "run_witness.orchestrator_ref_rejected_malformed" in events
+    assert "run_translator.orchestrator_ref_rejected_malformed" in events
 
 
 @pytest.mark.unit
@@ -2220,7 +2220,7 @@ async def test_observe_precondition_bypass_is_keyed_per_capture_code() -> None:
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_noop_on_ended_while_idle() -> None:
+async def test_run_translator_noop_on_ended_while_idle() -> None:
     genesis = _FakeRecordWitnessedRun()
     outcome = _FakeRecordWitnessedRunOutcome()
     recorder = _recorder(record_witnessed_run=genesis, record_witnessed_run_outcome=outcome)
@@ -2232,7 +2232,7 @@ async def test_run_witness_recorder_noop_on_ended_while_idle() -> None:
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_noop_on_aborted_while_idle() -> None:
+async def test_run_translator_noop_on_aborted_while_idle() -> None:
     genesis = _FakeRecordWitnessedRun()
     outcome = _FakeRecordWitnessedRunOutcome()
     recorder = _recorder(record_witnessed_run=genesis, record_witnessed_run_outcome=outcome)
@@ -2245,7 +2245,7 @@ async def test_run_witness_recorder_noop_on_aborted_while_idle() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize("preopened", [False, True])
-async def test_run_witness_recorder_noop_on_progressing_regardless_of_state(
+async def test_run_translator_noop_on_progressing_regardless_of_state(
     preopened: bool,
 ) -> None:
     fake = _FakeRecordWitnessedRun()
@@ -2261,7 +2261,7 @@ async def test_run_witness_recorder_noop_on_progressing_regardless_of_state(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("preopened", [False, True])
-async def test_run_witness_recorder_noop_on_unrecognized_regardless_of_state(
+async def test_run_translator_noop_on_unrecognized_regardless_of_state(
     preopened: bool,
 ) -> None:
     fake = _FakeRecordWitnessedRun()
@@ -2275,7 +2275,7 @@ async def test_run_witness_recorder_noop_on_unrecognized_regardless_of_state(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("preopened", [False, True])
-async def test_run_witness_recorder_noop_on_none_phase_regardless_of_state(
+async def test_run_translator_noop_on_none_phase_regardless_of_state(
     preopened: bool,
 ) -> None:
     """The roadmap's explicit rule: a `phase is None` observation must
@@ -2378,7 +2378,7 @@ async def test_progress_readings_returns_a_copy_not_a_live_reference() -> None:
 
 
 _PROGRESS_TRAIL_LENGTH = 60
-"""Mirrors `cora.api._run_witness._PROGRESS_TRAIL_LENGTH`. Kept as a local
+"""Mirrors `cora.api._run_translator._PROGRESS_TRAIL_LENGTH`. Kept as a local
 constant rather than importing the private module attribute."""
 
 
@@ -2500,7 +2500,7 @@ async def test_record_outcome_success_evicts_the_progress_trail() -> None:
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_is_a_pass_through_when_recording_disabled() -> None:
+async def test_run_translator_is_a_pass_through_when_recording_disabled() -> None:
     """The hard no-regression requirement: with recording off, the fake
     handler is never called and the log output matches bare
     `observe_capture` exactly."""
@@ -2518,7 +2518,7 @@ async def test_run_witness_recorder_is_a_pass_through_when_recording_disabled() 
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_seeds_open_captures_from_the_supplied_map() -> None:
+async def test_run_translator_lifespan_seeds_open_captures_from_the_supplied_map() -> None:
     """A code seeded as open at construction reads OPEN: a BEGUN for it
     goes through the truncate-then-promote recovery path rather than a
     blind idle-promote, proving the supplied map was actually consulted."""
@@ -2534,7 +2534,7 @@ async def test_run_witness_lifespan_seeds_open_captures_from_the_supplied_map() 
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2551,9 +2551,9 @@ async def test_run_witness_lifespan_seeds_open_captures_from_the_supplied_map() 
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_rejects_a_handler_without_deps() -> None:
+async def test_run_translator_lifespan_rejects_a_handler_without_deps() -> None:
     with pytest.raises(ValueError, match="requires deps"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             record_witnessed_run=_FakeRecordWitnessedRun(),
@@ -2562,14 +2562,14 @@ async def test_run_witness_lifespan_rejects_a_handler_without_deps() -> None:
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_rejects_capture_probe_store_without_witness_handler() -> None:
-    """Without `record_witnessed_run`, no `RunWitnessRecorder` is ever
+async def test_run_translator_lifespan_rejects_capture_probe_store_without_handler() -> None:
+    """Without `record_witnessed_run`, no `RunTranslator` is ever
     constructed, so a supplied `capture_probe_store` would otherwise be
     silently accepted and never written to -- precisely in the
     shadow-only case this store's kill switch exists to serve. Refuse
     at boot instead."""
     with pytest.raises(ValueError, match="capture_probe_store requires record_witnessed_run"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             capture_probe_store=InMemoryCaptureProbeStore(),
@@ -2578,9 +2578,9 @@ async def test_run_witness_lifespan_rejects_capture_probe_store_without_witness_
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_rejects_progress_recording_without_witness_handler() -> None:
+async def test_run_translator_lifespan_rejects_progress_recording_without_handler() -> None:
     with pytest.raises(ValueError, match="capture_progress_recording_enabled requires"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             capture_progress_recording_enabled=True,
@@ -2589,7 +2589,7 @@ async def test_run_witness_lifespan_rejects_progress_recording_without_witness_h
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_rejects_progress_recording_without_append_obs() -> None:
+async def test_run_translator_lifespan_rejects_progress_recording_without_append_obs() -> None:
     deps = dataclasses.replace(
         build_deps(ids=[uuid4() for _ in range(5)]),
         settings=Settings(  # type: ignore[call-arg]
@@ -2598,7 +2598,7 @@ async def test_run_witness_lifespan_rejects_progress_recording_without_append_ob
         ),
     )
     with pytest.raises(ValueError, match="append_observations"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             deps=deps,
@@ -2611,7 +2611,7 @@ async def test_run_witness_lifespan_rejects_progress_recording_without_append_ob
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_with_progress_recording_writes_observations() -> None:
+async def test_run_translator_lifespan_with_progress_recording_writes_observations() -> None:
     """End-to-end wiring check: a BEGUN promotes, a buffered progress
     reading survives to the periodic flush tick, and the flush writes
     through the real `AppendObservations` fake against the promoted
@@ -2635,7 +2635,7 @@ async def test_run_witness_lifespan_with_progress_recording_writes_observations(
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2657,7 +2657,7 @@ async def test_run_witness_lifespan_with_progress_recording_writes_observations(
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_refuses_progress_recording_in_shadow_mode() -> None:
+async def test_run_translator_lifespan_refuses_progress_recording_in_shadow_mode() -> None:
     """Defensive, mirrors `_promote`'s own capture_watch_plan_id check:
     the boot-time gate already refuses to start the app in this state,
     but a direct in-process caller that sets `run_witness_recording_enabled
@@ -2672,7 +2672,7 @@ async def test_run_witness_lifespan_refuses_progress_recording_in_shadow_mode() 
         ),
     )
     with pytest.raises(ValueError, match="run_witness_recording_enabled=True"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             deps=deps,
@@ -2704,7 +2704,7 @@ class _FakeBaselineControlPort:
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_rejects_capture_baseline_pvs_without_control_port() -> None:
+async def test_run_translator_lifespan_rejects_capture_baseline_pvs_without_control_port() -> None:
     deps = dataclasses.replace(
         build_deps(ids=[uuid4() for _ in range(5)]),
         settings=Settings(  # type: ignore[call-arg]
@@ -2713,7 +2713,7 @@ async def test_run_witness_lifespan_rejects_capture_baseline_pvs_without_control
         ),
     )
     with pytest.raises(ValueError, match="control_port"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             deps=deps,
@@ -2727,9 +2727,7 @@ async def test_run_witness_lifespan_rejects_capture_baseline_pvs_without_control
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_with_capture_baseline_pvs_reads_and_appends_on_promotion() -> (
-    None
-):
+async def test_run_translator_lifespan_with_baseline_pvs_reads_and_appends_on_promotion() -> None:
     """End-to-end wiring check: a BEGUN promotes and the baseline reader
     actually reads through the real ControlPort fake and appends against
     the promoted run_id -- proving the reader is constructed and invoked,
@@ -2748,7 +2746,7 @@ async def test_run_witness_lifespan_with_capture_baseline_pvs_reads_and_appends_
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2771,7 +2769,7 @@ async def test_run_witness_lifespan_with_capture_baseline_pvs_reads_and_appends_
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_declares_baseline_pvs_but_kill_switch_off_appends_nothing() -> (
+async def test_run_translator_lifespan_declares_baseline_pvs_kill_switch_off_appends_nothing() -> (
     None
 ):
     """Declaring capture_baseline_pvs builds a reader; the fourth kill
@@ -2791,7 +2789,7 @@ async def test_run_witness_lifespan_declares_baseline_pvs_but_kill_switch_off_ap
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2809,7 +2807,7 @@ async def test_run_witness_lifespan_declares_baseline_pvs_but_kill_switch_off_ap
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_rejects_experiment_identity_pvs_no_control_port() -> None:
+async def test_run_translator_lifespan_rejects_experiment_identity_pvs_no_control_port() -> None:
     deps = dataclasses.replace(
         build_deps(ids=[uuid4() for _ in range(5)]),
         settings=Settings(  # type: ignore[call-arg]
@@ -2818,7 +2816,7 @@ async def test_run_witness_lifespan_rejects_experiment_identity_pvs_no_control_p
         ),
     )
     with pytest.raises(ValueError, match="control_port"):
-        async with run_witness_lifespan(
+        async with run_translator_lifespan(
             observer=_FakeObserver([]),
             capture_codes=frozenset({_CODE}),
             deps=deps,
@@ -2834,7 +2832,7 @@ async def test_run_witness_lifespan_rejects_experiment_identity_pvs_no_control_p
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_with_experiment_identity_pvs_reads_and_vaults() -> None:
+async def test_run_translator_lifespan_with_experiment_identity_pvs_reads_and_vaults() -> None:
     """End-to-end wiring check: a BEGUN promotes and the experiment-
     identity reader actually reads through the real ControlPort fake
     and vaults against the promoted run_id -- proving the reader is
@@ -2853,7 +2851,7 @@ async def test_run_witness_lifespan_with_experiment_identity_pvs_reads_and_vault
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2875,7 +2873,7 @@ async def test_run_witness_lifespan_with_experiment_identity_pvs_reads_and_vault
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_declares_identity_pvs_but_switch_off_vaults_nothing() -> None:
+async def test_run_translator_lifespan_declares_identity_pvs_switch_off_vaults_nothing() -> None:
     """Declaring capture_experiment_identity_pvs builds a reader; the
     sixth kill switch, capture_experiment_identity_recording_enabled,
     is what actually gates whether it is called."""
@@ -2893,7 +2891,7 @@ async def test_run_witness_lifespan_declares_identity_pvs_but_switch_off_vaults_
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2913,13 +2911,13 @@ async def test_run_witness_lifespan_declares_identity_pvs_but_switch_off_vaults_
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_with_capture_probe_store_writes_a_probe_row() -> None:
+async def test_run_translator_lifespan_with_capture_probe_store_writes_a_probe_row() -> None:
     """End-to-end wiring check: `capture_probe_store` passed into
-    `run_witness_lifespan` actually reaches `RunWitnessRecorder`, not
+    `run_translator_lifespan` actually reaches `RunTranslator`, not
     just accepted as a parameter and dropped. This is the hop
     `main.py`'s `capture_probe_store=app.state.run.capture_probe_store`
     depends on; nothing else in this file exercises it, since every
-    other capture-probe test builds a `RunWitnessRecorder` directly via
+    other capture-probe test builds a `RunTranslator` directly via
     `_recorder()`."""
     store = InMemoryCaptureProbeStore()
     genesis = _FakeRecordWitnessedRun()
@@ -2932,7 +2930,7 @@ async def test_run_witness_lifespan_with_capture_probe_store_writes_a_probe_row(
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
@@ -2950,7 +2948,7 @@ async def test_run_witness_lifespan_with_capture_probe_store_writes_a_probe_row(
 
 
 @pytest.mark.unit
-async def test_run_witness_lifespan_flushes_buffered_progress_on_shutdown() -> None:
+async def test_run_translator_lifespan_flushes_buffered_progress_on_shutdown() -> None:
     """A reading buffered right before teardown must not be silently
     lost: the lifespan's `finally` does one best-effort final flush
     after cancelling both background tasks."""
@@ -2971,7 +2969,7 @@ async def test_run_witness_lifespan_flushes_buffered_progress_on_shutdown() -> N
         ),
     )
 
-    async with run_witness_lifespan(
+    async with run_translator_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,

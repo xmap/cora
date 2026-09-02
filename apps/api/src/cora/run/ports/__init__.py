@@ -2,7 +2,7 @@
 
 Cross-BC ports live in `infrastructure/ports/`; these are owned by Run
 because their sole consumer is a Run-watching composition-root runtime
-(the RunSupervisor, and now the capture-observing RunWitness). See
+(the RunSupervisor, and now the capture-observing RunTranslator). See
 [[project_observation_signal_port_design]].
 """
 

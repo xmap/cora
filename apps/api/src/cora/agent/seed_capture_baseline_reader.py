@@ -17,10 +17,10 @@ scaffolding lives in `cora.agent._agent_seed`.
     (`provider="deterministic"`). Never used to build an LLM: the
     runtime is a one-shot read-and-append at promotion, not an LLM
     subscriber.
-  - A SEPARATE principal from RunWitness AND from CaptureProgressFeeder,
+  - A SEPARATE principal from RunTranslator AND from CaptureProgressFeeder,
     deliberately, for the same reason CaptureProgressFeeder already got
     its own: an operator can revoke baseline-writing (this grant)
-    without blinding either the witness or the progress feeder, and
+    without blinding either the translator or the progress feeder, and
     `Observation.actor_id` tells all three runtimes' rows apart in the
     record even though `sampling_procedure` already discriminates
     baseline from monitor rows. The ONLY lever that actually revokes it
@@ -43,10 +43,10 @@ scaffolding lives in `cora.agent._agent_seed`.
     accepts any Running-or-Held Run, driven ones included, the same as
     every other operator-facing entry writer. This principal's safety
     rests entirely on `CaptureBaselineReader.read` only ever
-    being called by `RunWitnessRecorder._promote` with the `run_id` it
+    being called by `RunTranslator._promote` with the `run_id` it
     JUST minted via `record_witnessed_run`, never a run_id sourced any
     other way. Same structural residual already documented for
-    RunWitness's own `TruncateRun` grant in `seed_run_witness.py` and
+    RunTranslator's own `TruncateRun` grant in `seed_run_translator.py` and
     for CaptureProgressFeeder's `AppendObservations` grant above it.
 """
 
@@ -79,7 +79,7 @@ CAPTURE_BASELINE_READER_AGENT_DESCRIPTION = (
     "genesis-baseline PVs exactly once, at the instant a capture promotes "
     "to a witnessed Run, and appends them as AppendObservations rows with "
     'sampling_procedure="baseline", scoped exclusively to the Run '
-    "RunWitness itself just promoted. Not a control path: it never drives "
+    "RunTranslator itself just promoted. Not a control path: it never drives "
     "the substrate, only records what it read at that moment."
 )
 

@@ -6,7 +6,7 @@ rather than driving the act itself. Carries the caller-controlled inputs:
   - `name` -- display name for the new Run, same free-text shape as
     `StartRun.name`.
   - `plan_id` -- the Plan being executed. Deployment-declared (the
-    RunWitness runtime resolves it from settings, not from the substrate);
+    RunTranslator runtime resolves it from settings, not from the substrate);
     existence verified at handler-load time exactly as at a driven start.
   - `subject_id` -- always None in practice today (2-BM's dark-field /
     flat-field / fly-scan captures carry no Subject binding), but kept
@@ -18,7 +18,7 @@ rather than driving the act itself. Carries the caller-controlled inputs:
     an `Identifier(scheme="capture-code", value=capture_code)` so a
     restart can rediscover which Run belongs to which open capture.
   - `monitor_source_id` -- the stable `MonitorSourceId` of the in-process
-    RunWitness runtime that produced this genesis, mirroring
+    RunTranslator runtime that produced this genesis, mirroring
     `ObserveEnclosureStatus.monitor_source_id`.
   - `trigger` -- command-tier guard string. The decider rejects any value
     other than the literal `"Monitor"` with
@@ -26,7 +26,7 @@ rather than driving the act itself. Carries the caller-controlled inputs:
     Witnessed backdoor (mirrors `ObserveEnclosureStatus.trigger`'s D6.L2
     anti-lock): there is no operator path to a witnessed genesis.
   - `capture_precondition_bypass_snapshot` -- the latest `testing`-role
-    reading `RunWitness` retained before this genesis, or `None` if the
+    reading `RunTranslator` retained before this genesis, or `None` if the
     capture code declares no `testing` role, or none has ever arrived.
     Carried straight onto
     `RunStarted.capture_precondition_bypass_snapshot` with no
@@ -37,13 +37,13 @@ rather than driving the act itself. Carries the caller-controlled inputs:
     and why this is NOT `Manifest.is_simulated`.
   - `orchestrator_ref` -- an external orchestrator's own run identifier
     for this capture (e.g. a Bluesky RunEngine start-document uid),
-    already validated as an `Identifier` by `RunWitnessRecorder
+    already validated as an `Identifier` by `RunTranslator
     ._consume_orchestrator_ref` before this command is constructed, or
     `None` if the capture code declares no `orchestrator_ref` role,
     none has ever arrived, or the retained reading failed the
     consume-once staleness guard. The decider appends it as a SECOND
     `external_refs` entry alongside `capture-code`, never in place of
-    it. See `_run_witness.py`'s "Orchestrator-ref pairing" section for
+    it. See `_run_translator.py`'s "Orchestrator-ref pairing" section for
     why validation happens before this command exists, unlike
     `capture_precondition_bypass_snapshot` above: an `Identifier`'s
     scheme/value bounds must hold before the decider ever sees it, the
@@ -57,7 +57,7 @@ ran, never a caller's choice, on either path.
 
 No `override_parameters`, `campaign_id`, `raid`, `decided_by_decision_id`,
 `pinned_calibration_ids`, `input_dataset_ids`, or `compute_resource_code`:
-RunWitness has no operator inputs to pass, and every field this command
+RunTranslator has no operator inputs to pass, and every field this command
 does not carry is a field an operator cannot reach through it. Effective
 parameters are the Plan's own defaults, unmodified.
 

@@ -95,7 +95,7 @@ from cora.agent.seed_ratification_enforcer import RATIFICATION_ENFORCER_AGENT_ID
 from cora.agent.seed_run_debriefer_external import RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
 from cora.agent.seed_run_supervisor import RUN_SUPERVISOR_AGENT_ID
-from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
+from cora.agent.seed_run_translator import RUN_TRANSLATOR_AGENT_ID
 from cora.agent.seed_status_publisher import STATUS_PUBLISHER_AGENT_ID
 from cora.run.adapters.sim_observation_feeder import SIM_OBSERVATION_FEEDER_AGENT_ID
 
@@ -125,7 +125,7 @@ IN_PROCESS_GRANTS: Final[Mapping[UUID, frozenset[str]]] = MappingProxyType(
         RUN_SUPERVISOR_AGENT_ID: frozenset(
             {"HoldRun", "ResumeRun", "TruncateRun", "AbortRun", "StopRun", "ListRuns"}
         ),
-        RUN_WITNESS_AGENT_ID: frozenset(
+        RUN_TRANSLATOR_AGENT_ID: frozenset(
             {"RecordWitnessedRun", "TruncateRun", "RecordWitnessedRunOutcome", "ListRuns"}
         ),
         SIM_OBSERVATION_FEEDER_AGENT_ID: frozenset({"AppendObservations"}),

@@ -26,15 +26,15 @@ uses (2-BM's `Testing` PV is the identical `DBR_ENUM` record type as
 own `CapturePathObservation`: a text reading of the areaDetector file
 plugin's own filename readback (`2bmSP2:HDF1:FullFileName_RBV`, NOT
 tomoscan's own `FullFileName`, which is written too late relative to
-CORA's terminal -- see `_run_witness.py`'s "Capture path pairing"
+CORA's terminal -- see `_run_translator.py`'s "Capture path pairing"
 section for the full argument). `observed_path` is PERSONAL DATA; this
 module never logs it, only its length when rejecting a suspect
 reading. The optional `orchestrator_ref` role pumps its own
 `CaptureOrchestratorRefObservation`: a text reading of an external
 orchestrator's own run identifier for this capture code (e.g. a
-Bluesky RunEngine start-document uid), so `RunWitnessRecorder` can
+Bluesky RunEngine start-document uid), so `RunTranslator` can
 attach it to the promoted Run as a second `external_refs` entry,
-alongside `capture-code` -- see `_run_witness.py`'s
+alongside `capture-code` -- see `_run_translator.py`'s
 "Orchestrator-ref pairing" section.
 
 ## One deliberate inversion from the Enclosure precedent
@@ -144,7 +144,7 @@ ROLE_ORCHESTRATOR_REF = "orchestrator_ref"
 example. Module-public (not `_`-prefixed) because other composition-root
 modules read observations back out, or dispatch decoders, by these same
 keys and must not carry their own copy of the literal strings:
-`RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads
+`RunTranslator._build_progress_snapshot` (`_run_translator.py`) reads
 `ROLE_IMAGES_SAVED` / `ROLE_IMAGES_COLLECTED`, and `capture_watch_preflight`
 dispatches its per-role decode check on all seven. Import these, not
 `_PROGRESS_ROLES` below, so a rename or a new role here cannot silently
@@ -511,7 +511,7 @@ class ControlPortCaptureObserver:
         `CapturePreconditionBypassObservation`), not a phase claim where
         a clear or unresolvable reading means "nothing happened". No
         `_unreached` counterpart, mirroring `_pump_progress`: a disconnect must not
-        erase the last reading `RunWitnessRecorder` retained, since the
+        erase the last reading `RunTranslator` retained, since the
         dual-clock (`observed_at`) discipline exists precisely so
         staleness is visible at genesis time rather than papered over by
         a synthesized "unknown" on every reconnect.
@@ -534,7 +534,7 @@ class ControlPortCaptureObserver:
 
         Mirrors `_pump_testing` exactly, for the same reason: a
         disconnect must not erase the last retained reading, since the
-        dual-clock guard `RunWitnessRecorder` applies (comparing this
+        dual-clock guard `RunTranslator` applies (comparing this
         reading's `observed_at` against the Run's own BEGUN time) needs
         the last GOOD reading to survive a reconnect, not be replaced by
         a synthesized "unreached". Unlike `_pump_abort` / `_pump`, no
@@ -565,7 +565,7 @@ class ControlPortCaptureObserver:
 
         Mirrors `_pump_full_file_name`'s shape exactly, for the same
         reason: a disconnect must not erase the last retained reading,
-        since `RunWitnessRecorder`'s own consume-once guard needs the
+        since `RunTranslator`'s own consume-once guard needs the
         last GOOD reading to survive a reconnect between the
         orchestrator's write and this capture's own BEGUN. Unlike
         `_pump_abort` / `_pump`, no `_from_orchestrator_ref_reading`
@@ -752,7 +752,7 @@ class ControlPortCaptureObserver:
         1. Not a string: a non-text reading on this role is a
            deployment misconfiguration, not a value to guess at.
         2. Empty string: the orchestrator cleared the PV between
-           captures (see `_run_witness.py`'s "Orchestrator-ref pairing"
+           captures (see `_run_translator.py`'s "Orchestrator-ref pairing"
            section on why the writer is expected to clear it). A fine,
            ordinary outcome, not an error -- just nothing to enqueue.
         3. Length over `IDENTIFIER_VALUE_MAX_LENGTH` AFTER TRIMMING:

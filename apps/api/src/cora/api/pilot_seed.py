@@ -1139,8 +1139,8 @@ async def seed_pilot_beamline(
         await seed_acquisition_recipe(
             "flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan_v2"
         )
-        # The actual 2-BM TomoScan workflow the RunWitness's promotion path
-        # (cora.api._run_witness) watches: a fly-scan capture, distinct from
+        # The actual 2-BM TomoScan workflow the RunTranslator's promotion path
+        # (cora.api._run_translator) watches: a fly-scan capture, distinct from
         # the two conductible baseline captures above. Watch-only, not
         # conducted: no operator REST/UI surface ever selects this Plan for
         # start_run, matching record_witnessed_run's own stub route/tool.

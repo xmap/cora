@@ -201,7 +201,7 @@ class RunStarted:
 
     `capture_precondition_bypass_snapshot` (slice 11) is the witnessed
     genesis's recorded reading of the substrate's `testing` role at the
-    moment RunWitness promoted this capture, or `None` on every driven
+    moment RunTranslator promoted this capture, or `None` on every driven
     Run and on a witnessed genesis whose capture code declares no
     `testing` role. See `CapturePreconditionBypassSnapshot`'s own
     docstring for the tri-state contract and why this is NOT
@@ -560,7 +560,7 @@ class RunCompleted:
 
     `capture_progress_snapshot` is `None` for a driven completion (no
     progress PVs to have observed) and, for a witnessed one, the last
-    per-role progress counts `RunWitness` retained before this
+    per-role progress counts `RunTranslator` retained before this
     terminal, or `None` if nothing was retained. See
     `CaptureProgressSnapshot`'s own docstring for why it carries no
     completeness judgment: 2-BM's real counters routinely fall short of

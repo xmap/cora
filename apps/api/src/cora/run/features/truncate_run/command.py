@@ -12,8 +12,8 @@ responsive; truncate = retroactive cleanup for a Run that became
 de-facto dead through interruption (power loss, process crash,
 hardware fault). Two callers today: an operator (REST / MCP), and
 the RunSupervisor's run-liveness act rung, both threading
-`decided_by_decision_id` when autonomous. The RunWitness runtime
-(`cora.api._run_witness`) is a third, in-process-only caller: it
+`decided_by_decision_id` when autonomous. The RunTranslator runtime
+(`cora.api._run_translator`) is a third, in-process-only caller: it
 truncates a witnessed Run whose terminal observation was missed,
 recovering the dedup state so a fresh capture on the same code can
 promote. None of the three detect de-facto-dead Runs on their own

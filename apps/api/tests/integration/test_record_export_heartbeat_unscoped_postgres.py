@@ -43,7 +43,7 @@ async def test_heartbeat_rows_land_in_the_bundle_and_manifest_reports_included(
 ) -> None:
     """Seeded through the real production writer
     (`PostgresFeedHeartbeatStore.append`, the same call
-    `CaptureProgressFeeder`/`RunWitnessRecorder` make -- there is no CQRS
+    `CaptureProgressFeeder`/`RunTranslator` make -- there is no CQRS
     handler wrapper for this table, see `feed_heartbeats.py`)."""
     store = PostgresFeedHeartbeatStore(db_pool)
     run_id = uuid4()

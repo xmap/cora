@@ -1325,9 +1325,9 @@ async def _supervise_tick(
     # with the supervisor blind to it, because this filter used to run before
     # any rule did. The liveness pass may flag or advise a Witnessed Run; it
     # must never issue TruncateRun for one (gated at the act site below).
-    # RunWitnessRecorder already truncates a stale Witnessed Run itself, on
+    # RunTranslator already truncates a stale Witnessed Run itself, on
     # the next BEGUN observation for the same capture code (see
-    # `_run_witness.py`, "BEGUN while a Run is already open"): that terminal
+    # `_run_translator.py`, "BEGUN while a Run is already open"): that terminal
     # already has an owner, and re-deciding it here would be the supervisor
     # overriding another authority's verdict on a Run it does not drive,
     # exactly what `project_conjunct_symmetry_design` rules out: bind what
@@ -1385,7 +1385,7 @@ async def _supervise_tick(
     #   - ADVISE (advise_enabled): record one Decision(choice=SupervisionQuieted)
     #     on the same edge, still no command. Either conduct_mode.
     #   - ACT (truncate_enabled): Conducted only (see the comment above; a
-    #     Witnessed Run's terminal belongs to RunWitnessRecorder). Count
+    #     Witnessed Run's terminal belongs to RunTranslator). Count
     #     CONSECUTIVE stale ticks in `truncate_settle`; once the settle window
     #     elapses, record one Decision(choice=Truncate) and issue TruncateRun
     #     (terminal). The settle window is the fail-safe: a transiently-stale

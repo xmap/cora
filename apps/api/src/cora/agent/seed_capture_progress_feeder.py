@@ -17,15 +17,15 @@ for the per-agent constants below; the shared scaffolding lives in
     (`prompt_template_id=None`) and a sentinel `ModelRef`
     (`provider="deterministic"`). Never used to build an LLM: the
     runtime is a buffer-and-flush loop, not an LLM subscriber.
-  - A SEPARATE principal from RunWitness, deliberately: an operator can
-    revoke progress-writing (this grant) without blinding the witness
-    (RunWitness's own four grants), and `Observation.actor_id` tells
+  - A SEPARATE principal from RunTranslator, deliberately: an operator can
+    revoke progress-writing (this grant) without blinding the translator
+    (RunTranslator's own four grants), and `Observation.actor_id` tells
     the two runtimes' rows apart in the record. The ONLY lever that
     actually revokes it is removing this principal from the Policy's
     `permitted_principal_ids` (a Policy edit): `AppendObservations` is
     liveness-exempt (`cora.shared.liveness`), so deactivating this
     Agent's Actor (`ActorDeactivated`) has NO effect on it, unlike
-    RunWitness, where three of its four grants ARE liveness-gated.
+    RunTranslator, where three of its four grants ARE liveness-gated.
   - Authorization: the runtime issues exactly one command,
     `AppendObservations`, through the Authorize port like any
     principal. Under the default AllowAllAuthorize it is permitted;
@@ -42,16 +42,16 @@ for the per-agent constants below; the shared scaffolding lives in
     accepts any Running-or-Held Run, driven ones included, the same as
     every other operator-facing entry writer. This principal's safety
     therefore rests entirely on `CaptureProgressFeeder` only ever
-    sourcing a `run_id` from `RunWitnessRecorder.open_captures`, which
-    is populated exclusively from RunWitness's own promotions -- this
+    sourcing a `run_id` from `RunTranslator.open_captures`, which
+    is populated exclusively from RunTranslator's own promotions -- this
     process's, or a prior one's via the boot-time
     `rebuild_open_captures`, itself scoped to `conduct_mode="Witnessed"`
-    Runs only -- so it can only ever name a Run RunWitness created. A
+    Runs only -- so it can only ever name a Run RunTranslator created. A
     future change to `_capture_progress_feeder.py` that sources a
     `run_id` for this call from anywhere else would lose that guarantee
     with no decider-level backstop to catch it. Same structural
-    residual as the one already documented for RunWitness's own
-    `TruncateRun` grant in `seed_run_witness.py`.
+    residual as the one already documented for RunTranslator's own
+    `TruncateRun` grant in `seed_run_translator.py`.
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ CAPTURE_PROGRESS_FEEDER_AGENT_DESCRIPTION = (
     "Deterministic in-process runtime: buffers a witnessed Run's "
     "capture-progress readings (images saved, images collected) and "
     "flushes them as AppendObservations batches plus a feed heartbeat, "
-    "scoped exclusively to Runs RunWitness itself promoted. Not a "
+    "scoped exclusively to Runs RunTranslator itself promoted. Not a "
     "control path: it never drives the substrate, only records what a "
     "promoted capture reported."
 )

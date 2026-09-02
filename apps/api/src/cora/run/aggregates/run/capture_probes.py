@@ -9,7 +9,7 @@ substrate said (the `CaptureLifecycleObservation.phase` a
 `ControlPortCaptureObserver` pump surfaces), this one answers whether
 CORA could reach it. `reach_tier` is already computed on every capture
 observation and was previously thrown away, reaching only a log line
-(`run_witness.capture_unreached` in `_run_witness.py`).
+(`run_translator.capture_unreached` in `_run_translator.py`).
 
 ## Scoped by `capture_code`, not a minted aggregate id
 
@@ -20,7 +20,7 @@ a bare deployment-declared string (`Settings.capture_watch_pvs`'s outer
 key), already CORA's declared identifier for a watched source
 elsewhere (`external_refs`'s `Identifier(scheme="capture-code", ...)`,
 `_capture_baseline_reader.py`, `_capture_experiment_identity_reader.py`,
-every `run_witness.capture_*` log line). Minting a `CaptureSource`
+every `run_translator.capture_*` log line). Minting a `CaptureSource`
 aggregate purely to get a UUID scope key would model the exact
 TomoScan-orchestration concept CORA's own seam intends to dissolve
 (memory/project_seam_model.md), on a rule-of-three count of one. Reach
@@ -70,7 +70,7 @@ reader would otherwise have to reconstruct from `recorded_at` alone.
 
 Verified from source, not assumed: the ~10s cadence measured in the
 2026-08-14 2-BM outage's `capture_unreached` log lines is
-`_run_witness.py`'s own `_RECONNECT_DELAY_SECONDS` (5.0s) plus
+`_run_translator.py`'s own `_RECONNECT_DELAY_SECONDS` (5.0s) plus
 `EpicsCaControlPort._DEFAULT_TIMEOUT_S` (5.0s) -- the identical
 mechanism the enclosure gate review diagnosed for permit probes, NOT
 `Settings.capture_watch_probe_tick_seconds` (irrelevant while

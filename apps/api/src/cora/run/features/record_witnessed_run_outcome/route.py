@@ -2,7 +2,7 @@
 
 Per the roadmap's anti-scope: no operator path to a witnessed terminal,
 mirroring `record_witnessed_run`'s own lock. No REST route, no MCP tool.
-In-process adapters (the RunWitness runtime) call
+In-process adapters (the RunTranslator runtime) call
 `RunHandlers.record_witnessed_run_outcome(...)` directly.
 
 The empty `router` exists only to satisfy the slice-file-shape +

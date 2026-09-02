@@ -50,7 +50,7 @@ from cora.access import (
 )
 from cora.access.adapters import EventStorePrincipalLivenessLookup
 from cora.agent import (
-    RUN_WITNESS_AGENT_ID,
+    RUN_TRANSLATOR_AGENT_ID,
     AgentHandlers,
     build_llm,
     refresh_language_model_pricing,
@@ -81,6 +81,7 @@ from cora.agent import (
     seed_run_debriefer_local_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
+    seed_run_translator_agent,
     seed_run_witness_agent,
     seed_status_publisher_agent,
     wire_agent,
@@ -110,7 +111,7 @@ from cora.api._readiness import (
 )
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
-from cora.api._run_witness import rebuild_open_captures, run_witness_lifespan
+from cora.api._run_translator import rebuild_open_captures, run_translator_lifespan
 from cora.api._status_push import status_push_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -477,7 +478,7 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     prerequisites it depends on are also set.
 
     run_witness_recording_enabled promotes a BEGUN capture observation to
-    a real witnessed Run; that promotion needs (a) the shadow witness
+    a real witnessed Run; that promotion needs (a) the shadow translator
     itself running (run_witness_enabled) to ever see an observation, and
     (b) a target Plan (capture_watch_plan_id) to bind the promoted Run
     to. Catching the misconfiguration at boot is cheaper than discovering
@@ -1255,20 +1256,24 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # same shape for ExperimentSteerer (deterministic L3 steering agent;
             # identity + Decision seam now, proactive driver loop in a later slice).
             await seed_experiment_steerer_agent(deps)
-            # same shape for RunWitness (deterministic capture-promotion agent).
+            # same shape for RunTranslator (deterministic capture-promotion
+            # agent; renamed from RunWitness -- seed_run_witness_agent stays
+            # below it forever, retired-but-source-tracked, per that
+            # module's own FOREVER-STABLE rule).
+            await seed_run_translator_agent(deps)
             await seed_run_witness_agent(deps)
             # same shape for CaptureProgressFeeder (deterministic progress-write
-            # agent; a separate principal from RunWitness so progress-writing
-            # can be revoked without blinding the witness).
+            # agent; a separate principal from RunTranslator so progress-writing
+            # can be revoked without blinding the translator).
             await seed_capture_progress_feeder_agent(deps)
             # same shape for CaptureBaselineReader (deterministic genesis-baseline
-            # read agent; a separate principal from both RunWitness and
+            # read agent; a separate principal from both RunTranslator and
             # CaptureProgressFeeder so baseline-writing can be revoked without
             # blinding either).
             await seed_capture_baseline_reader_agent(deps)
             # same shape for CaptureScanIngestor (deterministic sweep agent;
             # a separate principal from the other three so scan-ingest can
-            # be revoked without blinding the witness, progress feed, or
+            # be revoked without blinding the translator, progress feed, or
             # baseline reads).
             await seed_capture_scan_ingestor_agent(deps)
             # same shape for DurableCopyRegistrar (deterministic sweep agent;
@@ -1335,7 +1340,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 tick_seconds=settings.enclosure_permit_probe_tick_seconds,
             )
 
-            # RunWitness: shadow-observe an external tool's captures (2-BM
+            # RunTranslator: shadow-observe an external tool's captures (2-BM
             # commissioning ladder rung 1), and (behind the SECOND,
             # independent run_witness_recording_enabled gate) promote a
             # BEGUN capture to a real witnessed Run. run_witness_enabled is
@@ -1376,9 +1381,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             if capture_watch_codes:
                 await probe_read_grant(
                     deps,
-                    agent_id=RUN_WITNESS_AGENT_ID,
+                    agent_id=RUN_TRANSLATOR_AGENT_ID,
                     read_command="ListRuns",
-                    log_prefix="run_witness",
+                    log_prefix="run_translator",
                     strict=settings.watcher_authz_strict,
                 )
                 try:
@@ -1387,9 +1392,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     )
                 except RunUnauthorizedError:
                     _log.warning(
-                        "run_witness.rebuild_unauthorized",
+                        "run_translator.rebuild_unauthorized",
                         reason=(
-                            "ListRuns grant missing for RUN_WITNESS_AGENT_ID; "
+                            "ListRuns grant missing for RUN_TRANSLATOR_AGENT_ID; "
                             "starting with an empty dedup map"
                         ),
                     )
@@ -1508,7 +1513,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         list_campaigns=app.state.campaign.list_campaigns,
                     ),
-                    run_witness_lifespan(
+                    run_translator_lifespan(
                         observer=capture_watch_observer,
                         capture_codes=capture_watch_codes,
                         deps=deps,
@@ -1530,7 +1535,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_experiment_identity_pvs=(settings.capture_experiment_identity_pvs),
                         experiment_identity_store=app.state.run.experiment_identity_store,
                         capture_probe_store=app.state.run.capture_probe_store,
-                    ) as witness_recorder,
+                    ) as translator,
                     status_push_lifespan(
                         deps,
                         list_runs=app.state.run.list_runs,
@@ -1544,7 +1549,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_decisions=app.state.decision.list_decisions,
                         get_run_history=app.state.run.get_run_history,
                         get_enclosure_history=app.state.enclosure.get_enclosure_history,
-                        witness_recorder=witness_recorder,
+                        translator=translator,
                     ),
                     capture_scan_ingestor_lifespan(
                         deps,

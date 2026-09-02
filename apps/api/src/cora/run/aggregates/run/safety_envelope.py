@@ -260,7 +260,7 @@ def witness_safety_envelope(
 
     Same six inputs and same clearance/supply behaviour as
     `check_safety_envelope`: both still raise on those two gates, because
-    they are CORA-side data, not something RunWitness can observe from
+    they are CORA-side data, not something RunTranslator can observe from
     the floor. Only enclosure and beam, evaluated by the exact same
     `enclosure_gate_refusal` / `beam_gate_refusal` functions
     `check_safety_envelope` uses, are converted to a bool instead of

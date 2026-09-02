@@ -757,7 +757,7 @@ def test_run_aborted_round_trips_with_a_capture_progress_snapshot() -> None:
     )
     original = RunAborted(
         run_id=uuid4(),
-        reason="RunWitness observed capture 2bmb-tomoscan as Aborted",
+        reason="RunTranslator observed capture 2bmb-tomoscan as Aborted",
         occurred_at=_NOW,
         observed_at=_NOW,
         capture_progress_snapshot=snapshot,
