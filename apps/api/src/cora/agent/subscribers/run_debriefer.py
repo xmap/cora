@@ -150,10 +150,10 @@ from cora.agent.prompts import (
     build_run_debrief_chat_request,
 )
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
-from cora.agent.seed import (
-    RUN_DEBRIEFER_AGENT_ID,
-    RUN_DEBRIEFER_AGENT_KIND,
-    RUN_DEBRIEFER_AGENT_NAME,
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
     TERMINAL_RUN_EVENTS,
@@ -302,7 +302,7 @@ class RunDebrieferSubscriber:
         inference_recorder: InferenceRecorder | None = None,
         spend_lookup: SpendLookup | None = None,
         allocation_lookup: AllocationLookup | None = None,
-        agent_id: UUID = RUN_DEBRIEFER_AGENT_ID,
+        agent_id: UUID = RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
@@ -415,7 +415,7 @@ class RunDebrieferSubscriber:
         # approved-model catalog gate is NOT re-checked here: `define_agent`
         # already checked it, and a second authority could disagree with
         # the first.
-        is_designated = self._agent_id != RUN_DEBRIEFER_AGENT_ID
+        is_designated = self._agent_id != RUN_DEBRIEFER_EXTERNAL_AGENT_ID
         if is_designated:
             if agent is None:
                 log.warning(
@@ -423,12 +423,12 @@ class RunDebrieferSubscriber:
                     agent_id=str(self._agent_id),
                 )
                 return
-            if agent.kind.value != RUN_DEBRIEFER_AGENT_KIND:
+            if agent.kind.value != RUN_DEBRIEFER_EXTERNAL_AGENT_KIND:
                 log.warning(
                     "run_debriefer.skip.designated_agent_wrong_kind",
                     agent_id=str(self._agent_id),
                     agent_name=agent.name.value,
-                    expected_kind=RUN_DEBRIEFER_AGENT_KIND,
+                    expected_kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
                     actual_kind=agent.kind.value,
                 )
                 return
@@ -455,7 +455,7 @@ class RunDebrieferSubscriber:
             self.event_store,
             run_id=run_id,
             debriefer_agent_id=self._agent_id,
-            debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
+            debriefer_kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
             terminal_event=event,
             occurred_at=event.occurred_at,
             command_name=_COMMAND_NAME,
@@ -626,7 +626,7 @@ class RunDebrieferSubscriber:
         await self._record_inference(
             decision_id=decision_id,
             actor=actor,
-            agent_name=agent.name.value if agent is not None else RUN_DEBRIEFER_AGENT_NAME,
+            agent_name=agent.name.value if agent is not None else RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
             request=request,
             response=response,
             duration_ms=duration_ms,
@@ -992,7 +992,7 @@ def make_run_debriefer_subscriber(deps: Kernel) -> RunDebrieferSubscriber:
         inference_recorder=deps.inference_recorder,
         spend_lookup=deps.spend_lookup,
         allocation_lookup=deps.allocation_lookup,
-        agent_id=deps.settings.run_debriefer_agent_id or RUN_DEBRIEFER_AGENT_ID,
+        agent_id=deps.settings.run_debriefer_agent_id or RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
     )
 
 

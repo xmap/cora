@@ -57,7 +57,7 @@ below is confirmed present in the real wire surface via
 
 ## Overridable principals
 
-`RUN_DEBRIEFER_AGENT_ID` and `CAUTION_DRAFTER_AGENT_ID` are the default
+`RUN_DEBRIEFER_EXTERNAL_AGENT_ID` and `CAUTION_DRAFTER_EXTERNAL_AGENT_ID` are the default
 principals only: `Settings.run_debriefer_agent_id` and
 `Settings.caution_drafter_agent_id` let a deployment designate a
 different Agent for either LLM subscriber. A deployment that overrides
@@ -78,14 +78,13 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final
 
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
 from cora.agent.seed_authority_revocation_holder import AUTHORITY_REVOCATION_HOLDER_AGENT_ID
 from cora.agent.seed_calibration_watcher import CALIBRATION_WATCHER_AGENT_ID
 from cora.agent.seed_campaign_watcher import CAMPAIGN_WATCHER_AGENT_ID
 from cora.agent.seed_capture_baseline_reader import CAPTURE_BASELINE_READER_AGENT_ID
 from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
 from cora.agent.seed_capture_scan_ingestor import CAPTURE_SCAN_INGESTOR_AGENT_ID
-from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_ID
+from cora.agent.seed_caution_drafter_external import CAUTION_DRAFTER_EXTERNAL_AGENT_ID
 from cora.agent.seed_caution_promoter import CAUTION_PROMOTER_AGENT_ID
 from cora.agent.seed_clearance_expirer import CLEARANCE_EXPIRER_AGENT_ID
 from cora.agent.seed_clearance_watcher import CLEARANCE_WATCHER_AGENT_ID
@@ -93,6 +92,7 @@ from cora.agent.seed_durable_copy_registrar import DURABLE_COPY_REGISTRAR_AGENT_
 from cora.agent.seed_experiment_steerer import EXPERIMENT_STEERER_AGENT_ID
 from cora.agent.seed_procedure_watcher import PROCEDURE_WATCHER_AGENT_ID
 from cora.agent.seed_ratification_enforcer import RATIFICATION_ENFORCER_AGENT_ID
+from cora.agent.seed_run_debriefer_external import RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
 from cora.agent.seed_run_supervisor import RUN_SUPERVISOR_AGENT_ID
 from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
@@ -112,7 +112,7 @@ IN_PROCESS_GRANTS: Final[Mapping[UUID, frozenset[str]]] = MappingProxyType(
         CAPTURE_BASELINE_READER_AGENT_ID: frozenset({"AppendObservations"}),
         CAPTURE_PROGRESS_FEEDER_AGENT_ID: frozenset({"AppendObservations"}),
         CAPTURE_SCAN_INGESTOR_AGENT_ID: frozenset({"IngestScan"}),
-        CAUTION_DRAFTER_AGENT_ID: frozenset({"AppendInferences"}),
+        CAUTION_DRAFTER_EXTERNAL_AGENT_ID: frozenset({"AppendInferences"}),
         CAUTION_PROMOTER_AGENT_ID: frozenset({"PromoteCautionProposal"}),
         CLEARANCE_EXPIRER_AGENT_ID: frozenset({"ListClearances", "ExpireClearance"}),
         CLEARANCE_WATCHER_AGENT_ID: frozenset({"ListClearances", "GetClearance"}),
@@ -120,7 +120,7 @@ IN_PROCESS_GRANTS: Final[Mapping[UUID, frozenset[str]]] = MappingProxyType(
         EXPERIMENT_STEERER_AGENT_ID: frozenset({"HoldProcedure", "AppendInferences"}),
         PROCEDURE_WATCHER_AGENT_ID: frozenset({"ListProcedures"}),
         RATIFICATION_ENFORCER_AGENT_ID: frozenset({"HoldRun", "ResumeRun"}),
-        RUN_DEBRIEFER_AGENT_ID: frozenset({"AppendInferences"}),
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID: frozenset({"AppendInferences"}),
         RUN_INITIATOR_AGENT_ID: frozenset({"StartRun", "ListRuns", "ListSubjects"}),
         RUN_SUPERVISOR_AGENT_ID: frozenset(
             {"HoldRun", "ResumeRun", "TruncateRun", "AbortRun", "StopRun", "ListRuns"}

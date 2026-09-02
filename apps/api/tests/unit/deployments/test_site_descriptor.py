@@ -28,15 +28,15 @@ import pytest
 from cora.access.aggregates.actor import ActorKind
 from cora.agent.prompts.caution_drafter import DEFAULT_CAUTION_DRAFTER_MODEL
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
-from cora.agent.seed import (
-    RUN_DEBRIEFER_AGENT_KIND,
-    RUN_DEBRIEFER_AGENT_NAME,
-    RUN_DEBRIEFER_AGENT_VERSION,
+from cora.agent.seed_caution_drafter_external import (
+    CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_NAME,
+    CAUTION_DRAFTER_EXTERNAL_AGENT_VERSION,
 )
-from cora.agent.seed_caution_drafter import (
-    CAUTION_DRAFTER_AGENT_KIND,
-    CAUTION_DRAFTER_AGENT_NAME,
-    CAUTION_DRAFTER_AGENT_VERSION,
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_VERSION,
 )
 from cora.federation.aggregates.facility import FacilityKind
 
@@ -123,15 +123,15 @@ def test_actor_kind_mirror_matches_code() -> None:
 def test_agents_match_seed_constants() -> None:
     site = sd.load(_SITE)
     expected = {
-        RUN_DEBRIEFER_AGENT_NAME: (
-            RUN_DEBRIEFER_AGENT_KIND,
-            RUN_DEBRIEFER_AGENT_VERSION,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_NAME: (
+            RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+            RUN_DEBRIEFER_EXTERNAL_AGENT_VERSION,
             DEFAULT_RUN_DEBRIEF_MODEL.provider,
             DEFAULT_RUN_DEBRIEF_MODEL.model,
         ),
-        CAUTION_DRAFTER_AGENT_NAME: (
-            CAUTION_DRAFTER_AGENT_KIND,
-            CAUTION_DRAFTER_AGENT_VERSION,
+        CAUTION_DRAFTER_EXTERNAL_AGENT_NAME: (
+            CAUTION_DRAFTER_EXTERNAL_AGENT_KIND,
+            CAUTION_DRAFTER_EXTERNAL_AGENT_VERSION,
             DEFAULT_CAUTION_DRAFTER_MODEL.provider,
             DEFAULT_CAUTION_DRAFTER_MODEL.model,
         ),

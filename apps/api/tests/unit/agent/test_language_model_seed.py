@@ -5,11 +5,11 @@ declares (RunDebriefer, CautionDrafter, and the ExperimentSteerer
 LLM-decide default, whose identity the seed mirrors as literals across
 the tach boundary) has a seeded catalog entry, born Approved, at a
 deterministic id, with pricing figures matching the observability
-PRICING table. Second, the two catalog-only entries for the 2-BM
-buy-vs-build debrief comparison (Argo Haiku 4.5, the in-house
-placeholder) are priced and served under the right route, and the
-in-house entry deliberately has no PRICING counterpart. Idempotency
-mirrors test_caution_drafter_seed.py.
+PRICING table. Second, the three catalog-only entries for the
+buy-vs-build debrief comparison (Argo Haiku 4.5, the 2-BM-named in-house
+placeholder, the generic in-house placeholder) are priced and served
+under the right route, and both in-house entries deliberately have no
+PRICING counterpart. Idempotency mirrors test_caution_drafter_seed.py.
 """
 
 from datetime import UTC, datetime
@@ -103,11 +103,11 @@ def test_fleet_default_model_refs_each_equal_their_seeded_entry() -> None:
 
 
 @pytest.mark.unit
-def test_two_buy_vs_build_entries_are_catalog_only_not_fleet_defaults() -> None:
-    """The Argo and in-house entries are pre-approved catalog members
+def test_three_buy_vs_build_entries_are_catalog_only_not_fleet_defaults() -> None:
+    """The Argo and two in-house entries are pre-approved catalog members
     that no fleet agent declares as its compile-time default; they
-    exist so an operator can point a RunDebriefer variant at either
-    one for the 2-BM buy-vs-build debrief comparison."""
+    exist so an operator can point a RunDebriefer/CautionDrafter variant
+    at any of them for the buy-vs-build debrief comparison."""
     fleet_identities = {
         (fleet_default.provider, fleet_default.model) for fleet_default in _FLEET_DEFAULTS
     }
@@ -118,6 +118,7 @@ def test_two_buy_vs_build_entries_are_catalog_only_not_fleet_defaults() -> None:
     assert extra_identities == {
         (ARGO_PROVIDER_NAME, DEFAULT_RUN_DEBRIEF_MODEL.model),
         (_LOCAL_PROVIDER_NAME, "2bm-inhouse"),
+        (_LOCAL_PROVIDER_NAME, "local-model"),
     }
 
 
@@ -189,27 +190,28 @@ def test_argo_entry_prices_and_serves_under_argo_not_anthropic() -> None:
 
 
 @pytest.mark.unit
-def test_in_house_entry_is_token_priced_and_has_no_static_pricing_row() -> None:
-    """The in-house entry must carry a token price (a zero rate is
-    legitimate for metered-free serving), never `GpuHourPricing`:
-    `approve_language_model` refuses any entry priced per GPU-hour
-    outright. It has no static PRICING row by design; its rate is
-    catalog-only, set by the facility rather than mirrored from a
-    vendor table."""
+def test_in_house_entries_are_token_priced_and_have_no_static_pricing_row() -> None:
+    """Both in-house entries (the 2-BM-named one and the generic one) must
+    carry a token price (a zero rate is legitimate for metered-free
+    serving), never `GpuHourPricing`: `approve_language_model` refuses any
+    entry priced per GPU-hour outright. Neither has a static PRICING row
+    by design; their rate is catalog-only, set by the facility rather than
+    mirrored from a vendor table."""
     local_entries = [
         entry for entry in SEED_LANGUAGE_MODELS if entry.model_ref.provider == _LOCAL_PROVIDER_NAME
     ]
-    assert len(local_entries) == 1
-    entry = local_entries[0]
-    assert entry.served_via == ServingRoute.IN_HOUSE
-    assert isinstance(entry.cost_basis, TokenPricing)
-    assert entry.cost_basis == TokenPricing(
-        input_per_mtok=0.0,
-        output_per_mtok=0.0,
-        cache_write_per_mtok=0.0,
-        cache_read_per_mtok=0.0,
-    )
-    assert (entry.model_ref.provider, entry.model_ref.model) not in PRICING
+    assert len(local_entries) == 2
+    assert {entry.model_ref.model for entry in local_entries} == {"2bm-inhouse", "local-model"}
+    for entry in local_entries:
+        assert entry.served_via == ServingRoute.IN_HOUSE
+        assert isinstance(entry.cost_basis, TokenPricing)
+        assert entry.cost_basis == TokenPricing(
+            input_per_mtok=0.0,
+            output_per_mtok=0.0,
+            cache_write_per_mtok=0.0,
+            cache_read_per_mtok=0.0,
+        )
+        assert (entry.model_ref.provider, entry.model_ref.model) not in PRICING
 
 
 @pytest.mark.unit

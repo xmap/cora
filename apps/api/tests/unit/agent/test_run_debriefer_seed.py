@@ -29,9 +29,13 @@ def test_seeded_identity_literals_match_doer_form() -> None:
     if someone rewrote the constant to a different value. This test
     fixes the doer-form name in place; per [[project_naming_conventions]]
     R5 the agent's identity must read as `<DomainNoun><DoerNoun>`,
-    not as the work-product noun (`RunDebrief`).
+    not as the work-product noun (`RunDebrief`). `NAME` carries a
+    `" (Legacy)"` qualifier (this id is no longer the compile-time
+    default; see `cora.agent.seed_run_debriefer_external`), which does
+    not disturb the doer-form root the R5 guard cares about; `KIND`
+    stays bare, shared with every sibling of this agent.
     """
-    assert RUN_DEBRIEFER_AGENT_NAME == "RunDebriefer"
+    assert RUN_DEBRIEFER_AGENT_NAME == "RunDebriefer (Legacy)"
     assert RUN_DEBRIEFER_AGENT_KIND == "RunDebriefer"
 
 

@@ -26,12 +26,12 @@ from cora.agent.aggregates.agent import ModelRef as AgentModelRef
 from cora.agent.aggregates.agent import event_type_name as agent_event_type_name
 from cora.agent.aggregates.agent import to_payload as agent_to_payload
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
-from cora.agent.seed import (
-    RUN_DEBRIEFER_AGENT_ID,
-    RUN_DEBRIEFER_AGENT_KIND,
-    RUN_DEBRIEFER_AGENT_NAME,
-)
 from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_KIND
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_NAME,
+)
 from cora.agent.subscribers._terminal_run_helpers import (
     extract_capture_progress as _extract_capture_progress,
 )
@@ -94,7 +94,7 @@ _DESIGNATED_AGENT_ID = UUID("01900000-0000-7000-8000-0000cccc0001")
 async def _seed_run_debrief_actor(
     store: InMemoryEventStore,
     *,
-    agent_id: UUID = RUN_DEBRIEFER_AGENT_ID,
+    agent_id: UUID = RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
     deactivated: bool = False,
 ) -> None:
     """Write the bare-minimum Actor for a RunDebriefer agent (the seeded
@@ -112,7 +112,7 @@ async def _seed_run_debrief_actor(
     # PII vault: event payload carries no `name`; display name lives
     # in actor_profile. The subscriber doesn't read the display
     # surface, so the legacy seed-name constant stays unused here.
-    _ = RUN_DEBRIEFER_AGENT_NAME
+    _ = RUN_DEBRIEFER_EXTERNAL_AGENT_NAME
     event = ActorRegistered(
         actor_id=agent_id,
         occurred_at=_NOW,
@@ -244,7 +244,7 @@ async def _build_subscriber(
     inference_recorder: FakeInferenceRecorder | None = None,
     spend_lookup: FakeSpendLookup | None = None,
     allocation_lookup: FakeAllocationLookup | None = None,
-    agent_id: UUID = RUN_DEBRIEFER_AGENT_ID,
+    agent_id: UUID = RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
 ) -> RunDebrieferSubscriber:
     return RunDebrieferSubscriber(
         event_store=event_store,
@@ -357,7 +357,7 @@ async def test_apply_writes_decision_on_run_completed() -> None:
     assert decision.context.value == "RunDebrief"
     assert decision.choice.value == "NominalCompletion"
     assert decision.confidence == pytest.approx(0.92)
-    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+    assert decision.decided_by == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
     assert decision.rule is not None
     assert decision.rule.value == "agent:RunDebriefer:v1"
     # inputs round-trip via JSONB.
@@ -471,7 +471,7 @@ async def test_apply_skips_entirely_when_agent_suspended() -> None:
     await _seed_run_debrief_actor(store)
     await seed_suspended_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         suspend_event_id=uuid4(),
@@ -503,7 +503,7 @@ async def test_apply_defers_debrief_when_monthly_usd_cap_exhausted() -> None:
     await _seed_run_debrief_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -533,7 +533,7 @@ async def test_apply_defers_debrief_when_monthly_usd_cap_exhausted() -> None:
     # 2026-05-17), NOT wall clock: the replay-determinism invariant.
     assert spend_lookup.windows == [
         (
-            RUN_DEBRIEFER_AGENT_ID,
+            RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
             datetime(2026, 5, 1, tzinfo=UTC),
             datetime(2026, 6, 1, tzinfo=UTC),
         )
@@ -549,7 +549,7 @@ async def test_apply_defers_debrief_when_daily_token_cap_exhausted() -> None:
     await _seed_run_debrief_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -574,7 +574,7 @@ async def test_apply_defers_debrief_when_daily_token_cap_exhausted() -> None:
     assert llm.received == []
     assert spend_lookup.windows == [
         (
-            RUN_DEBRIEFER_AGENT_ID,
+            RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
             datetime(2026, 5, 17, tzinfo=UTC),
             datetime(2026, 5, 18, tzinfo=UTC),
         )
@@ -594,7 +594,7 @@ async def test_apply_defers_debrief_when_allocation_envelope_exhausted() -> None
     await _seed_run_debrief_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -649,7 +649,7 @@ async def test_apply_agent_cap_breach_wins_over_the_envelope() -> None:
     await _seed_run_debrief_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -694,20 +694,20 @@ async def test_apply_skips_entirely_when_agent_deprecated() -> None:
     await _seed_run_debrief_actor(store)
     await seed_defined_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
         principal_id=_PRINCIPAL_ID,
         occurred_at=_NOW,
     )
     deprecated = AgentDeprecated(
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         reason="Superseded",
         occurred_at=_NOW,
     )
     await store.append(
         stream_type="Agent",
-        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        stream_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         expected_version=1,
         events=[
             to_new_event(
@@ -742,7 +742,7 @@ async def test_apply_proceeds_normally_when_spend_is_under_cap() -> None:
     await _seed_run_debrief_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -1027,7 +1027,7 @@ async def test_decision_event_principal_id_is_agent_id() -> None:
 
     decision_id = _derive_decision_id(event.event_id)
     decision_events, _ = await store.load("Decision", decision_id)
-    assert decision_events[0].principal_id == RUN_DEBRIEFER_AGENT_ID
+    assert decision_events[0].principal_id == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
 
 # ---------- Logbook mirror ----------
@@ -1410,7 +1410,7 @@ async def test_apply_signs_decision_when_signer_configured() -> None:
     # The subscriber MUST pass the Agent's id to the signer; a regression
     # that dropped or renamed the `actor_id` kwarg would silently sign
     # with the wrong identity in production.
-    assert signer.received_actor_ids == [RUN_DEBRIEFER_AGENT_ID]
+    assert signer.received_actor_ids == [RUN_DEBRIEFER_EXTERNAL_AGENT_ID]
 
     async def _resolver(kid: str) -> bytes:
         assert kid == "kid-run-debriefer"
@@ -1488,7 +1488,7 @@ async def test_apply_fails_closed_when_signer_raises_and_writes_no_decision(
     elif failure == "inactive_key":
         exc = SignerKeyInactiveError("kid-run-debriefer-old")
     else:
-        exc = SignerKeyNotFoundError(RUN_DEBRIEFER_AGENT_ID)
+        exc = SignerKeyNotFoundError(RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
 
     subscriber = RunDebrieferSubscriber(
         event_store=store,
@@ -1562,12 +1562,12 @@ async def test_apply_appends_lease_event_to_run_stream_on_happy_path() -> None:
     assert len(leases) == 1
     lease = leases[0]
     assert lease.payload["run_id"] == str(run_id)
-    assert lease.payload["debriefer_agent_id"] == str(RUN_DEBRIEFER_AGENT_ID)
+    assert lease.payload["debriefer_agent_id"] == str(RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
     assert lease.payload["terminal_event_id"] == str(event.event_id)
     # event_id is the deterministic seed so retries are idempotent.
     assert lease.event_id == derive_lease_event_id(
         run_id=run_id,
-        debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+        debriefer_agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         terminal_event_id=event.event_id,
     )
 
@@ -1593,7 +1593,7 @@ async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() 
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
-        debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
+        debriefer_kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
         debriefer_agent_id=foreign_agent_id,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1638,8 +1638,8 @@ async def test_apply_after_prior_lease_by_same_agent_proceeds_to_llm_and_writes_
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
-        debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
-        debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+        debriefer_kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+        debriefer_agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         terminal_event=event,
         occurred_at=event.occurred_at,
         command_name="PriorCrash",
@@ -1736,9 +1736,9 @@ async def test_apply_records_inference_on_success() -> None:
     # refused outright by models newer than 4.6, so setting one would
     # also defer every debrief served by a current model.
     assert call.trace.request_temperature is None
-    assert call.trace.agent_id == str(RUN_DEBRIEFER_AGENT_ID)
-    assert call.trace.agent_name == RUN_DEBRIEFER_AGENT_NAME
-    assert call.principal_id == RUN_DEBRIEFER_AGENT_ID
+    assert call.trace.agent_id == str(RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
+    assert call.trace.agent_name == RUN_DEBRIEFER_EXTERNAL_AGENT_NAME
+    assert call.principal_id == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
     assert call.correlation_id == event.correlation_id
     assert call.causation_id == event.event_id
     # Provenance columns that were previously written by nobody (see
@@ -1912,7 +1912,7 @@ async def test_apply_serves_the_model_the_agent_declares_not_the_module_default(
     await _seed_run_debrief_actor(store)
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
@@ -1964,7 +1964,7 @@ def test_default_agent_id_is_the_seeded_singleton() -> None:
         llm=FakeLLM(),
         logbook_mirror=None,
     )
-    assert subscriber._agent_id == RUN_DEBRIEFER_AGENT_ID
+    assert subscriber._agent_id == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
 
 @pytest.mark.unit
@@ -1985,7 +1985,7 @@ async def test_apply_designation_honoured_on_actor_id_lease_and_inference_trace(
         principal_id=_PRINCIPAL_ID,
         defined_at=_NOW,
         versioned_at=_NOW,
-        kind=RUN_DEBRIEFER_AGENT_KIND,
+        kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
     )
     run_id = uuid4()
     await _seed_run(store, run_id)
@@ -2023,7 +2023,7 @@ async def test_apply_designation_serves_the_designated_agents_declared_model() -
         principal_id=_PRINCIPAL_ID,
         defined_at=_NOW,
         versioned_at=_NOW,
-        kind=RUN_DEBRIEFER_AGENT_KIND,
+        kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
         model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
     )
     run_id = uuid4()
@@ -2101,7 +2101,7 @@ async def test_apply_skips_when_designated_agent_not_versioned() -> None:
         correlation_id=_CORRELATION_ID,
         principal_id=_PRINCIPAL_ID,
         occurred_at=_NOW,
-        kind=RUN_DEBRIEFER_AGENT_KIND,
+        kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
     )
     run_id = uuid4()
     await _seed_run(store, run_id)

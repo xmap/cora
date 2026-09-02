@@ -66,6 +66,8 @@ from cora.agent.seed_capture_scan_ingestor import (
     seed_capture_scan_ingestor_agent,
 )
 from cora.agent.seed_caution_drafter import seed_caution_drafter_agent
+from cora.agent.seed_caution_drafter_external import seed_caution_drafter_external_agent
+from cora.agent.seed_caution_drafter_local import seed_caution_drafter_local_agent
 from cora.agent.seed_caution_promoter import (
     CAUTION_PROMOTER_AGENT_ID,
     seed_caution_promoter_agent,
@@ -95,6 +97,8 @@ from cora.agent.seed_ratification_enforcer import (
     RATIFICATION_ENFORCER_AGENT_ID,
     seed_ratification_enforcer_agent,
 )
+from cora.agent.seed_run_debriefer_external import seed_run_debriefer_external_agent
+from cora.agent.seed_run_debriefer_local import seed_run_debriefer_local_agent
 from cora.agent.seed_run_initiator import (
     RUN_INITIATOR_AGENT_ID,
     seed_run_initiator_agent,
@@ -153,6 +157,8 @@ __all__ = [
     "seed_capture_progress_feeder_agent",
     "seed_capture_scan_ingestor_agent",
     "seed_caution_drafter_agent",
+    "seed_caution_drafter_external_agent",
+    "seed_caution_drafter_local_agent",
     "seed_caution_promoter_agent",
     "seed_clearance_expirer_agent",
     "seed_clearance_watcher_agent",
@@ -162,6 +168,8 @@ __all__ = [
     "seed_procedure_watcher_agent",
     "seed_ratification_enforcer_agent",
     "seed_run_debriefer_agent",
+    "seed_run_debriefer_external_agent",
+    "seed_run_debriefer_local_agent",
     "seed_run_initiator_agent",
     "seed_run_supervisor_agent",
     "seed_run_witness_agent",

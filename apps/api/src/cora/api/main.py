@@ -66,6 +66,8 @@ from cora.agent import (
     seed_capture_progress_feeder_agent,
     seed_capture_scan_ingestor_agent,
     seed_caution_drafter_agent,
+    seed_caution_drafter_external_agent,
+    seed_caution_drafter_local_agent,
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
@@ -75,6 +77,8 @@ from cora.agent import (
     seed_procedure_watcher_agent,
     seed_ratification_enforcer_agent,
     seed_run_debriefer_agent,
+    seed_run_debriefer_external_agent,
+    seed_run_debriefer_local_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
     seed_run_witness_agent,
@@ -1196,6 +1200,17 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_run_debriefer_agent(deps)
             # same shape for CautionDrafter.
             await seed_caution_drafter_agent(deps)
+            # The local/in-house and vendor-API siblings sharing each kind
+            # (see cora.agent.seed_run_debriefer_external's module
+            # docstring): the vendor-API ones are the new compile-time
+            # default `report_designated_agents` resolves below when no
+            # deployment override is configured; the local ones exist so a
+            # deployment can designate them instead. Idempotent, same as
+            # the two calls above.
+            await seed_run_debriefer_external_agent(deps)
+            await seed_run_debriefer_local_agent(deps)
+            await seed_caution_drafter_external_agent(deps)
+            await seed_caution_drafter_local_agent(deps)
             # Report which Agent each LLM subscriber will act as (the
             # seeded singleton, or a deployment designation) and warn on
             # a provider mismatch. Must run AFTER both seeds above so the

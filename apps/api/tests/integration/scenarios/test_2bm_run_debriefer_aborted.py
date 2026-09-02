@@ -88,7 +88,10 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, seed_run_debriefer_agent
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    seed_run_debriefer_external_agent,
+)
 from cora.agent.subscribers.run_debriefer import (
     RunDebrieferSubscriber,
     _derive_decision_id,
@@ -423,10 +426,10 @@ async def test_run_debrief_agent_fires_on_equipment_abort(
 
     # ----- Agent fires on terminal RunAborted; emits EquipmentAbort -----
 
-    await seed_run_debriefer_agent(deps)
+    await seed_run_debriefer_external_agent(deps)
     await promote_seeded_agent(
         deps,
-        RUN_DEBRIEFER_AGENT_ID,
+        RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         occurred_at=_NOW,
@@ -453,7 +456,7 @@ async def test_run_debrief_agent_fires_on_equipment_abort(
     assert decision is not None
     assert decision.context.value == "RunDebrief"
     assert decision.choice.value == "EquipmentAbort"
-    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+    assert decision.decided_by == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
     # ----- Assert: Hexapod stream carries the fault event -----
 

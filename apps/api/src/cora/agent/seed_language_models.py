@@ -14,26 +14,32 @@ they land Defined and are gated at runtime by `Actor.active`, not
 `deprecate_language_model`, which withdraws the seeded approval like
 any other.
 
-Two further entries are catalog-only: no fleet agent declares them as
+Three further entries are catalog-only: no fleet agent declares them as
 its compile-time default, but they are pre-approved so an operator can
-point a RunDebriefer variant at either one. Both serve the 2-BM
-buy-vs-build LLM debrief comparison, which debriefs the same completed
-Runs under a bought model (Claude Haiku 4.5 over Argonne's Argo
-gateway) and a built one (an open model served in-house on facility
-GPUs), debiting one source-agnostic Allocation envelope either way.
-The Argo entry mirrors `DEFAULT_RUN_DEBRIEF_MODEL`'s upstream model
+point a RunDebriefer/CautionDrafter variant at any of them. All three
+serve the buy-vs-build LLM comparison, which debriefs the same
+completed Runs under a bought model (Claude Haiku 4.5 over Argonne's
+Argo gateway) and a built one (an open model served in-house on
+facility GPUs), debiting one source-agnostic Allocation envelope either
+way. The Argo entry mirrors `DEFAULT_RUN_DEBRIEF_MODEL`'s upstream model
 name but is priced and served under `provider="argo"`, never
 `"anthropic"`: `ArgoLLM.chat` refuses a `ModelRef` priced any other
 way, because pricing resolves from `ModelRef.provider` while the
 route is chosen by config, and letting the two disagree would bill a
-facility-funded call at the deployment's own list rate. The in-house
-entry's `model` field is a deployment-stable governance identifier,
+facility-funded call at the deployment's own list rate. Both in-house
+entries' `model` field is a deployment-stable governance identifier,
 not the served checkpoint: `LocalLLM`'s backend sends whatever
 `Settings.local_llm_model` names on the wire regardless of what the
 catalog's `ModelRef.model` says, so retargeting the GPU box to a
 different open model is a config change, not a new catalog entry or a
-code change here. Its `TokenPricing` is legitimately all-zero
-(metered-free in-house serving); `approve_language_model` refuses any
+code change here. The two in-house entries differ only in how
+facility-specific their identifier is: `"2bm-inhouse"` predates this
+comment and stays for the agents already defined against it;
+`"local-model"` is generic so a different facility's own local
+deployment can be priced against the same entry rather than inheriting
+a name that only ever meant 2-BM's GPU pool. Their `TokenPricing` is
+legitimately all-zero (metered-free in-house serving);
+`approve_language_model` refuses any
 entry priced as `GpuHourPricing` outright (the pricing bridge skips
 that basis, which would silently record $0 forever), so a GPU-hour
 cost basis is not an option here even bypassing the handler as this
@@ -55,7 +61,7 @@ the model identity, not hand-allocated).
 
 Seeded tiers: `served_via` is `Direct` for the three fleet defaults
 (CORA's own adapter holds the provider credentials today), `Argo` for
-the gateway entry, and `InHouse` for the GPU-pool entry; `data_tier`
+the gateway entry, and `InHouse` for the two GPU-pool entries; `data_tier`
 is `Internal` for every entry (the fleet reads non-public working
 data); `archivability` is `Alias` for every entry (a provider-hosted
 identity the vendor may move or retire, or an in-house identity an
@@ -221,6 +227,35 @@ SEED_LANGUAGE_MODELS: Final[tuple[LanguageModelSeedEntry, ...]] = (
             # needs no change here. See the module docstring.
             provider=_LOCAL_PROVIDER_NAME,
             model="2bm-inhouse",
+            snapshot_pin=None,
+        ),
+        cost_basis=TokenPricing(
+            # Metered-free in-house serving: legitimately all-zero.
+            # GpuHourPricing is refused at approval and is not an
+            # option regardless (see the module docstring).
+            input_per_mtok=0.0,
+            output_per_mtok=0.0,
+            cache_write_per_mtok=0.0,
+            cache_read_per_mtok=0.0,
+        ),
+        served_via=ServingRoute.IN_HOUSE,
+    ),
+    # Catalog-only, same shape as the entry above, with a facility-agnostic
+    # governance identifier instead of a 2-BM-specific one: any deployment's
+    # own local/in-house serving route can designate an Agent priced against
+    # this entry, not only 2-BM's. Added alongside the 2-BM-named entry
+    # rather than in place of it, because the older entry's derived id is
+    # already referenced by agents defined before this one existed (see
+    # `cora.agent.seed_run_debriefer_local`'s module docstring).
+    LanguageModelSeedEntry(
+        name="In-House Model (GPU Pool)",
+        model_ref=ModelRef(
+            # Stable governance identifier, deliberately not a real
+            # checkpoint name, for the same reason as the entry above:
+            # `LocalLLM` sends `Settings.local_llm_model` on the wire
+            # regardless of this string.
+            provider=_LOCAL_PROVIDER_NAME,
+            model="local-model",
             snapshot_pin=None,
         ),
         cost_basis=TokenPricing(

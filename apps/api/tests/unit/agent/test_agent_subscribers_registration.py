@@ -10,8 +10,11 @@ import pytest
 import structlog.testing
 
 from cora.agent import register_agent_subscribers, report_designated_agents
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_KIND
-from cora.agent.seed_caution_drafter import CAUTION_DRAFTER_AGENT_ID
+from cora.agent.seed_caution_drafter_external import CAUTION_DRAFTER_EXTERNAL_AGENT_ID
+from cora.agent.seed_run_debriefer_external import (
+    RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
+    RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
+)
 from cora.agent.subscribers.caution_drafter import CautionDrafterSubscriber
 from cora.agent.subscribers.run_debriefer import RunDebrieferSubscriber
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
@@ -212,7 +215,7 @@ def test_run_debriefer_unset_designation_uses_seeded_singleton() -> None:
 
     subscriber = registry.get("run_debriefer")
     assert isinstance(subscriber, RunDebrieferSubscriber)
-    assert subscriber._agent_id == RUN_DEBRIEFER_AGENT_ID
+    assert subscriber._agent_id == RUN_DEBRIEFER_EXTERNAL_AGENT_ID
 
 
 @pytest.mark.unit
@@ -238,7 +241,7 @@ def test_caution_drafter_unset_designation_uses_seeded_singleton() -> None:
 
     subscriber = registry.get("caution_drafter")
     assert isinstance(subscriber, CautionDrafterSubscriber)
-    assert subscriber._agent_id == CAUTION_DRAFTER_AGENT_ID
+    assert subscriber._agent_id == CAUTION_DRAFTER_EXTERNAL_AGENT_ID
 
 
 # ---------------------------------------------------------------------------
@@ -277,14 +280,14 @@ async def test_report_designated_agents_no_warning_when_provider_matches() -> No
     store = InMemoryEventStore()
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
         principal_id=_PRINCIPAL_ID,
         defined_at=_NOW,
         versioned_at=_NOW,
-        kind=RUN_DEBRIEFER_AGENT_KIND,
+        kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
     )
     kernel = _kernel(llm=None, llm_provider="anthropic", event_store=store)
 
@@ -292,7 +295,7 @@ async def test_report_designated_agents_no_warning_when_provider_matches() -> No
 
     reports = [e for e in events if e.get("event") == "agent_subscriber.designated_agent"]
     assert any(
-        e["subscriber"] == "run_debriefer" and e["agent_id"] == str(RUN_DEBRIEFER_AGENT_ID)
+        e["subscriber"] == "run_debriefer" and e["agent_id"] == str(RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
         for e in reports
     )
     mismatches = [
@@ -313,14 +316,14 @@ async def test_report_designated_agents_warns_on_provider_mismatch() -> None:
     store = InMemoryEventStore()
     await seed_versioned_agent(
         store,
-        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        agent_id=RUN_DEBRIEFER_EXTERNAL_AGENT_ID,
         genesis_event_id=uuid4(),
         version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
         principal_id=_PRINCIPAL_ID,
         defined_at=_NOW,
         versioned_at=_NOW,
-        kind=RUN_DEBRIEFER_AGENT_KIND,
+        kind=RUN_DEBRIEFER_EXTERNAL_AGENT_KIND,
         model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
     )
     kernel = _kernel(llm=None, llm_provider="anthropic", event_store=store)
