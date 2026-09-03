@@ -58,10 +58,12 @@ from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identifier import Identifier
 from cora.shared.steering import (
-    SteeringAxis,
     SteeringObjective,
-    SteeringObjectiveKind,
     SteeringSpace,
+    deserialize_objective,
+    deserialize_space,
+    serialize_objective,
+    serialize_space,
 )
 
 # ---------------------------------------------------------------------------
@@ -89,59 +91,6 @@ def deserialize_external_ref(payload: dict[str, Any]) -> Identifier:
 def _serialize_external_refs(refs: frozenset[Identifier]) -> list[dict[str, str]]:
     """Sort + encode a frozenset of Identifier for deterministic bytes."""
     return [serialize_external_ref(r) for r in sorted(refs, key=lambda r: (r.scheme, r.value))]
-
-
-# ---------------------------------------------------------------------------
-# Steering objective / space serialize / deserialize (private slice helpers)
-# ---------------------------------------------------------------------------
-
-
-def _serialize_objective(objective: SteeringObjective) -> dict[str, Any]:
-    """Encode a SteeringObjective to a JSON-friendly dict."""
-    return {
-        "kind": objective.kind.value,
-        "target_measurement_name": objective.target_measurement_name,
-        "target_value": objective.target_value,
-    }
-
-
-def _serialize_space(space: SteeringSpace) -> dict[str, Any]:
-    """Encode a SteeringSpace to a JSON-friendly dict (choices tuple -> list)."""
-    return {
-        "axes": [
-            {
-                "name": axis.name,
-                "lower": axis.lower,
-                "upper": axis.upper,
-                "choices": list(axis.choices),
-            }
-            for axis in space.axes
-        ]
-    }
-
-
-def _deserialize_objective(payload: dict[str, Any]) -> SteeringObjective:
-    """Decode a JSON-friendly dict to a SteeringObjective."""
-    return SteeringObjective(
-        kind=SteeringObjectiveKind(payload["kind"]),
-        target_measurement_name=payload.get("target_measurement_name"),
-        target_value=payload.get("target_value"),
-    )
-
-
-def _deserialize_space(payload: dict[str, Any]) -> SteeringSpace:
-    """Decode a JSON-friendly dict to a SteeringSpace (choices list -> tuple)."""
-    return SteeringSpace(
-        axes=tuple(
-            SteeringAxis(
-                name=axis["name"],
-                lower=axis.get("lower"),
-                upper=axis.get("upper"),
-                choices=tuple(axis.get("choices", [])),
-            )
-            for axis in payload["axes"]
-        )
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -425,8 +374,8 @@ def to_payload(event: CampaignEvent) -> dict[str, Any]:
         ):
             return {
                 "campaign_id": str(campaign_id),
-                "objective": _serialize_objective(objective),
-                "space": _serialize_space(space),
+                "objective": serialize_objective(objective),
+                "space": serialize_space(space),
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -534,8 +483,8 @@ def from_stored(stored: StoredEvent) -> CampaignEvent:
                 "CampaignSteeringDeclared",
                 lambda: CampaignSteeringDeclared(
                     campaign_id=UUID(payload["campaign_id"]),
-                    objective=_deserialize_objective(payload["objective"]),
-                    space=_deserialize_space(payload["space"]),
+                    objective=deserialize_objective(payload["objective"]),
+                    space=deserialize_space(payload["space"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
                 extra=(ValueError,),

@@ -1754,6 +1754,35 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "reason": "drop:text",
         "started_by": "token:uuid",
     },
+    "SteeringDesignRecorded": {
+        "budget_iterations_remaining": "keep:number",
+        "budget_wall_clock_seconds_remaining": "keep:number",
+        "design_source": "keep:enum:SteeringDesignSource",
+        "min_observations": "keep:number",
+        "num_restarts": "keep:number",
+        "objective": {
+            "kind": "keep:enum:SteeringObjectiveKind",
+            "target_measurement_name": "drop:text",
+            "target_value": "keep:number",
+        },
+        "objective_capture_name": "drop:text",
+        "occurred_at": "keep:time",
+        "points_per_axis": "keep:number",
+        "procedure_id": "token:uuid",
+        "raw_samples": "keep:number",
+        "seed": "keep:number",
+        "space": {
+            "axes": {
+                "choices": "drop:opaque",
+                "lower": "keep:number",
+                "name": "drop:text",
+                "upper": "keep:number",
+            }
+        },
+        "spend_agent_id": "token:uuid",
+        "staged_threshold": "keep:number",
+        "substrate": "keep:enum:SteeringSubstrate",
+    },
     "SubjectDiscarded": {
         "discarded_by": "token:uuid",
         "occurred_at": "keep:time",

@@ -1,11 +1,14 @@
 """Procedure event (de)serialization + roundtrip tests."""
 
+import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.infrastructure.record_export._redact_tier1 import redact_tier1_payload
+from cora.infrastructure.record_export._tokens import TokenMap
 from cora.operation.aggregates.procedure import (
     DIAGNOSTIC_LOGBOOK_SCHEMA,
     OUTCOME_LOGBOOK_SCHEMA,
@@ -23,11 +26,20 @@ from cora.operation.aggregates.procedure import (
     ProcedureStarted,
     ProcedureTruncated,
     RecipeExpansionRecorded,
+    SteeringDesignRecorded,
     event_type_name,
     from_stored,
     to_payload,
 )
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
+from cora.shared.steering import (
+    SteeringAxis,
+    SteeringDesignSource,
+    SteeringObjective,
+    SteeringObjectiveKind,
+    SteeringSpace,
+    SteeringSubstrate,
+)
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
 
@@ -892,6 +904,7 @@ def test_iteration_ended_pre_tier1_stream_folds_advised_next_point_to_none() -> 
         "ProcedureActivitiesLogbookOpened",
         "ProcedureIterationStarted",
         "ProcedureIterationEnded",
+        "SteeringDesignRecorded",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:
@@ -990,3 +1003,204 @@ def test_from_stored_held_without_decided_by_key_folds_to_none() -> None:
     )
     assert isinstance(rebuilt, ProcedureHeld)
     assert rebuilt.decided_by_decision_id is None
+
+
+# --- SteeringDesignRecorded (design-input provenance) ---
+
+
+def _steering_design_recorded(**overrides: object) -> SteeringDesignRecorded:
+    fields: dict[str, object] = {
+        "procedure_id": uuid4(),
+        "objective": SteeringObjective(
+            kind=SteeringObjectiveKind.MAXIMIZE,
+            target_measurement_name="flux",
+            target_value=None,
+        ),
+        "objective_capture_name": "flux_capture",
+        "space": SteeringSpace(
+            axes=(
+                SteeringAxis(name="energy", lower=8000.0, upper=12000.0),
+                SteeringAxis(name="mode", choices=("a", "b")),
+            )
+        ),
+        "budget_iterations_remaining": 25,
+        "budget_wall_clock_seconds_remaining": 3600.0,
+        "substrate": SteeringSubstrate.BOTORCH,
+        "points_per_axis": 5,
+        "min_observations": 3,
+        "num_restarts": 10,
+        "raw_samples": 512,
+        "seed": 7,
+        "staged_threshold": 8,
+        "spend_agent_id": uuid4(),
+        "design_source": SteeringDesignSource.REQUEST,
+        "occurred_at": _NOW,
+    }
+    fields.update(overrides)
+    return SteeringDesignRecorded(**fields)  # type: ignore[arg-type]
+
+
+@pytest.mark.unit
+def test_event_type_name_for_steering_design_recorded() -> None:
+    assert event_type_name(_steering_design_recorded()) == "SteeringDesignRecorded"
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_steering_design_recorded_to_primitives() -> None:
+    event = _steering_design_recorded()
+    payload = to_payload(event)
+    assert payload == {
+        "procedure_id": str(event.procedure_id),
+        "objective": {
+            "kind": "Maximize",
+            "target_measurement_name": "flux",
+            "target_value": None,
+        },
+        "objective_capture_name": "flux_capture",
+        "space": {
+            "axes": [
+                {"name": "energy", "lower": 8000.0, "upper": 12000.0, "choices": []},
+                {"name": "mode", "lower": None, "upper": None, "choices": ["a", "b"]},
+            ]
+        },
+        "budget_iterations_remaining": 25,
+        "budget_wall_clock_seconds_remaining": 3600.0,
+        "substrate": "botorch",
+        "points_per_axis": 5,
+        "min_observations": 3,
+        "num_restarts": 10,
+        "raw_samples": 512,
+        "seed": 7,
+        "staged_threshold": 8,
+        "spend_agent_id": str(event.spend_agent_id),
+        "design_source": "Request",
+        "occurred_at": _NOW.isoformat(),
+    }
+    # THE ASSERTION THAT MATTERS: `objective` / `space` must stay JSON
+    # primitives all the way down, or the disposition generator would
+    # have classified the field opaque and record export would drop it.
+    assert json.dumps(payload)
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_round_trips() -> None:
+    event = _steering_design_recorded()
+    rebuilt = from_stored(_stored("SteeringDesignRecorded", to_payload(event)))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_round_trips_with_null_budget_and_spend_agent() -> None:
+    """budget_iterations_remaining / budget_wall_clock_seconds_remaining /
+    spend_agent_id are the three nullable fields (exhausted budget leg,
+    wall-clock-only budget, operator-issued wire request)."""
+    event = _steering_design_recorded(
+        budget_iterations_remaining=None,
+        budget_wall_clock_seconds_remaining=None,
+        spend_agent_id=None,
+    )
+    rebuilt = from_stored(_stored("SteeringDesignRecorded", to_payload(event)))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_disposition_classifies_every_field() -> None:
+    """Pin the WHOLE table row, not a sample of it.
+
+    `test_record_dispositions_drift.py` only proves the committed table equals
+    a fresh run of the same generator, so a field silently retyped (an `int`
+    tunable becoming a `str`, say) regenerates to `drop:text` and stays green
+    there. Asserting the complete dict is what makes that downgrade fail, and
+    `seed` is the field where it would matter most.
+    """
+    from cora.infrastructure.record_export._dispositions import DISPOSITIONS
+
+    assert DISPOSITIONS["SteeringDesignRecorded"] == {
+        "procedure_id": "token:uuid",
+        "objective": {
+            "kind": "keep:enum:SteeringObjectiveKind",
+            "target_measurement_name": "drop:text",
+            "target_value": "keep:number",
+        },
+        "objective_capture_name": "drop:text",
+        "space": {
+            "axes": {
+                "name": "drop:text",
+                "lower": "keep:number",
+                "upper": "keep:number",
+                "choices": "drop:opaque",
+            }
+        },
+        "budget_iterations_remaining": "keep:number",
+        "budget_wall_clock_seconds_remaining": "keep:number",
+        "substrate": "keep:enum:SteeringSubstrate",
+        "points_per_axis": "keep:number",
+        "min_observations": "keep:number",
+        "num_restarts": "keep:number",
+        "raw_samples": "keep:number",
+        "seed": "keep:number",
+        "staged_threshold": "keep:number",
+        "spend_agent_id": "token:uuid",
+        "design_source": "keep:enum:SteeringDesignSource",
+        "occurred_at": "keep:time",
+    }
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_export_publishes_the_scalar_design() -> None:
+    """What the REDACTOR emits, which is not what the table appears to promise.
+
+    The disposition table is an input to redaction, not its output, so
+    asserting the table alone leaves both sides of the check derived from the
+    generator. This drives the real redactor.
+    """
+    event = _steering_design_recorded()
+    exported = redact_tier1_payload(
+        "SteeringDesignRecorded", to_payload(event), token_map=TokenMap()
+    )
+
+    assert exported["objective"]["kind"] == "Maximize"
+    assert exported["substrate"] == "botorch"
+    assert exported["seed"] == 7
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_export_drops_the_whole_search_space() -> None:
+    """KNOWN GAP, pinned so the fix cannot land silently.
+
+    `space.axes` is a `tuple[SteeringAxis, ...]`. The generator unwraps the
+    collection to its element, producing a dict-shaped disposition, while the
+    stored value is a list, and `_redact_tier1` returns OMITTED when a dict
+    disposition meets a non-dict value. So a populated search space exports as
+    `{}`, which does not read as withheld but as zero-dimensional.
+
+    This is not specific to steering: every `tuple[ValueObject, ...]` field in
+    the record has it, `CampaignSteeringDeclared` included. It must be closed
+    BEFORE anything emits this event, because an empty space in a published
+    record is a false statement about the design rather than a missing one.
+    When it is fixed this test fails, and should be replaced by one asserting
+    the axes survive.
+    """
+    event = _steering_design_recorded()
+    stored = to_payload(event)
+    assert len(stored["space"]["axes"]) == 2
+
+    exported = redact_tier1_payload("SteeringDesignRecorded", stored, token_map=TokenMap())
+    assert exported["space"] == {}
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_from_stored_raises_on_any_missing_field() -> None:
+    """Every required key, dropped one at a time.
+
+    The shared malformed-payload case passes `{}`, so it only ever exercises
+    the first subscript and proves nothing about the fields after it. A
+    `.get()` creeping into a later field would let a corrupt row deserialize
+    with a plausible default, and an absent budget would become
+    indistinguishable from a legitimately exhausted one.
+    """
+    payload = to_payload(_steering_design_recorded())
+    for key in payload:
+        partial = {k: v for k, v in payload.items() if k != key}
+        with pytest.raises(ValueError, match="Malformed SteeringDesignRecorded"):
+            from_stored(_stored("SteeringDesignRecorded", partial))

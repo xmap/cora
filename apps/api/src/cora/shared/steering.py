@@ -17,6 +17,12 @@ directly: there is no legacy importer to keep stable, and the substrate one must
 not enter the port's public surface, which is deliberately blind to which brain
 is behind the seam.
 
+`serialize_objective` / `deserialize_objective` / `serialize_space` /
+`deserialize_space` live here for the same reason as the VOs themselves: both
+`CampaignSteeringDeclared` and the Operation Procedure's `SteeringDesignRecorded`
+carry `SteeringObjective` / `SteeringSpace`, and a shared VO must not carry two
+payload shapes across the two streams.
+
 Deliberately narrow: only the value types two BCs genuinely share live here. The
 ADVICE side of the seam (`SteeringAdvice`, `SteeringVerdict`, `SteeringEvidence`,
 `SteeringObservation`, `SteeringBudget`, the `Decide*Error` families, the
@@ -151,6 +157,63 @@ class SteeringObjective:
     target_value: float | None = None
 
 
+# ---------------------------------------------------------------------------
+# Serialize / deserialize (public; shared across every event stream that
+# carries these VOs, so the same value object never carries two payload
+# shapes -- Campaign's CampaignSteeringDeclared and Operation's
+# SteeringDesignRecorded both call these rather than each hand-rolling
+# their own encode/decode).
+# ---------------------------------------------------------------------------
+
+
+def serialize_objective(objective: SteeringObjective) -> dict[str, Any]:
+    """Encode a SteeringObjective to a JSON-friendly dict."""
+    return {
+        "kind": objective.kind.value,
+        "target_measurement_name": objective.target_measurement_name,
+        "target_value": objective.target_value,
+    }
+
+
+def deserialize_objective(payload: dict[str, Any]) -> SteeringObjective:
+    """Decode a JSON-friendly dict to a SteeringObjective."""
+    return SteeringObjective(
+        kind=SteeringObjectiveKind(payload["kind"]),
+        target_measurement_name=payload.get("target_measurement_name"),
+        target_value=payload.get("target_value"),
+    )
+
+
+def serialize_space(space: SteeringSpace) -> dict[str, Any]:
+    """Encode a SteeringSpace to a JSON-friendly dict (choices tuple -> list)."""
+    return {
+        "axes": [
+            {
+                "name": axis.name,
+                "lower": axis.lower,
+                "upper": axis.upper,
+                "choices": list(axis.choices),
+            }
+            for axis in space.axes
+        ]
+    }
+
+
+def deserialize_space(payload: dict[str, Any]) -> SteeringSpace:
+    """Decode a JSON-friendly dict to a SteeringSpace (choices list -> tuple)."""
+    return SteeringSpace(
+        axes=tuple(
+            SteeringAxis(
+                name=axis["name"],
+                lower=axis.get("lower"),
+                upper=axis.get("upper"),
+                choices=tuple(axis.get("choices", [])),
+            )
+            for axis in payload["axes"]
+        )
+    )
+
+
 __all__ = [
     "SteeringAxis",
     "SteeringDesignSource",
@@ -159,4 +222,8 @@ __all__ = [
     "SteeringPoint",
     "SteeringSpace",
     "SteeringSubstrate",
+    "deserialize_objective",
+    "deserialize_space",
+    "serialize_objective",
+    "serialize_space",
 ]

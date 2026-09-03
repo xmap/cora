@@ -77,6 +77,16 @@ from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookSchema
+from cora.shared.steering import (
+    SteeringDesignSource,
+    SteeringObjective,
+    SteeringSpace,
+    SteeringSubstrate,
+    deserialize_objective,
+    deserialize_space,
+    serialize_objective,
+    serialize_space,
+)
 
 
 @dataclass(frozen=True)
@@ -608,13 +618,79 @@ class ResolvedStepsRecorded:
     resolved_closing_steps: tuple[Mapping[str, Any], ...] = ()
 
 
+@dataclass(frozen=True)
+class SteeringDesignRecorded:
+    """Provenance event: the design inputs behind a steered conduct segment.
+
+    Appended in the SAME `append` call as `ResolvedStepsRecorded`, once per
+    conduct segment (initial conduct AND resume): the objective, the search
+    space, the budget scalars and the brain configuration the runtime
+    currently takes as command arguments and never persists elsewhere. By
+    Rubin ignorability (Biometrika 63(3):581, 1976) a sampling rule is
+    verifiable only if recorded; this event exists so a steered run's
+    design is recoverable for inference, not to support replay of a
+    learning brain.
+
+    `objective` / `space` are the shared `SteeringObjective` / `SteeringSpace`
+    VOs from `cora.shared.steering`, the SAME VOs `CampaignSteeringDeclared`
+    carries; `serialize_objective` / `serialize_space` /
+    `deserialize_objective` / `deserialize_space` (also shared) keep both
+    streams' payload shapes identical rather than each hand-rolling its own.
+    `objective_capture_name` names the Conductor capture the objective's
+    target measurement scalar comes from.
+
+    `budget_iterations_remaining` / `budget_wall_clock_seconds_remaining`
+    and the six substrate tunables (`points_per_axis` through
+    `staged_threshold`) are flattened scalars, not the runtime's own
+    `SteeringBudget` / `DecidePortConfig` VOs: `cora.operation.aggregates`
+    depends only on `cora.infrastructure` and `cora.shared`, so the
+    `cora.operation.ports` / `cora.operation.adapters` types cannot be
+    imported here. Recording them is not a seam violation: `DecidePort`
+    itself never sees them, the adapter still owns them at runtime, and the
+    port signature is untouched; the event only WITNESSES the policy
+    parameters that determined which points a learning brain chose.
+
+    `substrate` is which brain materialized the segment's `DecidePort`
+    (`SteeringSubstrate`, kept in sync with `DecideSubstrate` by a fitness
+    test). `spend_agent_id` is the acting Agent when an autonomous request
+    supplied the design, None for an operator-issued wire request.
+    `design_source` records where the design originated (`Request` today).
+
+    No `axis_count` field: a derived duplicate of `len(space.axes)` that
+    could disagree with the axes, deliberately not carried.
+
+    Provenance-only: the evolver leaves Procedure state unchanged when this
+    event arrives (`require_state`, mirroring `ResolvedStepsRecorded` /
+    `RecipeExpansionRecorded` above). No decider reads it back; the resume
+    continuity check is a handler-tier read of the stream.
+    """
+
+    procedure_id: UUID
+    objective: SteeringObjective
+    objective_capture_name: str
+    space: SteeringSpace
+    budget_iterations_remaining: int | None
+    budget_wall_clock_seconds_remaining: float | None
+    substrate: SteeringSubstrate
+    points_per_axis: int
+    min_observations: int
+    num_restarts: int
+    raw_samples: int
+    seed: int
+    staged_threshold: int
+    spend_agent_id: UUID | None
+    design_source: SteeringDesignSource
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Procedure aggregate emits.
 # The FSM is closed by the three transition events; the per-step
 # logbook envelope event `ProcedureActivitiesLogbookOpened` opens lazily
 # on first append; the iteration boundary pair
 # (`ProcedureIterationStarted` / `ProcedureIterationEnded`) folds onto
 # the iteration denorm without touching the lifecycle status;
-# `RecipeExpansionRecorded` / `ResolvedStepsRecorded` are provenance-only.
+# `RecipeExpansionRecorded` / `ResolvedStepsRecorded` /
+# `SteeringDesignRecorded` are provenance-only.
 ProcedureEvent = (
     ProcedureRegistered
     | ProcedureStarted
@@ -630,6 +706,7 @@ ProcedureEvent = (
     | ProcedureIterationEnded
     | RecipeExpansionRecorded
     | ResolvedStepsRecorded
+    | SteeringDesignRecorded
 )
 
 
@@ -899,6 +976,42 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "occurred_at": occurred_at.isoformat(),
                 "resolved_closing_steps": [dict(step) for step in resolved_closing_steps],
             }
+        case SteeringDesignRecorded(
+            procedure_id=procedure_id,
+            objective=objective,
+            objective_capture_name=objective_capture_name,
+            space=space,
+            budget_iterations_remaining=budget_iterations_remaining,
+            budget_wall_clock_seconds_remaining=budget_wall_clock_seconds_remaining,
+            substrate=substrate,
+            points_per_axis=points_per_axis,
+            min_observations=min_observations,
+            num_restarts=num_restarts,
+            raw_samples=raw_samples,
+            seed=seed,
+            staged_threshold=staged_threshold,
+            spend_agent_id=spend_agent_id,
+            design_source=design_source,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "objective": serialize_objective(objective),
+                "objective_capture_name": objective_capture_name,
+                "space": serialize_space(space),
+                "budget_iterations_remaining": budget_iterations_remaining,
+                "budget_wall_clock_seconds_remaining": budget_wall_clock_seconds_remaining,
+                "substrate": substrate.value,
+                "points_per_axis": points_per_axis,
+                "min_observations": min_observations,
+                "num_restarts": num_restarts,
+                "raw_samples": raw_samples,
+                "seed": seed,
+                "staged_threshold": staged_threshold,
+                "spend_agent_id": str(spend_agent_id) if spend_agent_id is not None else None,
+                "design_source": design_source.value,
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -1160,6 +1273,35 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     ),
                 ),
             )
+        case "SteeringDesignRecorded":
+            return deserialize_or_raise(
+                "SteeringDesignRecorded",
+                lambda: SteeringDesignRecorded(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    objective=deserialize_objective(payload["objective"]),
+                    objective_capture_name=payload["objective_capture_name"],
+                    space=deserialize_space(payload["space"]),
+                    budget_iterations_remaining=payload["budget_iterations_remaining"],
+                    budget_wall_clock_seconds_remaining=payload[
+                        "budget_wall_clock_seconds_remaining"
+                    ],
+                    substrate=SteeringSubstrate(payload["substrate"]),
+                    points_per_axis=int(payload["points_per_axis"]),
+                    min_observations=int(payload["min_observations"]),
+                    num_restarts=int(payload["num_restarts"]),
+                    raw_samples=int(payload["raw_samples"]),
+                    seed=int(payload["seed"]),
+                    staged_threshold=int(payload["staged_threshold"]),
+                    spend_agent_id=(
+                        UUID(payload["spend_agent_id"])
+                        if payload["spend_agent_id"] is not None
+                        else None
+                    ),
+                    design_source=SteeringDesignSource(payload["design_source"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
         case _:
             msg = f"Unknown ProcedureEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -1181,6 +1323,7 @@ __all__ = [
     "ProcedureTruncated",
     "RecipeExpansionRecorded",
     "ResolvedStepsRecorded",
+    "SteeringDesignRecorded",
     "event_type_name",
     "from_stored",
     "to_payload",
