@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9_main_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -179,7 +179,7 @@
     <p class="run"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">seed_run_debriefer_external</span> <span class="key">import</span> <span class="nam">RUN_DEBRIEFER_EXTERNAL_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">seed_run_initiator</span> <span class="key">import</span> <span class="nam">RUN_INITIATOR_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">seed_run_supervisor</span> <span class="key">import</span> <span class="nam">RUN_SUPERVISOR_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">seed_run_witness</span> <span class="key">import</span> <span class="nam">RUN_WITNESS_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">seed_run_translator</span> <span class="key">import</span> <span class="nam">RUN_TRANSLATOR_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">agent</span><span class="op">.</span><span class="nam">seed_status_publisher</span> <span class="key">import</span> <span class="nam">STATUS_PUBLISHER_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">adapters</span><span class="op">.</span><span class="nam">sim_observation_feeder</span> <span class="key">import</span> <span class="nam">SIM_OBSERVATION_FEEDER_AGENT_ID</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -209,7 +209,7 @@
     <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">        <span class="nam">RUN_SUPERVISOR_AGENT_ID</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="op">{</span><span class="str">&quot;HoldRun&quot;</span><span class="op">,</span> <span class="str">&quot;ResumeRun&quot;</span><span class="op">,</span> <span class="str">&quot;TruncateRun&quot;</span><span class="op">,</span> <span class="str">&quot;AbortRun&quot;</span><span class="op">,</span> <span class="str">&quot;StopRun&quot;</span><span class="op">,</span> <span class="str">&quot;ListRuns&quot;</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="nam">RUN_WITNESS_AGENT_ID</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">        <span class="nam">RUN_TRANSLATOR_AGENT_ID</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">            <span class="op">{</span><span class="str">&quot;RecordWitnessedRun&quot;</span><span class="op">,</span> <span class="str">&quot;TruncateRun&quot;</span><span class="op">,</span> <span class="str">&quot;RecordWitnessedRunOutcome&quot;</span><span class="op">,</span> <span class="str">&quot;ListRuns&quot;</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">        <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">        <span class="nam">SIM_OBSERVATION_FEEDER_AGENT_ID</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">(</span><span class="op">{</span><span class="str">&quot;AppendObservations&quot;</span><span class="op">}</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -242,7 +242,7 @@
             <a class="nav" href="z_f875772e35c93dd9_main_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
     </div>
 </footer>

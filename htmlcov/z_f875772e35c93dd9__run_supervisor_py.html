@@ -64,10 +64,10 @@
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_f875772e35c93dd9__run_phase_conduct_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__run_witness_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__run_translator_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1409,9 +1409,9 @@
     <p class="pln"><span class="n"><a id="t1325" href="#t1325">1325</a></span><span class="t">    <span class="com"># with the supervisor blind to it, because this filter used to run before</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1326" href="#t1326">1326</a></span><span class="t">    <span class="com"># any rule did. The liveness pass may flag or advise a Witnessed Run; it</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1327" href="#t1327">1327</a></span><span class="t">    <span class="com"># must never issue TruncateRun for one (gated at the act site below).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1328" href="#t1328">1328</a></span><span class="t">    <span class="com"># RunWitnessRecorder already truncates a stale Witnessed Run itself, on</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1328" href="#t1328">1328</a></span><span class="t">    <span class="com"># RunTranslator already truncates a stale Witnessed Run itself, on</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1329" href="#t1329">1329</a></span><span class="t">    <span class="com"># the next BEGUN observation for the same capture code (see</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1330" href="#t1330">1330</a></span><span class="t">    <span class="com"># `_run_witness.py`, &quot;BEGUN while a Run is already open&quot;): that terminal</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1330" href="#t1330">1330</a></span><span class="t">    <span class="com"># `_run_translator.py`, &quot;BEGUN while a Run is already open&quot;): that terminal</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1331" href="#t1331">1331</a></span><span class="t">    <span class="com"># already has an owner, and re-deciding it here would be the supervisor</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1332" href="#t1332">1332</a></span><span class="t">    <span class="com"># overriding another authority&#x27;s verdict on a Run it does not drive,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1333" href="#t1333">1333</a></span><span class="t">    <span class="com"># exactly what `project_conjunct_symmetry_design` rules out: bind what</span>&nbsp;</span><span class="r"></span></p>
@@ -1469,7 +1469,7 @@
     <p class="pln"><span class="n"><a id="t1385" href="#t1385">1385</a></span><span class="t">    <span class="com">#   - ADVISE (advise_enabled): record one Decision(choice=SupervisionQuieted)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1386" href="#t1386">1386</a></span><span class="t">    <span class="com">#     on the same edge, still no command. Either conduct_mode.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1387" href="#t1387">1387</a></span><span class="t">    <span class="com">#   - ACT (truncate_enabled): Conducted only (see the comment above; a</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1388" href="#t1388">1388</a></span><span class="t">    <span class="com">#     Witnessed Run&#x27;s terminal belongs to RunWitnessRecorder). Count</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1388" href="#t1388">1388</a></span><span class="t">    <span class="com">#     Witnessed Run&#x27;s terminal belongs to RunTranslator). Count</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1389" href="#t1389">1389</a></span><span class="t">    <span class="com">#     CONSECUTIVE stale ticks in `truncate_settle`; once the settle window</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1390" href="#t1390">1390</a></span><span class="t">    <span class="com">#     elapses, record one Decision(choice=Truncate) and issue TruncateRun</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1391" href="#t1391">1391</a></span><span class="t">    <span class="com">#     (terminal). The settle window is the fail-safe: a transiently-stale</span>&nbsp;</span><span class="r"></span></p>
@@ -1905,10 +1905,10 @@
         <p>
             <a class="nav" href="z_f875772e35c93dd9__run_phase_conduct_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a class="nav" href="z_f875772e35c93dd9__run_witness_py.html">&#xbb; next</a>
+            <a class="nav" href="z_f875772e35c93dd9__run_translator_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
     </div>
 </footer>

@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_9b1401bacecaa802_control_port_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1158,8 +1158,8 @@
     <p class="pln"><span class="n"><a id="t1074" href="#t1074">1074</a></span><span class="t">    <span class="com"># source, not a workaround. The value is PERSONAL DATA (2-BM&#x27;s</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1075" href="#t1075">1075</a></span><span class="t">    <span class="com"># directory layout embeds a surname and a proposal number): it is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1076" href="#t1076">1076</a></span><span class="t">    <span class="com"># never logged in full and never lands on an event; it goes to the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1077" href="#t1077">1077</a></span><span class="t">    <span class="com"># `run_capture_path` PII vault via `RunWitnessRecorder`&#x27;s dual-clock</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t">    <span class="com"># guard. See `_run_witness.py`&#x27;s &quot;Capture path pairing&quot; section.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1077" href="#t1077">1077</a></span><span class="t">    <span class="com"># `run_capture_path` PII vault via `RunTranslator`&#x27;s dual-clock</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1078" href="#t1078">1078</a></span><span class="t">    <span class="com"># guard. See `_run_translator.py`&#x27;s &quot;Capture path pairing&quot; section.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1079" href="#t1079">1079</a></span><span class="t">    <span class="com">#</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1080" href="#t1080">1080</a></span><span class="t">    <span class="com"># `camera_selected` (optional per code) is a further role,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1081" href="#t1081">1081</a></span><span class="t">    <span class="com"># declared-and-unread by production exactly like `server_running`</span>&nbsp;</span><span class="r"></span></p>
@@ -1190,7 +1190,7 @@
     <p class="pln"><span class="n"><a id="t1106" href="#t1106">1106</a></span><span class="t">    <span class="com"># reading is rejected as misconfigured (see</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1107" href="#t1107">1107</a></span><span class="t">    <span class="com"># `cora.api._capture_observer`&#x27;s `_from_orchestrator_ref_reading`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1108" href="#t1108">1108</a></span><span class="t">    <span class="com"># NOT personal data (unlike `full_file_name`): a run uid names no</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1109" href="#t1109">1109</a></span><span class="t">    <span class="com"># person. See `_run_witness.py`&#x27;s &quot;Orchestrator-ref pairing&quot; section</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1109" href="#t1109">1109</a></span><span class="t">    <span class="com"># person. See `_run_translator.py`&#x27;s &quot;Orchestrator-ref pairing&quot; section</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1110" href="#t1110">1110</a></span><span class="t">    <span class="com"># for the consume-once guard that makes this join safe against a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1111" href="#t1111">1111</a></span><span class="t">    <span class="com"># stale substrate reading.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1112" href="#t1112">1112</a></span><span class="t">    <span class="nam">capture_watch_pvs</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">str</span><span class="op">]</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
@@ -1216,8 +1216,8 @@
     <p class="run"><span class="n"><a id="t1132" href="#t1132">1132</a></span><span class="t">    <span class="nam">capture_orchestrator_ref_schemes</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">str</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1133" href="#t1133">1133</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1134" href="#t1134">1134</a></span><span class="t">    <span class="com"># How long an `orchestrator_ref` reading may lead the BEGUN</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1135" href="#t1135">1135</a></span><span class="t">    <span class="com"># observation it is meant to pair with before `RunWitnessRecorder</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1136" href="#t1136">1136</a></span><span class="t">    <span class="com"># ._consume_orchestrator_ref` rejects it as stale (see `_run_witness</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1135" href="#t1135">1135</a></span><span class="t">    <span class="com"># observation it is meant to pair with before `RunTranslator</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1136" href="#t1136">1136</a></span><span class="t">    <span class="com"># ._consume_orchestrator_ref` rejects it as stale (see `_run_translator</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1137" href="#t1137">1137</a></span><span class="t">    <span class="com"># .py`&#x27;s &quot;Orchestrator-ref pairing&quot; section). A run uid is written</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1138" href="#t1138">1138</a></span><span class="t">    <span class="com"># BEFORE the capture it names begins, so some lead is expected and</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1139" href="#t1139">1139</a></span><span class="t">    <span class="com"># correct; this bounds how much. Deployment-declared rather than</span>&nbsp;</span><span class="r"></span></p>
@@ -1331,7 +1331,7 @@
     <p class="pln"><span class="n"><a id="t1247" href="#t1247">1247</a></span><span class="t">    <span class="com"># NOTE the fdt / scp transfer messages map to Progressing, not</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1248" href="#t1248">1248</a></span><span class="t">    <span class="com"># Ended: they mark transfer START, not arrival, per</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1249" href="#t1249">1249</a></span><span class="t">    <span class="com"># docs/deployments/2-bm/operations.md. An `Aborted` phase reaches</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1250" href="#t1250">1250</a></span><span class="t">    <span class="com"># `RunWitnessRecorder` via the separate `abort` role</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1250" href="#t1250">1250</a></span><span class="t">    <span class="com"># `RunTranslator` via the separate `abort` role</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1251" href="#t1251">1251</a></span><span class="t">    <span class="com"># (`_from_abort_reading` in `_capture_observer.py`), never through</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1252" href="#t1252">1252</a></span><span class="t">    <span class="com"># this table: `decarlof/tomoscan@master` never calls</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1253" href="#t1253">1253</a></span><span class="t">    <span class="com"># `ScanStatus.put(&quot;Scan aborted&quot;)` (verified by extracting every</span>&nbsp;</span><span class="r"></span></p>
@@ -1364,7 +1364,7 @@
     <p class="pln"><span class="n"><a id="t1280" href="#t1280">1280</a></span><span class="t">    <span class="com"># trail exists to cover the gaps a promoted Run cannot -- including</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1281" href="#t1281">1281</a></span><span class="t">    <span class="com"># the shadow-only window this comment used to say wrote nothing.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1282" href="#t1282">1282</a></span><span class="t">    <span class="com"># Default off; irrelevant when `capture_watch_pvs` is empty. See</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1283" href="#t1283">1283</a></span><span class="t">    <span class="com"># `cora.api._run_witness`.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1283" href="#t1283">1283</a></span><span class="t">    <span class="com"># `cora.api._run_translator`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1284" href="#t1284">1284</a></span><span class="t">    <span class="nam">run_witness_enabled</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1285" href="#t1285">1285</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1286" href="#t1286">1286</a></span><span class="t">    <span class="com"># Which Plan a promoted witnessed Run references (record_witnessed_run&#x27;s</span>&nbsp;</span><span class="r"></span></p>
@@ -1436,7 +1436,7 @@
     <p class="pln"><span class="n"><a id="t1352" href="#t1352">1352</a></span><span class="t">    <span class="com"># privacy review) without also disabling progress or baseline</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1353" href="#t1353">1353</a></span><span class="t">    <span class="com"># recording. Declaring `full_file_name` in `capture_watch_pvs` alone</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1354" href="#t1354">1354</a></span><span class="t">    <span class="com"># is necessary but not sufficient, mirroring every other switch</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1355" href="#t1355">1355</a></span><span class="t">    <span class="com"># here. See `cora.api._run_witness`&#x27;s &quot;Capture path pairing&quot; section.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1355" href="#t1355">1355</a></span><span class="t">    <span class="com"># here. See `cora.api._run_translator`&#x27;s &quot;Capture path pairing&quot; section.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1356" href="#t1356">1356</a></span><span class="t">    <span class="nam">capture_path_recording_enabled</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1357" href="#t1357">1357</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1358" href="#t1358">1358</a></span><span class="t">    <span class="com"># Experiment-identity PVs (slice 14a): a deployment-declared set read</span>&nbsp;</span><span class="r"></span></p>
@@ -1528,7 +1528,7 @@
     <p class="pln"><span class="n"><a id="t1444" href="#t1444">1444</a></span><span class="t">    <span class="com"># `run_witness_enabled` also True (see</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1445" href="#t1445">1445</a></span><span class="t">    <span class="com"># `_enforce_run_witness_recording_gate`): with the shadow observer not</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1446" href="#t1446">1446</a></span><span class="t">    <span class="com"># running there is nothing to write from. See</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1447" href="#t1447">1447</a></span><span class="t">    <span class="com"># `cora.api._run_witness`&#x27;s probe-write section.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1447" href="#t1447">1447</a></span><span class="t">    <span class="com"># `cora.api._run_translator`&#x27;s probe-write section.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1448" href="#t1448">1448</a></span><span class="t">    <span class="nam">capture_probe_recording_enabled</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1449" href="#t1449">1449</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1450" href="#t1450">1450</a></span><span class="t">    <span class="com"># EIGHTH kill switch (slice 17), and the only one so far that is NOT a</span>&nbsp;</span><span class="r"></span></p>
@@ -1580,11 +1580,11 @@
     <p class="pln"><span class="n"><a id="t1496" href="#t1496">1496</a></span><span class="t">    <span class="com"># Declaring the role in `capture_watch_pvs` (with a paired scheme in</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1497" href="#t1497">1497</a></span><span class="t">    <span class="com"># `capture_orchestrator_ref_schemes`) alone is necessary but not</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1498" href="#t1498">1498</a></span><span class="t">    <span class="com"># sufficient, mirroring every other switch here. Retention</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1499" href="#t1499">1499</a></span><span class="t">    <span class="com"># (`RunWitnessRecorder.observe_orchestrator_ref`) happens regardless</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1499" href="#t1499">1499</a></span><span class="t">    <span class="com"># (`RunTranslator.observe_orchestrator_ref`) happens regardless</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1500" href="#t1500">1500</a></span><span class="t">    <span class="com"># of this switch, gated only on `run_witness_recording_enabled`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1501" href="#t1501">1501</a></span><span class="t">    <span class="com"># exactly like `capture_path_recording_enabled`&#x27;s own declare-vs-</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1502" href="#t1502">1502</a></span><span class="t">    <span class="com"># record split, so flipping this switch on later does not miss</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1503" href="#t1503">1503</a></span><span class="t">    <span class="com"># whatever was already retained. See `_run_witness.py`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1503" href="#t1503">1503</a></span><span class="t">    <span class="com"># whatever was already retained. See `_run_translator.py`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1504" href="#t1504">1504</a></span><span class="t">    <span class="com"># &quot;Orchestrator-ref pairing&quot; section.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1505" href="#t1505">1505</a></span><span class="t">    <span class="nam">capture_orchestrator_ref_recording_enabled</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1506" href="#t1506">1506</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -1646,7 +1646,7 @@
     <p class="pln"><span class="n"><a id="t1562" href="#t1562">1562</a></span><span class="t">    <span class="com"># the location&#x27;s OWN storage root rather than an invented tier name.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1563" href="#t1563">1563</a></span><span class="t">    <span class="com"># The vault&#x27;s `root` column itself carries only a length CHECK, no</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1564" href="#t1564">1564</a></span><span class="t">    <span class="com"># normalization guarantee; every row it holds is normalized in</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1565" href="#t1565">1565</a></span><span class="t">    <span class="com"># practice because `_run_witness.py` is the column&#x27;s single writer</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1565" href="#t1565">1565</a></span><span class="t">    <span class="com"># practice because `_run_translator.py` is the column&#x27;s single writer</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1566" href="#t1566">1566</a></span><span class="t">    <span class="com"># and always writes through `matched_storage_root`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1567" href="#t1567">1567</a></span><span class="t">    <span class="com"># (`cora.shared.storage_root`), so `cora.api._capture_scan_ingestor`</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1568" href="#t1568">1568</a></span><span class="t">    <span class="com"># reading a candidate&#x27;s root straight off that row and joining</span>&nbsp;</span><span class="r"></span></p>
@@ -2213,7 +2213,7 @@
             <a class="nav" href="z_9b1401bacecaa802_control_port_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
     </div>
 </footer>

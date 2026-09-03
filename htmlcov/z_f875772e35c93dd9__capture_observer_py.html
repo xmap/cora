@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9__capture_progress_feeder_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -110,15 +110,15 @@
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">own `CapturePathObservation`: a text reading of the areaDetector file</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="str">plugin&#x27;s own filename readback (`2bmSP2:HDF1:FullFileName_RBV`, NOT</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="str">tomoscan&#x27;s own `FullFileName`, which is written too late relative to</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">CORA&#x27;s terminal -- see `_run_witness.py`&#x27;s &quot;Capture path pairing&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="str">CORA&#x27;s terminal -- see `_run_translator.py`&#x27;s &quot;Capture path pairing&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">section for the full argument). `observed_path` is PERSONAL DATA; this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">module never logs it, only its length when rejecting a suspect</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">reading. The optional `orchestrator_ref` role pumps its own</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">`CaptureOrchestratorRefObservation`: a text reading of an external</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">orchestrator&#x27;s own run identifier for this capture code (e.g. a</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">Bluesky RunEngine start-document uid), so `RunWitnessRecorder` can</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">Bluesky RunEngine start-document uid), so `RunTranslator` can</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">attach it to the promoted Run as a second `external_refs` entry,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">alongside `capture-code` -- see `_run_witness.py`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">alongside `capture-code` -- see `_run_translator.py`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">&quot;Orchestrator-ref pairing&quot; section.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t"><span class="str">## One deliberate inversion from the Enclosure precedent</span>&nbsp;</span><span class="r"></span></p>
@@ -228,7 +228,7 @@
     <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t"><span class="str">example. Module-public (not `_`-prefixed) because other composition-root</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t"><span class="str">modules read observations back out, or dispatch decoders, by these same</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t"><span class="str">keys and must not carry their own copy of the literal strings:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t"><span class="str">`RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t"><span class="str">`RunTranslator._build_progress_snapshot` (`_run_translator.py`) reads</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t"><span class="str">`ROLE_IMAGES_SAVED` / `ROLE_IMAGES_COLLECTED`, and `capture_watch_preflight`</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t"><span class="str">dispatches its per-role decode check on all seven. Import these, not</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t"><span class="str">`_PROGRESS_ROLES` below, so a rename or a new role here cannot silently</span>&nbsp;</span><span class="r"></span></p>
@@ -595,7 +595,7 @@
     <p class="pln"><span class="n"><a id="t511" href="#t511">511</a></span><span class="t"><span class="str">        `CapturePreconditionBypassObservation`), not a phase claim where</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t512" href="#t512">512</a></span><span class="t"><span class="str">        a clear or unresolvable reading means &quot;nothing happened&quot;. No</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t513" href="#t513">513</a></span><span class="t"><span class="str">        `_unreached` counterpart, mirroring `_pump_progress`: a disconnect must not</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t"><span class="str">        erase the last reading `RunWitnessRecorder` retained, since the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t514" href="#t514">514</a></span><span class="t"><span class="str">        erase the last reading `RunTranslator` retained, since the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t515" href="#t515">515</a></span><span class="t"><span class="str">        dual-clock (`observed_at`) discipline exists precisely so</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t516" href="#t516">516</a></span><span class="t"><span class="str">        staleness is visible at genesis time rather than papered over by</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t517" href="#t517">517</a></span><span class="t"><span class="str">        a synthesized &quot;unknown&quot; on every reconnect.</span>&nbsp;</span><span class="r"></span></p>
@@ -618,7 +618,7 @@
     <p class="pln"><span class="n"><a id="t534" href="#t534">534</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t535" href="#t535">535</a></span><span class="t"><span class="str">        Mirrors `_pump_testing` exactly, for the same reason: a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t536" href="#t536">536</a></span><span class="t"><span class="str">        disconnect must not erase the last retained reading, since the</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t"><span class="str">        dual-clock guard `RunWitnessRecorder` applies (comparing this</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t"><span class="str">        dual-clock guard `RunTranslator` applies (comparing this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t538" href="#t538">538</a></span><span class="t"><span class="str">        reading&#x27;s `observed_at` against the Run&#x27;s own BEGUN time) needs</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t539" href="#t539">539</a></span><span class="t"><span class="str">        the last GOOD reading to survive a reconnect, not be replaced by</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t540" href="#t540">540</a></span><span class="t"><span class="str">        a synthesized &quot;unreached&quot;. Unlike `_pump_abort` / `_pump`, no</span>&nbsp;</span><span class="r"></span></p>
@@ -649,7 +649,7 @@
     <p class="pln"><span class="n"><a id="t565" href="#t565">565</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t566" href="#t566">566</a></span><span class="t"><span class="str">        Mirrors `_pump_full_file_name`&#x27;s shape exactly, for the same</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t567" href="#t567">567</a></span><span class="t"><span class="str">        reason: a disconnect must not erase the last retained reading,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t568" href="#t568">568</a></span><span class="t"><span class="str">        since `RunWitnessRecorder`&#x27;s own consume-once guard needs the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t568" href="#t568">568</a></span><span class="t"><span class="str">        since `RunTranslator`&#x27;s own consume-once guard needs the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t569" href="#t569">569</a></span><span class="t"><span class="str">        last GOOD reading to survive a reconnect between the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t570" href="#t570">570</a></span><span class="t"><span class="str">        orchestrator&#x27;s write and this capture&#x27;s own BEGUN. Unlike</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t571" href="#t571">571</a></span><span class="t"><span class="str">        `_pump_abort` / `_pump`, no `_from_orchestrator_ref_reading`</span>&nbsp;</span><span class="r"></span></p>
@@ -836,7 +836,7 @@
     <p class="pln"><span class="n"><a id="t752" href="#t752">752</a></span><span class="t"><span class="str">        1. Not a string: a non-text reading on this role is a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t753" href="#t753">753</a></span><span class="t"><span class="str">           deployment misconfiguration, not a value to guess at.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t754" href="#t754">754</a></span><span class="t"><span class="str">        2. Empty string: the orchestrator cleared the PV between</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t755" href="#t755">755</a></span><span class="t"><span class="str">           captures (see `_run_witness.py`&#x27;s &quot;Orchestrator-ref pairing&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t755" href="#t755">755</a></span><span class="t"><span class="str">           captures (see `_run_translator.py`&#x27;s &quot;Orchestrator-ref pairing&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t756" href="#t756">756</a></span><span class="t"><span class="str">           section on why the writer is expected to clear it). A fine,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t757" href="#t757">757</a></span><span class="t"><span class="str">           ordinary outcome, not an error -- just nothing to enqueue.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t758" href="#t758">758</a></span><span class="t"><span class="str">        3. Length over `IDENTIFIER_VALUE_MAX_LENGTH` AFTER TRIMMING:</span>&nbsp;</span><span class="r"></span></p>
@@ -936,7 +936,7 @@
             <a class="nav" href="z_f875772e35c93dd9__capture_progress_feeder_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
     </div>
 </footer>

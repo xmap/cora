@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -391,7 +391,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t"><span class="str">    started today, via `_run_initiator.py` or a phase-conduct bridge,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t"><span class="str">    is Conducted). `WITNESSED` is an externally-driven act CORA only</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t"><span class="str">    observes after the fact, for example a 2-BM tomoscan scan witnessed</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t"><span class="str">    by `RunWitness` (see `cora.api._run_witness`) and promoted via</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t"><span class="str">    by `RunTranslator` (see `cora.api._run_translator`) and promoted via</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t"><span class="str">    `record_witnessed_run`.</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t"><span class="str">    Named `WITNESSED`, not `RECORDED`: every Conducted Run is ALSO</span>&nbsp;</span><span class="r"></span></p>
@@ -552,7 +552,7 @@
     <p class="pln"><span class="n"><a id="t468" href="#t468">468</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t469" href="#t469">469</a></span><span class="t"><span class="str">    `observed_at` is the substrate&#x27;s OWN time for the retained reading</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t470" href="#t470">470</a></span><span class="t"><span class="str">    (dual clock, mirroring `CaptureLifecycleObservation`), and can</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t471" href="#t471">471</a></span><span class="t"><span class="str">    predate this genesis by an arbitrary amount: `RunWitness` reads the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t471" href="#t471">471</a></span><span class="t"><span class="str">    predate this genesis by an arbitrary amount: `RunTranslator` reads the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t472" href="#t472">472</a></span><span class="t"><span class="str">    `testing` role continuously, independent of any one capture, and</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t473" href="#t473">473</a></span><span class="t"><span class="str">    retains only the LATEST reading seen so far, not a fresh read</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t"><span class="str">    triggered by the genesis itself. Independently nullable from</span>&nbsp;</span><span class="r"></span></p>
@@ -640,7 +640,7 @@
     <p class="pln"><span class="n"><a id="t556" href="#t556">556</a></span><span class="t"><span class="str">    The command exists to record ONE of the two facts a witnessed</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t557" href="#t557">557</a></span><span class="t"><span class="str">    capture&#x27;s lifecycle can end on, `Ended` or `Aborted`; every other</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t558" href="#t558">558</a></span><span class="t"><span class="str">    `CapturePhase` value (`Begun`, `Progressing`, `Unrecognized`) is</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t559" href="#t559">559</a></span><span class="t"><span class="str">    something the RunWitness runtime already handles without touching</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t559" href="#t559">559</a></span><span class="t"><span class="str">    something the RunTranslator runtime already handles without touching</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t560" href="#t560">560</a></span><span class="t"><span class="str">    the Run aggregate at all (dedup, or a no-op). A caller reaching this</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t561" href="#t561">561</a></span><span class="t"><span class="str">    decider with a non-terminal phase is a programmer mistake in the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t562" href="#t562">562</a></span><span class="t"><span class="str">    runtime&#x27;s own dispatch, not a fact about the world, so this is a</span>&nbsp;</span><span class="r"></span></p>
@@ -671,7 +671,7 @@
     <p class="run"><span class="n"><a id="t587" href="#t587">587</a></span><span class="t"><span class="key">class</span> <span class="nam">RunNotWitnessedError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t588" href="#t588">588</a></span><span class="t">    <span class="str">&quot;&quot;&quot;`record_witnessed_run_outcome` targeted a Conducted Run.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t589" href="#t589">589</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t590" href="#t590">590</a></span><span class="t"><span class="str">    The RunWitness runtime is granted this command so it can terminate</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t590" href="#t590">590</a></span><span class="t"><span class="str">    The RunTranslator runtime is granted this command so it can terminate</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t591" href="#t591">591</a></span><span class="t"><span class="str">    the Runs it itself created; a Conducted Run&#x27;s terminal belongs</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t592" href="#t592">592</a></span><span class="t"><span class="str">    exclusively to `complete_run` / `abort_run` / `stop_run` /</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t593" href="#t593">593</a></span><span class="t"><span class="str">    `truncate_run`, reached by an operator or the RunSupervisor, never by</span>&nbsp;</span><span class="r"></span></p>
@@ -681,7 +681,7 @@
     <p class="pln"><span class="n"><a id="t597" href="#t597">597</a></span><span class="t"><span class="str">    it. Checked defensively at the decider, mirroring</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t598" href="#t598">598</a></span><span class="t"><span class="str">    `RunMonitorTriggerNotPermittedError`&#x27;s posture, rather than trusting</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t599" href="#t599">599</a></span><span class="t"><span class="str">    the runtime&#x27;s own bookkeeping never to misdirect a call: without</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t600" href="#t600">600</a></span><span class="t"><span class="str">    this guard, a granted RunWitness principal could terminate any</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t600" href="#t600">600</a></span><span class="t"><span class="str">    this guard, a granted RunTranslator principal could terminate any</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t601" href="#t601">601</a></span><span class="t"><span class="str">    operator-driven Run.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t602" href="#t602">602</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t603" href="#t603">603</a></span><span class="t"><span class="str">    HTTP 400 (the command itself does not apply to this Run, not a</span>&nbsp;</span><span class="r"></span></p>
@@ -2094,7 +2094,7 @@
             <a class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
     </div>
 </footer>

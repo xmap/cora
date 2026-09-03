@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_a49960b61b8fc5fb_entries_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -93,7 +93,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="str">`ControlPortCaptureObserver` pump surfaces), this one answers whether</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="str">CORA could reach it. `reach_tier` is already computed on every capture</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="str">observation and was previously thrown away, reaching only a log line</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">(`run_witness.capture_unreached` in `_run_witness.py`).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">(`run_translator.capture_unreached` in `_run_translator.py`).</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">## Scoped by `capture_code`, not a minted aggregate id</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -104,7 +104,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">key), already CORA&#x27;s declared identifier for a watched source</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">elsewhere (`external_refs`&#x27;s `Identifier(scheme=&quot;capture-code&quot;, ...)`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">`_capture_baseline_reader.py`, `_capture_experiment_identity_reader.py`,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">every `run_witness.capture_*` log line). Minting a `CaptureSource`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">every `run_translator.capture_*` log line). Minting a `CaptureSource`</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">aggregate purely to get a UUID scope key would model the exact</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">TomoScan-orchestration concept CORA&#x27;s own seam intends to dissolve</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">(memory/project_seam_model.md), on a rule-of-three count of one. Reach</span>&nbsp;</span><span class="r"></span></p>
@@ -154,7 +154,7 @@
     <p class="exc exc2 show_exc"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">Verified from source, not assumed: the ~10s cadence measured in the</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">2026-08-14 2-BM outage&#x27;s `capture_unreached` log lines is</span>&nbsp;</span><span class="r"></span></p>
-    <p class="exc exc2 show_exc"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">`_run_witness.py`&#x27;s own `_RECONNECT_DELAY_SECONDS` (5.0s) plus</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">`_run_translator.py`&#x27;s own `_RECONNECT_DELAY_SECONDS` (5.0s) plus</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="str">`EpicsCaControlPort._DEFAULT_TIMEOUT_S` (5.0s) -- the identical</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">mechanism the enclosure gate review diagnosed for permit probes, NOT</span>&nbsp;</span><span class="r"></span></p>
     <p class="exc exc2 show_exc"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">`Settings.capture_watch_probe_tick_seconds` (irrelevant while</span>&nbsp;</span><span class="r"></span></p>
@@ -295,7 +295,7 @@
             <a class="nav" href="z_a49960b61b8fc5fb_entries_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-02 18:34 +0000
+            created at 2026-09-03 08:42 +0000
         </p>
     </div>
 </footer>
