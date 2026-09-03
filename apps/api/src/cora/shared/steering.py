@@ -10,8 +10,12 @@ loop, and the Campaign aggregate declares a campaign's steering INTENT
 next Run. tach forbids `cora.campaign` from importing `cora.operation.ports`, so
 the shared value types move here (an allowed campaign dependency), exactly as
 `DecisionConfidenceSource` moved to `cora.shared.decision_signals` for the same
-reason. `DecidePort` re-exports every name below so existing Operation importers
-stay stable.
+reason. `DecidePort` re-exports the intent value types that MOVED out of it, so
+existing Operation importers stay stable. Names that originated here, such as
+`SteeringSubstrate` and `SteeringDesignSource`, are imported from this module
+directly: there is no legacy importer to keep stable, and the substrate one must
+not enter the port's public surface, which is deliberately blind to which brain
+is behind the seam.
 
 Deliberately narrow: only the value types two BCs genuinely share live here. The
 ADVICE side of the seam (`SteeringAdvice`, `SteeringVerdict`, `SteeringEvidence`,
@@ -42,6 +46,46 @@ class SteeringObjectiveKind(StrEnum):
     MAXIMIZE = "Maximize"
     SATISFY = "Satisfy"
     EXPLORE = "Explore"
+
+
+class SteeringSubstrate(StrEnum):
+    """Which brain materialised a steered run's `DecidePort`.
+
+    Mirrors, value for value, the `DecideSubstrate` Literal in
+    `cora.operation.adapters.decide_port_config` (kept in sync by a
+    fitness test, since tach forbids this shared module from importing
+    that adapter-tier Literal directly). Lives here rather than being
+    imported from there because it is recorded on a Procedure event,
+    and events are typed with shared vocabulary, not adapter internals.
+
+    `IN_MEMORY` is the deterministic fake; `GRID_WALK` is the in-CORA
+    grid/sweep decider; `SOBOL` is the Sobol initial-design seeder;
+    `BOTORCH` is the GP Bayesian-optimization brain; `STAGED` is the
+    two-phase sobol-then-botorch composite; `LLM` is the LLM steering
+    brain.
+    """
+
+    IN_MEMORY = "in_memory"
+    GRID_WALK = "grid_walk"
+    SOBOL = "sobol"
+    BOTORCH = "botorch"
+    STAGED = "staged"
+    LLM = "llm"
+
+
+class SteeringDesignSource(StrEnum):
+    """Where a pinned steering design originated.
+
+    One value today: `REQUEST`, the operator- or agent-supplied wire
+    request that started or resumed the conduct segment. Every design
+    pin currently traces to that single origin, so a second value
+    would have nothing to distinguish itself from and no reader ready
+    to branch on it; this stays single-valued until an across-Run
+    steerer can itself originate a design, at which point widening
+    this enum is purely additive.
+    """
+
+    REQUEST = "Request"
 
 
 @dataclass(frozen=True)
@@ -109,8 +153,10 @@ class SteeringObjective:
 
 __all__ = [
     "SteeringAxis",
+    "SteeringDesignSource",
     "SteeringObjective",
     "SteeringObjectiveKind",
     "SteeringPoint",
     "SteeringSpace",
+    "SteeringSubstrate",
 ]
