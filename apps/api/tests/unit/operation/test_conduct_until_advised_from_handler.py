@@ -811,8 +811,8 @@ async def test_resume_under_an_unchanged_design_adds_no_second_pin() -> None:
 
 
 @pytest.mark.unit
-async def test_resume_with_a_changed_space_refuses_and_leaves_the_procedure_held() -> None:
-    """The observations already recorded were drawn from the pinned support.
+async def test_resume_dropping_a_recorded_axis_refuses_and_leaves_the_procedure_held() -> None:
+    """A recorded pass carries a coordinate the new space cannot hold.
 
     Asserting only that the call raises would leave the "fires before any FSM
     event" claim untested, and a guard that refuses AFTER resuming has already
@@ -821,26 +821,36 @@ async def test_resume_with_a_changed_space_refuses_and_leaves_the_procedure_held
     store = InMemoryEventStore()
     outcome_store = InMemoryOutcomeStore()
     await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
-    widened = SteeringSpace(axes=(SteeringAxis(name=_MOTOR_ADDR, lower=0.0, upper=99.0),))
+    renamed = SteeringSpace(axes=(SteeringAxis(name="a_different_axis", lower=0.0, upper=10.0),))
 
     with pytest.raises(SteeringDesignMismatchError) as excinfo:
-        await _resume_once(store, outcome_store, space=widened)
+        await _resume_once(store, outcome_store, space=renamed)
 
-    assert excinfo.value.differing_fields == ("space",)
+    assert excinfo.value.differing_fields == (
+        f"space.axes.{_MOTOR_ADDR}.missing",
+        "space.axes.a_different_axis.unrecorded",
+    )
     assert await _status(store) is ProcedureStatus.HELD
     assert len(await _design_pins(store)) == 1
 
 
 @pytest.mark.unit
-async def test_resume_with_a_changed_objective_capture_name_refuses() -> None:
+async def test_resume_with_moved_bounds_is_recorded_not_refused() -> None:
+    """Narrowing or widening the bounds strands nothing, so it is allowed.
+
+    The whole run stays resumable and the new bounds land on the resumed
+    segment's own pin, which is what lets a reader see that the search was
+    tightened partway through.
+    """
     store = InMemoryEventStore()
     outcome_store = InMemoryOutcomeStore()
     await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+    narrowed = SteeringSpace(axes=(SteeringAxis(name=_MOTOR_ADDR, lower=2.0, upper=4.0),))
 
-    with pytest.raises(SteeringDesignMismatchError) as excinfo:
-        await _resume_once(store, outcome_store, objective_capture_name="a_different_slot")
+    result = await _resume_once(store, outcome_store, space=narrowed)
 
-    assert excinfo.value.differing_fields == ("objective_capture_name",)
+    assert result.succeeded is True
+    assert (await _design_pins(store))[-1].space == narrowed
 
 
 @pytest.mark.unit

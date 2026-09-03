@@ -23,12 +23,13 @@ and result conversion.
   4. locate the PINNED `ResolvedStepsRecorded` (a conducted, Held Procedure
      ALWAYS has one; its absence is corruption -> `ResolvedStepsRecordNotFoundError`,
      500) and parse it back into `Step`s -- resume NEVER re-derives the block.
-  5. CONTINUITY: the request's objective / capture name / space must match the
-     latest `SteeringDesignRecorded` on the stream, or the accumulated
-     observations were drawn under a different design
-     (`SteeringDesignMismatchError`, 422). Silent when no pin exists, which is
-     every Procedure conducted before the pin did. Budget and brain config may
-     change and are recorded rather than compared.
+  5. CONTINUITY: the request's search space must still be able to express the
+     passes already recorded, or a coordinate on one of them has nowhere to
+     live (`SteeringDesignMismatchError`, 422). Axis names and categorical
+     choices carry across a hold; bounds, objective, capture name, budget and
+     brain config are recorded rather than compared. Silent when no pin
+     governed an earlier segment, which is every Procedure conducted before the
+     pin existed.
   6. PIN this segment's own design, so a Procedure resumed under a different
      substrate does not end with a record describing only its first half. A
      lone append, since a resume replays the pinned steps rather than

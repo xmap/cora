@@ -27,7 +27,7 @@ remove.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from cora.infrastructure.event_envelope import to_new_event
@@ -72,7 +72,6 @@ from cora.shared.steering import (
     SteeringObjective,
     SteeringSpace,
     SteeringSubstrate,
-    serialize_objective,
     serialize_space,
 )
 
@@ -266,66 +265,117 @@ def find_governing_steering_design_record(
     return find_last_event(stored_events[:last_start], "SteeringDesignRecorded")
 
 
-_CONTINUITY_KEYS = ("objective", "objective_capture_name", "space")
-
-
 def verify_steering_design_continuity(
     procedure_id: UUID,
     stored_events: Sequence[StoredEvent],
     design: SteeringDesign,
 ) -> None:
-    """Refuse a resume whose objective, capture name or space left the pin behind.
+    """Refuse a resume whose space cannot express the observations already recorded.
 
-    Only `space` has a first-principles argument: it is a DRAW-time property,
-    fixing the support the recorded x values came from, so resuming a brain
-    over that history while it proposes within different bounds asks it to
-    extrapolate outside the region it has data for.
+    The rule is REPRESENTABILITY, not sameness. A recorded pass carries a
+    coordinate per axis, and the only changes that break a resumed brain are
+    the ones that leave one of those coordinates with nowhere to live: an axis
+    that disappears (the point has a value the space cannot hold), an axis that
+    appears (the point has no value for it at all), or a categorical axis whose
+    choices no longer contain a value already drawn.
 
-    The other two are a CONSERVATIVE DEFAULT and should be read as one rather
-    than as the same argument. `objective` is applied at fit time, not draw
-    time: `reconstruct_observations` keeps every `Measurement` on a recorded
-    row and the brain selects its scalar by name, so changing the objective is
-    a re-read of identical data. `objective_capture_name` really does have a
-    correctness condition, but it is agreement with the PINNED STEPS (the slot
-    the block deposits), and checking it here checks a proxy for that. Both are
-    refused because a mid-Procedure change to either is far more likely to be a
-    mistake than an intention, not because the data becomes incommensurable.
+    Bounds are NOT compared, and that is a deliberate reversal of the obvious
+    intuition. Narrowing `lower` / `upper` leaves the model fitted on a WIDER
+    set than it now proposes within, which is interpolation and is fine.
+    Widening leaves the new region without data, where a GP reports high
+    variance and goes to look, which is what exploration is. Neither strands
+    anything, so both are recorded rather than refused.
 
-    Budget and brain config are NOT compared: `iterations_remaining` decrements
-    across a hold by construction, and a substrate change between segments is a
-    legitimate operator decision. Note the asymmetry this leaves, deliberately:
-    the substrate IS part of the sampling rule, and it may change freely while
-    the objective may not. What makes that defensible is that the substrate is
-    RECORDED by the resume's own pin, so the change stays verifiable, which is
-    the property this whole event exists to provide.
+    The objective is not compared either. It is applied when the brain FITS,
+    not when the data was recorded: `reconstruct_observations` keeps every
+    `Measurement` on a row and the brain selects its scalar by name, so
+    changing the objective re-reads identical rows. Refusing it would also sit
+    badly beside the substrate, which is squarely part of the sampling rule and
+    changes freely.
+
+    `objective_capture_name` is not compared because its real condition is that
+    the block DEPOSITS that slot, which is a fact about the steps and not about
+    the design. The Conductor already enforces it, though only at runtime: the
+    decide loop aborts the pass when the slot is absent from `pass_captures`,
+    naming the slots that were available. So a resume that renames it now costs
+    one pass instead of a 422, the same as the forward path has always cost.
+    Promoting that to a wire-time refusal would be an improvement for both
+    paths, and is deliberately NOT done here: the runtime branch is the only
+    thing covering a recorded ledger-drop bug, and a wire guard would leave it
+    unreachable through either entry point.
+
+    What makes recording enough, rather than a weaker substitute for refusing:
+    a change that is on the record can be accounted for by whoever reads it,
+    and one that is not cannot. This event is what buys the freedom.
 
     Silent when no pin GOVERNED an earlier segment, which covers both a
     Procedure conducted before this event existed and one whose only pin was
-    left by an attempt that never started. Refusing the first would make a
-    record-keeping improvement retroactively break resumes that were fine, and
-    refusing the second would lock the Procedure out of resuming entirely; see
+    left by an attempt that never started; see
     `find_governing_steering_design_record`.
 
     The two sides come from different places, which is what makes this a real
-    check: one was serialized at conduct time and has been sitting in Postgres
-    since, the other is the request in hand. They meet through the same
-    `serialize_*` pair, so a change to those functions between the two writes
-    would read as a design difference rather than a crash. That is the safe
-    direction, and rare enough to leave stated rather than engineered around.
+    check: one was serialized at conduct time and has been in Postgres since,
+    the other is the request in hand.
     """
     governing = find_governing_steering_design_record(stored_events)
     if governing is None:
         return
-    candidate = {
-        "objective": serialize_objective(design.objective),
-        "objective_capture_name": design.objective_capture_name,
-        "space": serialize_space(design.space),
-    }
-    differing = tuple(
-        key for key in _CONTINUITY_KEYS if governing.payload.get(key) != candidate[key]
+    differing = _space_representability_gaps(
+        governing.payload.get("space"), serialize_space(design.space)
     )
     if differing:
         raise SteeringDesignMismatchError(procedure_id, differing)
+
+
+def _space_representability_gaps(pinned: Any, candidate: Mapping[str, Any]) -> tuple[str, ...]:
+    """Name the ways `candidate` cannot hold a point drawn from `pinned`.
+
+    Returns axis-scoped labels rather than a bare field name, because "space"
+    alone does not tell an operator which axis to look at, and the two failures
+    need different corrections: a missing axis is a typo or a dropped
+    dimension, a shrunken choice list is a value already tried.
+
+    A pinned payload that is not the expected shape yields a single generic
+    gap rather than raising. This is a refusal path already; turning an
+    unreadable old row into a 500 would replace an actionable 422 with one that
+    tells the operator nothing.
+    """
+    pinned_axes = _axes_by_name(pinned)
+    if pinned_axes is None:
+        return ("space",)
+    candidate_axes = _axes_by_name(candidate)
+    if candidate_axes is None:  # pragma: no cover - serialize_space always conforms
+        return ("space",)
+    gaps: list[str] = [
+        *(f"space.axes.{name}.missing" for name in sorted(pinned_axes.keys() - candidate_axes)),
+        *(f"space.axes.{name}.unrecorded" for name in sorted(candidate_axes.keys() - pinned_axes)),
+        *(
+            f"space.axes.{name}.choices"
+            for name in sorted(pinned_axes.keys() & candidate_axes.keys())
+            if pinned_axes[name] != candidate_axes[name]
+        ),
+    ]
+    return tuple(gaps)
+
+
+def _axes_by_name(space: Any) -> dict[str, list[Any]] | None:
+    """Axis name -> its `choices` list, or None when the payload is not a space."""
+    if not isinstance(space, dict):
+        return None
+    axes = cast("dict[str, object]", space).get("axes")
+    if not isinstance(axes, list):
+        return None
+    by_name: dict[str, list[Any]] = {}
+    for raw_axis in cast("list[object]", axes):
+        if not isinstance(raw_axis, dict):
+            return None
+        axis = cast("dict[str, object]", raw_axis)
+        name = axis.get("name")
+        if not isinstance(name, str):
+            return None
+        choices = axis.get("choices", [])
+        by_name[name] = cast("list[Any]", choices) if isinstance(choices, list) else []
+    return by_name
 
 
 async def pin_steering_design(

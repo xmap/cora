@@ -135,29 +135,39 @@ class UnwiredExternalTriggerError(ActionRefusedError):
 
 
 class SteeringDesignMismatchError(Exception):
-    """A steered RESUME's design left the design pinned for the earlier segment.
+    """A steered RESUME's space cannot express the observations already recorded.
 
-    Raised by `conduct_until_advised_from` when the request's `objective`,
-    `objective_capture_name` or `space` differs from the design pinned for the
-    segment the Procedure last started under. `space` is refused on its merits,
-    being the support the recorded observations were drawn from; the other two
-    are a conservative default, since a mid-Procedure change to either is far
-    more likely a mistake than an intention. `verify_steering_design_continuity`
-    carries the full argument, including the asymmetry it leaves. The budget and
-    the brain configuration are NOT compared, because both legitimately change
-    across a hold; the resume records them instead.
+    Raised by `conduct_until_advised_from` when the request's `SteeringSpace`
+    drops an axis the pinned design had, adds one it did not, or narrows a
+    categorical axis's choices, measured against the design pinned for the
+    segment the Procedure last started under. Each recorded pass carries a
+    coordinate per axis, and those three are the changes that leave one of
+    those coordinates with nowhere to live.
 
-    Well-formed request, unprocessable against the pinned design, and the
-    operator corrects it by restoring the original objective and space (or by
-    starting a fresh Procedure if the search really has moved), so the route
-    maps it to HTTP 422. Fires BEFORE any FSM event, so nothing was resumed.
+    Bounds are NOT compared, nor is the objective, nor the capture name, nor
+    the budget or brain configuration. `verify_steering_design_continuity`
+    carries the argument; the short version is that they are all RECORDED by
+    the resume's own pin, and a change on the record can be accounted for by
+    whoever reads it.
+
+    Well-formed request, unprocessable against the recorded history, and the
+    operator corrects it by restoring the axis or the choice (or by starting a
+    fresh Procedure if the search really has moved on), so the route maps it to
+    HTTP 422. Fires BEFORE any FSM event, so nothing was resumed.
+
+    `differing_fields` names each gap as `space.axes.<axis>.<gap>`, because
+    "the space changed" does not tell an operator which axis to look at, and
+    the gaps need different corrections: `missing` is a dropped dimension,
+    `unrecorded` is one the earlier passes have no value for, and `choices` is
+    a category that has already been tried.
     """
 
     def __init__(self, procedure_id: UUID, differing_fields: tuple[str, ...]) -> None:
         super().__init__(
-            f"Procedure {procedure_id} was pinned with a different steering design; "
-            f"{', '.join(differing_fields)} must match the pinned design to resume. "
-            "Budget and brain configuration may change and are recorded, not compared."
+            f"Procedure {procedure_id} recorded observations a resumed search space "
+            f"cannot hold; {', '.join(differing_fields)}. Axis names and categorical "
+            "choices must carry across a hold. Bounds, objective, budget and brain "
+            "configuration may change and are recorded, not compared."
         )
         self.procedure_id = procedure_id
         self.differing_fields = differing_fields

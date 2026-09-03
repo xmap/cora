@@ -368,12 +368,12 @@ def register_operation_routes(app: FastAPI) -> None:
         # setpoints (the Conductor's pre-FSM wire guard). Well-formed request,
         # unprocessable against the recipe; operator aligns the space + retries.
         SteeringWireMismatchError,
-        # Steered RESUME (conduct_until_advised_from): the request's objective
-        # / capture name / space differs from the design pinned for the segment
-        # the Procedure last started under, so the observations already
-        # accumulated were drawn under a different design. Operator restores the
-        # pinned three (budget and brain config may change freely) or starts a
-        # fresh Procedure.
+        # Steered RESUME (conduct_until_advised_from): the request's search
+        # space drops an axis, adds one, or narrows a categorical axis, so a
+        # coordinate on an already-recorded pass has nowhere to live in it.
+        # Operator restores the axis or the choice, or starts a fresh
+        # Procedure. Bounds, objective, budget and brain config are recorded
+        # rather than compared, so none of those reach here.
         SteeringDesignMismatchError,
         # conduct_from: a closing step's CaptureRef names a capture only a
         # pre-boundary main step declares -- resume starts captures empty, so

@@ -391,38 +391,36 @@ def test_continuity_accepts_a_resume_under_the_governing_design() -> None:
 @pytest.mark.parametrize(
     ("changed", "expected"),
     [
-        (_design(space=_space(upper=9.0)), ("space",)),
-        (_design(objective_capture_name="other_capture"), ("objective_capture_name",)),
         (
-            _design(
-                objective=SteeringObjective(
-                    kind=SteeringObjectiveKind.MAXIMIZE,
-                    target_measurement_name="rotation_center",
-                    target_value=None,
-                )
-            ),
-            ("objective",),
+            _design(space=SteeringSpace(axes=())),
+            ("space.axes.theta.missing",),
         ),
         (
             _design(
-                objective=SteeringObjective(
-                    kind=SteeringObjectiveKind.SATISFY,
-                    target_measurement_name="rotation_center",
-                    target_value=2048.0,
+                space=SteeringSpace(
+                    axes=(
+                        SteeringAxis(name="theta", lower=-5.0, upper=5.0),
+                        SteeringAxis(name="energy", lower=8000.0, upper=12000.0),
+                    )
                 )
             ),
-            ("objective",),
+            ("space.axes.energy.unrecorded",),
+        ),
+        (
+            _design(space=SteeringSpace(axes=(SteeringAxis(name="tehta", lower=-5.0, upper=5.0),))),
+            ("space.axes.theta.missing", "space.axes.tehta.unrecorded"),
         ),
     ],
 )
-def test_continuity_refuses_a_resume_and_names_the_field_that_changed(
+def test_continuity_refuses_a_space_that_cannot_hold_a_recorded_point(
     changed: SteeringDesign, expected: tuple[str, ...]
 ) -> None:
-    """Each compared key, one at a time, including both halves of `objective`.
+    """The three ways a coordinate ends up with nowhere to live.
 
-    `objective` is a whole value object compared as one unit, so a rule that
-    reached only two of the three keys, or an error that reported a fixed
-    field name, would still pass a test that varied `space` alone.
+    A dropped axis leaves the recorded point carrying a value the space cannot
+    hold; an added one leaves it with no value at all; a renamed one is both at
+    once, which is what a typo actually looks like and why the message has to
+    name the axis rather than say "space".
     """
     with pytest.raises(SteeringDesignMismatchError) as excinfo:
         verify_steering_design_continuity(_PROCEDURE_ID, _governed(_design()), changed)
@@ -431,22 +429,58 @@ def test_continuity_refuses_a_resume_and_names_the_field_that_changed(
 
 
 @pytest.mark.unit
-def test_continuity_reports_every_field_that_changed_not_just_the_first() -> None:
-    """An operator who changed three things should be told about three.
+def test_continuity_refuses_a_categorical_axis_that_dropped_an_already_drawn_choice() -> None:
+    """Optuna calls this one out by name, and for the same reason.
 
-    Reporting only the first would send them round the loop once per field,
-    and every raising test that varies a single input passes either way.
+    A narrowed choice list can strand a value some earlier pass was actually
+    run at, which no amount of recording makes usable: the brain would be
+    handed an observation at a setting it is no longer allowed to express.
     """
-    changed = _design(
-        space=_space(upper=9.0),
-        objective_capture_name="other_capture",
-        objective=SteeringObjective(kind=SteeringObjectiveKind.EXPLORE),
-    )
+    pinned = _design(space=SteeringSpace(axes=(SteeringAxis(name="filter", choices=("A", "B")),)))
+    narrowed = _design(space=SteeringSpace(axes=(SteeringAxis(name="filter", choices=("A",)),)))
 
     with pytest.raises(SteeringDesignMismatchError) as excinfo:
-        verify_steering_design_continuity(_PROCEDURE_ID, _governed(_design()), changed)
+        verify_steering_design_continuity(_PROCEDURE_ID, _governed(pinned), narrowed)
 
-    assert excinfo.value.differing_fields == ("objective", "objective_capture_name", "space")
+    assert excinfo.value.differing_fields == ("space.axes.filter.choices",)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "changed",
+    [
+        _design(space=_space(upper=9.0)),
+        _design(space=SteeringSpace(axes=(SteeringAxis(name="theta", lower=-1.0, upper=1.0),))),
+        _design(objective_capture_name="other_capture"),
+        _design(
+            objective=SteeringObjective(
+                kind=SteeringObjectiveKind.MAXIMIZE, target_measurement_name="rotation_center"
+            )
+        ),
+        _design(
+            objective=SteeringObjective(
+                kind=SteeringObjectiveKind.SATISFY,
+                target_measurement_name="rotation_center",
+                target_value=2048.0,
+            )
+        ),
+    ],
+)
+def test_continuity_allows_a_change_that_leaves_every_recorded_point_expressible(
+    changed: SteeringDesign,
+) -> None:
+    """Widened bounds, narrowed bounds, a new capture slot, a new objective.
+
+    None of these strand a recorded coordinate. Narrowing bounds in particular
+    reads like the dangerous case and is the safe one: the brain stays fitted
+    on a wider set than it now proposes within, which is interpolation.
+    Widening leaves the new region without data, where the model reports high
+    variance and goes to look, which is the whole point of exploration.
+
+    Every one of these IS written to the resumed segment's own pin, so a reader
+    can see the change. Recording is what buys the permission.
+    """
+    verify_steering_design_continuity(_PROCEDURE_ID, _governed(_design()), changed)
 
 
 @pytest.mark.unit
@@ -466,7 +500,7 @@ def test_continuity_measures_against_the_latest_governing_pin_not_the_first() ->
     has run, so none of them would catch the direction being wrong.
     """
     first = _design()
-    second = _design(space=_space(upper=9.0))
+    second = _design(space=SteeringSpace(axes=(SteeringAxis(name="chi", lower=-5.0, upper=5.0),)))
     stream = [
         *_pinned(first, version=1),
         _fsm("ProcedureStarted", version=2),
@@ -491,7 +525,9 @@ def test_continuity_ignores_a_pin_no_segment_ever_started_under() -> None:
     rejected, and on a stream with no earlier governing pin that locks the
     Procedure out of resuming for good.
     """
-    abandoned = _design(space=_space(upper=1.0))
+    abandoned = _design(
+        space=SteeringSpace(axes=(SteeringAxis(name="chi", lower=-5.0, upper=5.0),))
+    )
     stream = [
         *_pinned(_design(), version=1),
         _fsm("ProcedureStarted", version=2),
