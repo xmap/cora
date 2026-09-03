@@ -1,4 +1,22 @@
-"""Stored-event payload deserialization helpers.
+"""Helpers for getting at a stored event's payload: find it, then decode it.
+
+Two concerns, joined because every caller of the first immediately wants
+the second: `find_first_event` / `find_last_event` locate the ONE event
+carrying the payload a reader needs, and `deserialize_or_raise` /
+`deserialize_vo_or_raise` wrap the decoding of that payload.
+
+## Locating an event in a loaded stream
+
+`find_first_event` and `find_last_event` differ only in direction, and
+the direction is a real decision each caller must make rather than a
+style choice: a genesis record is the FIRST of its type and any later
+one is not it, while a record a retry can re-emit is the LAST, and
+reading that one from the head returns the abandoned attempt. Neither
+function has an opinion about which is right; the named domain finders
+that wrap them carry that knowledge in their own docstrings, which is
+where a reader looking at a call site will be.
+
+## Wrapping a decode
 
 Two free functions sharing the same try / wrap / re-raise body but
 keyed on different identity dimensions:
@@ -87,7 +105,9 @@ calibration's `deserialize_source` raises
 event-type wrap layer.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
+
+from cora.infrastructure.ports.event_store import StoredEvent
 
 
 def deserialize_or_raise[EventT](
@@ -145,4 +165,43 @@ def deserialize_vo_or_raise[VoT](
         raise raise_as(msg) from exc
 
 
-__all__ = ["deserialize_or_raise", "deserialize_vo_or_raise"]
+def find_first_event(
+    stored_events: Iterable[StoredEvent],
+    event_type: str,
+) -> StoredEvent | None:
+    """The FIRST event of `event_type` in a loaded stream, or None.
+
+    Scans from the head and early-exits on the first hit. Correct where
+    the wanted record is a genesis one, which by definition cannot be
+    superseded by a later event of the same type.
+    """
+    for event in stored_events:
+        if event.event_type == event_type:
+            return event
+    return None
+
+
+def find_last_event(
+    stored_events: Sequence[StoredEvent],
+    event_type: str,
+) -> StoredEvent | None:
+    """The LAST event of `event_type` in a loaded stream, or None.
+
+    Scans from the tail. Correct where a later event of the same type
+    SUPERSEDES an earlier one, which is the case for any record a failed
+    attempt can leave behind and a retry can re-emit with different
+    content. Takes a `Sequence` rather than an `Iterable` because
+    reversing needs a known end.
+    """
+    for event in reversed(stored_events):
+        if event.event_type == event_type:
+            return event
+    return None
+
+
+__all__ = [
+    "deserialize_or_raise",
+    "deserialize_vo_or_raise",
+    "find_first_event",
+    "find_last_event",
+]

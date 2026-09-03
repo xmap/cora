@@ -55,6 +55,7 @@ from cora.data.aggregates.distribution.state import (
     STORAGE_SUPPLY_KIND,
     URI_SCHEME_TO_ACCESS_PROTOCOL,
 )
+from cora.infrastructure.event_payload import find_first_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
 
@@ -278,10 +279,7 @@ async def bootstrap_distribution_backfill(kernel: Kernel, supply_id: UUID | None
                         dataset_id=str(dataset_id),
                     )
                     continue
-                genesis_event = next(
-                    (e for e in stored_events if e.event_type == "DatasetRegistered"),
-                    None,
-                )
+                genesis_event = find_first_event(stored_events, "DatasetRegistered")
                 if genesis_event is None:
                     msg = (
                         f"Distribution backfill: Dataset {dataset_id} has no "

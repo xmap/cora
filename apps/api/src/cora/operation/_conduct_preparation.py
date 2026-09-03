@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from cora.infrastructure.event_envelope import to_new_event
+from cora.infrastructure.event_payload import find_last_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import EventStore
 from cora.infrastructure.ports.event_store import StoredEvent
@@ -157,10 +158,7 @@ def find_latest_steering_design_record(
     fires the rule-of-three hoist recorded at `_resolved_steps_replay.py`,
     which is where all three should land together.
     """
-    for event in reversed(stored_events):
-        if event.event_type == "SteeringDesignRecorded":
-            return event
-    return None
+    return find_last_event(stored_events, "SteeringDesignRecorded")
 
 
 def decide_steering_design_recorded(

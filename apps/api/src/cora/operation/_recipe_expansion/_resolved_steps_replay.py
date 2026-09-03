@@ -18,6 +18,7 @@ generic `cora.infrastructure.event_payload` helper.
 
 from collections.abc import Iterable
 
+from cora.infrastructure.event_payload import find_first_event
 from cora.infrastructure.ports.event_store import StoredEvent
 
 
@@ -26,12 +27,12 @@ def find_resolved_steps_record(
 ) -> StoredEvent | None:
     """Locate the `ResolvedStepsRecorded` event in a Procedure stream.
 
-    Scans linearly from head, returns the first match, early-exits on the
-    first hit.
-
-    A stream may carry MORE than one pin, so head-scan is a choice rather
-    than a lookup of the only candidate, and when it bites this returns the
-    ABANDONED attempt rather than the one that ran.
+    Head-scan, and a stream may carry MORE than one pin, so the direction
+    is a choice rather than a lookup of the only candidate: when it bites,
+    this returns the ABANDONED attempt rather than the one that ran. The
+    steering-design pin faced the same fact and chose `find_last_event`
+    instead; the two disagree because that record supersedes and this one,
+    on the evidence below, mostly does not.
 
     `decide_resolved_steps_recorded` guards on status alone, so any conduct
     that fails after the pin and before `start_procedure` leaves the
@@ -54,7 +55,4 @@ def find_resolved_steps_record(
     `ResolvedStepsRecordNotFoundError` (a Held Procedure missing its pinned
     resolved steps is corruption, not an operational outcome).
     """
-    for event in stored_events:
-        if event.event_type == "ResolvedStepsRecorded":
-            return event
-    return None
+    return find_first_event(stored_events, "ResolvedStepsRecorded")

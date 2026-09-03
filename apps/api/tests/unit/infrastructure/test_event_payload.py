@@ -23,16 +23,31 @@ Coverage for `deserialize_vo_or_raise` (nested-VO wrap):
     calibration's `InvalidCalibrationSourceError`)
   - `extra` widens the catch tuple
   - Exceptions outside the catch tuple propagate unchanged
+
+Coverage for `find_first_event` / `find_last_event` (stream locate):
+  - each returns None on an empty stream and on a stream with no match
+  - each ignores events of other types, including ones surrounding the match
+  - with SEVERAL matches the two return DIFFERENT events, which is the only
+    reason both exist
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 import pytest
 
 from cora.infrastructure.event_payload import (
     deserialize_or_raise,
     deserialize_vo_or_raise,
+    find_first_event,
+    find_last_event,
 )
+from cora.infrastructure.ports.event_store import StoredEvent
+
+_NOW = datetime(2026, 9, 3, 12, 0, 0, tzinfo=UTC)
+_STREAM_ID = UUID("01900000-0000-7000-8000-0000000000f1")
 
 
 @dataclass(frozen=True)
@@ -277,3 +292,97 @@ def test_deserialize_vo_or_raise_propagates_unrelated_exception_types() -> None:
             "BarVo",
             lambda: (_ for _ in ()).throw(_DomainError("domain-specific")),
         )
+
+
+# --- find_first_event / find_last_event (locate one event in a loaded stream) ---
+
+
+def _stored(event_type: str, version: int, marker: str) -> StoredEvent:
+    return StoredEvent(
+        position=version,
+        event_id=uuid4(),
+        stream_type="Procedure",
+        stream_id=_STREAM_ID,
+        version=version,
+        event_type=event_type,
+        schema_version=1,
+        payload={"marker": marker},
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        correlation_id=uuid4(),
+        causation_id=None,
+    )
+
+
+def _stream() -> list[StoredEvent]:
+    """A pin surrounded by other types, and re-emitted by a later attempt."""
+    return [
+        _stored("Registered", 1, "genesis"),
+        _stored("Pinned", 2, "first"),
+        _stored("Other", 3, "noise"),
+        _stored("Pinned", 4, "second"),
+        _stored("Started", 5, "started"),
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("find", [find_first_event, find_last_event])
+def test_find_event_on_an_empty_stream_returns_none(
+    find: Callable[[list[StoredEvent], str], StoredEvent | None],
+) -> None:
+    assert find([], "Pinned") is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("find", [find_first_event, find_last_event])
+def test_find_event_with_no_match_returns_none(
+    find: Callable[[list[StoredEvent], str], StoredEvent | None],
+) -> None:
+    assert find(_stream(), "NeverWritten") is None
+
+
+@pytest.mark.unit
+def test_find_first_event_returns_the_earliest_match_not_the_earliest_event() -> None:
+    found = find_first_event(_stream(), "Pinned")
+
+    assert found is not None
+    assert found.payload["marker"] == "first"
+
+
+@pytest.mark.unit
+def test_find_last_event_returns_the_latest_match_not_the_latest_event() -> None:
+    found = find_last_event(_stream(), "Pinned")
+
+    assert found is not None
+    assert found.payload["marker"] == "second"
+
+
+@pytest.mark.unit
+def test_find_first_and_find_last_disagree_when_a_type_repeats() -> None:
+    """The whole reason both exist.
+
+    A single finder would force every caller onto one direction, and the two
+    directions answer different questions: which record STARTED this stream,
+    versus which record is now in force. Asserting each in isolation would
+    stay green if both were wired to the same scan.
+    """
+    stream = _stream()
+
+    first = find_first_event(stream, "Pinned")
+    last = find_last_event(stream, "Pinned")
+
+    assert first is not None
+    assert last is not None
+    assert first is not last
+    assert (first.payload["marker"], last.payload["marker"]) == ("first", "second")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("find", [find_first_event, find_last_event])
+def test_find_event_with_exactly_one_match_returns_it_from_either_direction(
+    find: Callable[[list[StoredEvent], str], StoredEvent | None],
+) -> None:
+    found = find(_stream(), "Started")
+
+    assert found is not None
+    assert found.payload["marker"] == "started"
