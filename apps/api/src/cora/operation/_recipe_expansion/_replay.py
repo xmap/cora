@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
+from cora.infrastructure.event_payload import find_first_event
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation._recipe_expansion._expand import steps_to_wire_with_closing
 from cora.operation.aggregates.procedure import (
@@ -56,22 +57,19 @@ def find_recipe_expansion_record(
 ) -> StoredEvent | None:
     """Locate the `RecipeExpansionRecorded` event in a Procedure stream.
 
-    Scans linearly from head, returns the first match, early-exits on
-    first hit. In well-formed Recipe-driven Procedure streams the match
-    lands at index 1 (the second event in the genesis 2-event block
-    emitted by `register_procedure_from_recipe`); the unit test pins
-    this position invariant. Tail-scan is wrong: only the genesis
-    `RecipeExpansionRecorded` defines the replay snapshot.
+    In well-formed Recipe-driven Procedure streams the match lands at
+    index 1 (the second event in the genesis 2-event block emitted by
+    `register_procedure_from_recipe`); the unit test pins this position
+    invariant. Head-scan, and tail-scan would be wrong: only the genesis
+    `RecipeExpansionRecorded` defines the replay snapshot, so a later one
+    of the same type could not supersede it.
 
     Returns `None` when no match. The caller decides whether None is
     expected (legacy Procedure with `recipe_id is None`) or an error
     (recipe-driven Procedure missing its provenance event, raised as
     `RecipeExpansionRecordNotFoundError` by the handler).
     """
-    for event in stored_events:
-        if event.event_type == "RecipeExpansionRecorded":
-            return event
-    return None
+    return find_first_event(stored_events, "RecipeExpansionRecorded")
 
 
 _REQUIRED_PINS_KEYS = (

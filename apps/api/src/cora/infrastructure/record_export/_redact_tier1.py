@@ -85,15 +85,44 @@ def _apply_field_disposition(disposition: Any, value: Any, *, token_map: TokenMa
         # field, unset" indistinguishable in the exported record.
         if value is None:
             return None
+        if "[*]" in disposition:
+            # A COLLECTION of value objects. The table states the cardinality
+            # HERE, so this branch does not read it off the payload: a stored
+            # shape that is not a collection is a disagreement between table
+            # and payload, and stays fail-closed. The scalar arms below still
+            # infer cardinality from the value, which is safe for them because
+            # a scalar rule publishes the same value class either way.
+            element = disposition["[*]"]
+            if not isinstance(value, (list, tuple)):
+                return OMITTED
+            redacted_items = [
+                _apply_field_disposition(element, item, token_map=token_map) for item in value
+            ]
+            # A withheld element becomes an explicit null, exactly as a
+            # withheld slot does in the positional branch below and for the
+            # same reason: removing it would shrink the collection, and a
+            # populated field that exports as `[]` is not a withheld field, it
+            # is a positive claim that there was nothing there. That claim is
+            # the whole defect this rule exists to remove, and filtering would
+            # reintroduce it one level down. OMITTED must not survive either:
+            # it is an internal sentinel no JSON encoder can write, so one
+            # escaping into a list aborts the entire export.
+            return [None if item is OMITTED else item for item in redacted_items]
         if "[]" in disposition:
             # Fixed-length heterogeneous tuple: one disposition per position.
             per_position = disposition["[]"]
             if not isinstance(value, (list, tuple)):
                 return OMITTED
-            return [
+            redacted_positions = [
                 _apply_field_disposition(pos_disposition, item, token_map=token_map)
                 for pos_disposition, item in zip(per_position, value, strict=True)
             ]
+            # A withheld slot becomes an explicit null, never a removed entry:
+            # this is a POSITIONAL record, so dropping one slot would silently
+            # renumber the rest and make the survivors unreadable. OMITTED also
+            # must not escape, being an internal sentinel that no JSON encoder
+            # can write.
+            return [None if item is OMITTED else item for item in redacted_positions]
         # A recursed value object: apply this same per-key logic one level down.
         if not isinstance(value, dict):
             return OMITTED

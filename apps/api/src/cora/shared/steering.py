@@ -10,8 +10,18 @@ loop, and the Campaign aggregate declares a campaign's steering INTENT
 next Run. tach forbids `cora.campaign` from importing `cora.operation.ports`, so
 the shared value types move here (an allowed campaign dependency), exactly as
 `DecisionConfidenceSource` moved to `cora.shared.decision_signals` for the same
-reason. `DecidePort` re-exports every name below so existing Operation importers
-stay stable.
+reason. `DecidePort` re-exports the intent value types that MOVED out of it, so
+existing Operation importers stay stable. Names that originated here, such as
+`SteeringSubstrate` and `SteeringDesignSource`, are imported from this module
+directly: there is no legacy importer to keep stable, and the substrate one must
+not enter the port's public surface, which is deliberately blind to which brain
+is behind the seam.
+
+`serialize_objective` / `deserialize_objective` / `serialize_space` /
+`deserialize_space` live here for the same reason as the VOs themselves: both
+`CampaignSteeringDeclared` and the Operation Procedure's `SteeringDesignRecorded`
+carry `SteeringObjective` / `SteeringSpace`, and a shared VO must not carry two
+payload shapes across the two streams.
 
 Deliberately narrow: only the value types two BCs genuinely share live here. The
 ADVICE side of the seam (`SteeringAdvice`, `SteeringVerdict`, `SteeringEvidence`,
@@ -42,6 +52,46 @@ class SteeringObjectiveKind(StrEnum):
     MAXIMIZE = "Maximize"
     SATISFY = "Satisfy"
     EXPLORE = "Explore"
+
+
+class SteeringSubstrate(StrEnum):
+    """Which brain materialised a steered run's `DecidePort`.
+
+    Mirrors, value for value, the `DecideSubstrate` Literal in
+    `cora.operation.adapters.decide_port_config` (kept in sync by a
+    fitness test, since tach forbids this shared module from importing
+    that adapter-tier Literal directly). Lives here rather than being
+    imported from there because it is recorded on a Procedure event,
+    and events are typed with shared vocabulary, not adapter internals.
+
+    `IN_MEMORY` is the deterministic fake; `GRID_WALK` is the in-CORA
+    grid/sweep decider; `SOBOL` is the Sobol initial-design seeder;
+    `BOTORCH` is the GP Bayesian-optimization brain; `STAGED` is the
+    two-phase sobol-then-botorch composite; `LLM` is the LLM steering
+    brain.
+    """
+
+    IN_MEMORY = "in_memory"
+    GRID_WALK = "grid_walk"
+    SOBOL = "sobol"
+    BOTORCH = "botorch"
+    STAGED = "staged"
+    LLM = "llm"
+
+
+class SteeringDesignSource(StrEnum):
+    """Where a pinned steering design originated.
+
+    One value today: `REQUEST`, the operator- or agent-supplied wire
+    request that started or resumed the conduct segment. Every design
+    pin currently traces to that single origin, so a second value
+    would have nothing to distinguish itself from and no reader ready
+    to branch on it; this stays single-valued until an across-Run
+    steerer can itself originate a design, at which point widening
+    this enum is purely additive.
+    """
+
+    REQUEST = "Request"
 
 
 @dataclass(frozen=True)
@@ -107,10 +157,73 @@ class SteeringObjective:
     target_value: float | None = None
 
 
+# ---------------------------------------------------------------------------
+# Serialize / deserialize (public; shared across every event stream that
+# carries these VOs, so the same value object never carries two payload
+# shapes -- Campaign's CampaignSteeringDeclared and Operation's
+# SteeringDesignRecorded both call these rather than each hand-rolling
+# their own encode/decode).
+# ---------------------------------------------------------------------------
+
+
+def serialize_objective(objective: SteeringObjective) -> dict[str, Any]:
+    """Encode a SteeringObjective to a JSON-friendly dict."""
+    return {
+        "kind": objective.kind.value,
+        "target_measurement_name": objective.target_measurement_name,
+        "target_value": objective.target_value,
+    }
+
+
+def deserialize_objective(payload: dict[str, Any]) -> SteeringObjective:
+    """Decode a JSON-friendly dict to a SteeringObjective."""
+    return SteeringObjective(
+        kind=SteeringObjectiveKind(payload["kind"]),
+        target_measurement_name=payload.get("target_measurement_name"),
+        target_value=payload.get("target_value"),
+    )
+
+
+def serialize_space(space: SteeringSpace) -> dict[str, Any]:
+    """Encode a SteeringSpace to a JSON-friendly dict (choices tuple -> list)."""
+    return {
+        "axes": [
+            {
+                "name": axis.name,
+                "lower": axis.lower,
+                "upper": axis.upper,
+                "choices": list(axis.choices),
+            }
+            for axis in space.axes
+        ]
+    }
+
+
+def deserialize_space(payload: dict[str, Any]) -> SteeringSpace:
+    """Decode a JSON-friendly dict to a SteeringSpace (choices list -> tuple)."""
+    return SteeringSpace(
+        axes=tuple(
+            SteeringAxis(
+                name=axis["name"],
+                lower=axis.get("lower"),
+                upper=axis.get("upper"),
+                choices=tuple(axis.get("choices", [])),
+            )
+            for axis in payload["axes"]
+        )
+    )
+
+
 __all__ = [
     "SteeringAxis",
+    "SteeringDesignSource",
     "SteeringObjective",
     "SteeringObjectiveKind",
     "SteeringPoint",
     "SteeringSpace",
+    "SteeringSubstrate",
+    "deserialize_objective",
+    "deserialize_space",
+    "serialize_objective",
+    "serialize_space",
 ]

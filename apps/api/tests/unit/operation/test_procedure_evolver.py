@@ -22,8 +22,16 @@ from cora.operation.aggregates.procedure import (
     ProcedureStarted,
     ProcedureStatus,
     ProcedureTruncated,
+    SteeringDesignRecorded,
     evolve,
     fold,
+)
+from cora.shared.steering import (
+    SteeringDesignSource,
+    SteeringObjective,
+    SteeringObjectiveKind,
+    SteeringSpace,
+    SteeringSubstrate,
 )
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
@@ -497,6 +505,46 @@ def test_evolve_procedure_resumed_on_empty_state_raises() -> None:
             None,
             ProcedureResumed(procedure_id=uuid4(), re_establishment_boundary=0, occurred_at=_NOW),
         )
+
+
+# --- SteeringDesignRecorded arm (design-input provenance) ---
+
+
+def _steering_design_recorded(procedure_id: UUID) -> SteeringDesignRecorded:
+    return SteeringDesignRecorded(
+        procedure_id=procedure_id,
+        objective=SteeringObjective(kind=SteeringObjectiveKind.MAXIMIZE),
+        objective_capture_name="flux_capture",
+        space=SteeringSpace(axes=()),
+        budget_iterations_remaining=25,
+        budget_wall_clock_seconds_remaining=None,
+        substrate=SteeringSubstrate.BOTORCH,
+        points_per_axis=5,
+        min_observations=3,
+        num_restarts=10,
+        raw_samples=512,
+        seed=7,
+        staged_threshold=8,
+        spend_agent_id=None,
+        design_source=SteeringDesignSource.REQUEST,
+        occurred_at=_NOW,
+    )
+
+
+@pytest.mark.unit
+def test_evolve_steering_design_recorded_on_empty_state_raises() -> None:
+    with pytest.raises(ValueError, match="SteeringDesignRecorded"):
+        evolve(None, _steering_design_recorded(uuid4()))
+
+
+@pytest.mark.unit
+def test_evolve_steering_design_recorded_leaves_running_state_unchanged() -> None:
+    """Provenance-only: the design pin lives in the stream for inferential
+    recovery, not in Procedure state. Mirrors the ResolvedStepsRecorded /
+    RecipeExpansionRecorded no-fold contract."""
+    running = _running()
+    state = evolve(running, _steering_design_recorded(running.id))
+    assert state == running
 
 
 # --- ProcedureActivitiesLogbookOpened arm ---

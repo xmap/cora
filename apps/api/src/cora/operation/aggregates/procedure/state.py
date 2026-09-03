@@ -594,10 +594,12 @@ class ResolvedStepsRecordNotFoundError(Exception):
 
     Raised by the `conduct_from_procedure` (resume-and-replay) handler when a
     Held Procedure's stream carries no `ResolvedStepsRecorded` event. A
-    conduct pins exactly one at start (while `Defined`), so a conducted
+    conduct pins at least one at start (while `Defined`), so a conducted
     Procedure always has it; its absence is corruption (stream truncation,
     a manual event-store write, or a partial-write failure), not an
-    operational outcome. Kept OUT of the conduct/conduct_from failures-in-body
+    operational outcome. At least one rather than exactly one: a conduct
+    that fails after the pin but before `start_procedure` leaves the status
+    `Defined`, so a retry pins again. Kept OUT of the conduct/conduct_from failures-in-body
     contract (that is for step outcomes like an IOC rejecting a write).
     Sibling of `RecipeExpansionRecordNotFoundError`. Mapped to HTTP 500.
     """

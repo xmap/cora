@@ -86,6 +86,7 @@ from cora.operation.errors import (
     PseudoAxisConstituentUnauthorizedError,
     PseudoAxisEvaluationFailedError,
     PseudoAxisSingularityExceededError,
+    SteeringDesignMismatchError,
     SteeringWireMismatchError,
     UnauthorizedError,
     UnsupportedClosingStepsError,
@@ -367,6 +368,13 @@ def register_operation_routes(app: FastAPI) -> None:
         # setpoints (the Conductor's pre-FSM wire guard). Well-formed request,
         # unprocessable against the recipe; operator aligns the space + retries.
         SteeringWireMismatchError,
+        # Steered RESUME (conduct_until_advised_from): the request's search
+        # space drops an axis, adds one, or narrows a categorical axis, so a
+        # coordinate on an already-recorded pass has nowhere to live in it.
+        # Operator restores the axis or the choice, or starts a fresh
+        # Procedure. Bounds, objective, budget and brain config are recorded
+        # rather than compared, so none of those reach here.
+        SteeringDesignMismatchError,
         # conduct_from: a closing step's CaptureRef names a capture only a
         # pre-boundary main step declares -- resume starts captures empty, so
         # this resume would never populate it. Operator picks a boundary at

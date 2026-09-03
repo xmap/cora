@@ -23,7 +23,7 @@ owns lifecycle-handler orchestration.
      Procedure is never a misleading 500 and no resume-then-fail partial
      state can occur.
   4. locate the PINNED `ResolvedStepsRecorded` (a conducted, Held Procedure
-     ALWAYS has exactly one; its absence is corruption ->
+     ALWAYS has at least one; its absence is corruption ->
      `ResolvedStepsRecordNotFoundError`, 500) and parse it back into `Step`s
      via `steps_from_payload` -- resume NEVER re-derives the step list.
   5. `Conductor.conduct_from(steps, boundary)`: resume (Held -> Running, with
@@ -181,8 +181,9 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
             raise ProcedureCannotResumeError(command.procedure_id, current_status=procedure.status)
 
         # Replay the PINNED resolved steps, never re-derive. A Held Procedure that
-        # was conducted always has exactly one ResolvedStepsRecorded; its
-        # absence here is corruption (500), not an operational outcome.
+        # was conducted always has at least one ResolvedStepsRecorded; its
+        # absence here is corruption (500), not an operational outcome. More than
+        # one is reachable, and this takes the first; see find_resolved_steps_record.
         record = find_resolved_steps_record(stored_events)
         if record is None:
             raise ResolvedStepsRecordNotFoundError(command.procedure_id)

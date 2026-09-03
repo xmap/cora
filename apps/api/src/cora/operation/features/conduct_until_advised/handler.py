@@ -12,6 +12,12 @@ Shares the pre-Conductor pipeline (recipe re-expansion + pseudoaxis +
 resolved-steps pin) with `conduct_procedure` via `resolve_and_pin_conduct_steps`,
 and the wire shapes via `_advise_wire`. It imports NO sibling slice.
 
+Being STEERED, it also hands that pipeline a `SteeringDesign`, so the segment's
+objective, space, budget and brain configuration are pinned as a
+`SteeringDesignRecorded` alongside the steps. Those four reach the runtime as
+command arguments and are persisted nowhere else, and a sampling rule that is
+not recorded is not thereby harmless, it is unverifiable.
+
 ## Why no `_decider`
 
 Like `conduct_until_converged`, this records no events directly: the wrapped
@@ -35,7 +41,10 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.operation._conduct_preparation import resolve_and_pin_conduct_steps
+from cora.operation._conduct_preparation import (
+    SteeringDesign,
+    resolve_and_pin_conduct_steps,
+)
 from cora.operation.adapters.decide_port_config import build_decide_port
 from cora.operation.aggregates.procedure import (
     ProcedureNotFoundError,
@@ -148,6 +157,13 @@ def bind(
             principal_id=principal_id,
             correlation_id=correlation_id,
             causation_id=causation_id,
+            steering_design=SteeringDesign(
+                objective=command.objective,
+                objective_capture_name=command.objective_capture_name,
+                space=command.space,
+                decide=command.decide,
+                budget=command.budget,
+            ),
         )
         # v1 scope: a loop that re-walks one pass block repeatedly has no
         # defined place to run _run_closing. Refuse outright rather than

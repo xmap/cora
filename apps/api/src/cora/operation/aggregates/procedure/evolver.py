@@ -80,6 +80,7 @@ from cora.operation.aggregates.procedure.events import (
     ProcedureTruncated,
     RecipeExpansionRecorded,
     ResolvedStepsRecorded,
+    SteeringDesignRecorded,
 )
 from cora.operation.aggregates.procedure.state import (
     Procedure,
@@ -371,6 +372,13 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
             # conduct-time replay (resume reads it back); there is no
             # state fold. Mirrors the RecipeExpansionRecorded arm above.
             return require_state(state, "ResolvedStepsRecorded")
+        case SteeringDesignRecorded():
+            # Provenance-only event: leaves Procedure state unchanged. The
+            # design inputs (objective, space, budget, brain config) live
+            # in the event stream for inferential recovery; no decider
+            # reads them back and there is no state fold. Mirrors the
+            # ResolvedStepsRecorded arm above.
+            return require_state(state, "SteeringDesignRecorded")
         case ProcedureIterationStarted(iteration_index=iteration_index):
             # One convergence-loop iteration began: bump the denorm count
             # and record the open index. Status untouched (iteration is
