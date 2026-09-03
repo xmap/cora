@@ -10,15 +10,15 @@ the trigger the design memo named and which has now fired at 2-BM.
 
 ## A sweep, not a terminal hook
 
-Deliberately NOT wired onto `RunWitnessRecorder`'s own terminal, unlike
+Deliberately NOT wired onto `RunTranslator`'s own terminal, unlike
 `CaptureBaselineReader` (invoked inline from `_promote`) and
 `CaptureProgressFeeder` (fed observations as they arrive). A remote
 scan-ingest probe measures tens of seconds (2026-08-18: ~26s to digest a
-24 GB file even on the LOCAL disk holding it); `run_witness_loop` is a
+24 GB file even on the LOCAL disk holding it); `run_translator_loop` is a
 single sequential `async for`, and missing a BEGUN observation while a
 30-second-plus probe runs is not an acceptable trade for making this
 one Run's ingest a few seconds faster. This module never imports
-`_run_witness`, and `_run_witness.py` never imports this module.
+`_run_translator`, and `_run_translator.py` never imports this module.
 
 Instead: a periodic sweep against the read model. Its only candidate
 signal is "a terminated witnessed Run's capture path resolved
@@ -103,7 +103,7 @@ has the manual POST route.
 is not the vault: it cannot be erased. Every log line here carries
 `run_id` and `capture_code` only, never the path and never an
 exception's rendered message (`InvalidScanFileError`'s text embeds the
-locator via `repr()`), mirroring `_run_witness.py`'s identical rule for
+locator via `repr()`), mirroring `_run_translator.py`'s identical rule for
 the same value.
 
 The same reasoning extends past logging to what this module hands
@@ -337,7 +337,7 @@ class CaptureScanIngestor:
         self._candidate_lookup = candidate_lookup
         self._ingest_scan = ingest_scan
         self._bindings = bindings
-        # Optional, like `_run_witness.py`'s `capture_path_store`: every
+        # Optional, like `_run_translator.py`'s `capture_path_store`: every
         # existing caller's bindings leave `expected_camera_label` unset,
         # so the camera check in `_check_producing_camera` never consults
         # this collaborator for them, and defaulting it in rather than

@@ -1,4 +1,13 @@
-"""Bootstrap-time seed for the RunWitness Agent.
+"""Bootstrap-time seed for the RunWitness Agent (retired).
+
+Superseded by `seed_run_translator.py`'s `RunTranslator`: same runtime,
+same job, renamed because `witness` named the modeling axis this runtime
+implements, not what the runtime itself does. This module stays
+source-tracked and its boot-time seed call stays in `main.py` forever,
+per this identity's own FOREVER-STABLE rule below -- 2-BM's already-
+recorded Runs keep `RUN_WITNESS_AGENT_ID` as their `principal_id`
+pointer permanently, and a deployment retires this Agent via
+`deprecate_agent` rather than losing it from source.
 
 The RunWitness runtime (`cora.api._run_witness`) needs an Agent record
 (and its co-registered Actor) to exist at the pinned `RUN_WITNESS_AGENT_ID`

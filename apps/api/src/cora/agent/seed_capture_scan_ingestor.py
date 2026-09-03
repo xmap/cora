@@ -19,7 +19,7 @@ lives in `cora.agent._agent_seed`.
     (`prompt_template_id=None`) and a sentinel `ModelRef`
     (`provider="deterministic"`). The sweep is a poll-and-append loop,
     not an LLM subscriber.
-  - A SEPARATE principal from RunWitness, CaptureProgressFeeder, and
+  - A SEPARATE principal from RunTranslator, CaptureProgressFeeder, and
     CaptureBaselineReader, deliberately: an operator can revoke
     scan-ingest (this grant) without blinding any of the other three,
     and `Dataset.registered_by` / `Acquisition.recorded_by` tell this
@@ -63,7 +63,7 @@ CAPTURE_SCAN_INGESTOR_AGENT_DESCRIPTION = (
     "Deterministic in-process runtime: sweeps terminated witnessed Runs "
     "whose observed capture path resolved and which have no Dataset yet, "
     "and ingests each as a Dataset + Distribution + Acquisition via "
-    "IngestScan. Never triggered off the witness terminal itself; a "
+    "IngestScan. Never triggered off the translator terminal itself; a "
     "periodic reconciliation sweep against the read model. Not a control "
     "path: it never drives the substrate, only records the file a "
     "promoted capture already produced."

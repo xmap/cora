@@ -1163,7 +1163,7 @@ async def test_observe_orchestrator_ref_pump_has_no_unreached_counterpart() -> N
     NOT synthesize a `CaptureOrchestratorRefObservation`. Mirrors the
     `full_file_name` role's identical guarantee, for the identical
     reason: erasing the last retained reading on every reconnect would
-    defeat the consume-once discipline `RunWitnessRecorder` applies."""
+    defeat the consume-once discipline `RunTranslator` applies."""
     port = _ScriptedControlPort(
         readings={"pvA": [_reading("Beginning scan")], "pvUid": []},
         disconnect=frozenset({"pvUid"}),

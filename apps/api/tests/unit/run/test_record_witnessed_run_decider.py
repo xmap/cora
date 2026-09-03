@@ -172,7 +172,7 @@ def test_decide_emits_run_started_witnessed_for_a_valid_capture() -> None:
     assert event.safety_envelope_verdict == SafetyEnvelopeVerdict(
         enclosure_permitted=True, beam_available=True
     )
-    assert event.trigger_source == "RunWitness:2bmb-tomoscan"
+    assert event.trigger_source == "RunTranslator:2bmb-tomoscan"
     assert dict(event.external_refs[0]) == {"scheme": "capture-code", "value": "2bmb-tomoscan"}
     # No `capture_precondition_bypass_snapshot` supplied on the command:
     # the emitted genesis carries None, never a fabricated snapshot.

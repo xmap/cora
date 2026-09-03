@@ -9,7 +9,7 @@ Per the roadmap's anti-scope: no REST route, no MCP tool reach this
 handler (see `route.py` / `tool.py`, both stubs, mirroring
 `record_witnessed_run`'s own in-process-only lock). The authorized path
 in is the bound handler on `RunHandlers.record_witnessed_run_outcome`,
-called only by the in-process RunWitness runtime as a seeded Agent
+called only by the in-process RunTranslator runtime as a seeded Agent
 principal.
 """
 

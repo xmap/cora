@@ -1074,8 +1074,8 @@ class Settings(BaseSettings):
     # source, not a workaround. The value is PERSONAL DATA (2-BM's
     # directory layout embeds a surname and a proposal number): it is
     # never logged in full and never lands on an event; it goes to the
-    # `run_capture_path` PII vault via `RunWitnessRecorder`'s dual-clock
-    # guard. See `_run_witness.py`'s "Capture path pairing" section.
+    # `run_capture_path` PII vault via `RunTranslator`'s dual-clock
+    # guard. See `_run_translator.py`'s "Capture path pairing" section.
     #
     # `camera_selected` (optional per code) is a further role,
     # declared-and-unread by production exactly like `server_running`
@@ -1106,7 +1106,7 @@ class Settings(BaseSettings):
     # reading is rejected as misconfigured (see
     # `cora.api._capture_observer`'s `_from_orchestrator_ref_reading`).
     # NOT personal data (unlike `full_file_name`): a run uid names no
-    # person. See `_run_witness.py`'s "Orchestrator-ref pairing" section
+    # person. See `_run_translator.py`'s "Orchestrator-ref pairing" section
     # for the consume-once guard that makes this join safe against a
     # stale substrate reading.
     capture_watch_pvs: dict[str, dict[str, str]] = {}
@@ -1132,8 +1132,8 @@ class Settings(BaseSettings):
     capture_orchestrator_ref_schemes: dict[str, str] = {}
 
     # How long an `orchestrator_ref` reading may lead the BEGUN
-    # observation it is meant to pair with before `RunWitnessRecorder
-    # ._consume_orchestrator_ref` rejects it as stale (see `_run_witness
+    # observation it is meant to pair with before `RunTranslator
+    # ._consume_orchestrator_ref` rejects it as stale (see `_run_translator
     # .py`'s "Orchestrator-ref pairing" section). A run uid is written
     # BEFORE the capture it names begins, so some lead is expected and
     # correct; this bounds how much. Deployment-declared rather than
@@ -1247,7 +1247,7 @@ class Settings(BaseSettings):
     # NOTE the fdt / scp transfer messages map to Progressing, not
     # Ended: they mark transfer START, not arrival, per
     # docs/deployments/2-bm/operations.md. An `Aborted` phase reaches
-    # `RunWitnessRecorder` via the separate `abort` role
+    # `RunTranslator` via the separate `abort` role
     # (`_from_abort_reading` in `_capture_observer.py`), never through
     # this table: `decarlof/tomoscan@master` never calls
     # `ScanStatus.put("Scan aborted")` (verified by extracting every
@@ -1280,7 +1280,7 @@ class Settings(BaseSettings):
     # trail exists to cover the gaps a promoted Run cannot -- including
     # the shadow-only window this comment used to say wrote nothing.
     # Default off; irrelevant when `capture_watch_pvs` is empty. See
-    # `cora.api._run_witness`.
+    # `cora.api._run_translator`.
     run_witness_enabled: bool = False
 
     # Which Plan a promoted witnessed Run references (record_witnessed_run's
@@ -1352,7 +1352,7 @@ class Settings(BaseSettings):
     # privacy review) without also disabling progress or baseline
     # recording. Declaring `full_file_name` in `capture_watch_pvs` alone
     # is necessary but not sufficient, mirroring every other switch
-    # here. See `cora.api._run_witness`'s "Capture path pairing" section.
+    # here. See `cora.api._run_translator`'s "Capture path pairing" section.
     capture_path_recording_enabled: bool = False
 
     # Experiment-identity PVs (slice 14a): a deployment-declared set read
@@ -1444,7 +1444,7 @@ class Settings(BaseSettings):
     # `run_witness_enabled` also True (see
     # `_enforce_run_witness_recording_gate`): with the shadow observer not
     # running there is nothing to write from. See
-    # `cora.api._run_witness`'s probe-write section.
+    # `cora.api._run_translator`'s probe-write section.
     capture_probe_recording_enabled: bool = False
 
     # EIGHTH kill switch (slice 17), and the only one so far that is NOT a
@@ -1496,11 +1496,11 @@ class Settings(BaseSettings):
     # Declaring the role in `capture_watch_pvs` (with a paired scheme in
     # `capture_orchestrator_ref_schemes`) alone is necessary but not
     # sufficient, mirroring every other switch here. Retention
-    # (`RunWitnessRecorder.observe_orchestrator_ref`) happens regardless
+    # (`RunTranslator.observe_orchestrator_ref`) happens regardless
     # of this switch, gated only on `run_witness_recording_enabled`,
     # exactly like `capture_path_recording_enabled`'s own declare-vs-
     # record split, so flipping this switch on later does not miss
-    # whatever was already retained. See `_run_witness.py`'s
+    # whatever was already retained. See `_run_translator.py`'s
     # "Orchestrator-ref pairing" section.
     capture_orchestrator_ref_recording_enabled: bool = False
 
@@ -1562,7 +1562,7 @@ class Settings(BaseSettings):
     # the location's OWN storage root rather than an invented tier name.
     # The vault's `root` column itself carries only a length CHECK, no
     # normalization guarantee; every row it holds is normalized in
-    # practice because `_run_witness.py` is the column's single writer
+    # practice because `_run_translator.py` is the column's single writer
     # and always writes through `matched_storage_root`
     # (`cora.shared.storage_root`), so `cora.api._capture_scan_ingestor`
     # reading a candidate's root straight off that row and joining

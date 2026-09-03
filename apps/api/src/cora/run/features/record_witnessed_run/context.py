@@ -6,7 +6,7 @@ slice-local dataclass rather than a shared import: cross-slice sharing
 through a feature module is banned (cross-slice independence), and the
 two contexts are not identical shapes anyway (this one carries no
 `campaign`, `input_distributions`, or `reachable_storage_supply_ids`,
-since RunWitness has no operator inputs in those axes).
+since RunTranslator has no operator inputs in those axes).
 
 ## Field semantics
 

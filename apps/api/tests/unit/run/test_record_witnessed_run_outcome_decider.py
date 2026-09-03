@@ -121,7 +121,7 @@ def test_decide_emits_run_aborted_for_aborted_phase() -> None:
     assert events == [
         RunAborted(
             run_id=state.id,
-            reason="RunWitness observed capture 2bmb-tomoscan as Aborted",
+            reason="RunTranslator observed capture 2bmb-tomoscan as Aborted",
             occurred_at=_NOW,
             observed_at=_NOW,
         )

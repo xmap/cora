@@ -10,7 +10,7 @@ the role level, so personal data written there could never be erased.
 
 ## Why this exists
 
-`RunWitnessRecorder` observes the areaDetector file plugin's own
+`RunTranslator` observes the areaDetector file plugin's own
 `FullFileName_RBV` readback and, once it verifies the reading postdates
 the Run's own BEGUN time, needs somewhere to put the result. 2-BM's
 directory layout embeds `{UserLastName}-{ProposalNumber}`
@@ -25,7 +25,7 @@ write to it), this store has exactly one BC. Per `wire.py`'s own
 it is built locally in `wire_run(deps)` from `deps.pool` and surfaced on
 the `RunHandlers` bundle (`RunHandlers.capture_path_store`), not
 promoted to a `Kernel` field. `main.py`'s composition-root lifespan
-(`RunWitnessRecorder`, which is outside the Run BC) reads it off
+(`RunTranslator`, which is outside the Run BC) reads it off
 `app.state.run.capture_path_store`, the same route
 `app.state.run.feed_heartbeat_store` already takes.
 

@@ -1,4 +1,4 @@
-"""CaptureProgressFeeder: buffer and flush RunWitness's progress readings.
+"""CaptureProgressFeeder: buffer and flush RunTranslator's progress readings.
 
 Slice 10. `sim_observation_feeder.py`'s docstring states the shape this
 follows: "each DEPLOYMENT writes its real EPICS ... feeder against the
@@ -20,12 +20,12 @@ dict assignment per reading and nothing else.
 
 ## Flush ordering matters, and lives in the caller
 
-`flush_capture(code)` must run BEFORE the RunWitness recorder acts on a
+`flush_capture(code)` must run BEFORE RunTranslator acts on a
 BEGUN / ENDED / ABORTED observation for that same code, or a capture's
 tail of progress readings loses its Run before it can be attributed
 (the observation logbook closes on completion, and a truncated Run's
 new BEGUN opens a DIFFERENT run_id). This module has no opinion on when
-that is; `run_witness_loop` (`_run_witness.py`) is the coordinator that
+that is; `run_translator_loop` (`_run_translator.py`) is the coordinator that
 calls `flush_capture` at the right moments and owns the ordering.
 
 ## No conduct_mode gate on the write path
@@ -34,10 +34,10 @@ calls `flush_capture` at the right moments and owns the ordering.
 included; there is no `conduct_mode` check the way
 `RecordWitnessedRunOutcome`'s decider has one. This feeder's safety
 rests entirely on `open_captures` (supplied by the caller, in practice
-`RunWitnessRecorder.open_captures`) only ever naming a Run the RunWitness
+`RunTranslator.open_captures`) only ever naming a Run the RunTranslator
 runtime itself promoted. See `cora.agent.seed_capture_progress_feeder`
 for the full security note; this is the same structural residual
-already accepted for `TruncateRun` in `seed_run_witness.py`.
+already accepted for `TruncateRun` in `seed_run_translator.py`.
 
 ## The heartbeat fires whenever a Run is open, buffer or no buffer
 
@@ -56,7 +56,7 @@ buffered this tick," still heartbeats.
 ## A lock, not just an atomic pop, guards each flush
 
 Two independent callers can invoke `flush_capture` for the SAME code:
-`run_witness_loop`'s flush-before-recorder-acts call, and this
+`run_translator_loop`'s flush-before-recorder-acts call, and this
 module's own periodic `capture_progress_flush_loop`. The buffer pop
 alone prevents a double-write of the SAME buffered readings, but not a
 window where one caller's in-flight `AppendObservations` /
@@ -106,7 +106,7 @@ class CaptureProgressFeeder:
 
     `open_captures` returns a snapshot of every capture_code currently
     open, mapped to its run_id; in production this is
-    `RunWitnessRecorder.open_captures`, so the feeder's write scope is
+    `RunTranslator.open_captures`, so the feeder's write scope is
     exactly the witness's own promotions (this process's, or a prior
     one's via the boot-time restart rebuild), never a run_id from
     anywhere else.

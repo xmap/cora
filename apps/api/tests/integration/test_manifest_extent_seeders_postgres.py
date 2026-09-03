@@ -331,7 +331,7 @@ async def _seed_observation(db_pool: asyncpg.Pool) -> None:
 async def _seed_heartbeat(db_pool: asyncpg.Pool) -> None:
     """`entries_run_feed_heartbeats` has no FK and no envelope: the real
     production writer is `PostgresFeedHeartbeatStore.append`, called
-    directly by `CaptureProgressFeeder`/`RunWitnessRecorder` rather than
+    directly by `CaptureProgressFeeder`/`RunTranslator` rather than
     through a CQRS command handler. Calling the store directly IS the
     real path; there is no handler wrapper to go through."""
     store = PostgresFeedHeartbeatStore(db_pool)

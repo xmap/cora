@@ -148,7 +148,7 @@ def bind(deps: Kernel) -> Handler:
 
     Deliberately never touches `CapturePathStore`: this handler instance
     is shared by every internal composition-root caller
-    (`RunWitnessRecorder.rebuild_open_captures`, the run-supervisor and
+    (`RunTranslator.rebuild_open_captures`, the run-supervisor and
     run-initiator watchdogs) as well as the REST/MCP route, all under
     one coarse `ListRuns` authorization grant. Resolving the observed
     capture path here would hand personal data to every one of them.

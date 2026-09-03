@@ -180,8 +180,8 @@ def test_status_push_request_max_per_tick_accepts_the_upper_bound() -> None:
 # ---------- pure: _render_progress ----------
 
 
-class _FakeWitnessRecorder:
-    """Duck-types `RunWitnessRecorder`'s read-only surface for these tests."""
+class _FakeTranslator:
+    """Duck-types `RunTranslator`'s read-only surface for these tests."""
 
     def __init__(
         self,
@@ -220,14 +220,14 @@ def test_render_progress_is_empty_when_recorder_is_none() -> None:
 
 @pytest.mark.unit
 def test_render_progress_is_empty_when_run_has_no_readings() -> None:
-    recorder = _FakeWitnessRecorder({})
+    recorder = _FakeTranslator({})
     assert _render_progress(uuid4(), recorder) == {}  # type: ignore[arg-type]
 
 
 @pytest.mark.unit
 def test_render_progress_renders_each_role_json_safe() -> None:
     run_id = uuid4()
-    recorder = _FakeWitnessRecorder(
+    recorder = _FakeTranslator(
         {run_id: {"images_saved": _obs(value=810.0, commanded_total=1500.0, observed_at=_NOW)}}
     )
 
@@ -246,7 +246,7 @@ def test_render_progress_renders_each_role_json_safe() -> None:
 def test_render_progress_renders_a_missing_observed_at_as_none() -> None:
     """2-BM's real case: the substrate reports no time for this reading."""
     run_id = uuid4()
-    recorder = _FakeWitnessRecorder(
+    recorder = _FakeTranslator(
         {run_id: {"images_saved": _obs(value=3.0, commanded_total=None, observed_at=None)}}
     )
 
@@ -266,7 +266,7 @@ def test_render_progress_trail_is_empty_when_recorder_is_none() -> None:
 
 @pytest.mark.unit
 def test_render_progress_trail_is_empty_when_run_has_no_trail() -> None:
-    recorder = _FakeWitnessRecorder({}, {})
+    recorder = _FakeTranslator({}, {})
     assert _render_progress_trail(uuid4(), recorder) == {}  # type: ignore[arg-type]
 
 
@@ -275,7 +275,7 @@ def test_render_progress_trail_renders_each_role_json_safe_oldest_first() -> Non
     run_id = uuid4()
     first = _obs(value=1.0, commanded_total=100.0, observed_at=_NOW)
     second = _obs(value=2.0, commanded_total=100.0, observed_at=_NOW + timedelta(seconds=1))
-    recorder = _FakeWitnessRecorder({}, {run_id: {"images_saved": [first, second]}})
+    recorder = _FakeTranslator({}, {run_id: {"images_saved": [first, second]}})
 
     rendered = _render_progress_trail(run_id, recorder)  # type: ignore[arg-type]
 
@@ -295,7 +295,7 @@ def test_render_progress_trail_renders_each_role_json_safe_oldest_first() -> Non
 def test_render_progress_trail_tail_slices_independent_of_recorder_retention() -> None:
     run_id = uuid4()
     long_trail = [_obs(value=float(i), commanded_total=None, observed_at=_NOW) for i in range(40)]
-    recorder = _FakeWitnessRecorder({}, {run_id: {"images_saved": long_trail}})
+    recorder = _FakeTranslator({}, {run_id: {"images_saved": long_trail}})
 
     rendered = _render_progress_trail(run_id, recorder)  # type: ignore[arg-type]
 
@@ -1861,8 +1861,8 @@ async def test_lifespan_pushes_an_activity_message_when_an_event_is_appended() -
 
 
 @pytest.mark.unit
-async def test_lifespan_includes_witness_recorder_progress_in_the_pushed_snapshot() -> None:
-    """The end-to-end path from a `RunWitnessRecorder` reading to the wire."""
+async def test_lifespan_includes_translator_progress_in_the_pushed_snapshot() -> None:
+    """The end-to-end path from a `RunTranslator` reading to the wire."""
     received: asyncio.Queue[str] = asyncio.Queue()
 
     async def handler(ws: ServerConnection) -> None:
@@ -1878,14 +1878,14 @@ async def test_lifespan_includes_witness_recorder_progress_in_the_pushed_snapsho
             status_push_tick_seconds=0.1,
         )
         run_id = uuid4()
-        witness_recorder = _FakeWitnessRecorder(
+        translator = _FakeTranslator(
             {run_id: {"images_saved": _obs(value=42.0, commanded_total=100.0, observed_at=_NOW)}}
         )
 
         async with status_push_lifespan(
             kernel,
             **_default_handlers(list_runs=_make_list_runs([_run_item(run_id)])),
-            witness_recorder=witness_recorder,  # type: ignore[arg-type]
+            translator=translator,  # type: ignore[arg-type]
         ):
             raw = await asyncio.wait_for(received.get(), timeout=5)
 

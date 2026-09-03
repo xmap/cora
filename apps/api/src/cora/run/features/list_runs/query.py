@@ -46,4 +46,4 @@ class ListRuns:
     conduct_mode: str | None = None
     """Optional `ConductMode` value filter ("Conducted" or "Witnessed").
     Pass `None` (omit) for "any conduct mode". Lets a caller restrict to
-    Witnessed Runs, e.g. the RunWitness restart-rebuild query."""
+    Witnessed Runs, e.g. the RunTranslator restart-rebuild query."""

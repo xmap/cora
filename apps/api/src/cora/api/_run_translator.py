@@ -1,4 +1,4 @@
-"""RunWitness runtime: shadow-observe an external tool's captures, and
+"""RunTranslator runtime: shadow-observe an external tool's captures, and
 (behind a second, independent kill switch) promote a BEGUN capture to a
 real witnessed Run.
 
@@ -9,7 +9,7 @@ writes nothing anywhere, ever: no event append, no entries-table write,
 no Run command issued. When recording is enabled, a `BEGUN` observation
 for a capture with no open Run promotes one via `record_witnessed_run`,
 with per-capture-code dedup so a single in-progress capture is never
-promoted twice (see `RunWitnessRecorder`).
+promoted twice (see `RunTranslator`).
 
 Hosted at the composition root (`cora.api`), like `_run_initiator.py`
 and `_enclosure_permit_observer.py`: it composes a Run BC command with
@@ -17,15 +17,15 @@ an Agent principal, and only `cora.api` may depend on both.
 
 ## Log lines, one per observation
 
-- `run_witness.capture_begun`
-- `run_witness.capture_progressing`
-- `run_witness.capture_ended`
-- `run_witness.capture_aborted`
-- `run_witness.capture_unrecognized`: `phase` is `UNRECOGNIZED`, meaning
+- `run_translator.capture_begun`
+- `run_translator.capture_progressing`
+- `run_translator.capture_ended`
+- `run_translator.capture_aborted`
+- `run_translator.capture_unrecognized`: `phase` is `UNRECOGNIZED`, meaning
   `reported_status` did not match the deployment's declared literal
   table. A vocabulary drift (a tool upgrade renaming a status), not
   routine progress; worth an operator's attention.
-- `run_witness.capture_unreached`: `phase` is `None`, meaning this
+- `run_translator.capture_unreached`: `phase` is `None`, meaning this
   observation made no status claim at all (a probe-only re-affirmation
   read, or a disconnect the adapter reported with nothing to classify).
 
@@ -37,7 +37,7 @@ identically whether or not recording is enabled.
 
 ## Coverage trail (slice 16), independent of the recording switch
 
-Every observation reaching `RunWitnessRecorder.observe_capture` also
+Every observation reaching `RunTranslator.observe_capture` also
 writes one `CaptureProbe` row (see `cora.run.aggregates.run.capture_probes`
 for the full design argument), gated on its OWN kill switch,
 `Settings.capture_probe_recording_enabled` -- NOT on
@@ -62,10 +62,10 @@ Per capture_code, a small dedup state machine:
     call the configured `CaptureBaselineReader` (slice 12) exactly once
     to snapshot the genesis-baseline PVs against the new Run; a failure
     there is logged and never unwinds the promotion that already
-    committed (see `RunWitnessRecorder._read_baseline`). Also calls the
+    committed (see `RunTranslator._read_baseline`). Also calls the
     configured `CaptureExperimentIdentityReader` (slice 14a) exactly once, same
     posture, to vault the proposal / ESAF / ESAF-DOI PVs against the new
-    Run (see `RunWitnessRecorder._read_experiment_identity`). Before the
+    Run (see `RunTranslator._read_experiment_identity`). Before the
     `RecordWitnessedRun` command is even built, consumes the retained
     `orchestrator_ref` reading for this code (if any) through the
     consume-once staleness guard, so the promoted Run's genesis can
@@ -88,7 +88,7 @@ Per capture_code, a small dedup state machine:
   - `ENDED` / `ABORTED` while nothing is open, or `PROGRESSING` /
     `UNRECOGNIZED` / a `None` phase in any state: no-op.
 
-`RunWitnessRecorder`'s dedup state is seeded once at boot (see
+`RunTranslator`'s dedup state is seeded once at boot (see
 `rebuild_open_captures`) from every currently-Running Witnessed Run's
 `external_refs`, so a still-open capture at process restart is never
 re-promoted.
@@ -161,7 +161,7 @@ network-driven CA delivery interleaving the two subscriptions fairly,
 not a structural guarantee; a deliberately adversarial or bursty
 delivery pattern (confirmed by constructing exactly this case against
 a fake `ControlPort` that does not yield between readings, in
-`test_run_witness_capture_replay.py`) could let the trailing `ENDED`
+`test_run_translator_capture_replay.py`) could let the trailing `ENDED`
 arrive first, in which case that capture records as `Completed` and
 the correct `ABORTED` observation lands on the now-idle no-open-Run
 path, a no-op. Same outcome, same severity, as the coalesced-abort
@@ -204,7 +204,7 @@ bug in this code), and the same posture: a data-quality degradation
 (one out-of-order row), never a claim this code cannot tell is
 suspect. No freshness guard (rejecting a reading whose `observed_at`
 predates the Run's own promotion) is implemented; it would need
-threading a promotion timestamp through `RunWitnessRecorder`, a real
+threading a promotion timestamp through `RunTranslator`, a real
 fix but, again, a deliberate design decision to make later if this is
 ever observed in practice, not a wiring change.
 
@@ -364,7 +364,7 @@ from uuid import UUID
 
 from cora.agent.seed_capture_baseline_reader import CAPTURE_BASELINE_READER_AGENT_ID
 from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
-from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
+from cora.agent.seed_run_translator import RUN_TRANSLATOR_AGENT_ID
 from cora.api._capture_baseline_reader import CaptureBaselineReader
 from cora.api._capture_experiment_identity_reader import CaptureExperimentIdentityReader
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
@@ -433,22 +433,22 @@ _log = get_logger(__name__)
 
 # Single hardcoded literal, mirroring `ENCLOSURE_PERMIT_MONITOR_SOURCE_ID`
 # (`cora.enclosure._monitor`) exactly: there is exactly one in-process
-# RunWitness per deployment, so no derivation function is needed.
-RUN_WITNESS_MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-000072756e01"))
+# RunTranslator per deployment, so no derivation function is needed.
+RUN_TRANSLATOR_MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-000072756e01"))
 
 _PHASE_LOG_EVENT: dict[CapturePhase, str] = {
-    CapturePhase.BEGUN: "run_witness.capture_begun",
-    CapturePhase.PROGRESSING: "run_witness.capture_progressing",
-    CapturePhase.ENDED: "run_witness.capture_ended",
-    CapturePhase.ABORTED: "run_witness.capture_aborted",
-    CapturePhase.UNRECOGNIZED: "run_witness.capture_unrecognized",
+    CapturePhase.BEGUN: "run_translator.capture_begun",
+    CapturePhase.PROGRESSING: "run_translator.capture_progressing",
+    CapturePhase.ENDED: "run_translator.capture_ended",
+    CapturePhase.ABORTED: "run_translator.capture_aborted",
+    CapturePhase.UNRECOGNIZED: "run_translator.capture_unrecognized",
 }
 
 _TERMINAL_PHASES = (CapturePhase.ENDED, CapturePhase.ABORTED)
 
 _FLUSH_TRIGGER_PHASES = frozenset({CapturePhase.BEGUN, CapturePhase.ENDED, CapturePhase.ABORTED})
 """Phases where the recorder may close or replace a Run (slice 10).
-`run_witness_loop` flushes a capture's buffered progress readings
+`run_translator_loop` flushes a capture's buffered progress readings
 BEFORE the recorder acts on one of these, so a reading already
 BUFFERED at that instant is attributed to the Run it belongs to rather
 than lost to a closed logbook or attached to the wrong Run after a
@@ -470,7 +470,7 @@ the deployed tool, not something this ordering enforces."""
 def observe_capture(observation: CaptureLifecycleObservation) -> None:
     """Log one observation. The entire body of shadow mode: no writes."""
     if observation.phase is None:
-        event = "run_witness.capture_unreached"
+        event = "run_translator.capture_unreached"
     else:
         event = _PHASE_LOG_EVENT[observation.phase]
     _log.info(
@@ -483,7 +483,7 @@ def observe_capture(observation: CaptureLifecycleObservation) -> None:
     )
 
 
-class RunWitnessRecorder:
+class RunTranslator:
     """Promotes a BEGUN observation to a witnessed Run when recording is
     enabled; a log-only pass-through (today's shadow behavior) otherwise.
 
@@ -658,7 +658,7 @@ class RunWitnessRecorder:
             return
         if self._deps.schema_posture == "degraded":
             _log.warning(
-                "run_witness.capture_probe_skipped_degraded_schema",
+                "run_translator.capture_probe_skipped_degraded_schema",
                 capture_code=observation.capture_code,
             )
             return
@@ -688,7 +688,7 @@ class RunWitnessRecorder:
             # line carrying the row's own values discloses nothing this
             # log sink would need to erase.
             _log.exception(
-                "run_witness.capture_probe_write_failed",
+                "run_translator.capture_probe_write_failed",
                 capture_code=observation.capture_code,
             )
 
@@ -697,7 +697,7 @@ class RunWitnessRecorder:
         terminal can carry the counts even though
         `CaptureProgressFeeder.flush_capture` pops its own buffer for
         the same code before `_record_outcome` builds the command
-        (`run_witness_loop` flushes first; see that function's
+        (`run_translator_loop` flushes first; see that function's
         docstring). Synchronous and non-blocking, same contract as
         `CaptureProgressFeeder.offer`.
 
@@ -876,21 +876,21 @@ class RunWitnessRecorder:
             return None
         if begun_at is None or observation.observed_at is None:
             _log.warning(
-                "run_witness.orchestrator_ref_rejected_no_reference_time",
+                "run_translator.orchestrator_ref_rejected_no_reference_time",
                 capture_code=code,
             )
             return None
         lead_seconds = (begun_at - observation.observed_at).total_seconds()
         if lead_seconds < 0:
             _log.warning(
-                "run_witness.orchestrator_ref_rejected_reordered",
+                "run_translator.orchestrator_ref_rejected_reordered",
                 capture_code=code,
                 lead_seconds=lead_seconds,
             )
             return None
         if lead_seconds > self._settings.capture_orchestrator_ref_max_lead_seconds:
             _log.warning(
-                "run_witness.orchestrator_ref_rejected_stale",
+                "run_translator.orchestrator_ref_rejected_stale",
                 capture_code=code,
                 lead_seconds=lead_seconds,
             )
@@ -899,7 +899,7 @@ class RunWitnessRecorder:
             return Identifier(scheme=observation.scheme, value=observation.value)
         except InvalidIdentifierError:
             _log.warning(
-                "run_witness.orchestrator_ref_rejected_malformed",
+                "run_translator.orchestrator_ref_rejected_malformed",
                 capture_code=code,
             )
             return None
@@ -933,7 +933,7 @@ class RunWitnessRecorder:
             # caller that constructs this class directly (tests) cannot
             # crash the loop instead of just not promoting.
             _log.error(
-                "run_witness.recording_enabled_without_plan_id",
+                "run_translator.recording_enabled_without_plan_id",
                 capture_code=observation.capture_code,
             )
             return
@@ -963,7 +963,7 @@ class RunWitnessRecorder:
             name=f"Witnessed capture {observation.capture_code}",
             plan_id=plan_id,
             capture_code=observation.capture_code,
-            monitor_source_id=RUN_WITNESS_MONITOR_SOURCE_ID,
+            monitor_source_id=RUN_TRANSLATOR_MONITOR_SOURCE_ID,
             trigger="Monitor",
             capture_precondition_bypass_snapshot=self._build_precondition_bypass_snapshot(
                 observation.capture_code
@@ -973,31 +973,31 @@ class RunWitnessRecorder:
         try:
             run_id = await self._record_witnessed_run(
                 command,
-                principal_id=RUN_WITNESS_AGENT_ID,
+                principal_id=RUN_TRANSLATOR_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
                 surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise
         except UnauthorizedError:
-            # Configuration fault: the RunWitness principal is not
+            # Configuration fault: the RunTranslator principal is not
             # granted RecordWitnessedRun. Log loudly; stay unopened so the
             # next BEGUN retries once the grant is fixed (same posture
             # as RunInitiator's StartRun grant).
             _log.warning(
-                "run_witness.promotion_unauthorized",
+                "run_translator.promotion_unauthorized",
                 capture_code=observation.capture_code,
             )
             return
         except Exception:
             _log.exception(
-                "run_witness.promotion_failed",
+                "run_translator.promotion_failed",
                 capture_code=observation.capture_code,
             )
             return
         self._open_captures[observation.capture_code] = run_id
         _log.info(
-            "run_witness.promoted",
+            "run_translator.promoted",
             capture_code=observation.capture_code,
             run_id=str(run_id),
             orchestrator_ref_scheme=(
@@ -1025,14 +1025,14 @@ class RunWitnessRecorder:
         successful promotion.
 
         By this point the promotion has already fully committed
-        (`_open_captures` updated, `run_witness.promoted` logged), so a
+        (`_open_captures` updated, `run_translator.promoted` logged), so a
         baseline-read failure must never unwind or retry it. Gated on
         BOTH a reader being configured (main.py wires one whenever
         `capture_baseline_pvs` is declared) and the fourth kill switch,
         `capture_baseline_recording_enabled`; `CaptureBaselineReader`
         itself catches every failure internally (see its own module
         docstring), the outer try/except here is defense in depth,
-        mirroring how `run_witness_loop` already wraps
+        mirroring how `run_translator_loop` already wraps
         `feeder.flush_capture` the same way.
         """
         if self._baseline_reader is None or not self._settings.capture_baseline_recording_enabled:
@@ -1043,7 +1043,7 @@ class RunWitnessRecorder:
             raise
         except Exception:
             _log.exception(
-                "run_witness.baseline_read_failed",
+                "run_translator.baseline_read_failed",
                 capture_code=capture_code,
                 run_id=str(run_id),
             )
@@ -1074,7 +1074,7 @@ class RunWitnessRecorder:
             raise
         except Exception:
             _log.exception(
-                "run_witness.experiment_identity_read_failed",
+                "run_translator.experiment_identity_read_failed",
                 capture_code=capture_code,
                 run_id=str(run_id),
             )
@@ -1086,7 +1086,7 @@ class RunWitnessRecorder:
         # closed, so the dedup state must already read IDLE by the time
         # `_promote` runs next in `observe_capture`.
         #
-        # SECURITY NOTE (see seed_run_witness.py): TruncateRun's decider
+        # SECURITY NOTE (see seed_run_translator.py): TruncateRun's decider
         # has no conduct_mode gate, unlike RecordWitnessedRunOutcome's.
         # This principal's safety depends entirely on `stale_run_id`
         # coming from `_open_captures`, which this runtime populates
@@ -1122,13 +1122,13 @@ class RunWitnessRecorder:
                 TruncateRun(
                     run_id=stale_run_id,
                     reason=(
-                        f"RunWitness observed a new Begun for capture {code} "
+                        f"RunTranslator observed a new Begun for capture {code} "
                         f"while the previous Run was still open: the terminal "
                         f"for that capture was never observed."
                     ),
                     interrupted_at=None,
                 ),
-                principal_id=RUN_WITNESS_AGENT_ID,
+                principal_id=RUN_TRANSLATOR_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
                 surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
@@ -1136,19 +1136,19 @@ class RunWitnessRecorder:
             raise
         except UnauthorizedError:
             _log.warning(
-                "run_witness.truncate_unauthorized",
+                "run_translator.truncate_unauthorized",
                 capture_code=code,
                 run_id=str(stale_run_id),
             )
         except Exception:
             _log.exception(
-                "run_witness.truncate_failed",
+                "run_translator.truncate_failed",
                 capture_code=code,
                 run_id=str(stale_run_id),
             )
         else:
             _log.info(
-                "run_witness.truncated_stale_run",
+                "run_translator.truncated_stale_run",
                 capture_code=code,
                 run_id=str(stale_run_id),
             )
@@ -1171,33 +1171,33 @@ class RunWitnessRecorder:
             capture_code=code,
             observed_phase=phase,
             observed_at=observation.observed_at,
-            monitor_source_id=RUN_WITNESS_MONITOR_SOURCE_ID,
+            monitor_source_id=RUN_TRANSLATOR_MONITOR_SOURCE_ID,
             trigger="Monitor",
             capture_progress_snapshot=self._build_progress_snapshot(code),
         )
         try:
             await self._record_witnessed_run_outcome(
                 command,
-                principal_id=RUN_WITNESS_AGENT_ID,
+                principal_id=RUN_TRANSLATOR_AGENT_ID,
                 correlation_id=self._deps.id_generator.new_id(),
                 surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
         except asyncio.CancelledError:
             raise
         except UnauthorizedError:
-            # Configuration fault: the RunWitness principal is not
+            # Configuration fault: the RunTranslator principal is not
             # granted RecordWitnessedRunOutcome. Log loudly; leave the
             # entry open so the next BEGUN truncates it and promotes
             # fresh once the grant is fixed.
             _log.warning(
-                "run_witness.outcome_unauthorized",
+                "run_translator.outcome_unauthorized",
                 capture_code=code,
                 run_id=str(run_id),
             )
             return
         except Exception:
             _log.exception(
-                "run_witness.outcome_failed",
+                "run_translator.outcome_failed",
                 capture_code=code,
                 run_id=str(run_id),
             )
@@ -1217,7 +1217,7 @@ class RunWitnessRecorder:
         self._last_capture_path.pop(code, None)
         self._begun_at.pop(code, None)
         _log.info(
-            "run_witness.outcome_recorded",
+            "run_translator.outcome_recorded",
             capture_code=code,
             run_id=str(run_id),
             observed_phase=str(observation.phase),
@@ -1230,7 +1230,7 @@ class RunWitnessRecorder:
         By this point `record_witnessed_run_outcome` has already
         succeeded, so (mirroring `_read_baseline`'s exact posture) a
         failure here must be logged and must never unwind it. Gated on
-        BOTH a store being configured (`run_witness_lifespan` wires one
+        BOTH a store being configured (`run_translator_lifespan` wires one
         whenever `capture_watch_pvs` declares the `full_file_name` role
         for at least one code) and the fifth kill switch,
         `capture_path_recording_enabled`.
@@ -1246,7 +1246,7 @@ class RunWitnessRecorder:
         resolved = self._resolve_capture_path(code)
         if resolved is None:
             _log.info(
-                "run_witness.capture_path_unresolved",
+                "run_translator.capture_path_unresolved",
                 capture_code=code,
                 run_id=str(run_id),
             )
@@ -1280,14 +1280,14 @@ class RunWitnessRecorder:
             # sink is not the vault: it cannot be erased. Log the
             # exception's class name only, never the object itself.
             _log.error(
-                "run_witness.capture_path_write_failed",
+                "run_translator.capture_path_write_failed",
                 capture_code=code,
                 run_id=str(run_id),
                 error_class=type(exc).__name__,
             )
             return
         _log.info(
-            "run_witness.capture_path_recorded",
+            "run_translator.capture_path_recorded",
             capture_code=code,
             run_id=str(run_id),
         )
@@ -1342,7 +1342,7 @@ async def rebuild_open_captures(deps: Kernel, *, list_runs: ListRunsHandler) -> 
     """Page through every Running, Witnessed Run and return
     capture_code -> run_id for each one's `external_refs`.
 
-    Seeds `RunWitnessRecorder`'s dedup state once at boot so a capture
+    Seeds `RunTranslator`'s dedup state once at boot so a capture
     still open at process restart is never re-promoted. Mirrors
     `_run_supervisor._drain_runs` / `_run_initiator._drain_running_runs`'s
     exact paging shape.
@@ -1359,7 +1359,7 @@ async def rebuild_open_captures(deps: Kernel, *, list_runs: ListRunsHandler) -> 
                 cursor=cursor,
                 limit=_PAGE_LIMIT,
             ),
-            principal_id=RUN_WITNESS_AGENT_ID,
+            principal_id=RUN_TRANSLATOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
             surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
         )
@@ -1375,11 +1375,11 @@ async def rebuild_open_captures(deps: Kernel, *, list_runs: ListRunsHandler) -> 
         cursor = page.next_cursor
 
 
-async def run_witness_loop(
+async def run_translator_loop(
     *,
     observer: CaptureObserver,
     capture_codes: frozenset[str],
-    recorder: RunWitnessRecorder | None = None,
+    recorder: RunTranslator | None = None,
     feeder: CaptureProgressFeeder | None = None,
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
 ) -> None:
@@ -1388,25 +1388,25 @@ async def run_witness_loop(
 
     A `CaptureProgressObservation` fans out to TWO independent sinks:
     `recorder.observe_progress()` (retains the latest per-role reading
-    so a terminal can carry it as evidence; see `RunWitnessRecorder
+    so a terminal can carry it as evidence; see `RunTranslator
     ._build_progress_snapshot`) and `feeder.offer()` (buffers it for
     the next `AppendObservations` flush). Order between the two is
     immaterial: both are synchronous and neither raises in normal
     operation. A `CapturePreconditionBypassObservation` goes only to
     `recorder.observe_precondition_bypass()` (retains the latest
-    reading so the NEXT genesis can stamp it; see `RunWitnessRecorder
+    reading so the NEXT genesis can stamp it; see `RunTranslator
     ._build_precondition_bypass_snapshot`): it has no `feeder`
     counterpart, since it is never written as an `AppendObservations`
     row, only carried onto `RunStarted`. A `CapturePathObservation`
     (slice 13) likewise goes only to `recorder.observe_capture_path()`
     (retains the latest reading so a terminal can resolve it through
-    the dual-clock guard; see `RunWitnessRecorder._resolve_capture_path`):
+    the dual-clock guard; see `RunTranslator._resolve_capture_path`):
     no `feeder` counterpart either, since it never rides
     `AppendObservations` -- it goes to the `run_capture_path` PII
     vault, not the observation logbook. A `CaptureOrchestratorRefObservation`
     likewise goes only to `recorder.observe_orchestrator_ref()` (retains
     the latest reading so the NEXT genesis can attach it through the
-    consume-once lead-time guard; see `RunWitnessRecorder
+    consume-once lead-time guard; see `RunTranslator
     ._consume_orchestrator_ref`): no `feeder` counterpart either, since
     it rides `RunStarted.external_refs`, never `AppendObservations`. A
     `CaptureLifecycleObservation` on a phase in
@@ -1450,7 +1450,7 @@ async def run_witness_loop(
                         raise
                     except Exception:
                         _log.exception(
-                            "run_witness.progress_flush_failed",
+                            "run_translator.progress_flush_failed",
                             capture_code=observation.capture_code,
                         )
                 try:
@@ -1462,18 +1462,18 @@ async def run_witness_loop(
                     raise
                 except Exception:
                     _log.exception(
-                        "run_witness.record_failed",
+                        "run_translator.record_failed",
                         capture_code=observation.capture_code,
                     )
         except asyncio.CancelledError:
             raise
         except Exception:
-            _log.exception("run_witness.iteration_failed")
+            _log.exception("run_translator.iteration_failed")
         await asyncio.sleep(reconnect_delay_seconds)
 
 
 @contextlib.asynccontextmanager
-async def run_witness_lifespan(
+async def run_translator_lifespan(
     *,
     observer: CaptureObserver,
     capture_codes: frozenset[str],
@@ -1492,10 +1492,10 @@ async def run_witness_lifespan(
     capture_experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
     experiment_identity_store: ExperimentIdentityStore | None = None,
     capture_probe_store: CaptureProbeStore | None = None,
-) -> AsyncGenerator[RunWitnessRecorder | None]:
+) -> AsyncGenerator[RunTranslator | None]:
     """Run the watcher as a background task for the app's lifetime.
 
-    Yields the constructed `RunWitnessRecorder` (or `None`, in the
+    Yields the constructed `RunTranslator` (or `None`, in the
     no-`capture_codes` no-op case, or when `record_witnessed_run` is
     not supplied so the recorder stays shadow-only) so a sibling
     composition-root task started later in the same `async with` group
@@ -1558,7 +1558,7 @@ async def run_witness_lifespan(
     A supplied `capture_probe_store` (slice 16) REQUIRES
     `record_witnessed_run` (checked above, before this docstring's own
     baseline/experiment-identity checks): the write is a
-    `RunWitnessRecorder` method, so with no recorder constructed the
+    `RunTranslator` method, so with no recorder constructed the
     store would otherwise be accepted and silently never written to --
     precisely in the shadow-only configuration this store's own kill
     switch exists to serve. Once that prerequisite holds, the store is
@@ -1586,11 +1586,11 @@ async def run_witness_lifespan(
             if value is None
         ]
         if missing:
-            msg = f"run_witness_lifespan: record_witnessed_run requires {', '.join(missing)}"
+            msg = f"run_translator_lifespan: record_witnessed_run requires {', '.join(missing)}"
             raise ValueError(msg)
 
     if capture_probe_store is not None and record_witnessed_run is None:
-        # The probe write is a RunWitnessRecorder method, and the
+        # The probe write is a RunTranslator method, and the
         # recorder is only constructed below when record_witnessed_run
         # is supplied. Without this guard, a caller passing
         # capture_probe_store to an otherwise shadow-only lifespan (no
@@ -1599,7 +1599,7 @@ async def run_witness_lifespan(
         # module-level `observe_capture` (log-only) branch instead --
         # in exactly the shadow-only configuration this store's own
         # kill switch is designed to serve.
-        msg = "run_witness_lifespan: capture_probe_store requires record_witnessed_run"
+        msg = "run_translator_lifespan: capture_probe_store requires record_witnessed_run"
         raise ValueError(msg)
 
     baseline_reader: CaptureBaselineReader | None = None
@@ -1614,7 +1614,7 @@ async def run_witness_lifespan(
             if value is None
         ]
         if missing:
-            msg = f"run_witness_lifespan: capture_baseline_pvs requires {', '.join(missing)}"
+            msg = f"run_translator_lifespan: capture_baseline_pvs requires {', '.join(missing)}"
             raise ValueError(msg)
         # Narrowed by the checks above; deps is not None because
         # record_witnessed_run is not None (see the first check above).
@@ -1642,7 +1642,7 @@ async def run_witness_lifespan(
         ]
         if missing:
             msg = (
-                "run_witness_lifespan: capture_experiment_identity_pvs requires "
+                "run_translator_lifespan: capture_experiment_identity_pvs requires "
                 f"{', '.join(missing)}"
             )
             raise ValueError(msg)
@@ -1658,13 +1658,13 @@ async def run_witness_lifespan(
             store=experiment_identity_store,
         )
 
-    recorder: RunWitnessRecorder | None = None
+    recorder: RunTranslator | None = None
     if record_witnessed_run is not None:
         # Narrowed by the check above.
         assert deps is not None
         assert record_witnessed_run_outcome is not None
         assert truncate_run is not None
-        recorder = RunWitnessRecorder(
+        recorder = RunTranslator(
             deps=deps,
             record_witnessed_run=record_witnessed_run,
             record_witnessed_run_outcome=record_witnessed_run_outcome,
@@ -1690,7 +1690,7 @@ async def run_witness_lifespan(
         ]
         if missing:
             msg = (
-                "run_witness_lifespan: capture_progress_recording_enabled "
+                "run_translator_lifespan: capture_progress_recording_enabled "
                 f"requires {', '.join(missing)}"
             )
             raise ValueError(msg)
@@ -1711,7 +1711,7 @@ async def run_witness_lifespan(
             # shadow-only (writes nothing). Refuse rather than silently
             # break shadow mode's own promise.
             msg = (
-                "run_witness_lifespan: capture_progress_recording_enabled=True "
+                "run_translator_lifespan: capture_progress_recording_enabled=True "
                 "requires deps.settings.run_witness_recording_enabled=True"
             )
             raise ValueError(msg)
@@ -1725,13 +1725,13 @@ async def run_witness_lifespan(
 
     tasks = [
         asyncio.create_task(
-            run_witness_loop(
+            run_translator_loop(
                 observer=observer,
                 capture_codes=capture_codes,
                 recorder=recorder,
                 feeder=feeder,
             ),
-            name="run-witness",
+            name="run-translator",
         )
     ]
     if feeder is not None:
@@ -1767,10 +1767,10 @@ async def run_witness_lifespan(
 
 
 __all__ = [
-    "RUN_WITNESS_MONITOR_SOURCE_ID",
-    "RunWitnessRecorder",
+    "RUN_TRANSLATOR_MONITOR_SOURCE_ID",
+    "RunTranslator",
     "observe_capture",
     "rebuild_open_captures",
-    "run_witness_lifespan",
-    "run_witness_loop",
+    "run_translator_lifespan",
+    "run_translator_loop",
 ]

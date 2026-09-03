@@ -22,14 +22,14 @@ shape. This module instead holds one PERSISTENT outbound connection across
 many ticks (reopening it every 1-2 seconds would be pure handshake overhead
 for a live feed), and reconnects with backoff when the relay is unreachable
 rather than treating each drop as an isolated tick failure. That is closer
-to `_run_witness.py`'s hand-rolled shape than to the flag-watcher family.
+to `_run_translator.py`'s hand-rolled shape than to the flag-watcher family.
 
 ## Current scope
 
 Each tick reads and pushes:
 
   - open Runs (`Running` + `Held`), each with `progress` from
-    `RunWitnessRecorder.progress_readings()` and a `progress_trail` from
+    `RunTranslator.progress_readings()` and a `progress_trail` from
     `progress_trails()` (`{}` when unavailable; see `_render_progress` /
     `_render_progress_trail`)
   - open Subjects (`Received` / `Mounted` / `Measured` / `Removed`;
@@ -79,7 +79,7 @@ one is pushed only when genuinely new (a fresh fetch or a terminal
 checkpoint), never repeated, since `_RunHistoryTail.poll` already tracks
 what is new itself.
 
-Deliberately reads ONLY the in-memory `RunWitnessRecorder` for progress,
+Deliberately reads ONLY the in-memory `RunTranslator` for progress,
 not the Postgres-durable `entries_run_observations` fallback
 `PostgresRunChannelLookup` would offer for a run whose capture is not open
 in this process: that path is capped at `capture_progress_flush_tick_seconds`
@@ -215,7 +215,7 @@ if TYPE_CHECKING:
 
     from websockets.asyncio.client import ClientConnection
 
-    from cora.api._run_witness import RunWitnessRecorder
+    from cora.api._run_translator import RunTranslator
     from cora.campaign.features.list_campaigns.handler import Handler as ListCampaignsHandler
     from cora.campaign.features.list_campaigns.query import CampaignStatusFilter
     from cora.data.features.list_datasets.handler import Handler as ListDatasetsHandler
@@ -261,7 +261,7 @@ _ACTIVE_ENCLOSURE_LIFECYCLE = "Active"
 _DECISION_RING_SIZE = 20
 _PROGRESS_TRAIL_POINTS = 30
 """Cap on how many trail points ride the wire per (run, role), independent
-of `RunWitnessRecorder`'s own retention -- the payload stays bounded even
+of `RunTranslator`'s own retention -- the payload stays bounded even
 if that retention ever grows."""
 _RUN_HISTORY_RING_SIZE = 20
 """Producer-side cap on how many run histories `_RunHistoryTail` tracks at
@@ -354,18 +354,18 @@ async def _drain_all(call: Callable[[str | None], Awaitable[Any]]) -> list[Any]:
     return items
 
 
-def _render_progress(run_id: UUID, witness_recorder: RunWitnessRecorder | None) -> dict[str, Any]:
+def _render_progress(run_id: UUID, translator: RunTranslator | None) -> dict[str, Any]:
     """The run's progress readings, JSON-safe, or `{}` when unavailable.
 
     `{}` covers three cases alike, deliberately not distinguished on the
-    wire: witnessing is disabled entirely (`witness_recorder is None`), the
+    wire: witnessing is disabled entirely (`translator is None`), the
     capture behind this run is not open in this process, and the capture is
     open but has not produced a reading yet. All three mean the viewer has
     no progress number to show; none of them is an error.
     """
-    if witness_recorder is None:
+    if translator is None:
         return {}
-    readings = witness_recorder.progress_readings().get(run_id)
+    readings = translator.progress_readings().get(run_id)
     if not readings:
         return {}
     return {
@@ -379,15 +379,15 @@ def _render_progress(run_id: UUID, witness_recorder: RunWitnessRecorder | None) 
 
 
 def _render_progress_trail(
-    run_id: UUID, witness_recorder: RunWitnessRecorder | None
+    run_id: UUID, translator: RunTranslator | None
 ) -> dict[str, list[dict[str, Any]]]:
     """The run's recent progress trail per role, JSON-safe, or `{}` when
     unavailable. Same three-cases-alike `{}` posture as `_render_progress`.
     Tail-sliced to `_PROGRESS_TRAIL_POINTS` independent of the recorder's
     own retention, so the wire payload stays bounded either way."""
-    if witness_recorder is None:
+    if translator is None:
         return {}
-    trails = witness_recorder.progress_trails().get(run_id)
+    trails = translator.progress_trails().get(run_id)
     if not trails:
         return {}
     return {
@@ -431,7 +431,7 @@ async def _drain_open_runs(
     list_runs: ListRunsHandler,
     deps: Kernel,
     *,
-    witness_recorder: RunWitnessRecorder | None,
+    translator: RunTranslator | None,
     plan_names: dict[UUID, str],
 ) -> tuple[list[dict[str, Any]], list[UUID]]:
     """Returns the rendered (JSON-safe) rows AND the raw run_id UUIDs.
@@ -475,8 +475,8 @@ async def _drain_open_runs(
                     # a run with no plan.
                     "plan_name": plan_names.get(item.plan_id),
                     "started_at": render_value(item.running_since or item.created_at),
-                    "progress": _render_progress(item.run_id, witness_recorder),
-                    "progress_trail": _render_progress_trail(item.run_id, witness_recorder),
+                    "progress": _render_progress(item.run_id, translator),
+                    "progress_trail": _render_progress_trail(item.run_id, translator),
                 }
             )
             raw_run_ids.append(item.run_id)
@@ -725,7 +725,7 @@ class _FleetReadinessTail:
         readiness = await read_fleet_readiness(deps.event_store)
         self._ticks_since_read = 0
         # Names, never ids: this row exists to tell an operator which
-        # agents will not act, and `RunWitness` answers that where a uuid
+        # agents will not act, and `RunTranslator` answers that where a uuid
         # does not. Nothing on the page can resolve an agent id anyway.
         self._held = {
             "ready": len(readiness.ready),
@@ -1541,7 +1541,7 @@ async def _build_payload_fields(
     get_enclosure_history: GetEnclosureHistoryHandler,
     activity_tail: _ActivityTail,
     activity_trail: EventActivityTrail,
-    witness_recorder: RunWitnessRecorder | None,
+    translator: RunTranslator | None,
     generated_at: str,
     producer_id: str,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -1567,7 +1567,7 @@ async def _build_payload_fields(
     runs, raw_run_ids = await _drain_open_runs(
         list_runs,
         deps,
-        witness_recorder=witness_recorder,
+        translator=translator,
         plan_names=await _plan_names(list_plans, deps),
     )
     enclosures, raw_enclosure_ids = await _drain_active_enclosures(list_enclosures, deps)
@@ -1625,7 +1625,7 @@ async def _push_loop(
     activity_trail: EventActivityTrail,
     producer_id: str,
     url: str,
-    witness_recorder: RunWitnessRecorder | None,
+    translator: RunTranslator | None,
     request_max_per_tick: int,
 ) -> None:
     """Reconnect-with-backoff outer loop; one open connection sends many
@@ -1703,7 +1703,7 @@ async def _push_loop(
                             get_enclosure_history=get_enclosure_history,
                             activity_tail=activity_tail,
                             activity_trail=activity_trail,
-                            witness_recorder=witness_recorder,
+                            translator=translator,
                             generated_at=generated_at,
                             producer_id=producer_id,
                         )
@@ -1775,7 +1775,7 @@ async def status_push_lifespan(
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
     get_enclosure_history: GetEnclosureHistoryHandler,
-    witness_recorder: RunWitnessRecorder | None = None,
+    translator: RunTranslator | None = None,
 ) -> AsyncGenerator[None]:
     """Spawn the StatusPush loop for the duration of the context.
 
@@ -1789,9 +1789,9 @@ async def status_push_lifespan(
     every test's `create_app()`) never consumes an id from a test's
     `FixedIdGenerator` queue.
 
-    `witness_recorder` is `run_witness_lifespan`'s own yielded value, so the
+    `translator` is `run_translator_lifespan`'s own yielded value, so the
     caller must enter that context manager first and bind it (`main.py`
-    does this by ordering `run_witness_lifespan(...) as witness_recorder`
+    does this by ordering `run_translator_lifespan(...) as translator`
     before this call in the same `async with` group). `None` is a normal
     state, not a misconfiguration: it means witnessing is off, or shadow-only
     with no recorder built; either way progress is simply absent from every
@@ -1843,7 +1843,7 @@ async def status_push_lifespan(
             activity_trail=activity_trail,
             producer_id=producer_id,
             url=url,
-            witness_recorder=witness_recorder,
+            translator=translator,
             request_max_per_tick=deps.settings.status_push_request_max_per_tick,
         ),
         name="status-push",

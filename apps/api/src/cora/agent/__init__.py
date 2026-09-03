@@ -107,6 +107,10 @@ from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
     seed_run_supervisor_agent,
 )
+from cora.agent.seed_run_translator import (
+    RUN_TRANSLATOR_AGENT_ID,
+    seed_run_translator_agent,
+)
 from cora.agent.seed_run_witness import (
     RUN_WITNESS_AGENT_ID,
     seed_run_witness_agent,
@@ -134,6 +138,7 @@ __all__ = [
     "RATIFICATION_ENFORCER_AGENT_ID",
     "RUN_INITIATOR_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
+    "RUN_TRANSLATOR_AGENT_ID",
     "RUN_WITNESS_AGENT_ID",
     "STATUS_PUBLISHER_AGENT_ID",
     "AgentHandlers",
@@ -172,6 +177,7 @@ __all__ = [
     "seed_run_debriefer_local_agent",
     "seed_run_initiator_agent",
     "seed_run_supervisor_agent",
+    "seed_run_translator_agent",
     "seed_run_witness_agent",
     "seed_status_publisher_agent",
     "wire_agent",

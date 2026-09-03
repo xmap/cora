@@ -11,13 +11,13 @@ yet justify on its own (see the commit history for the reasoning).
 Not wrapped in `with_idempotency`: the Run id is fresh and random per
 call, so there is no retry key to collapse against. Dedup against a
 repeated substrate observation (the PV re-reporting the same capture's
-begin) is the RunWitness runtime's own edge-triggered state, not this
+begin) is the RunTranslator runtime's own edge-triggered state, not this
 handler's concern.
 
 Per the roadmap's anti-scope: no REST route, no MCP tool reach this
 handler (see `route.py` / `tool.py`, both stubs). The authorized path in
 is the bound handler on `RunHandlers.record_witnessed_run`, called only by
-the in-process RunWitness runtime as a seeded Agent principal.
+the in-process RunTranslator runtime as a seeded Agent principal.
 """
 
 from typing import Protocol

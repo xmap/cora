@@ -221,7 +221,7 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         # inherited, not freshly reverified against 2bm-docs at S5b.
         "reach_tier": KEEP,  # proved closed: ReachTier StrEnum
         "phase_claimed": DROP,  # watch item RESOLVED at S5b, reversed to DROP: the
-        # producer (`_run_witness.py`'s `phase_claimed=observation.phase is not None,
+        # producer (`_run_translator.py`'s `phase_claimed=observation.phase is not None,
         # observed_at=observation.observed_at`) sets this from a field independent of
         # observed_at, not correlated with it as the compressed aggregate docstring
         # implied, so keeping it would disclose a real, distinct "genuine status/abort

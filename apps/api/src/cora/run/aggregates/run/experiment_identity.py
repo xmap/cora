@@ -20,7 +20,7 @@ other.
 
 `tomoScan_2BM.template` exposes `ProposalNumber`, `ESAFNumber`, and
 `ESAFDOINumber` under `2bmb:TomoScan:`, stamped by `dmagic` from APS
-scheduling data, not by the IOC itself. `RunWitness` has no operator to
+scheduling data, not by the IOC itself. `RunTranslator` has no operator to
 ask for a proposal the way `start_run.external_refs` does (see "Why the
 vault, not the event"), so a witnessed Run has no experiment identity
 at all today. This closes that gap without touching `RunStarted`.

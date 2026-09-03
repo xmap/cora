@@ -2,7 +2,7 @@
 
 Lives in `cora.shared` (`depends_on = []`) rather than in either BC
 because three layers need the SAME answer and would otherwise each
-derive it: `cora.api`'s `RunWitnessRecorder` records which root a
+derive it: `cora.api`'s `RunTranslator` records which root a
 capture path was observed under, `cora.data`'s locator embeds that root
 in an indirect locator, and `cora.run`'s vault persists and keys on it.
 The Run aggregate is restricted to `cora.infrastructure` + `cora.shared`,

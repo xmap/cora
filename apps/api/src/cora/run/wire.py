@@ -65,7 +65,7 @@ store directly, not wrapped behind a command.
 `capture_path_store` (slice 13) follows the identical construction
 shape (built locally from `deps.pool`), but NOT the identical wiring:
 it is surfaced on the bundle for the composition root's
-`RunWitnessRecorder` to write through (it verifies the observed path
+`RunTranslator` to write through (it verifies the observed path
 against the Run's own BEGUN time before writing, so the write cannot be
 a plain command) AND passed into `get_run.bind(deps, capture_path_store=...)`,
 which resolves it inside the handler exactly the way `get_actor.bind(deps,
@@ -167,7 +167,7 @@ class RunHandlers:
     capture_path_store: CapturePathStore
     """Slice 13's PII vault store for a witnessed Run's observed
     capture file path. Surfaced on the bundle for the same reason as
-    `feed_heartbeat_store`: `RunWitnessRecorder` (composition root)
+    `feed_heartbeat_store`: `RunTranslator` (composition root)
     writes through it directly after its own dual-clock guard passes.
     `get_run.bind()` (single-entity, mirroring `get_actor`) reads
     through the SAME instance; `list_runs` deliberately never touches
@@ -176,12 +176,12 @@ class RunHandlers:
     """Slice 14a's vault store for a witnessed Run's proposal / ESAF /
     ESAF-DOI experiment identity. Same surfacing reason and the same
     `list_runs`-never-touches-it posture as `capture_path_store`:
-    `RunWitnessRecorder`'s `CaptureExperimentIdentityReader` writes through it
+    `RunTranslator`'s `CaptureExperimentIdentityReader` writes through it
     directly, and `get_run.bind()` reads through the SAME instance."""
     capture_probe_store: CaptureProbeStore
     """Slice 16's write store for the capture-watch coverage trail.
     Surfaced on the bundle for the same reason as `feed_heartbeat_store`:
-    `RunWitnessRecorder` (composition root) writes through it directly.
+    `RunTranslator` (composition root) writes through it directly.
     UNLIKE `capture_path_store` / `experiment_identity_store`, never
     passed to `get_run.bind()` or any other handler: this store is not
     scoped by `run_id` at all (see `entries_run_capture_probes`'

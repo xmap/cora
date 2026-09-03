@@ -103,7 +103,7 @@ def _extract_capture_code(external_refs: list[dict[str, Any]]) -> str | None:
     Mirrors the public sibling `extract_capture_code` in
     `cora.run.aggregates.run.state` (which does the same lookup against
     the folded aggregate state's `frozenset[Identifier]`, and is what
-    `_run_witness.py` and `get_run`'s handler both call); this one
+    `_run_translator.py` and `get_run`'s handler both call); this one
     operates on the raw JSON list a stored event payload carries, a
     genuinely different input type, so it stays a separate function.
     `None` for a Conducted Run (empty list) and, defensively, for a

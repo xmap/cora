@@ -11,7 +11,7 @@ same field, set here to `"baseline"`.
 
 Unlike `CaptureProgressFeeder` (buffer + periodic flush over the whole
 capture's lifetime), this is a single read-every-PV-once-and-append call,
-invoked exactly once per promotion by `RunWitnessRecorder._promote`
+invoked exactly once per promotion by `RunTranslator._promote`
 immediately after `record_witnessed_run` returns a `run_id`. There is no
 buffer, no tick, and no ongoing liveness claim: a baseline reading is a
 snapshot of genesis, not a trail, so there is nothing for a heartbeat to
@@ -30,7 +30,7 @@ that PV's reading and lets the sweep continue over the rest, mirroring
 way `CaptureProgressFeeder._flush_observations` catches them: a baseline
 read that fails must never prevent or unwind the promotion that
 triggered it, because by the time this runs the promotion has already
-succeeded and `RunWitnessRecorder._open_captures` already reflects it.
+succeeded and `RunTranslator._open_captures` already reflects it.
 
 ## Numeric and categorical readings, one entry kind
 
@@ -153,7 +153,7 @@ class CaptureBaselineReader:
         `AppendObservations` batch against `run_id`.
 
         Concurrent, not sequential: this runs inline inside
-        `RunWitnessRecorder._promote`, itself on `run_witness_loop`'s
+        `RunTranslator._promote`, itself on `run_translator_loop`'s
         single consumer path, so a slow or partially-unreachable
         control system must not block that loop from reacting to the
         NEXT lifecycle observation (for a different capture_code, or a

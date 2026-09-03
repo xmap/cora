@@ -1,11 +1,11 @@
 """The set of Agents CORA ships with itself.
 
-Every deployment gets these twenty-three at boot, seeded by the
+Every deployment gets these twenty-four at boot, seeded by the
 `seed_*_agent` functions. Until this file existed the set existed only
 as sequential calls in `cora.api.main`, which was enough to create them
 and not enough to ask a question ABOUT them.
 
-Four of the twenty-three are two "kind, split by which brain serves it"
+Four of the twenty-four are two "kind, split by which brain serves it"
 pairs: `RunDebriefer`/`RunDebriefer (External)` and
 `CautionDrafter`/`CautionDrafter (External)`. The bare name is the
 local/in-house arm, `(External)` marks the vendor-API arm; both members
@@ -17,6 +17,13 @@ singletons (`RUN_DEBRIEFER_AGENT_ID`/`CAUTION_DRAFTER_AGENT_ID`, from
 are no longer the compile-time default (see `_subscribers.py`), but
 per-id FOREVER-STABLE means they are retired via `deprecate_agent` on a
 deployment, never removed from source.
+
+One further identity, `RunWitness`, was renamed outright to
+`RunTranslator` (`seed_run_translator.py`): not a split, a straight
+rename, since `witness` named the modeling axis this runtime implements
+rather than what it does. `RUN_WITNESS_AGENT_ID` (from `seed_run_witness.py`)
+stays in this tuple unchanged for the same FOREVER-STABLE reason as the
+pair above.
 
 The question that needed asking: which of these can actually act? A
 seeded Agent lands `Versioned` on a fresh bootstrap, but a deployment
@@ -124,6 +131,10 @@ from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
     RUN_SUPERVISOR_AGENT_NAME,
 )
+from cora.agent.seed_run_translator import (
+    RUN_TRANSLATOR_AGENT_ID,
+    RUN_TRANSLATOR_AGENT_NAME,
+)
 from cora.agent.seed_run_witness import (
     RUN_WITNESS_AGENT_ID,
     RUN_WITNESS_AGENT_NAME,
@@ -167,6 +178,7 @@ SEEDED_FLEET: Final[tuple[SeededAgent, ...]] = (
     SeededAgent(RUN_DEBRIEFER_LOCAL_AGENT_ID, RUN_DEBRIEFER_LOCAL_AGENT_NAME),
     SeededAgent(RUN_INITIATOR_AGENT_ID, RUN_INITIATOR_AGENT_NAME),
     SeededAgent(RUN_SUPERVISOR_AGENT_ID, RUN_SUPERVISOR_AGENT_NAME),
+    SeededAgent(RUN_TRANSLATOR_AGENT_ID, RUN_TRANSLATOR_AGENT_NAME),
     SeededAgent(RUN_WITNESS_AGENT_ID, RUN_WITNESS_AGENT_NAME),
     SeededAgent(STATUS_PUBLISHER_AGENT_ID, STATUS_PUBLISHER_AGENT_NAME),
 )

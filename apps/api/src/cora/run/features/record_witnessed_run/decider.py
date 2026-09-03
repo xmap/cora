@@ -219,7 +219,7 @@ def decide(
             plan_id=command.plan_id,
             subject_id=command.subject_id,
             conduct_mode=ConductMode.WITNESSED,
-            trigger_source=f"RunWitness:{command.capture_code}",
+            trigger_source=f"RunTranslator:{command.capture_code}",
             effective_parameters=effective_parameters,
             external_refs=external_refs,
             acknowledged_cautions=acknowledged_cautions,

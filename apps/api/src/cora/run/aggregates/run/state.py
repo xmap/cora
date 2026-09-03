@@ -307,7 +307,7 @@ class ConductMode(StrEnum):
     started today, via `_run_initiator.py` or a phase-conduct bridge,
     is Conducted). `WITNESSED` is an externally-driven act CORA only
     observes after the fact, for example a 2-BM tomoscan scan witnessed
-    by `RunWitness` (see `cora.api._run_witness`) and promoted via
+    by `RunTranslator` (see `cora.api._run_translator`) and promoted via
     `record_witnessed_run`.
 
     Named `WITNESSED`, not `RECORDED`: every Conducted Run is ALSO
@@ -468,7 +468,7 @@ class CapturePreconditionBypassSnapshot:
 
     `observed_at` is the substrate's OWN time for the retained reading
     (dual clock, mirroring `CaptureLifecycleObservation`), and can
-    predate this genesis by an arbitrary amount: `RunWitness` reads the
+    predate this genesis by an arbitrary amount: `RunTranslator` reads the
     `testing` role continuously, independent of any one capture, and
     retains only the LATEST reading seen so far, not a fresh read
     triggered by the genesis itself. Independently nullable from
@@ -556,7 +556,7 @@ class RunCapturePhaseNotTerminalError(Exception):
     The command exists to record ONE of the two facts a witnessed
     capture's lifecycle can end on, `Ended` or `Aborted`; every other
     `CapturePhase` value (`Begun`, `Progressing`, `Unrecognized`) is
-    something the RunWitness runtime already handles without touching
+    something the RunTranslator runtime already handles without touching
     the Run aggregate at all (dedup, or a no-op). A caller reaching this
     decider with a non-terminal phase is a programmer mistake in the
     runtime's own dispatch, not a fact about the world, so this is a
@@ -587,7 +587,7 @@ class RunNotFoundError(Exception):
 class RunNotWitnessedError(Exception):
     """`record_witnessed_run_outcome` targeted a Conducted Run.
 
-    The RunWitness runtime is granted this command so it can terminate
+    The RunTranslator runtime is granted this command so it can terminate
     the Runs it itself created; a Conducted Run's terminal belongs
     exclusively to `complete_run` / `abort_run` / `stop_run` /
     `truncate_run`, reached by an operator or the RunSupervisor, never by
@@ -597,7 +597,7 @@ class RunNotWitnessedError(Exception):
     it. Checked defensively at the decider, mirroring
     `RunMonitorTriggerNotPermittedError`'s posture, rather than trusting
     the runtime's own bookkeeping never to misdirect a call: without
-    this guard, a granted RunWitness principal could terminate any
+    this guard, a granted RunTranslator principal could terminate any
     operator-driven Run.
 
     HTTP 400 (the command itself does not apply to this Run, not a

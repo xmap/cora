@@ -1,5 +1,5 @@
 # pyright: reportPrivateUsage=false
-"""Unit tests for the RunWitness recording boot guard.
+"""Unit tests for the RunTranslator recording boot guard.
 
 `_enforce_run_witness_recording_gate` refuses to boot with
 `run_witness_recording_enabled=True` unless both `run_witness_enabled`

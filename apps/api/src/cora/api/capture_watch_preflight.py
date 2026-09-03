@@ -133,7 +133,7 @@ real value, BAD only as `non-text`.
 nothing makes it follow which camera the operator actually has
 selected. On 2026-08-20 an operator's camera switch left that role
 reading the idle camera's stale filename readback, which is exactly the
-value `RunWitnessRecorder` vaults into `run_capture_path` (personal
+value `RunTranslator` vaults into `run_capture_path` (personal
 data) as the Run's capture path. When a code declares BOTH
 `full_file_name` and the optional `camera_selected` role (the live
 camera-selection readback PV, e.g. 2-BM's
