@@ -56,7 +56,9 @@ from cora.operation.aggregates.procedure import (
     ProcedureStarted,
     ProcedureStatus,
     ResolvedStepsRecorded,
+    SteeringDesignRecorded,
     event_type_name,
+    from_stored,
     load_procedure,
     to_payload,
 )
@@ -67,7 +69,12 @@ from cora.operation.conductor import (
     Step,
     step_to_payload,
 )
-from cora.operation.errors import UnauthorizedError, UnsupportedClosingStepsError
+from cora.operation.errors import (
+    SteeringDesignMismatchError,
+    SteeringWireMismatchError,
+    UnauthorizedError,
+    UnsupportedClosingStepsError,
+)
 from cora.operation.features import (
     abort_procedure,
     append_activities,
@@ -86,12 +93,14 @@ from cora.operation.features.conduct_until_advised_from import (
 from cora.operation.ports.control_port import ControlPort
 from cora.operation.ports.decide_port import (
     SteeringAxis,
+    SteeringBudget,
     SteeringObjective,
     SteeringObjectiveKind,
     SteeringSpace,
 )
 from cora.operation.ports.measurement import Measurement
 from cora.recipe.aggregates.recipe.body import CaptureRef
+from cora.shared.steering import SteeringDesignSource, SteeringSubstrate
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 7, 2, 12, 0, 0, tzinfo=UTC)
@@ -218,6 +227,7 @@ async def _seed_held_steered(
     extra_outcome: tuple[int, float, float] | None = None,
     procedure_id: UUID = _PROCEDURE_ID,
     resolved_closing_steps: tuple[Step, ...] = (),
+    design_pinned: bool = True,
 ) -> None:
     """Land a conducted-then-Held steered Procedure with recorded closed passes.
 
@@ -232,6 +242,12 @@ async def _seed_held_steered(
     `extra_outcome=(index, coordinate, value)` models a crash AFTER the pass
     wrote its outcome but before end_iteration: an Outcome row exists for the
     open pass. It is recovered + re-fed by the resume.
+
+    `design_pinned=False` models a stream conducted BEFORE the design pin
+    existed:
+    steps pinned, design absent. The resume's continuity check has nothing to
+    compare against and must stay silent rather than refuse, so this is the
+    legacy arm, not a variant of the normal case.
     """
     resolved = tuple(step_to_payload(s) for s in _steered_block())
     resolved_closing = tuple(step_to_payload(s) for s in resolved_closing_steps)
@@ -251,8 +267,29 @@ async def _seed_held_steered(
             step_count=len(resolved) + len(resolved_closing),
             occurred_at=_PRIOR,
         ),
-        ProcedureStarted(procedure_id=procedure_id, occurred_at=_PRIOR),
     ]
+    if design_pinned:
+        events.append(
+            SteeringDesignRecorded(
+                procedure_id=procedure_id,
+                objective=_objective(),
+                objective_capture_name=_OBJECTIVE_NAME,
+                space=_space(),
+                budget_iterations_remaining=None,
+                budget_wall_clock_seconds_remaining=None,
+                substrate=SteeringSubstrate.IN_MEMORY,
+                points_per_axis=5,
+                min_observations=5,
+                num_restarts=10,
+                raw_samples=256,
+                seed=0,
+                staged_threshold=5,
+                spend_agent_id=None,
+                design_source=SteeringDesignSource.REQUEST,
+                occurred_at=_PRIOR,
+            )
+        )
+    events.append(ProcedureStarted(procedure_id=procedure_id, occurred_at=_PRIOR))
     for k, _pass in enumerate(closed):
         one_based = k + 1
         events.append(
@@ -327,14 +364,23 @@ async def _current_open_iteration(store: InMemoryEventStore) -> int | None:
     return state.current_iteration_index
 
 
-def _call(handler: ReconductHandler, *, substrate: DecideSubstrate = "in_memory") -> Any:
+def _call(
+    handler: ReconductHandler,
+    *,
+    substrate: DecideSubstrate = "in_memory",
+    objective: SteeringObjective | None = None,
+    space: SteeringSpace | None = None,
+    objective_capture_name: str = _OBJECTIVE_NAME,
+    budget: SteeringBudget | None = None,
+) -> Any:
     return handler(
         ConductUntilAdvisedFrom(
             procedure_id=_PROCEDURE_ID,
-            objective=_objective(),
-            space=_space(),
-            objective_capture_name=_OBJECTIVE_NAME,
+            objective=objective or _objective(),
+            space=space or _space(),
+            objective_capture_name=objective_capture_name,
             decide=DecidePortConfig(substrate=substrate),
+            budget=budget,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -679,3 +725,187 @@ async def test_resume_with_an_llm_brain_surfaces_its_calls_on_the_result() -> No
     assert len(result.llm_calls) == 1
     assert result.llm_calls[0].usage.input_tokens == 700
     assert result.llm_calls[0].request_model == "claude-sonnet-4-5"
+
+
+# --- steering design continuity + the resumed segment's own pin ---
+
+
+async def _design_pins(store: InMemoryEventStore) -> list[SteeringDesignRecorded]:
+    stored, _version = await store.load(stream_type="Procedure", stream_id=_PROCEDURE_ID)
+    pins = [from_stored(e) for e in stored if e.event_type == "SteeringDesignRecorded"]
+    return [pin for pin in pins if isinstance(pin, SteeringDesignRecorded)]
+
+
+async def _resume_once(
+    store: InMemoryEventStore, outcome_store: InMemoryOutcomeStore, **call_kwargs: Any
+) -> Any:
+    port = InMemoryControlPort()
+    port.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    deps = _deps(store)
+    return await _call(_make_conduct_from(deps, port, compute, outcome_store), **call_kwargs)
+
+
+@pytest.mark.unit
+async def test_resume_pins_its_own_design_for_the_resumed_segment() -> None:
+    """A resume records the design it ran under, not just the one it inherited.
+
+    Without this the Procedure ends its life carrying a single pin that
+    describes only the segment before the hold, while the passes after it were
+    driven by whatever the resume request happened to carry.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+
+    await _resume_once(store, outcome_store, substrate="grid_walk")
+
+    pins = await _design_pins(store)
+    assert len(pins) == 2
+    assert pins[0].substrate is SteeringSubstrate.IN_MEMORY
+    assert pins[1].substrate is SteeringSubstrate.GRID_WALK
+
+
+@pytest.mark.unit
+async def test_resume_pins_the_design_before_the_procedure_leaves_held() -> None:
+    """The RESUMED segment's pin, specifically, precedes ProcedureResumed.
+
+    The fixture already seeds a pin from the earlier segment, and that one sits
+    before this resume no matter what, so asserting "some pin precedes
+    ProcedureResumed" would hold even if the resume pinned nothing at all. The
+    count has to be part of the claim, and the substrate has to differ from the
+    seeded one or the duplicate guard correctly writes nothing.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+
+    await _resume_once(store, outcome_store, substrate="grid_walk")
+
+    stored, _version = await store.load(stream_type="Procedure", stream_id=_PROCEDURE_ID)
+    event_types = [e.event_type for e in stored]
+    resumed_index = event_types.index("ProcedureResumed")
+    design_indices = [i for i, name in enumerate(event_types) if name == "SteeringDesignRecorded"]
+
+    assert len(design_indices) == 2
+    assert design_indices[1] < resumed_index
+
+
+@pytest.mark.unit
+async def test_resume_under_an_unchanged_design_adds_no_second_pin() -> None:
+    """Two segments under one design need one pin, and the guard leaves one.
+
+    The pin answers what design the observations were drawn under, and when a
+    resume changes nothing that answer is already on the stream. The hold and
+    resume are recorded by the FSM events either way, so a duplicate would add
+    a row without adding a fact. This is the same guard the forward path relies
+    on after a failed attempt, reached by a different route.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+
+    await _resume_once(store, outcome_store)
+
+    assert len(await _design_pins(store)) == 1
+
+
+@pytest.mark.unit
+async def test_resume_with_a_changed_space_refuses_and_leaves_the_procedure_held() -> None:
+    """The observations already recorded were drawn from the pinned support.
+
+    Asserting only that the call raises would leave the "fires before any FSM
+    event" claim untested, and a guard that refuses AFTER resuming has already
+    done the damage it exists to prevent.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+    widened = SteeringSpace(axes=(SteeringAxis(name=_MOTOR_ADDR, lower=0.0, upper=99.0),))
+
+    with pytest.raises(SteeringDesignMismatchError) as excinfo:
+        await _resume_once(store, outcome_store, space=widened)
+
+    assert excinfo.value.differing_fields == ("space",)
+    assert await _status(store) is ProcedureStatus.HELD
+    assert len(await _design_pins(store)) == 1
+
+
+@pytest.mark.unit
+async def test_resume_with_a_changed_objective_capture_name_refuses() -> None:
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+
+    with pytest.raises(SteeringDesignMismatchError) as excinfo:
+        await _resume_once(store, outcome_store, objective_capture_name="a_different_slot")
+
+    assert excinfo.value.differing_fields == ("objective_capture_name",)
+
+
+@pytest.mark.unit
+async def test_resume_with_a_changed_budget_and_substrate_is_recorded_not_refused() -> None:
+    """Budget and brain config legitimately change across a hold.
+
+    `iterations_remaining` decrements by construction, so comparing it would
+    refuse every ordinary resume. Both are recorded on the new pin instead,
+    which is the only reason the record can say the two segments differed.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)])
+    budget = SteeringBudget(iterations_remaining=3, wall_clock_seconds_remaining=45.0)
+
+    await _resume_once(store, outcome_store, substrate="grid_walk", budget=budget)
+
+    resumed = (await _design_pins(store))[-1]
+    assert resumed.budget_iterations_remaining == 3
+    assert resumed.budget_wall_clock_seconds_remaining == 45.0
+    assert resumed.substrate is SteeringSubstrate.GRID_WALK
+
+
+@pytest.mark.unit
+async def test_resume_of_a_stream_pinned_before_the_design_existed_is_not_refused() -> None:
+    """Absence is not a mismatch.
+
+    Every Procedure conducted before this event existed carries steps and no
+    design. Refusing those would make a record-keeping improvement retroactively
+    break resumes that were fine, so the check stays silent and the resume's own
+    pin closes the gap from its next segment on.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)], design_pinned=False)
+
+    result = await _resume_once(store, outcome_store)
+
+    assert result.succeeded is True
+    assert len(await _design_pins(store)) == 1
+
+
+@pytest.mark.unit
+async def test_a_refused_first_resume_does_not_lock_a_legacy_stream_out_of_resuming() -> None:
+    """A pin left by a resume that never ran must not become the thing to match.
+
+    On a stream with no pin the continuity check has nothing to compare, so the
+    first attempt pins whatever was typed, and the pin outlives the refusal that
+    follows it. If the check then measured against that pin, the only design it
+    would accept is the one the Conductor's wire guard just rejected, and the
+    Procedure could never be resumed again: every remedy the error offers is
+    either the rejected design or discarding the accumulated observations.
+
+    A pin that no segment ever started under governed nothing, so it is not what
+    a later resume has to be continuous with.
+    """
+    store = InMemoryEventStore()
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0)], design_pinned=False)
+    mistyped = SteeringSpace(axes=(SteeringAxis(name="thteta", lower=0.0, upper=10.0),))
+
+    with pytest.raises(SteeringWireMismatchError):
+        await _resume_once(store, outcome_store, space=mistyped)
+    assert await _status(store) is ProcedureStatus.HELD
+
+    result = await _resume_once(store, outcome_store)
+
+    assert result.succeeded is True

@@ -134,6 +134,35 @@ class UnwiredExternalTriggerError(ActionRefusedError):
         self.trigger_mode = trigger_mode
 
 
+class SteeringDesignMismatchError(Exception):
+    """A steered RESUME's design left the design pinned for the earlier segment.
+
+    Raised by `conduct_until_advised_from` when the request's `objective`,
+    `objective_capture_name` or `space` differs from the design pinned for the
+    segment the Procedure last started under. `space` is refused on its merits,
+    being the support the recorded observations were drawn from; the other two
+    are a conservative default, since a mid-Procedure change to either is far
+    more likely a mistake than an intention. `verify_steering_design_continuity`
+    carries the full argument, including the asymmetry it leaves. The budget and
+    the brain configuration are NOT compared, because both legitimately change
+    across a hold; the resume records them instead.
+
+    Well-formed request, unprocessable against the pinned design, and the
+    operator corrects it by restoring the original objective and space (or by
+    starting a fresh Procedure if the search really has moved), so the route
+    maps it to HTTP 422. Fires BEFORE any FSM event, so nothing was resumed.
+    """
+
+    def __init__(self, procedure_id: UUID, differing_fields: tuple[str, ...]) -> None:
+        super().__init__(
+            f"Procedure {procedure_id} was pinned with a different steering design; "
+            f"{', '.join(differing_fields)} must match the pinned design to resume. "
+            "Budget and brain configuration may change and are recorded, not compared."
+        )
+        self.procedure_id = procedure_id
+        self.differing_fields = differing_fields
+
+
 class SteeringWireMismatchError(Exception):
     """A steered conduct request's space/objective does not line up with the recipe.
 

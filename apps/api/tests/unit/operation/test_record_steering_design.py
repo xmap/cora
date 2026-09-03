@@ -24,15 +24,19 @@ from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation._conduct_preparation import (
     SteeringDesign,
     decide_steering_design_recorded,
+    verify_steering_design_continuity,
 )
 from cora.operation.adapters.decide_port_config import DecidePortConfig
 from cora.operation.aggregates.procedure import (
     Procedure,
+    ProcedureHeld,
     ProcedureRegistered,
     ProcedureStarted,
+    ProcedureStatus,
     fold,
     to_payload,
 )
+from cora.operation.errors import SteeringDesignMismatchError
 from cora.operation.ports.decide_port import SteeringBudget
 from cora.shared.steering import (
     SteeringAxis,
@@ -47,6 +51,8 @@ _NOW = datetime(2026, 9, 3, 12, 0, 0, tzinfo=UTC)
 _EARLIER = datetime(2026, 9, 3, 11, 0, 0, tzinfo=UTC)
 _PROCEDURE_ID = UUID("01900000-0000-7000-8000-0000000000d1")
 _AGENT_ID = UUID("01900000-0000-7000-8000-0000000000e1")
+_DEFINED = ProcedureStatus.DEFINED
+_HELD = ProcedureStatus.HELD
 
 
 def _registered() -> ProcedureRegistered:
@@ -62,6 +68,25 @@ def _registered() -> ProcedureRegistered:
 
 def _defined() -> Procedure | None:
     return fold([_registered()])
+
+
+def _running() -> Procedure | None:
+    return fold([_registered(), ProcedureStarted(procedure_id=_PROCEDURE_ID, occurred_at=_EARLIER)])
+
+
+def _held() -> Procedure | None:
+    return fold(
+        [
+            _registered(),
+            ProcedureStarted(procedure_id=_PROCEDURE_ID, occurred_at=_EARLIER),
+            ProcedureHeld(
+                procedure_id=_PROCEDURE_ID,
+                reason="beam dropped",
+                occurred_at=_EARLIER,
+                actuation_kind="Physical",
+            ),
+        ]
+    )
 
 
 def _space(upper: float = 5.0) -> SteeringSpace:
@@ -107,13 +132,17 @@ def _pinned(design: SteeringDesign, *, version: int = 1) -> Sequence[StoredEvent
     Round-trips through `to_payload` so the stored side is a payload, which is
     what the guard compares against on a real stream.
     """
-    events = decide_steering_design_recorded(_defined(), [], design, now=_EARLIER)
+    events = decide_steering_design_recorded(
+        _defined(), [], design, eligible_status=_DEFINED, now=_EARLIER
+    )
     return [_stored_pin(to_payload(events[0]), version=version)]
 
 
 @pytest.mark.unit
 def test_decide_records_the_design_for_a_defined_procedure() -> None:
-    events = decide_steering_design_recorded(_defined(), [], _design(), now=_NOW)
+    events = decide_steering_design_recorded(
+        _defined(), [], _design(), eligible_status=_DEFINED, now=_NOW
+    )
 
     assert len(events) == 1
     event = events[0]
@@ -139,7 +168,9 @@ def test_decide_flattens_the_budget_and_the_brain_config_into_scalars() -> None:
     whole failure the pin exists to prevent, so the flattening is asserted
     field by field rather than through an equality on the event.
     """
-    event = decide_steering_design_recorded(_defined(), [], _design(), now=_NOW)[0]
+    event = decide_steering_design_recorded(
+        _defined(), [], _design(), eligible_status=_DEFINED, now=_NOW
+    )[0]
 
     assert event.budget_iterations_remaining == 12
     assert event.budget_wall_clock_seconds_remaining == 600.0
@@ -153,7 +184,9 @@ def test_decide_flattens_the_budget_and_the_brain_config_into_scalars() -> None:
 
 @pytest.mark.unit
 def test_decide_records_null_budget_scalars_for_an_open_ended_segment() -> None:
-    event = decide_steering_design_recorded(_defined(), [], _design(budget=None), now=_NOW)[0]
+    event = decide_steering_design_recorded(
+        _defined(), [], _design(budget=None), eligible_status=_DEFINED, now=_NOW
+    )[0]
 
     assert event.budget_iterations_remaining is None
     assert event.budget_wall_clock_seconds_remaining is None
@@ -161,22 +194,66 @@ def test_decide_records_null_budget_scalars_for_an_open_ended_segment() -> None:
 
 @pytest.mark.unit
 def test_decide_records_nothing_when_state_is_none() -> None:
-    assert decide_steering_design_recorded(None, [], _design(), now=_NOW) == []
+    assert (
+        decide_steering_design_recorded(None, [], _design(), eligible_status=_DEFINED, now=_NOW)
+        == []
+    )
 
 
 @pytest.mark.unit
 def test_decide_records_nothing_when_procedure_already_running() -> None:
-    running = fold(
-        [_registered(), ProcedureStarted(procedure_id=_PROCEDURE_ID, occurred_at=_EARLIER)]
+    assert (
+        decide_steering_design_recorded(
+            _running(), [], _design(), eligible_status=_DEFINED, now=_NOW
+        )
+        == []
     )
-    assert decide_steering_design_recorded(running, [], _design(), now=_NOW) == []
+
+
+@pytest.mark.unit
+def test_decide_records_the_design_for_a_held_procedure_on_the_resume_arm() -> None:
+    events = decide_steering_design_recorded(
+        _held(), [], _design(), eligible_status=_HELD, now=_NOW
+    )
+
+    assert len(events) == 1
+    assert events[0].occurred_at == _NOW
+
+
+@pytest.mark.unit
+def test_decide_records_nothing_for_a_held_procedure_on_the_forward_arm() -> None:
+    """The reachable case that rules out accepting both statuses at once.
+
+    A forward conduct against a Held Procedure runs the shared pipeline, whose
+    steps decider refuses that status. A design decider that accepted Held as
+    well would append a lone design pin with no steps beside it and only then
+    fail in the Conductor, leaving the record carrying a design for a segment
+    that never ran a step.
+    """
+    assert (
+        decide_steering_design_recorded(_held(), [], _design(), eligible_status=_DEFINED, now=_NOW)
+        == []
+    )
+
+
+@pytest.mark.unit
+def test_decide_records_nothing_for_a_defined_procedure_on_the_resume_arm() -> None:
+    assert (
+        decide_steering_design_recorded(_defined(), [], _design(), eligible_status=_HELD, now=_NOW)
+        == []
+    )
 
 
 @pytest.mark.unit
 def test_decide_suppresses_a_re_pin_of_an_identical_design() -> None:
     design = _design()
 
-    assert decide_steering_design_recorded(_defined(), _pinned(design), design, now=_NOW) == []
+    assert (
+        decide_steering_design_recorded(
+            _defined(), _pinned(design), design, eligible_status=_DEFINED, now=_NOW
+        )
+        == []
+    )
 
 
 @pytest.mark.unit
@@ -191,7 +268,9 @@ def test_decide_re_pins_a_design_whose_only_difference_is_the_space() -> None:
     first = _design()
     corrected = _design(space=_space(upper=9.0))
 
-    events = decide_steering_design_recorded(_defined(), _pinned(first), corrected, now=_NOW)
+    events = decide_steering_design_recorded(
+        _defined(), _pinned(first), corrected, eligible_status=_DEFINED, now=_NOW
+    )
 
     assert len(events) == 1
     assert events[0].space == _space(upper=9.0)
@@ -216,7 +295,9 @@ def test_decide_re_pins_a_design_differing_in_any_single_input(corrected: Steeri
     indistinguishable from a key that matched, and one design input quietly
     excluded from the guard is one input a correction cannot re-pin.
     """
-    assert decide_steering_design_recorded(_defined(), _pinned(_design()), corrected, now=_NOW)
+    assert decide_steering_design_recorded(
+        _defined(), _pinned(_design()), corrected, eligible_status=_DEFINED, now=_NOW
+    )
 
 
 @pytest.mark.unit
@@ -225,7 +306,12 @@ def test_decide_suppresses_a_re_pin_that_differs_only_in_when_it_happened() -> N
     pinned = _pinned(design)
     assert pinned[0].payload["occurred_at"] == _EARLIER.isoformat()
 
-    assert decide_steering_design_recorded(_defined(), pinned, design, now=_NOW) == []
+    assert (
+        decide_steering_design_recorded(
+            _defined(), pinned, design, eligible_status=_DEFINED, now=_NOW
+        )
+        == []
+    )
 
 
 @pytest.mark.unit
@@ -241,7 +327,9 @@ def test_decide_compares_against_the_latest_pin_not_the_first() -> None:
     corrected = _design(space=_space(upper=9.0))
     stream = [*_pinned(original, version=1), *_pinned(corrected, version=2)]
 
-    events = decide_steering_design_recorded(_defined(), stream, original, now=_NOW)
+    events = decide_steering_design_recorded(
+        _defined(), stream, original, eligible_status=_DEFINED, now=_NOW
+    )
 
     assert len(events) == 1
     assert events[0].space == _space()
@@ -257,7 +345,9 @@ def test_decide_ignores_pins_of_other_event_types_on_the_stream() -> None:
         payload={"procedure_id": str(_PROCEDURE_ID), "resolved_steps": [], "step_count": 0},
     )
 
-    events = decide_steering_design_recorded(_defined(), [steps_pin], design, now=_NOW)
+    events = decide_steering_design_recorded(
+        _defined(), [steps_pin], design, eligible_status=_DEFINED, now=_NOW
+    )
 
     assert len(events) == 1
 
@@ -274,4 +364,142 @@ def test_decide_re_pins_when_the_stored_pin_carries_a_key_this_code_cannot_read(
     pinned = _pinned(design)
     widened = replace(pinned[0], payload={**pinned[0].payload, "acquisition": "qEI"})
 
-    assert decide_steering_design_recorded(_defined(), [widened], design, now=_NOW)
+    assert decide_steering_design_recorded(
+        _defined(), [widened], design, eligible_status=_DEFINED, now=_NOW
+    )
+
+
+# --- verify_steering_design_continuity (the resume's refusal) ---
+
+
+def _fsm(event_type: str, *, version: int) -> StoredEvent:
+    return replace(_stored_pin({}, version=version), event_type=event_type)
+
+
+def _governed(design: SteeringDesign, *, version: int = 1) -> list[StoredEvent]:
+    """A pin that a segment actually started under, which is the only kind the
+    check measures against."""
+    return [*_pinned(design, version=version), _fsm("ProcedureStarted", version=version + 1)]
+
+
+@pytest.mark.unit
+def test_continuity_accepts_a_resume_under_the_governing_design() -> None:
+    verify_steering_design_continuity(_PROCEDURE_ID, _governed(_design()), _design())
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("changed", "expected"),
+    [
+        (_design(space=_space(upper=9.0)), ("space",)),
+        (_design(objective_capture_name="other_capture"), ("objective_capture_name",)),
+        (
+            _design(
+                objective=SteeringObjective(
+                    kind=SteeringObjectiveKind.MAXIMIZE,
+                    target_measurement_name="rotation_center",
+                    target_value=None,
+                )
+            ),
+            ("objective",),
+        ),
+        (
+            _design(
+                objective=SteeringObjective(
+                    kind=SteeringObjectiveKind.SATISFY,
+                    target_measurement_name="rotation_center",
+                    target_value=2048.0,
+                )
+            ),
+            ("objective",),
+        ),
+    ],
+)
+def test_continuity_refuses_a_resume_and_names_the_field_that_changed(
+    changed: SteeringDesign, expected: tuple[str, ...]
+) -> None:
+    """Each compared key, one at a time, including both halves of `objective`.
+
+    `objective` is a whole value object compared as one unit, so a rule that
+    reached only two of the three keys, or an error that reported a fixed
+    field name, would still pass a test that varied `space` alone.
+    """
+    with pytest.raises(SteeringDesignMismatchError) as excinfo:
+        verify_steering_design_continuity(_PROCEDURE_ID, _governed(_design()), changed)
+
+    assert excinfo.value.differing_fields == expected
+
+
+@pytest.mark.unit
+def test_continuity_reports_every_field_that_changed_not_just_the_first() -> None:
+    """An operator who changed three things should be told about three.
+
+    Reporting only the first would send them round the loop once per field,
+    and every raising test that varies a single input passes either way.
+    """
+    changed = _design(
+        space=_space(upper=9.0),
+        objective_capture_name="other_capture",
+        objective=SteeringObjective(kind=SteeringObjectiveKind.EXPLORE),
+    )
+
+    with pytest.raises(SteeringDesignMismatchError) as excinfo:
+        verify_steering_design_continuity(_PROCEDURE_ID, _governed(_design()), changed)
+
+    assert excinfo.value.differing_fields == ("objective", "objective_capture_name", "space")
+
+
+@pytest.mark.unit
+def test_continuity_is_silent_when_no_pin_exists_at_all() -> None:
+    verify_steering_design_continuity(
+        _PROCEDURE_ID, [_fsm("ProcedureStarted", version=1)], _design()
+    )
+
+
+@pytest.mark.unit
+def test_continuity_measures_against_the_latest_governing_pin_not_the_first() -> None:
+    """Two designs have governed segments; the one in force is the later.
+
+    A head-scan here would hold every future resume to the design a Procedure
+    was first conducted under, so a legitimate re-pin could never be resumed
+    from. The two-pin streams elsewhere in this suite are built AFTER the check
+    has run, so none of them would catch the direction being wrong.
+    """
+    first = _design()
+    second = _design(space=_space(upper=9.0))
+    stream = [
+        *_pinned(first, version=1),
+        _fsm("ProcedureStarted", version=2),
+        _fsm("ProcedureHeld", version=3),
+        *_pinned(second, version=4),
+        _fsm("ProcedureResumed", version=5),
+    ]
+
+    verify_steering_design_continuity(_PROCEDURE_ID, stream, second)
+
+    with pytest.raises(SteeringDesignMismatchError):
+        verify_steering_design_continuity(_PROCEDURE_ID, stream, first)
+
+
+@pytest.mark.unit
+def test_continuity_ignores_a_pin_no_segment_ever_started_under() -> None:
+    """The pin a refused attempt left behind governed nothing.
+
+    Everything between the pin and the Conductor can still refuse: the steering
+    wire guard, the brain factory, the resume's own authorization. Measuring
+    against what those left behind would accept only the design that was just
+    rejected, and on a stream with no earlier governing pin that locks the
+    Procedure out of resuming for good.
+    """
+    abandoned = _design(space=_space(upper=1.0))
+    stream = [
+        *_pinned(_design(), version=1),
+        _fsm("ProcedureStarted", version=2),
+        _fsm("ProcedureHeld", version=3),
+        *_pinned(abandoned, version=4),
+    ]
+
+    verify_steering_design_continuity(_PROCEDURE_ID, stream, _design())
+
+    with pytest.raises(SteeringDesignMismatchError):
+        verify_steering_design_continuity(_PROCEDURE_ID, stream, abandoned)

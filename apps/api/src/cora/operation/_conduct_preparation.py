@@ -56,6 +56,7 @@ from cora.operation.aggregates.procedure import (
     to_payload,
 )
 from cora.operation.conductor import Step, step_to_payload
+from cora.operation.errors import SteeringDesignMismatchError
 from cora.operation.ports.decide_port import SteeringBudget
 from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import CapabilityStatus, load_capability
@@ -71,6 +72,8 @@ from cora.shared.steering import (
     SteeringObjective,
     SteeringSpace,
     SteeringSubstrate,
+    serialize_objective,
+    serialize_space,
 )
 
 if TYPE_CHECKING:
@@ -166,18 +169,26 @@ def decide_steering_design_recorded(
     stored_events: Sequence[StoredEvent],
     design: SteeringDesign,
     *,
+    eligible_status: ProcedureStatus,
     now: datetime,
 ) -> list[SteeringDesignRecorded]:
     """Pin a steered segment's design inputs iff pre-conduct and not already pinned.
 
-    Returns `[]` on the same status rule as `decide_resolved_steps_recorded`
-    (None or not `Defined`), so a design is never pinned without the steps it
-    chose sitting beside it. The converse does not hold, deliberately: on a
-    retry whose design is unchanged the duplicate guard below suppresses this
-    pin while the steps pin fires again, leaving a steps pin with no design
-    beside it. That reads correctly, because the design already on the stream
-    is still the one in force. The resume path's eligible status is `Held`,
-    and widening this guard is that slice's job.
+    `eligible_status` is required rather than defaulted because the two callers
+    genuinely differ and neither is the obvious default: the forward path pins
+    while `Defined`, matching `decide_resolved_steps_recorded` so a design is
+    never pinned without the steps it chose beside it, and the resume path pins
+    while `Held`, where there is no steps pin to accompany because a resume
+    replays the pinned list rather than resolving a new one. Accepting both
+    statuses unconditionally would be wrong in a reachable way: a forward
+    conduct against a Held Procedure would emit a lone design pin, since the
+    steps decider refuses that status, and only then fail in the Conductor.
+
+    The design-implies-steps direction does not hold in reverse, deliberately:
+    on a retry whose design is unchanged the duplicate guard below suppresses
+    this pin while the steps pin fires again, leaving a steps pin with no
+    design beside it. That reads correctly, because the design already on the
+    stream is still the one in force.
 
     Also returns `[]` when the latest pin already on the stream carries an
     IDENTICAL design. This guard is load-bearing here in a way it is not for
@@ -195,7 +206,7 @@ def decide_steering_design_recorded(
     a duplicate check into a 500. A payload that cannot be compared simply
     differs, and differing means pin again, which is the safe direction.
     """
-    if state is None or state.status is not ProcedureStatus.DEFINED:
+    if state is None or state.status is not eligible_status:
         return []
     budget = design.budget
     event = SteeringDesignRecorded(
@@ -222,6 +233,155 @@ def decide_steering_design_recorded(
     if latest is not None and _designs_match(latest.payload, to_payload(event)):
         return []
     return [event]
+
+
+_SEGMENT_START_TYPES = ("ProcedureStarted", "ProcedureResumed")
+
+
+def find_governing_steering_design_record(
+    stored_events: Sequence[StoredEvent],
+) -> StoredEvent | None:
+    """The latest design pin a conduct segment actually STARTED under, or None.
+
+    Not the same question as `find_latest_steering_design_record`, and the
+    difference is load-bearing rather than cosmetic. A pin is written before
+    the Conductor runs, and several things between the two can still refuse:
+    the steering wire guard, the brain factory, the resume's own authorization.
+    Such a pin sits on the stream having governed nothing.
+
+    For the duplicate guard that does not matter, since it only asks what was
+    written last. For the continuity check it decides whether a Procedure can
+    be resumed at all: measuring against a pin left by an attempt that never
+    started means the only design accepted is the one that was just rejected,
+    and on a stream with no earlier pin to fall back to, nothing can be
+    resumed again. So this reads the last pin PRECEDING the last segment start,
+    and a pin with no start after it is correctly invisible.
+    """
+    last_start = -1
+    for index, event in enumerate(stored_events):
+        if event.event_type in _SEGMENT_START_TYPES:
+            last_start = index
+    if last_start < 0:
+        return None
+    return find_last_event(stored_events[:last_start], "SteeringDesignRecorded")
+
+
+_CONTINUITY_KEYS = ("objective", "objective_capture_name", "space")
+
+
+def verify_steering_design_continuity(
+    procedure_id: UUID,
+    stored_events: Sequence[StoredEvent],
+    design: SteeringDesign,
+) -> None:
+    """Refuse a resume whose objective, capture name or space left the pin behind.
+
+    Only `space` has a first-principles argument: it is a DRAW-time property,
+    fixing the support the recorded x values came from, so resuming a brain
+    over that history while it proposes within different bounds asks it to
+    extrapolate outside the region it has data for.
+
+    The other two are a CONSERVATIVE DEFAULT and should be read as one rather
+    than as the same argument. `objective` is applied at fit time, not draw
+    time: `reconstruct_observations` keeps every `Measurement` on a recorded
+    row and the brain selects its scalar by name, so changing the objective is
+    a re-read of identical data. `objective_capture_name` really does have a
+    correctness condition, but it is agreement with the PINNED STEPS (the slot
+    the block deposits), and checking it here checks a proxy for that. Both are
+    refused because a mid-Procedure change to either is far more likely to be a
+    mistake than an intention, not because the data becomes incommensurable.
+
+    Budget and brain config are NOT compared: `iterations_remaining` decrements
+    across a hold by construction, and a substrate change between segments is a
+    legitimate operator decision. Note the asymmetry this leaves, deliberately:
+    the substrate IS part of the sampling rule, and it may change freely while
+    the objective may not. What makes that defensible is that the substrate is
+    RECORDED by the resume's own pin, so the change stays verifiable, which is
+    the property this whole event exists to provide.
+
+    Silent when no pin GOVERNED an earlier segment, which covers both a
+    Procedure conducted before this event existed and one whose only pin was
+    left by an attempt that never started. Refusing the first would make a
+    record-keeping improvement retroactively break resumes that were fine, and
+    refusing the second would lock the Procedure out of resuming entirely; see
+    `find_governing_steering_design_record`.
+
+    The two sides come from different places, which is what makes this a real
+    check: one was serialized at conduct time and has been sitting in Postgres
+    since, the other is the request in hand. They meet through the same
+    `serialize_*` pair, so a change to those functions between the two writes
+    would read as a design difference rather than a crash. That is the safe
+    direction, and rare enough to leave stated rather than engineered around.
+    """
+    governing = find_governing_steering_design_record(stored_events)
+    if governing is None:
+        return
+    candidate = {
+        "objective": serialize_objective(design.objective),
+        "objective_capture_name": design.objective_capture_name,
+        "space": serialize_space(design.space),
+    }
+    differing = tuple(
+        key for key in _CONTINUITY_KEYS if governing.payload.get(key) != candidate[key]
+    )
+    if differing:
+        raise SteeringDesignMismatchError(procedure_id, differing)
+
+
+async def pin_steering_design(
+    deps: Kernel,
+    *,
+    command_name: str,
+    procedure: Procedure,
+    stored_events: Sequence[StoredEvent],
+    design: SteeringDesign,
+    eligible_status: ProcedureStatus,
+    principal_id: UUID,
+    correlation_id: UUID,
+    causation_id: UUID | None,
+) -> None:
+    """Append the design pin on its own, for a segment with no steps pin to ride.
+
+    The resume half of the pin. `resolve_and_pin_conduct_steps` puts the two
+    pins in one append because it emits both; a resume emits only this one,
+    since it replays the already-pinned step list rather than resolving a new
+    one. So a lone append here is not the split the design forbids, it is the
+    only event there is to write.
+
+    Without it, a Procedure held and resumed under a different substrate would
+    end its life with a record asserting a design that governed only its first
+    half.
+    """
+    events = decide_steering_design_recorded(
+        procedure,
+        stored_events,
+        design,
+        eligible_status=eligible_status,
+        now=deps.clock.now(),
+    )
+    if not events:
+        return
+    _, current_version = await deps.event_store.load(
+        stream_type="Procedure", stream_id=procedure.id
+    )
+    await deps.event_store.append(
+        stream_type="Procedure",
+        stream_id=procedure.id,
+        expected_version=current_version,
+        events=[
+            to_new_event(
+                event_type=event_type_name(event),
+                payload=to_payload(event),
+                occurred_at=event.occurred_at,
+                event_id=deps.id_generator.new_id(),
+                command_name=command_name,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                principal_id=principal_id,
+            )
+            for event in events
+        ],
+    )
 
 
 def _designs_match(pinned: Mapping[str, Any], candidate: Mapping[str, Any]) -> bool:
@@ -338,7 +498,13 @@ async def resolve_and_pin_conduct_steps(
     )
     if steering_design is not None:
         pinned_events.extend(
-            decide_steering_design_recorded(procedure, stored_events, steering_design, now=now)
+            decide_steering_design_recorded(
+                procedure,
+                stored_events,
+                steering_design,
+                eligible_status=ProcedureStatus.DEFINED,
+                now=now,
+            )
         )
     if pinned_events:
         _, current_version = await deps.event_store.load(

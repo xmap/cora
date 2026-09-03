@@ -23,16 +23,23 @@ and result conversion.
   4. locate the PINNED `ResolvedStepsRecorded` (a conducted, Held Procedure
      ALWAYS has one; its absence is corruption -> `ResolvedStepsRecordNotFoundError`,
      500) and parse it back into `Step`s -- resume NEVER re-derives the block.
-  5. RECONSTRUCT the closed passes: read the recorded outcomes (the measured y,
-     via `ProcedureOutcomeLookup`) + the advised points (the x, from the
-     `ProcedureIterationEnded` events on the stream), pair them into a
-     `ResumePlan`, and reject a plan with no open frontier
-     (`SteeringResumeHasNoFrontierError`, 409): no closed pass, or the last
-     closed pass advised Stop (the campaign already ended, nothing to resume).
-  6. `Conductor.conduct_until_advised_from(...)`: resume (Held -> Running, with its
+  5. CONTINUITY: the request's objective / capture name / space must match the
+     latest `SteeringDesignRecorded` on the stream, or the accumulated
+     observations were drawn under a different design
+     (`SteeringDesignMismatchError`, 422). Silent when no pin exists, which is
+     every Procedure conducted before the pin did. Budget and brain config may
+     change and are recorded rather than compared.
+  6. PIN this segment's own design, so a Procedure resumed under a different
+     substrate does not end with a record describing only its first half. A
+     lone append, since a resume replays the pinned steps rather than
+     resolving a fresh list to pin beside it.
+  7. RECONSTRUCT the closed passes: read the self-describing recorded outcomes
+     (each carries its own point AND measurements, via `ProcedureOutcomeLookup`)
+     and map them into the observation history the brain saw.
+  8. `Conductor.conduct_until_advised_from(...)`: resume (Held -> Running, with its
      own authz + off-diagonal parent-Run-Held guard) -> continue the decide loop
      at the frontier -> terminalize (complete on brain Stop / abort on a fault).
-  7. project the `ConductorResult` onto `ConductUntilAdvisedFromResult`.
+  9. project the `ConductorResult` onto `ConductUntilAdvisedFromResult`.
 
 ## Authorization scope
 
@@ -49,6 +56,11 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.operation._conduct_preparation import (
+    SteeringDesign,
+    pin_steering_design,
+    verify_steering_design_continuity,
+)
 from cora.operation._recipe_expansion import find_resolved_steps_record
 from cora.operation._steering_resume import reconstruct_observations
 from cora.operation.adapters.decide_port_config import build_decide_port
@@ -184,6 +196,29 @@ def bind(
         # load is needed here. See [[project_conduct_closing_steps_design]].
         if record.payload.get("resolved_closing_steps"):
             raise UnsupportedClosingStepsError(command.procedure_id)
+
+        # The design this segment will run under, checked against the pinned one
+        # and then pinned in its own right. Both happen BEFORE any FSM event, so
+        # a refused resume leaves the Procedure Held exactly as it was.
+        design = SteeringDesign(
+            objective=command.objective,
+            objective_capture_name=command.objective_capture_name,
+            space=command.space,
+            decide=command.decide,
+            budget=command.budget,
+        )
+        verify_steering_design_continuity(command.procedure_id, stored_events, design)
+        await pin_steering_design(
+            deps,
+            command_name=_COMMAND_NAME,
+            procedure=procedure,
+            stored_events=stored_events,
+            design=design,
+            eligible_status=ProcedureStatus.HELD,
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+        )
 
         # RECONSTRUCT the brain's history from the self-describing outcome rows
         # (each carries its own point + measurements), so this is a sort-then-map

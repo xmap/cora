@@ -622,14 +622,25 @@ class ResolvedStepsRecorded:
 class SteeringDesignRecorded:
     """Provenance event: the design inputs behind a steered conduct segment.
 
-    Appended in the SAME `append` call as `ResolvedStepsRecorded`, once per
-    conduct segment (initial conduct AND resume): the objective, the search
-    space, the budget scalars and the brain configuration the runtime
-    currently takes as command arguments and never persists elsewhere. By
-    Rubin ignorability (Biometrika 63(3):581, 1976) a sampling rule is
-    verifiable only if recorded; this event exists so a steered run's
-    design is recoverable for inference, not to support replay of a
-    learning brain.
+    Carries the objective, the search space, the budget scalars and the brain
+    configuration the runtime takes as command arguments and persists nowhere
+    else. By Rubin ignorability (Biometrika 63(3):581, 1976) a sampling rule
+    is verifiable only if recorded; this event exists so a steered run's
+    design is recoverable for inference, not to support replay of a learning
+    brain.
+
+    Written at most once per conduct segment, and NOT once per segment: an
+    initial conduct appends it in the SAME `append` call as
+    `ResolvedStepsRecorded`, a resume appends it alone (a resume replays the
+    already-pinned step list rather than resolving a new one), and either is
+    suppressed when the design it would record is identical to the latest
+    already on the stream. Two segments under one design therefore leave one
+    pin, which is the whole answer the pin exists to give.
+
+    So a reader attributes a recorded pass to a design the same way in every
+    case: the most recent pin AT OR BEFORE it. Counting pins to count segments
+    does not work, and the FSM events (`ProcedureHeld` / `ProcedureResumed`)
+    are what delimit segments.
 
     `objective` / `space` are the shared `SteeringObjective` / `SteeringSpace`
     VOs from `cora.shared.steering`, the SAME VOs `CampaignSteeringDeclared`

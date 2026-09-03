@@ -24,6 +24,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.operation.errors import (
+    SteeringDesignMismatchError,
+    SteeringWireMismatchError,
+)
 
 _PATH = "/procedures/{pid}/conduct-until-advised-from"
 _OBJECTIVE_NAME = "rotation_center"
@@ -93,3 +97,29 @@ def test_post_conduct_until_advised_from_non_held_procedure_returns_409() -> Non
         run = client.post(_PATH.format(pid=pid), json=_body())
     assert run.status_code == 409
     assert str(pid) in run.json()["detail"]
+
+
+@pytest.mark.contract
+def test_steering_design_mismatch_maps_to_the_same_status_as_its_wire_sibling() -> None:
+    """A design mismatch is unprocessable (422), not a conflict or a server bug.
+
+    Reaching the real refusal over HTTP needs a Held Procedure carrying a design
+    pin, which needs a conduct the contract app cannot drive (the seeded
+    in-process ComputePort is out of reach, as this module's docstring notes).
+    So this pins the mapping by identity instead: `SteeringWireMismatchError` is
+    proven to return 422 by a real request in the forward endpoint's
+    `test_post_conduct_until_advised_space_axis_not_consumed_returns_422`, and
+    sharing its handler is what carries that status over.
+
+    Worth having because the architecture tier cannot see this. Its
+    routes-completeness fitness only asks that every error be registered
+    somewhere, and `test_http_422_handler_registered.py` only asks that a 422
+    handler exist at all, so moving this class into the 409 or 500 group would
+    leave the whole tier green.
+    """
+    app = create_app()
+
+    assert (
+        app.exception_handlers[SteeringDesignMismatchError]
+        is app.exception_handlers[SteeringWireMismatchError]
+    )
