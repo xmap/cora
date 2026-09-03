@@ -111,21 +111,63 @@ _OVERRIDE_WIRE_KEYS: dict[tuple[str, str], str] = {
 # mis-redacts at N == 2.
 #
 # `PartitionRule.partition_parameters` (`tuple[tuple[str, float], ...]`,
-# serialized the same way) has the same latent defect and is the reason
-# this is described as a limitation rather than a one-off. Neither the
-# generator's collection-erasure nor the redactor's zip is fixed here:
-# that is a change to what published records disclose for a second,
-# unrelated aggregate, and it deserves its own reviewed diff rather than
-# riding along inside a Trust change. Dropping the field whole is the
-# fail-closed reading in the meantime, and it is a narrowing: `grants`
+# serialized the same way) had the same latent defect and is the reason
+# this was described as a limitation rather than a one-off.
+#
+# UPDATE: the collection-erasure IS fixed, by the `{"[*]": ...}` rule below,
+# and `partition_parameters` now redacts correctly at any pair count. So this
+# override is no longer describing something the table CANNOT express: it is
+# now a deferred widening. `_classify` yields
+# `{"[*]": {"[]": ["token:uuid", "drop:text"]}}` for `grants`, which matches
+# the real serializer, and withdrawing the override would publish
+# pseudonymised principal ids plus the grant count. That is a disclosure
+# change to a Trust aggregate and belongs in a diff whose reviewers are
+# looking at Trust, not one fixing the export mechanism. Dropping the field
+# whole remains the fail-closed reading in the meantime, and it is a
+# narrowing: `grants`
 # supersedes `permitted_principal_ids` (`token:uuid`) and
 # `permitted_commands` (`drop:text`), so an exported policy record now
 # discloses nothing about its grants instead of pseudonymised principals
 # with no commands beside them.
+#
+# `AssetRegistered.owners`, `AssetOwnerAdded.owner` and `OutboundTerms.scopes`
+# are a THIRD kind:
+# neither a sensitivity judgment nor an unexpressible shape, but a field
+# whose SERIALIZER disagrees with its declared type, so the generated rule
+# describes a payload that is never written. `_owner_to_payload` flattens
+# each wrapper value object to a bare string, so the generated
+# `{"value": drop:text}` rule meets a string and drops the key, while an
+# ABSENT optional meets the None arm and survives as an explicit null. The
+# export would then disclose, per owner, exactly which of name / contact /
+# identifier CORA holds, with the reading inverted: `{}` means every field
+# was populated and dropped. `AssetOwnerContact` is documented as typically
+# an email, so that is a presence oracle over personal data.
+# `AssetOwnerAdded.owner` is the SINGULAR sibling and carries the identical
+# oracle, so both are withheld: fixing one and not the other would leave the
+# same disclosure reachable through a different command.
+# `_serialize_scopes` has the same class of divergence, writing positional
+# `[kind, name, qualifier]` triples where `frozenset[ScopeRef]` says value
+# objects, which would publish an empty list for a populated permit.
+# `Recipe{Defined,Versioned}.{steps,closing}` diverge the other way: `to_dict`
+# wraps the list in `{"steps": [...]}`, so the generated collection rule can
+# never match the stored shape and would describe a payload nobody writes.
+#
+# All are withheld rather than reconciled: fixing them means changing a stored
+# payload shape and its deserializer, which is a migration question, not an
+# export one. Withholding is what these fields effectively did before the
+# collection rule landed; the difference is that the table now SAYS so, and
+# the redaction-profile hash covers the claim.
 _OVERRIDE_DISPOSITIONS: dict[tuple[str, str], str] = {
     ("SafetyEnvelopeVerdict", "enclosure_permitted"): DROP_TEXT,
     ("SafetyEnvelopeVerdict", "beam_available"): DROP_TEXT,
     ("PolicyDefined", "grants"): DROP_OPAQUE,
+    ("AssetRegistered", "owners"): DROP_OPAQUE,
+    ("AssetOwnerAdded", "owner"): DROP_OPAQUE,
+    ("OutboundTerms", "scopes"): DROP_OPAQUE,
+    ("RecipeDefined", "steps"): DROP_OPAQUE,
+    ("RecipeDefined", "closing"): DROP_OPAQUE,
+    ("RecipeVersioned", "steps"): DROP_OPAQUE,
+    ("RecipeVersioned", "closing"): DROP_OPAQUE,
 }
 # `CapturePreconditionBypassSnapshot.beam_preconditions_bypassed` (slice 11)
 # is deliberately NOT added here, despite being a bool that reads as the
@@ -267,6 +309,20 @@ def _classify(annotation: Any, event: str, field: str) -> str | dict[str, Any]:
             return {"[]": inner}
         if any(candidate != inner[0] for candidate in inner[1:]):
             raise UnclassifiedAnnotationError(event, field, annotation)
+        if isinstance(inner[0], dict):
+            # A collection of VALUE OBJECTS. The element rule is dict-shaped,
+            # and so is the rule for a single nested value object, so emitting
+            # the element rule bare would leave the table unable to say which
+            # of the two this field is. `_redact_tier1` then met a dict rule
+            # with a list value, fell through to OMITTED, and published the
+            # field as `{}`: not a withheld key but a positive claim that the
+            # collection was empty.
+            #
+            # Scalar element rules are deliberately NOT wrapped. A string rule
+            # cannot describe a nested object, so there is no ambiguity to
+            # resolve, and the redactor's scalar arms are already documented as
+            # naming the element type rather than the cardinality.
+            return {"[*]": inner[0]}
         return inner[0]
     if origin in (dict, Mapping, MutableMapping):
         return DROP_OPAQUE

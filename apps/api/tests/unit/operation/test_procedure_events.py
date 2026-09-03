@@ -1125,10 +1125,12 @@ def test_steering_design_recorded_disposition_classifies_every_field() -> None:
         "objective_capture_name": "drop:text",
         "space": {
             "axes": {
-                "name": "drop:text",
-                "lower": "keep:number",
-                "upper": "keep:number",
-                "choices": "drop:opaque",
+                "[*]": {
+                    "name": "drop:text",
+                    "lower": "keep:number",
+                    "upper": "keep:number",
+                    "choices": "drop:opaque",
+                }
             }
         },
         "budget_iterations_remaining": "keep:number",
@@ -1165,28 +1167,27 @@ def test_steering_design_recorded_export_publishes_the_scalar_design() -> None:
 
 
 @pytest.mark.unit
-def test_steering_design_recorded_export_drops_the_whole_search_space() -> None:
-    """KNOWN GAP, pinned so the fix cannot land silently.
+def test_steering_design_recorded_export_publishes_every_axis_bound() -> None:
+    """The support survives redaction, which is what the pin is for.
 
-    `space.axes` is a `tuple[SteeringAxis, ...]`. The generator unwraps the
-    collection to its element, producing a dict-shaped disposition, while the
-    stored value is a list, and `_redact_tier1` returns OMITTED when a dict
-    disposition meets a non-dict value. So a populated search space exports as
-    `{}`, which does not read as withheld but as zero-dimensional.
-
-    This is not specific to steering: every `tuple[ValueObject, ...]` field in
-    the record has it, `CampaignSteeringDeclared` included. It must be closed
-    BEFORE anything emits this event, because an empty space in a published
-    record is a false statement about the design rather than a missing one.
-    When it is fixed this test fails, and should be replaced by one asserting
-    the axes survive.
+    A reader cannot tell a real find from the only available option without
+    the range it was drawn from, so a design that loses its axes on export
+    answers nothing. Axis NAMES are `drop:text` and stay dropped; the bounds
+    and the axis count are what make the support legible, and a categorical
+    axis carries neither bound.
     """
     event = _steering_design_recorded()
     stored = to_payload(event)
     assert len(stored["space"]["axes"]) == 2
 
     exported = redact_tier1_payload("SteeringDesignRecorded", stored, token_map=TokenMap())
-    assert exported["space"] == {}
+
+    assert exported["space"] == {
+        "axes": [
+            {"lower": 8000.0, "upper": 12000.0},
+            {"lower": None, "upper": None},
+        ]
+    }
 
 
 @pytest.mark.unit

@@ -6,6 +6,7 @@ drops with nobody editing a list" is demonstrated against the actual
 committed table.
 """
 
+import json
 from uuid import uuid4
 
 import pytest
@@ -315,6 +316,164 @@ def test_tier1_redactor_exposes_fired_fields_per_event_type_accumulated_across_r
     fired = redactor.fired_fields
     assert "AgentDefined" in fired
     assert "agent_id" in fired["AgentDefined"]
+
+
+@pytest.mark.unit
+def test_collection_rule_applies_the_element_rule_to_every_item() -> None:
+    """A `[*]` rule keeps the collection and redacts each element.
+
+    Before the table could say "collection of", a dict-shaped element rule
+    met a list, fell through to OMITTED, and the field published as `{}`:
+    not a withheld key but a positive claim that the collection was empty.
+    Every pre-existing collection case in this file passes `[]`, where the
+    right and wrong answers are indistinguishable.
+    """
+    payload: dict[str, object] = {
+        "campaign_id": "01900000-0000-7000-8000-0000000000e1",
+        "objective": {"kind": "Minimize", "target_measurement_name": "blur", "target_value": 0.0},
+        "space": {
+            "axes": [
+                {"name": "SampleTop_X", "lower": 0.2, "upper": 0.6, "choices": []},
+                {"name": "theta", "lower": -5.0, "upper": 5.0, "choices": []},
+            ]
+        },
+        "occurred_at": "2026-09-03T12:00:00+00:00",
+    }
+
+    redacted = redact_tier1_payload("CampaignSteeringDeclared", payload, token_map=TokenMap())
+
+    assert redacted["space"] == {
+        "axes": [{"lower": 0.2, "upper": 0.6}, {"lower": -5.0, "upper": 5.0}]
+    }
+    json.dumps(redacted)
+
+
+@pytest.mark.unit
+def test_collection_rule_meeting_a_non_collection_withholds_the_field() -> None:
+    """Fail closed when the stored shape disagrees with the table.
+
+    The table states the cardinality, so a scalar arriving where a
+    collection was declared is a disagreement, not an alternative encoding,
+    and publishing it would mean trusting the payload over the rule.
+    """
+    payload: dict[str, object] = {
+        "campaign_id": "01900000-0000-7000-8000-0000000000e1",
+        "objective": {"kind": "Minimize", "target_measurement_name": "b", "target_value": 0.0},
+        "space": {"axes": {"name": "theta", "lower": -5.0, "upper": 5.0, "choices": []}},
+        "occurred_at": "2026-09-03T12:00:00+00:00",
+    }
+
+    redacted = redact_tier1_payload("CampaignSteeringDeclared", payload, token_map=TokenMap())
+
+    assert redacted["space"] == {}
+
+
+@pytest.mark.unit
+def test_a_positional_record_withholds_a_slot_as_null_and_keeps_its_arity() -> None:
+    """Dropping a slot would renumber the rest.
+
+    `partition_parameters` is a collection of (name, value) pairs whose name
+    is `drop:text`. Removing the withheld slot would leave a bare number
+    that reads as the name. The sentinel must not survive either: it is
+    internal and no JSON encoder can write it, so one escaping into a list
+    aborts the entire export.
+    """
+    payload = {
+        "asset_id": "01900000-0000-7000-8000-0000000000a3",
+        "partition_rule": {
+            "kind": "channel",
+            "partition_parameters": [["chan_a", 1.0], ["chan_b", 2.0], ["chan_c", 3.0]],
+        },
+        "occurred_at": "2026-09-03T12:00:00+00:00",
+    }
+
+    redacted = redact_tier1_payload("AssetPartitionRuleUpdated", payload, token_map=TokenMap())
+
+    assert redacted["partition_rule"]["partition_parameters"] == [
+        [None, 1.0],
+        [None, 2.0],
+        [None, 3.0],
+    ]
+    json.dumps(redacted)
+
+
+@pytest.mark.unit
+def test_a_divergent_element_becomes_null_and_the_collection_keeps_its_length() -> None:
+    """An element that disagrees with its rule is withheld, not removed.
+
+    Removing it would shrink the collection, so a populated field would
+    export as fewer items than it had, and an all-divergent field as `[]`:
+    the same false claim of emptiness the collection rule exists to remove,
+    relocated one level down. The sentinel must not survive either, being
+    internal and unserialisable, so one escaping aborts the whole export.
+
+    Reaches the `[*]` branch on purpose. The known divergent serializers in
+    the record are all withheld by explicit override, so a test built on one
+    of those would return at the `drop:` arm and never exercise this.
+    """
+    payload: dict[str, object] = {
+        "campaign_id": "01900000-0000-7000-8000-0000000000e1",
+        "objective": {"kind": "Minimize", "target_measurement_name": "b", "target_value": 0.0},
+        "space": {
+            "axes": [
+                {"name": "theta", "lower": -5.0, "upper": 5.0, "choices": []},
+                "not_an_axis",
+                ["positional", "triple", "form"],
+            ]
+        },
+        "occurred_at": "2026-09-03T12:00:00+00:00",
+    }
+
+    redacted = redact_tier1_payload("CampaignSteeringDeclared", payload, token_map=TokenMap())
+
+    assert redacted["space"] == {"axes": [{"lower": -5.0, "upper": 5.0}, None, None]}
+    json.dumps(redacted)
+
+
+@pytest.mark.unit
+def test_a_wholly_divergent_collection_is_not_published_as_empty() -> None:
+    """Three withheld elements must not read as zero elements."""
+    payload = {
+        "campaign_id": "01900000-0000-7000-8000-0000000000e1",
+        "objective": {"kind": "Minimize", "target_measurement_name": "b", "target_value": 0.0},
+        "space": {"axes": ["a", "b", "c"]},
+        "occurred_at": "2026-09-03T12:00:00+00:00",
+    }
+
+    redacted = redact_tier1_payload("CampaignSteeringDeclared", payload, token_map=TokenMap())
+
+    assert redacted["space"] == {"axes": [None, None, None]}
+    json.dumps(redacted)
+
+
+@pytest.mark.unit
+def test_asset_owners_are_withheld_whole_rather_than_per_field() -> None:
+    """An owner block must not become a presence oracle.
+
+    `_owner_to_payload` flattens each wrapper value object to a bare string,
+    so the generated per-field rules meet strings and drop, while an ABSENT
+    optional meets the None arm and survives as an explicit null. That would
+    disclose which of name / contact / identifier CORA holds, with the
+    reading inverted, over a field documented as typically an email.
+    """
+    payload = {
+        "asset_id": "01900000-0000-7000-8000-0000000000a2",
+        "owners": [
+            {
+                "name": "A Person",
+                "contact": "a@example.org",
+                "identifier": None,
+                "identifier_type": None,
+            },
+            {"name": "B Person", "contact": None, "identifier": None, "identifier_type": None},
+        ],
+        "occurred_at": "2026-09-03T12:00:00+00:00",
+    }
+
+    redacted = redact_tier1_payload("AssetRegistered", payload, token_map=TokenMap())
+
+    assert "owners" not in redacted
+    json.dumps(redacted)
 
 
 def test_tier1_redactor_fired_fields_is_a_copy_not_a_live_view() -> None:
