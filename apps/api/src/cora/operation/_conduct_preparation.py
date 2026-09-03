@@ -10,17 +10,22 @@ the same way before handing it to the Conductor, then pin it identically:
      Plan wires);
   3. pin the FINAL resolved list as a `ResolvedStepsRecorded` provenance
      event BEFORE any step executes, so a later resume replays this exact
-     list rather than re-deriving it.
+     list rather than re-deriving it, and, for a STEERED conduct, pin the
+     design inputs as a `SteeringDesignRecorded` in the SAME append.
 
 A slice cannot import a sibling slice (the cross-slice-independence fitness),
 so this BC-level module owns the shared pipeline, mirroring `_conduct_wire`
 (shared HTTP/MCP shapes) and `_recipe_expansion/_resolved_steps_replay` (the resume-side read).
-The pin is emitted inline rather than via a dedicated command slice:
-`ResolvedStepsRecorded` is an internal provenance event with no operator
-entry point, exactly like `RecipeExpansionRecorded`.
+The pins are emitted inline rather than via a dedicated command slice: both
+are internal provenance events with no operator entry point, exactly like
+`RecipeExpansionRecorded`. They share ONE `append` call because a second
+append would open a window in which the steps are pinned and the design that
+chose them is not, manufacturing exactly the absence the design pin exists to
+remove.
 """
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -35,18 +40,22 @@ from cora.operation._recipe_expansion import (
     verify_bindings_hash,
     verify_steps_hash,
 )
+from cora.operation.adapters.decide_port_config import DecidePortConfig
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureBoundCapabilityDeprecatedError,
+    ProcedureEvent,
     ProcedureStatus,
     ProcedureStepsForbiddenForRecipeDrivenError,
     RecipeExpanderVersionMismatchError,
     RecipeExpansionRecordNotFoundError,
     ResolvedStepsRecorded,
+    SteeringDesignRecorded,
     event_type_name,
     to_payload,
 )
 from cora.operation.conductor import Step, step_to_payload
+from cora.operation.ports.decide_port import SteeringBudget
 from cora.operation.ports.recipe_expander import RecipeExpander
 from cora.recipe.aggregates.capability import CapabilityStatus, load_capability
 from cora.recipe.aggregates.plan import (
@@ -56,6 +65,12 @@ from cora.recipe.aggregates.plan import (
 )
 from cora.recipe.aggregates.recipe import load_recipe_at_version
 from cora.run.aggregates.run import RunNotFoundError, load_run
+from cora.shared.steering import (
+    SteeringDesignSource,
+    SteeringObjective,
+    SteeringSpace,
+    SteeringSubstrate,
+)
 
 if TYPE_CHECKING:
     from cora.operation._pseudoaxis import ConstituentResolver
@@ -98,6 +113,133 @@ def decide_resolved_steps_recorded(
     ]
 
 
+@dataclass(frozen=True)
+class SteeringDesign:
+    """The design inputs of ONE steered conduct segment, as the caller holds them.
+
+    A carrier, not a new concept: the steered handlers already have these five
+    values on their command, and this bundles them so
+    `resolve_and_pin_conduct_steps` gains one parameter rather than five. The
+    runtime VOs are carried WHOLE here (`SteeringBudget`, `DecidePortConfig`)
+    and flattened to scalars only at the event boundary, where
+    `cora.operation.aggregates` may not import either type.
+
+    `budget` is None for an open-ended segment.
+    """
+
+    objective: SteeringObjective
+    objective_capture_name: str
+    space: SteeringSpace
+    decide: DecidePortConfig
+    budget: SteeringBudget | None = None
+
+
+def find_latest_steering_design_record(
+    stored_events: Sequence[StoredEvent],
+) -> StoredEvent | None:
+    """The LAST `SteeringDesignRecorded` on a Procedure stream, or None.
+
+    Scans from the TAIL, unlike its two `find_*_record` siblings
+    (`find_recipe_expansion_record`, `find_resolved_steps_record`), which scan
+    from the head. The direction is the point rather than an inconsistency: a
+    stream can carry more than one design pin, because a conduct that fails
+    after the pin and before `start_procedure` leaves the Procedure `Defined`
+    and the operator's corrected retry pins again. The pin that GOVERNED the
+    segment is therefore the most recent one, and a head-scan would return the
+    abandoned attempt. Both siblings return the abandoned attempt today; that
+    is a recorded read-side defect in `find_resolved_steps_record`, not a
+    convention to copy.
+
+    Keeps the siblings' `find_<subject>_record` skeleton and states the delta
+    in the name rather than dropping the prefix: the difference here is a
+    missing qualifier, not a different kind of operation. The resume path
+    needs this same read, at which point it is the third such scanner and
+    fires the rule-of-three hoist recorded at `_resolved_steps_replay.py`,
+    which is where all three should land together.
+    """
+    for event in reversed(stored_events):
+        if event.event_type == "SteeringDesignRecorded":
+            return event
+    return None
+
+
+def decide_steering_design_recorded(
+    state: Procedure | None,
+    stored_events: Sequence[StoredEvent],
+    design: SteeringDesign,
+    *,
+    now: datetime,
+) -> list[SteeringDesignRecorded]:
+    """Pin a steered segment's design inputs iff pre-conduct and not already pinned.
+
+    Returns `[]` on the same status rule as `decide_resolved_steps_recorded`
+    (None or not `Defined`), so a design is never pinned without the steps it
+    chose sitting beside it. The converse does not hold, deliberately: on a
+    retry whose design is unchanged the duplicate guard below suppresses this
+    pin while the steps pin fires again, leaving a steps pin with no design
+    beside it. That reads correctly, because the design already on the stream
+    is still the one in force. The resume path's eligible status is `Held`,
+    and widening this guard is that slice's job.
+
+    Also returns `[]` when the latest pin already on the stream carries an
+    IDENTICAL design. This guard is load-bearing here in a way it is not for
+    the steps pin: two failure paths (`build_decide_port`'s `ValueError` and
+    the Conductor's steering wire guard) fire after the pin and leave the
+    Procedure `Defined`, so a retry re-pins. For the steps that re-pin is
+    byte-identical and harmless; here the operator has usually CORRECTED the
+    space in between, so the second pin carries a different design and is the
+    one that must survive. Suppressing only the identical case keeps the
+    stream free of noise without ever discarding a real correction.
+
+    Comparison is over the SERIALIZED payload minus `occurred_at`, not over
+    the dataclass: the stored side is a payload, and rebuilding it through
+    `from_stored` would raise on a row written before a field existed, turning
+    a duplicate check into a 500. A payload that cannot be compared simply
+    differs, and differing means pin again, which is the safe direction.
+    """
+    if state is None or state.status is not ProcedureStatus.DEFINED:
+        return []
+    budget = design.budget
+    event = SteeringDesignRecorded(
+        procedure_id=state.id,
+        objective=design.objective,
+        objective_capture_name=design.objective_capture_name,
+        space=design.space,
+        budget_iterations_remaining=(None if budget is None else budget.iterations_remaining),
+        budget_wall_clock_seconds_remaining=(
+            None if budget is None else budget.wall_clock_seconds_remaining
+        ),
+        substrate=SteeringSubstrate(design.decide.substrate),
+        points_per_axis=design.decide.points_per_axis,
+        min_observations=design.decide.min_observations,
+        num_restarts=design.decide.num_restarts,
+        raw_samples=design.decide.raw_samples,
+        seed=design.decide.seed,
+        staged_threshold=design.decide.staged_threshold,
+        spend_agent_id=design.decide.spend_agent_id,
+        design_source=SteeringDesignSource.REQUEST,
+        occurred_at=now,
+    )
+    latest = find_latest_steering_design_record(stored_events)
+    if latest is not None and _designs_match(latest.payload, to_payload(event)):
+        return []
+    return [event]
+
+
+def _designs_match(pinned: Mapping[str, Any], candidate: Mapping[str, Any]) -> bool:
+    """Two `SteeringDesignRecorded` payloads describe the same design.
+
+    Every key but `occurred_at` must match, INCLUDING keys the candidate does
+    not know about: a pinned payload carrying an extra key was written by a
+    different schema than the one that built the candidate, and calling those
+    two designs identical would suppress a pin on the strength of a row this
+    code cannot fully read.
+    """
+    return {key: value for key, value in pinned.items() if key != "occurred_at"} == {
+        key: value for key, value in candidate.items() if key != "occurred_at"
+    }
+
+
 async def resolve_and_pin_conduct_steps(
     deps: Kernel,
     *,
@@ -109,6 +251,7 @@ async def resolve_and_pin_conduct_steps(
     principal_id: UUID,
     correlation_id: UUID,
     causation_id: UUID | None,
+    steering_design: SteeringDesign | None = None,
 ) -> tuple[tuple[Step, ...], tuple[Step, ...]]:
     """Resolve the final conduct step list + pin it as `ResolvedStepsRecorded`.
 
@@ -121,6 +264,10 @@ async def resolve_and_pin_conduct_steps(
     A legacy (non-recipe-driven) Procedure has no closing steps: `caller_steps`
     is an inline list with no separate closing half, so `closing_steps` is
     always `()` on that path.
+
+    `steering_design` is supplied only by the STEERED entry points, and adds
+    a `SteeringDesignRecorded` to the same append, immediately after the steps
+    pin. The unsteered callers pass nothing and their append is unchanged.
     """
     closing_steps: tuple[Step, ...] = ()
     if procedure.recipe_id is not None:
@@ -180,13 +327,22 @@ async def resolve_and_pin_conduct_steps(
     # the event only while the Procedure is still Defined and returns []
     # otherwise, leaving the Conductor's start_procedure to surface a lifecycle
     # failure (keeps the conduct route's failures-in-body contract).
-    resolved_steps_events = decide_resolved_steps_recorded(
-        procedure,
-        tuple(step_to_payload(step) for step in steps),
-        now=deps.clock.now(),
-        resolved_closing_steps=tuple(step_to_payload(step) for step in closing_steps),
+    # One clock read for both pins: they describe one decision taken at one
+    # moment, and two reads would let them disagree about when that was.
+    now = deps.clock.now()
+    pinned_events: list[ProcedureEvent] = list(
+        decide_resolved_steps_recorded(
+            procedure,
+            tuple(step_to_payload(step) for step in steps),
+            now=now,
+            resolved_closing_steps=tuple(step_to_payload(step) for step in closing_steps),
+        )
     )
-    if resolved_steps_events:
+    if steering_design is not None:
+        pinned_events.extend(
+            decide_steering_design_recorded(procedure, stored_events, steering_design, now=now)
+        )
+    if pinned_events:
         _, current_version = await deps.event_store.load(
             stream_type="Procedure", stream_id=procedure.id
         )
@@ -205,7 +361,7 @@ async def resolve_and_pin_conduct_steps(
                     causation_id=causation_id,
                     principal_id=principal_id,
                 )
-                for event in resolved_steps_events
+                for event in pinned_events
             ],
         )
 
