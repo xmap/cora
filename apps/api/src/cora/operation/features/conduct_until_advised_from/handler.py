@@ -170,8 +170,9 @@ def bind(
             raise ProcedureCannotResumeError(command.procedure_id, current_status=procedure.status)
 
         # Re-expand the PINNED recipe block (never re-derive). A Held steered
-        # Procedure that was conducted always has exactly one
-        # ResolvedStepsRecorded; its absence is corruption (500).
+        # Procedure that was conducted always has at least one
+        # ResolvedStepsRecorded; its absence is corruption (500). More than one is
+        # reachable, and this takes the first; see find_resolved_steps_record.
         record = find_resolved_steps_record(stored_events)
         if record is None:
             raise ResolvedStepsRecordNotFoundError(command.procedure_id)
