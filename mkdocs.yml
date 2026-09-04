@@ -949,10 +949,8 @@ nav:
   # - Blog:
   #   - blog/index.md
   - Talks: talks.md
-  # - Papers:
-  #   - papers.md
-  #   - Demos:
-  #     - Replay scrubber: scrubber.md
+  # - Demos:
+  #   - Replay scrubber: scrubber.md
   - Reference:
     - reference/index.md
     - Workflow: reference/workflow.md
@@ -1028,8 +1026,6 @@ not_in_nav: ""
 # uncommenting the nav entries plus the blog plugin above) brings them back.
 exclude_docs: |
   blog/
-  papers.md
-  papers/
   scrubber.md
   projects/
   javascripts/scrubber-demo.js
