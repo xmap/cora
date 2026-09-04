@@ -80,7 +80,7 @@ jobs:
       - name: Build site
         run: mkdocs build --strict
 
-      # The decks are slow to build (npm install plus a chromium download per
+      # The decks are slow to build (npm ci plus a chromium download per
       # deck) and nothing deploys from a PR, so skip them there. The mkdocs
       # build above is the part a PR needs to prove.
       - name: Set up Node
@@ -102,7 +102,12 @@ jobs:
             echo "::group::Building deck: $slug"
             (
               cd "$dir"
-              npm install --no-audit --no-fund
+              # ci, not install: install is free to resolve a newer dependency
+              # and rewrite the lockfile, so the deck CI deploys would drift
+              # from the tree. Each deck README already tells a human the same
+              # thing, because these lockfiles carry linux native-binary
+              # entries that a resolve on another platform strips.
+              npm ci --no-audit --no-fund
               # Belt-and-suspenders: playwright-chromium's postinstall sometimes
               # skips the binary download in CI. Force it before exporting.
               npx --yes playwright install chromium
