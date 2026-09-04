@@ -246,6 +246,7 @@ class Transcript:
     end_iteration_indices: list[int] = field(default_factory=list[int])
     end_iteration_converged: list[bool | None] = field(default_factory=list[bool | None])
     end_iteration_advised_stop: list[bool | None] = field(default_factory=list[bool | None])
+    end_iteration_advice_latency_ms: list[float | None] = field(default_factory=list[float | None])
     end_iteration_provenance: list[dict[str, object]] = field(
         default_factory=list[dict[str, object]]
     )
@@ -278,6 +279,7 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
         transcript.end_iteration_indices.append(command.iteration_index)
         transcript.end_iteration_converged.append(command.converged)
         transcript.end_iteration_advised_stop.append(command.advised_stop)
+        transcript.end_iteration_advice_latency_ms.append(command.advice_latency_ms)
         transcript.end_iteration_provenance.append(
             {
                 "reasoning": command.reasoning,
@@ -313,6 +315,7 @@ def build_conductor(
     control_port: InMemoryControlPort,
     append_diagnostics: object | None = None,
     append_outcomes: object | None = None,
+    monotonic_clock: object | None = None,
 ) -> Conductor:
     handlers = _make_handlers(transcript)
     return Conductor(
@@ -320,6 +323,10 @@ def build_conductor(
         append_step=FakeAppendStep(),
         clock=FakeClock(FIXED_NOW),
         id_generator=FakeIdGen(),
+        # Left None by default so every existing test keeps the production
+        # SystemMonotonicClock and measures a real, tiny elapsed time. A test
+        # that asserts ON the latency injects a FakeMonotonicClock instead.
+        monotonic_clock=monotonic_clock,  # type: ignore[arg-type]
         compute_port=compute_port,
         start_procedure=handlers["start_procedure"],  # type: ignore[arg-type]
         complete_procedure=handlers["complete_procedure"],  # type: ignore[arg-type]

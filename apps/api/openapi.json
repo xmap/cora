@@ -11117,8 +11117,19 @@
         "type": "object"
       },
       "ProcedureIterationDTO": {
-        "description": "One convergence-loop iteration of a Procedure.\n\n`advised_stop` / `model_ref` / `advised_next_point` are the steering\ndecision trail for a steered conduct (null on a plain convergence pass);\n`advised_next_point` is the coordinate map the brain advised for the next\npass, letting a reader reconstruct a GP-steered run's decisions.",
+        "description": "One convergence-loop iteration of a Procedure.\n\n`advised_stop` / `model_ref` / `advised_next_point` are the steering\ndecision trail for a steered conduct (null on a plain convergence pass);\n`advised_next_point` is the coordinate map the brain advised for the next\npass, letting a reader reconstruct a GP-steered run's decisions.\n`advice_latency_ms` is how long that brain took to answer.",
         "properties": {
+          "advice_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Latency Ms"
+          },
           "advised_next_point": {
             "anyOf": [
               {

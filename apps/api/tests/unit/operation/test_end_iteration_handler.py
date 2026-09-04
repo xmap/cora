@@ -74,6 +74,7 @@ async def test_handler_appends_iteration_ended_event() -> None:
         "alternatives": [],
         "model_ref": None,
         "advised_next_point": None,
+        "advice_latency_ms": None,
     }
 
 

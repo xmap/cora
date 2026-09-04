@@ -26,6 +26,7 @@ class _ProcedureIterationDTO(BaseModel):
     advised_stop: bool | None = None
     model_ref: str | None = None
     advised_next_point: dict[str, Any] | None = None
+    advice_latency_ms: float | None = None
 
 
 class _ListProcedureIterationsOutput(BaseModel):
@@ -74,6 +75,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                         if item.advised_next_point is not None
                         else None
                     ),
+                    advice_latency_ms=item.advice_latency_ms,
                 )
                 for item in result.items
             ]

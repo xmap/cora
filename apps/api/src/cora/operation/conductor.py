@@ -122,7 +122,7 @@ from typing import Any, Protocol, cast
 from uuid import UUID
 
 from cora.infrastructure.edge_runtime import abort_orphan_on_cancel
-from cora.infrastructure.ports.clock import Clock
+from cora.infrastructure.ports.clock import Clock, MonotonicClock, SystemMonotonicClock
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -748,6 +748,19 @@ def steering_probe_point(space: SteeringSpace) -> SteeringPoint:
     )
 
 
+def _elapsed_ms(started: float, finished: float) -> float:
+    """Milliseconds between two monotonic reads, floored at zero.
+
+    Both reads come from the Conductor's injected `MonotonicClock`, so a
+    `FakeMonotonicClock` that is never advanced yields 0.0 and a re-drive
+    reproduces the ledger byte-for-byte. The floor is belt-and-braces: a
+    monotonic source should never go backwards, and if one ever does, a
+    negative duration would silently poison any aggregate computed over the
+    column later.
+    """
+    return max(0.0, (finished - started) * 1000.0)
+
+
 def _validate_advice_point(point: SteeringPoint | None, space: SteeringSpace) -> None:
     """Raise `DecideAdviceMalformedError` unless a Measure advice's `next_point`
     covers exactly the space axis names.
@@ -1113,6 +1126,7 @@ class Conductor:
         append_step: AppendProcedureActivitiesHandler,
         clock: Clock,
         id_generator: IdGenerator,
+        monotonic_clock: MonotonicClock | None = None,
         action_registry: ActionRegistry | None = None,
         compute_port: ComputePort | None = None,
         start_procedure: StartProcedureHandler | None = None,
@@ -1148,6 +1162,14 @@ class Conductor:
         # replay-determinism property is untouched.
         self._append_outcomes = append_outcomes
         self._clock = clock
+        # Durations are measured off a MONOTONIC source, never off `clock`:
+        # wall-clock time can step backwards under an NTP correction, which
+        # would make an elapsed measurement wrong or negative (the same reason
+        # GPU accounting has its own port). Defaulted rather than required so
+        # every existing construction site keeps working; a test injects
+        # `FakeMonotonicClock`, which starts at 0.0 and only moves when told,
+        # so a re-drive that never advances it reproduces the ledger exactly.
+        self._monotonic_clock: MonotonicClock = monotonic_clock or SystemMonotonicClock()
         self._id_generator = id_generator
         self._action_registry: ActionRegistry = action_registry or InMemoryActionRegistry({})
         # BORROWED reference: the composition root owns the single ComputePort
@@ -2848,8 +2870,18 @@ class Conductor:
                 iteration_index=iteration_count - 1,
                 procedure_id=procedure_id,
             )
+            # Timed off the injected MONOTONIC clock, never `self._clock`: wall
+            # time can step backwards under an NTP correction and yield a
+            # negative duration. The varying value still enters through a port,
+            # per the non-determinism rule. The faulted path is timed too,
+            # because a brain that hung and then raised is the case most worth
+            # seeing.
+            advice_started = self._monotonic_clock.now()
             try:
                 advice = await decide_port.advise_next(evidence)
+                # Stopped the moment the brain answers: validation below is
+                # CORA's work, not the brain's, and must not be charged to it.
+                advice_finished = self._monotonic_clock.now()
                 if advice.verdict is SteeringVerdict.MEASURE:
                     _validate_advice_point(advice.next_point, space)
             except _DECIDE_ERRORS as exc:
@@ -2860,6 +2892,7 @@ class Conductor:
                         converged=None,
                         reason=str(exc)[:REASON_MAX_LENGTH],
                         advised_stop=None,
+                        advice_latency_ms=_elapsed_ms(advice_started, self._monotonic_clock.now()),
                     ),
                     **envelope_kwargs,
                 )
@@ -2906,6 +2939,7 @@ class Conductor:
                         if advice.next_point is not None
                         else None
                     ),
+                    advice_latency_ms=_elapsed_ms(advice_started, advice_finished),
                 ),
                 **envelope_kwargs,
             )

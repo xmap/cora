@@ -7,7 +7,8 @@ Subscribed events:
                                  started_at) ON CONFLICT DO NOTHING
   - ProcedureIterationEnded   -> UPDATE ended_at / converged / reason
                                  + the steering decision trail
-                                 (advised_stop / model_ref / advised_next_point)
+                                 (advised_stop / model_ref / advised_next_point
+                                 / advice_latency_ms)
                                  WHERE (procedure_id, iteration_index)
 
 This is the per-occurrence drill-down companion to the single-row
@@ -27,6 +28,11 @@ deterministic brain cannot be reconstructed by re-asking). `advised_stop`
 pre-TIER-1 events + on plain convergence iterations, which leave them NULL).
 `advised_next_point` is a jsonb coordinate map, encoded explicitly with a
 `::jsonb` cast (same posture as the Calibration operating_point projection).
+
+`advice_latency_ms` is how long the brain took to answer, and is the reason
+this table is queryable rather than stream-only: it exists to be aggregated
+over, since it is the only budget dimension a non-LLM brain spends and nothing
+currently caps it. Same `.get()` posture, NULL on every pre-existing row.
 
 Both arms are replay-safe under ordered per-stream delivery:
 ProcedureIterationStarted is INSERT-ON-CONFLICT-DO-NOTHING (re-delivery
@@ -63,6 +69,7 @@ SET ended_at = $3,
     advised_stop = $6,
     model_ref = $7,
     advised_next_point = $8::jsonb,
+    advice_latency_ms = $9,
     updated_at = now()
 WHERE procedure_id = $1 AND iteration_index = $2
 """
@@ -105,6 +112,7 @@ class ProcedureIterationsProjection:
                 event.payload.get("advised_stop"),
                 event.payload.get("model_ref"),
                 json.dumps(advised_next_point) if advised_next_point is not None else None,
+                event.payload.get("advice_latency_ms"),
             )
             return
 

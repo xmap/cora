@@ -1413,6 +1413,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "reason": "drop:text",
     },
     "ProcedureIterationEnded": {
+        "advice_latency_ms": "keep:number",
         "advised_next_point": "drop:opaque",
         "advised_stop": "keep:number",
         "alternatives": "drop:text",

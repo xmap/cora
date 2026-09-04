@@ -25,7 +25,7 @@ from uuid import uuid4
 
 import pytest
 
-from cora.infrastructure.ports.clock import FakeClock
+from cora.infrastructure.ports.clock import FakeClock, FakeMonotonicClock
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
@@ -299,6 +299,118 @@ async def test_conduct_until_advised_decide_port_raises_folds_into_recorded_deci
     # field list would drop it (this branch used to build a fresh ConductorResult
     # instead of `replace(result, ...)`). See [[project_field_drop_bug_class]].
     assert _MOTOR_ADDR in result.substrate_writes
+
+
+class _SlowDecidePort:
+    """A brain that advances the injected monotonic clock while it 'thinks'."""
+
+    def __init__(self, clock: FakeMonotonicClock, seconds: float) -> None:
+        self._clock = clock
+        self._seconds = seconds
+
+    async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
+        _ = evidence
+        self._clock.advance(self._seconds)
+        return SteeringAdvice(verdict=SteeringVerdict.STOP)
+
+    async def aclose(self) -> None:
+        return None
+
+
+class _SlowRaisingDecidePort:
+    """A brain that burns time and THEN raises: the hung-then-failed case."""
+
+    def __init__(self, clock: FakeMonotonicClock, seconds: float) -> None:
+        self._clock = clock
+        self._seconds = seconds
+
+    async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
+        _ = evidence
+        self._clock.advance(self._seconds)
+        raise DecideTimeoutError(self._seconds)
+
+    async def aclose(self) -> None:
+        return None
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_records_how_long_the_brain_took() -> None:
+    """The iteration ledger carries the brain's think time, in milliseconds.
+
+    Wall clock is the only budget dimension no gate watches: a non-LLM brain
+    spends neither money nor tokens, so the spend guards are blind to it while
+    it burns beam time. Recording is the prerequisite for capping; nothing is
+    capped here.
+
+    The fake monotonic clock is advanced by the brain itself, so the assertion
+    is on a real measured interval rather than on a constant.
+    """
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(2.0),),))
+    monotonic = FakeMonotonicClock()
+    conductor = _conductor(
+        transcript,
+        compute_port=compute,
+        control_port=control,
+        monotonic_clock=monotonic,
+    )
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=_SlowDecidePort(monotonic, 0.25),
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is True
+    assert transcript.end_iteration_advice_latency_ms == [250.0]
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_records_latency_when_the_brain_faults() -> None:
+    """A brain that hung and then raised still reports how long it hung.
+
+    This is the case most worth seeing, so the faulted path is timed too. If
+    only the happy path were measured, the pathology the measurement exists to
+    catch would be the one thing invisible.
+    """
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(2.0),),))
+    monotonic = FakeMonotonicClock()
+    conductor = _conductor(
+        transcript,
+        compute_port=compute,
+        control_port=control,
+        monotonic_clock=monotonic,
+    )
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=_SlowRaisingDecidePort(monotonic, 1.5),
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.error_class == "DecideTimeoutError"
+    assert transcript.end_iteration_advice_latency_ms == [1500.0]
 
 
 @pytest.mark.unit
