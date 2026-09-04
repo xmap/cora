@@ -12,7 +12,7 @@ from uuid import UUID
 import pytest
 
 from cora.access.aggregates.actor import ActorKind
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef, ModelRef
 from cora.agent.aggregates.language_model import LanguageModelNotApprovedError
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features import define_agent
@@ -273,6 +273,54 @@ async def test_handler_uncataloged_model_raises_not_approved() -> None:
     assert exc_info.value.provider == "anthropic"
     assert exc_info.value.model == "claude-sonnet-4-6"
     assert exc_info.value.status is None
+
+
+@pytest.mark.unit
+async def test_handler_rule_brain_skips_the_language_model_catalog() -> None:
+    """A Rule-brained agent is defined without consulting the LLM catalog.
+
+    The catalog encodes a decision about which language models the facility
+    permits. A deterministic rule runs no model, so there is nothing for that
+    decision to be about, and requiring an Approved entry would force the
+    caller to name a language model it will never call. That is exactly the
+    sentinel the ExperimentSteerer carries today.
+
+    The lookup is set to refuse everything, so if the gate were still
+    unconditional this would raise.
+    """
+    lookup = _FixedLanguageModelLookup(None)
+    deps = _build_deps(language_model_lookup=lookup)
+    handler = define_agent.bind(deps, profile_store=make_profile_store())
+
+    agent_id = await handler(
+        _command(brain=BrainRef.for_rule("ExperimentSteerer:v1")),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert agent_id is not None
+    assert lookup.calls == [], "a Rule brain must not consult the model catalog"
+
+
+@pytest.mark.unit
+async def test_handler_language_model_brain_still_meets_the_catalog_gate() -> None:
+    """Naming the brain explicitly does not become a way around the gate.
+
+    The kind dispatch must route a LanguageModel-kind brain to the same
+    approval check the legacy `model_ref` path takes, or `brain` would be a
+    bypass rather than a generalisation.
+    """
+    deps = _build_deps(language_model_lookup=_FixedLanguageModelLookup(None))
+    handler = define_agent.bind(deps, profile_store=make_profile_store())
+
+    with pytest.raises(LanguageModelNotApprovedError):
+        await handler(
+            _command(
+                brain=BrainRef.for_model(ModelRef(provider="anthropic", model="claude-sonnet-4-6"))
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
 
 
 @pytest.mark.unit

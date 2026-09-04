@@ -54,7 +54,7 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
-from cora.agent.aggregates.agent.state import ModelRef
+from cora.agent.aggregates.agent.state import BrainKind, BrainRef, ModelRef
 from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_vo_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identity import ActorId
@@ -98,6 +98,47 @@ def deserialize_model_ref(payload: dict[str, Any]) -> ModelRef:
     )
 
 
+def serialize_brain_ref(brain: BrainRef) -> dict[str, Any]:
+    """Encode a typed BrainRef to a JSON-friendly dict.
+
+    Only the payload belonging to `kind` is written, so the persisted shape
+    cannot disagree with itself the way a flat dict of every possible field
+    could.
+    """
+    match brain.kind:
+        case BrainKind.LANGUAGE_MODEL:
+            assert brain.model_ref is not None  # guaranteed by BrainRef.__post_init__
+            return {"kind": brain.kind.value, "model_ref": serialize_model_ref(brain.model_ref)}
+        case BrainKind.RULE:
+            return {"kind": brain.kind.value, "rule": brain.rule}
+        case _:  # pragma: no cover - exhaustive over a closed enum
+            assert_never(brain.kind)
+
+
+def deserialize_brain_ref(payload: dict[str, Any]) -> BrainRef:
+    """Decode a JSON-friendly dict to a typed BrainRef.
+
+    An unrecognised `kind` fails loud rather than folding to a default: a brain
+    CORA cannot name is not a brain it should run, and silently coercing one to
+    LanguageModel would route it through the wrong approval gate.
+    """
+    return deserialize_vo_or_raise(
+        "BrainRef",
+        lambda: _brain_ref_from(payload),
+    )
+
+
+def _brain_ref_from(payload: dict[str, Any]) -> BrainRef:
+    kind = BrainKind(payload["kind"])
+    match kind:
+        case BrainKind.LANGUAGE_MODEL:
+            return BrainRef.for_model(deserialize_model_ref(payload["model_ref"]))
+        case BrainKind.RULE:
+            return BrainRef.for_rule(payload["rule"])
+        case _:  # pragma: no cover - exhaustive over a closed enum
+            assert_never(kind)
+
+
 # ---------------------------------------------------------------------------
 # Event classes
 # ---------------------------------------------------------------------------
@@ -132,6 +173,12 @@ class AgentDefined:
     tools: frozenset[str] = frozenset()
     monthly_usd_cap: float | None = None
     daily_token_cap: int | None = None
+    # The brain this Agent thinks with. Additive and optional ONLY during the
+    # migration: a stream written before it existed folds to a
+    # LanguageModel-kind ref derived from `model_ref`, so folded state always
+    # has a brain. Once the seeds and the wire declare `brain` directly,
+    # `model_ref` goes and this stops being nullable.
+    brain: BrainRef | None = None
 
 
 @dataclass(frozen=True)
@@ -332,6 +379,7 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
             tools=tools,
             monthly_usd_cap=monthly_usd_cap,
             daily_token_cap=daily_token_cap,
+            brain=brain,
         ):
             return {
                 "agent_id": str(agent_id),
@@ -352,6 +400,7 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "tools": sorted(tools),
                 "monthly_usd_cap": monthly_usd_cap,
                 "daily_token_cap": daily_token_cap,
+                "brain": serialize_brain_ref(brain) if brain is not None else None,
             }
         case AgentVersioned(agent_id=agent_id, version=version, occurred_at=occurred_at):
             return {
@@ -444,6 +493,11 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
 
             def _build_agent_defined() -> AgentDefined:
                 prompt_template_id_raw = payload.get("prompt_template_id")
+                # Pre-brain streams carry no `brain` key at all. They fold to
+                # None here rather than being back-filled, so the EVENT stays a
+                # faithful record of what was written; the evolver is what
+                # derives the effective brain for folded state.
+                brain_raw = payload.get("brain")
                 return AgentDefined(
                     agent_id=UUID(payload["agent_id"]),
                     kind=payload["kind"],
@@ -460,6 +514,7 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                     tools=frozenset(payload.get("tools", [])),
                     monthly_usd_cap=payload.get("monthly_usd_cap"),
                     daily_token_cap=payload.get("daily_token_cap"),
+                    brain=deserialize_brain_ref(brain_raw) if brain_raw is not None else None,
                 )
 
             return deserialize_or_raise("AgentDefined", _build_agent_defined)

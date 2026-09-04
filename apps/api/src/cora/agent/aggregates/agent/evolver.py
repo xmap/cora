@@ -56,6 +56,7 @@ from cora.agent.aggregates.agent.state import (
     AgentSuspensionReason,
     AgentVersion,
     ToolName,
+    brain_from_legacy_model_ref,
 )
 from cora.infrastructure.evolver import require_state
 from cora.shared.deprecation import DeprecationReason
@@ -78,6 +79,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
             tools=tools,
             monthly_usd_cap=monthly_usd_cap,
             daily_token_cap=daily_token_cap,
+            brain=brain,
         ):
             _ = state  # AgentDefined is the genesis event; prior state ignored
             # Path C: `defined_at` no longer on state — folded into
@@ -88,6 +90,14 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=AgentName(name),
                 version=AgentVersion(version),
                 model_ref=model_ref,
+                # A stream written before `brain` existed named its brain the
+                # only way it could, so read that rather than leave folded
+                # state without one. Eighteen seeded agents are deterministic
+                # and carried a sentinel model_ref; folding those to a
+                # LanguageModel brain would claim they think with a model that
+                # does not exist. `brain_from_legacy_model_ref` reads the
+                # sentinel as the Rule it always was.
+                brain=brain if brain is not None else brain_from_legacy_model_ref(model_ref),
                 description=AgentDescription(description) if description is not None else None,
                 canonical_uri=(
                     AgentCanonicalUri(canonical_uri) if canonical_uri is not None else None
@@ -108,6 +118,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -135,6 +146,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -163,6 +175,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -186,6 +199,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -217,6 +231,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -240,6 +255,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -267,6 +283,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -290,6 +307,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,

@@ -116,5 +116,10 @@ def decide(
             prompt_template_id=command.prompt_template_id,
             capabilities=frozenset(c.value for c in capabilities),
             occurred_at=now,
+            # Recorded exactly as the caller named it, including None. The
+            # evolver derives the effective brain when folding, so a stream
+            # stays a faithful record of what was asked rather than of what
+            # was inferred.
+            brain=command.brain,
         )
     ]

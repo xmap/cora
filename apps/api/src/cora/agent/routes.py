@@ -55,6 +55,7 @@ from cora.agent.aggregates.agent import (
     InvalidAgentSuspensionReasonError,
     InvalidAgentToolsError,
     InvalidAgentVersionError,
+    InvalidBrainRefError,
     InvalidModelRefError,
     InvalidToolNameError,
 )
@@ -217,6 +218,7 @@ def register_agent_routes(app: FastAPI) -> None:
         InvalidAgentBudgetError,
         InvalidAgentToolsError,
         InvalidModelRefError,
+        InvalidBrainRefError,
         AgentNotSeededError,
         AgentKindMismatchError,
         AgentDeactivatedError,

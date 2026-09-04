@@ -142,6 +142,10 @@ def test_to_payload_serializes_agent_defined_minimal() -> None:
         "tools": [],
         "monthly_usd_cap": None,
         "daily_token_cap": None,
+        # A define that names no brain writes none: the evolver derives the
+        # LanguageModel-kind ref from model_ref when folding, rather than the
+        # serializer inventing one the caller never asked for.
+        "brain": None,
     }
 
 

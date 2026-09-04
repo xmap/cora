@@ -1,5 +1,12 @@
 """Evolver tests for the Agent aggregate."""
 
+# Pins the legacy-sentinel fold against a REAL seed constant rather than a
+# copy of it, which means reaching for a module private. A copy would keep
+# passing after a seed stopped matching the convention, which is the exact
+# failure the test exists to prevent.
+# pyright: reportPrivateUsage=false
+
+import dataclasses
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -20,11 +27,14 @@ from cora.agent.aggregates.agent.state import (
     AgentBudget,
     AgentCapability,
     AgentStatus,
+    BrainKind,
     ModelRef,
     ToolName,
 )
+from cora.agent.seed_run_supervisor import _DETERMINISTIC_MODEL_REF as _REAL_SEEDED_SENTINEL
 from cora.shared.identity import ActorId
 
+_AGENT_ID = uuid4()
 _SUSPENDED_BY = ActorId(uuid4())
 _RESUMED_BY = ActorId(uuid4())
 
@@ -33,19 +43,111 @@ _T1 = _T0 + timedelta(minutes=10)
 _T2 = _T0 + timedelta(minutes=20)
 
 
-def _genesis(*, agent_id: object | None = None) -> AgentDefined:
+def _genesis(*, agent_id: object | None = None, model_ref: ModelRef | None = None) -> AgentDefined:
     return AgentDefined(
         agent_id=agent_id or uuid4(),  # type: ignore[arg-type]
         kind="RunDebriefer",
         name="Run Debrief",
         version="v1",
-        model_ref=ModelRef(provider="anthropic", model="claude-sonnet-4-6"),
+        model_ref=model_ref or ModelRef(provider="anthropic", model="claude-sonnet-4-6"),
         description="Synthesises terminal Runs.",
         canonical_uri="https://example.org/agents/run-debrief",
         prompt_template_id=None,
         capabilities=frozenset({"summarize"}),
         occurred_at=_T0,
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("label", "follow_on"),
+    [
+        ("versioned", AgentVersioned(agent_id=_AGENT_ID, version="v2", occurred_at=_T1)),
+        (
+            "suspended",
+            AgentSuspended(
+                agent_id=_AGENT_ID, reason="paused", suspended_by=_SUSPENDED_BY, occurred_at=_T1
+            ),
+        ),
+        (
+            "tool_granted",
+            AgentToolGranted(agent_id=_AGENT_ID, tool_name="list_runs", occurred_at=_T1),
+        ),
+        (
+            "budget_updated",
+            AgentBudgetUpdated(
+                agent_id=_AGENT_ID, monthly_usd_cap=5.0, daily_token_cap=None, occurred_at=_T1
+            ),
+        ),
+    ],
+)
+def test_every_follow_on_event_carries_forward_every_field(label: str, follow_on: object) -> None:
+    """No evolver arm silently wipes a field it does not itself change.
+
+    The module docstring already claims this, and the claim was untestable:
+    each arm rebuilds `Agent(...)` by hand from `prior`, so adding a field to
+    the aggregate means editing eight call sites and the suite stays green if
+    you miss one. `brain` was added across exactly those eight.
+
+    This compares the whole aggregate before and after, excluding only the
+    fields the event under test is SUPPOSED to change, so a newly added field
+    is covered the moment it exists rather than when someone remembers to
+    assert it.
+    """
+    genesis = _genesis(agent_id=_AGENT_ID)
+    before = fold([genesis])
+    assert before is not None
+    after = fold([genesis, follow_on])  # type: ignore[list-item]
+    assert after is not None
+
+    changed_by_design = {
+        "versioned": {"version", "status"},
+        "suspended": {"status", "suspended_at", "suspension_reason", "suspended_by"},
+        "tool_granted": {"tools"},
+        "budget_updated": {"budget"},
+    }[label]
+
+    carried = {
+        f.name
+        for f in dataclasses.fields(before)
+        if f.name not in changed_by_design and getattr(before, f.name) != getattr(after, f.name)
+    }
+    assert carried == set(), f"{label} arm wiped: {sorted(carried)}"
+
+
+@pytest.mark.unit
+def test_pre_brain_llm_stream_folds_to_a_language_model_brain() -> None:
+    """A stream written before `brain` existed still folds to a brain.
+
+    Folded state always carries one, so a reader never has to know which era
+    the stream came from.
+    """
+    state = fold([_genesis()])
+    assert state is not None
+    assert state.brain is not None
+    assert state.brain.kind is BrainKind.LANGUAGE_MODEL
+    assert state.brain.model_ref == ModelRef(provider="anthropic", model="claude-sonnet-4-6")
+
+
+@pytest.mark.unit
+def test_pre_brain_deterministic_sentinel_folds_to_a_rule_brain() -> None:
+    """The deterministic sentinel folds to the Rule it always was.
+
+    Eighteen seeded agents run no model and had to satisfy a required,
+    LLM-shaped `model_ref`, so they all carried the same deliberate sentinel.
+    Reading that as a LanguageModel brain would assert they think with a model
+    that does not exist and was never approved, and because seeds are
+    idempotent that claim would never be corrected on an existing deployment.
+
+    The fixture uses the REAL constant from a real seed module rather than a
+    copy, so a seed that stops matching the convention fails here instead of
+    folding to the wrong kind in silence.
+    """
+    state = fold([_genesis(model_ref=_REAL_SEEDED_SENTINEL)])
+    assert state is not None
+    assert state.brain is not None
+    assert state.brain.kind is BrainKind.RULE
+    assert state.brain.rule == "RunSupervisor:v1"
 
 
 @pytest.mark.unit

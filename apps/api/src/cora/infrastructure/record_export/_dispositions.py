@@ -90,6 +90,15 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "AgentDefined": {
         "agent_id": "token:uuid",
+        "brain": {
+            "kind": "keep:enum:BrainKind",
+            "model_ref": {
+                "model": "drop:text",
+                "provider": "drop:text",
+                "snapshot_pin": "drop:text",
+            },
+            "rule": "drop:text",
+        },
         "canonical_uri": "drop:text",
         "capabilities": "drop:text",
         "daily_token_cap": "keep:number",
