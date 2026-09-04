@@ -177,6 +177,24 @@ class InvalidAgentCapabilityError(ValueError):
         self.value = value
 
 
+class BrainIsNotLanguageModelError(ValueError):
+    """An LLM call was routed to an Agent that does not think with a model.
+
+    Reachable only by pointing a designated-agent setting at an Agent whose
+    brain is a rule, which is a deployment misconfiguration rather than an
+    operator mistake at the wire. Loud rather than tolerated: the quiet
+    alternative is serving a module-default model under that Agent's
+    identity, which is the exact shape of the sentinel this type replaced.
+    """
+
+    def __init__(self, kind: str | None) -> None:
+        super().__init__(
+            f"Agent brain must be a {BrainKind.LANGUAGE_MODEL.value} to serve an LLM call "
+            f"(got: {kind!r})"
+        )
+        self.kind = kind
+
+
 class InvalidBrainRefError(ValueError):
     """A `BrainRef`'s payload does not match its own `kind`.
 
@@ -926,9 +944,10 @@ class Agent:
     integration. Identity is a stable opaque `id: UUID` SHARED with
     Access BC's `Actor.id` for the same agent.
 
-    Required day-1 fields: `id`, `kind`, `name`, `version`, `model_ref`,
-    `status` (defaults to `Defined` at construction; evolver sets
-    explicitly).
+    Required day-1 fields: `id`, `kind`, `name`, `version`, `status`
+    (defaults to `Defined` at construction; evolver sets explicitly).
+    `brain` is not declared required by the type, but the evolver never
+    produces state without one: see `_effective_brain` in the evolver.
 
     Optional fields: `description`, `canonical_uri`,
     `prompt_template_id` (None if no template registry entry exists;
@@ -967,12 +986,14 @@ class Agent:
     kind: AgentKind
     name: AgentName
     version: AgentVersion
-    model_ref: ModelRef
+    # Legacy input path, written only by streams that predate `brain` and by
+    # wire callers that still send it. None for anything defined since the
+    # seeds moved over. Read `brain` instead; this field is kept so an old
+    # stream stays a faithful record of what was written.
+    model_ref: ModelRef | None = None
     # The brain, always present in folded state even for a stream written
-    # before `brain` existed: the evolver derives a LanguageModel-kind ref from
-    # `model_ref` in that case, so a reader never has to know which era the
-    # stream came from. `model_ref` stays as the legacy input path until the
-    # seeds and the wire move over; it is then removed.
+    # before `brain` existed: the evolver derives one from `model_ref` in that
+    # case, so a reader never has to know which era the stream came from.
     brain: BrainRef | None = None
     description: AgentDescription | None = None
     canonical_uri: AgentCanonicalUri | None = None

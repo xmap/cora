@@ -1,7 +1,7 @@
 """Unit tests for the RunWitness Agent bootstrap seed.
 
 RunWitness is another DETERMINISTIC agent: no prompt template and a
-sentinel ModelRef (it is rule-based, never builds an LLM). These tests
+a Rule brain (`RunWitness:v1`) (it is rule-based, never builds an LLM). These tests
 pin that shape alongside the shared seed scaffolding, mirroring
 `test_run_supervisor_seed.py`.
 """
@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cora.agent.aggregates.agent import load_agent
+from cora.agent.aggregates.agent import BrainRef, load_agent
 from cora.agent.seed_run_witness import (
     RUN_WITNESS_AGENT_ID,
     RUN_WITNESS_AGENT_KIND,
@@ -48,16 +48,17 @@ async def test_seed_creates_run_witness_at_pinned_id() -> None:
 
 
 @pytest.mark.unit
-async def test_seed_is_deterministic_no_prompt_sentinel_model() -> None:
-    """Deterministic agent: no prompt template, sentinel (non-LLM) model_ref."""
+async def test_seed_is_deterministic_no_prompt_rule_brain() -> None:
+    """Deterministic agent: no prompt template, and a Rule brain rather
+    than a model it does not have."""
     kernel = _kernel()
     await seed_run_witness_agent(kernel)
 
     agent = await load_agent(kernel.event_store, RUN_WITNESS_AGENT_ID)
     assert agent is not None
     assert agent.prompt_template_id is None
-    assert agent.model_ref.provider == "deterministic"
-    assert agent.model_ref.model == "agent:RunWitness:v1"
+    assert agent.model_ref is None
+    assert agent.brain == BrainRef.for_rule("RunWitness:v1")
 
 
 @pytest.mark.unit

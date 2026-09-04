@@ -14,12 +14,12 @@ Per [[project-run-supervisor-design]]:
     RunDebriefer `aaaa00XX` and CautionDrafter `bbbb00XX` ranges);
     deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). The model_ref is never used to build
-    an LLM (the runtime is a separate periodic loop, not an LLM
-    subscriber); it only satisfies the Agent aggregate's required
-    field. Watch: the Agent aggregate is LLM-shaped; revisit a
-    first-class deterministic-agent shape if more rule-agents land.
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("RunSupervisor:v1")`). The runtime is a separate
+    periodic loop, not an LLM subscriber. The watch this bullet used to carry,
+    that the Agent aggregate was LLM-shaped and wanted a first-class
+    deterministic-agent shape if more rule-agents landed, has fired and been
+    answered: eighteen landed, and `BrainRef` is that shape.
   - Authorization: the runtime issues commands through the Authorize
     port like any principal. Under the default AllowAllAuthorize it is
     permitted; under TrustAuthorize the operator's single configured
@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -70,16 +70,6 @@ RUN_SUPERVISOR_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: RunSupervisor is rule-based, not an LLM agent. The
-# Agent aggregate requires a ModelRef; this value is never used to build
-# an LLM (no subscriber / no build_llm call for this agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:RunSupervisor:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -97,7 +87,7 @@ async def seed_run_supervisor_agent(kernel: Kernel) -> None:
         kind=RUN_SUPERVISOR_AGENT_KIND,
         version=RUN_SUPERVISOR_AGENT_VERSION,
         description=RUN_SUPERVISOR_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("RunSupervisor:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

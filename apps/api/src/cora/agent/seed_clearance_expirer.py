@@ -13,8 +13,8 @@ Per [[project-clearance-window-expirer-design]]:
     RunDebriefer `aaaa00XX`, CautionDrafter `bbbb00XX`, RunSupervisor
     `cccc00XX`, CautionPromoter `dddd00XX`); deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`), never used to build an LLM (the runtime
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("ClearanceExpirer:v1")`), never used to build an LLM (the runtime
     is a periodic loop applying a clock comparison).
   - Authorization: the runtime issues `expire_clearance` through the
     Authorize port like any principal. Under the default AllowAllAuthorize
@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -59,16 +59,6 @@ CLEARANCE_EXPIRER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: ClearanceExpirer is rule-based, not an LLM agent. The
-# Agent aggregate requires a ModelRef; this value is never used to build an
-# LLM (the runtime is a periodic clock comparison, no build_llm call).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:ClearanceExpirer:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -86,7 +76,7 @@ async def seed_clearance_expirer_agent(kernel: Kernel) -> None:
         kind=CLEARANCE_EXPIRER_AGENT_KIND,
         version=CLEARANCE_EXPIRER_AGENT_VERSION,
         description=CLEARANCE_EXPIRER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("ClearanceExpirer:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

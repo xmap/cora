@@ -25,8 +25,8 @@ for the per-agent constants below; the shared scaffolding lives in
     unclaimed block after `1111`/`2222`/`3333`/`4444`); deployment-stable
     forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). Never used to build an LLM: the
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("RunTranslator:v1")`). Never used to build an LLM: the
     runtime is a substrate-observation loop, not an LLM subscriber.
   - Authorization: the runtime issues four distinct commands through the
     Authorize port like any principal. Under the default AllowAllAuthorize
@@ -62,7 +62,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -91,16 +91,6 @@ RUN_TRANSLATOR_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: RunTranslator is rule-based, not an LLM agent. The
-# Agent aggregate requires a ModelRef; this value is never used to build
-# an LLM (no subscriber / no build_llm call for this agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:RunTranslator:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -118,7 +108,7 @@ async def seed_run_translator_agent(kernel: Kernel) -> None:
         kind=RUN_TRANSLATOR_AGENT_KIND,
         version=RUN_TRANSLATOR_AGENT_VERSION,
         description=RUN_TRANSLATOR_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("RunTranslator:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

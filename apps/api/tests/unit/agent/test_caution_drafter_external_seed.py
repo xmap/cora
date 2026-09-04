@@ -53,9 +53,12 @@ async def test_seed_model_ref_matches_the_original_default() -> None:
 
     agent = await load_agent(kernel.event_store, CAUTION_DRAFTER_EXTERNAL_AGENT_ID)
     assert agent is not None
-    assert agent.model_ref.provider == DEFAULT_CAUTION_DRAFTER_MODEL.provider
-    assert agent.model_ref.model == DEFAULT_CAUTION_DRAFTER_MODEL.model
-    assert agent.model_ref.snapshot_pin == DEFAULT_CAUTION_DRAFTER_MODEL.snapshot_pin
+    assert agent.brain is not None
+    model_ref = agent.brain.model_ref
+    assert model_ref is not None
+    assert model_ref.provider == DEFAULT_CAUTION_DRAFTER_MODEL.provider
+    assert model_ref.model == DEFAULT_CAUTION_DRAFTER_MODEL.model
+    assert model_ref.snapshot_pin == DEFAULT_CAUTION_DRAFTER_MODEL.snapshot_pin
 
 
 @pytest.mark.unit

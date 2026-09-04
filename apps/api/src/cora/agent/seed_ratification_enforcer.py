@@ -23,8 +23,8 @@ paper's four-gates plan):
     rati-FIC-ation mnemonic), distinct from every other agent block; deployment-
     stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`), never used to build an LLM. Same Agent-shape
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("RatificationEnforcer:v1")`), never used to build an LLM. Same Agent-shape
     watch the other rule-agents carry.
   - Authorization: the hold subscriber authorizes HoldRun and the release
     subscriber authorizes ResumeRun through the Authorize port as this principal
@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -68,15 +68,6 @@ RATIFICATION_ENFORCER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: the enforcer is rule-based, not an LLM agent. The Agent
-# aggregate requires a ModelRef; this value is never used to build an LLM.
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:RatificationEnforcer:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -94,7 +85,7 @@ async def seed_ratification_enforcer_agent(kernel: Kernel) -> None:
         kind=RATIFICATION_ENFORCER_AGENT_KIND,
         version=RATIFICATION_ENFORCER_AGENT_VERSION,
         description=RATIFICATION_ENFORCER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("RatificationEnforcer:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

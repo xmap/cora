@@ -1,11 +1,5 @@
 """Evolver tests for the Agent aggregate."""
 
-# Pins the legacy-sentinel fold against a REAL seed constant rather than a
-# copy of it, which means reaching for a module private. A copy would keep
-# passing after a seed stopped matching the convention, which is the exact
-# failure the test exists to prevent.
-# pyright: reportPrivateUsage=false
-
 import dataclasses
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -28,11 +22,19 @@ from cora.agent.aggregates.agent.state import (
     AgentCapability,
     AgentStatus,
     BrainKind,
+    BrainRef,
     ModelRef,
     ToolName,
 )
-from cora.agent.seed_run_supervisor import _DETERMINISTIC_MODEL_REF as _REAL_SEEDED_SENTINEL
 from cora.shared.identity import ActorId
+
+# The sentinel exactly as eighteen seeds once wrote it. A literal rather than
+# an import, because no seed constructs it any more: it survives only in
+# streams written before `brain` existed, which is precisely why the fold that
+# reads it still has to work.
+_SEEDED_SENTINEL = ModelRef(
+    provider="deterministic", model="agent:RunSupervisor:v1", snapshot_pin=None
+)
 
 _AGENT_ID = uuid4()
 _SUSPENDED_BY = ActorId(uuid4())
@@ -43,13 +45,25 @@ _T1 = _T0 + timedelta(minutes=10)
 _T2 = _T0 + timedelta(minutes=20)
 
 
-def _genesis(*, agent_id: object | None = None, model_ref: ModelRef | None = None) -> AgentDefined:
+_DEFAULT_MODEL_REF = ModelRef(provider="anthropic", model="claude-sonnet-4-6")
+
+
+def _genesis(
+    *,
+    agent_id: object | None = None,
+    # Sentinel-defaulted rather than None-defaulted: `model_ref=None` is a
+    # case under test (the post-seed era), so it cannot also mean "give me the
+    # default".
+    model_ref: ModelRef | None = _DEFAULT_MODEL_REF,
+    brain: BrainRef | None = None,
+) -> AgentDefined:
     return AgentDefined(
         agent_id=agent_id or uuid4(),  # type: ignore[arg-type]
         kind="RunDebriefer",
         name="Run Debrief",
         version="v1",
-        model_ref=model_ref or ModelRef(provider="anthropic", model="claude-sonnet-4-6"),
+        model_ref=model_ref,
+        brain=brain,
         description="Synthesises terminal Runs.",
         canonical_uri="https://example.org/agents/run-debrief",
         prompt_template_id=None,
@@ -139,15 +153,41 @@ def test_pre_brain_deterministic_sentinel_folds_to_a_rule_brain() -> None:
     that does not exist and was never approved, and because seeds are
     idempotent that claim would never be corrected on an existing deployment.
 
-    The fixture uses the REAL constant from a real seed module rather than a
-    copy, so a seed that stops matching the convention fails here instead of
-    folding to the wrong kind in silence.
+    The two eras have to agree: a deployment first booted before `brain`
+    existed folds its RunSupervisor through here, and one booted after reads
+    the brain the seed now declares. Both must land on
+    `Rule("RunSupervisor:v1")`. This test pins the legacy half; the
+    architecture-tier `test_rule_brain_is_named_for_its_own_agent_kind` pins
+    the other half by requiring each seed's rule to be named for its own
+    agent kind, which is what the sentinel encoded.
     """
-    state = fold([_genesis(model_ref=_REAL_SEEDED_SENTINEL)])
+    state = fold([_genesis(model_ref=_SEEDED_SENTINEL)])
     assert state is not None
     assert state.brain is not None
     assert state.brain.kind is BrainKind.RULE
     assert state.brain.rule == "RunSupervisor:v1"
+
+
+@pytest.mark.unit
+def test_seed_era_stream_folds_to_the_brain_the_seed_declares() -> None:
+    """The other era of the same agent, and it must land in the same place.
+
+    A deployment first booted after the seeds moved over has no `model_ref`
+    at all. If this and the sentinel fold disagreed, the same agent would
+    report a different brain depending only on when its deployment started.
+    """
+    state = fold([_genesis(model_ref=None, brain=BrainRef.for_rule("RunSupervisor:v1"))])
+    assert state is not None
+    assert state.model_ref is None
+    assert state.brain == BrainRef.for_rule("RunSupervisor:v1")
+
+
+@pytest.mark.unit
+def test_genesis_carrying_neither_brain_nor_model_ref_refuses_to_fold() -> None:
+    """No writer has ever been able to produce this, so folding it would mean
+    inventing a brain for a stream that names none."""
+    with pytest.raises(ValueError, match="neither brain nor model_ref"):
+        fold([_genesis(model_ref=None)])
 
 
 @pytest.mark.unit

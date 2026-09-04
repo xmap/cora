@@ -13,8 +13,8 @@ scaffolding lives in `cora.agent._agent_seed`.
     from RunInitiator's `1111`, RunWitness's `2222`, and
     CaptureProgressFeeder's `3333`. Deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). Never used to build an LLM: the
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("CaptureBaselineReader:v1")`). Never used to build an LLM: the
     runtime is a one-shot read-and-append at promotion, not an LLM
     subscriber.
   - A SEPARATE principal from RunTranslator AND from CaptureProgressFeeder,
@@ -56,7 +56,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -84,17 +84,6 @@ CAPTURE_BASELINE_READER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: CaptureBaselineReader is rule-based, not an LLM
-# agent. The Agent aggregate requires a ModelRef; this value is never
-# used to build an LLM (no subscriber / no build_llm call for this
-# agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:CaptureBaselineReader:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -112,7 +101,7 @@ async def seed_capture_baseline_reader_agent(kernel: Kernel) -> None:
         kind=CAPTURE_BASELINE_READER_AGENT_KIND,
         version=CAPTURE_BASELINE_READER_AGENT_VERSION,
         description=CAPTURE_BASELINE_READER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("CaptureBaselineReader:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

@@ -71,7 +71,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef, ModelRef
 from cora.agent.prompts import RUN_DEBRIEF_PROMPT_TEMPLATE_ID
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
 
@@ -125,10 +125,12 @@ async def seed_run_debriefer_agent(kernel: Kernel) -> None:
         kind=RUN_DEBRIEFER_AGENT_KIND,
         version=RUN_DEBRIEFER_AGENT_VERSION,
         description=RUN_DEBRIEFER_AGENT_DESCRIPTION,
-        model_ref=ModelRef(
-            provider=DEFAULT_RUN_DEBRIEF_MODEL.provider,
-            model=DEFAULT_RUN_DEBRIEF_MODEL.model,
-            snapshot_pin=DEFAULT_RUN_DEBRIEF_MODEL.snapshot_pin,
+        brain=BrainRef.for_model(
+            ModelRef(
+                provider=DEFAULT_RUN_DEBRIEF_MODEL.provider,
+                model=DEFAULT_RUN_DEBRIEF_MODEL.model,
+                snapshot_pin=DEFAULT_RUN_DEBRIEF_MODEL.snapshot_pin,
+            )
         ),
         prompt_template_id=RUN_DEBRIEF_PROMPT_TEMPLATE_ID,
         agent_event_id=_AGENT_EVENT_ID,

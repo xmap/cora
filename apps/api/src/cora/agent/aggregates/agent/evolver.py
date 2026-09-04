@@ -55,11 +55,35 @@ from cora.agent.aggregates.agent.state import (
     AgentStatus,
     AgentSuspensionReason,
     AgentVersion,
+    BrainRef,
+    ModelRef,
     ToolName,
     brain_from_legacy_model_ref,
 )
 from cora.infrastructure.evolver import require_state
 from cora.shared.deprecation import DeprecationReason
+
+
+def _effective_brain(brain: BrainRef | None, model_ref: ModelRef | None) -> BrainRef:
+    """The brain an `AgentDefined` names, whichever era wrote it.
+
+    A stream written before `brain` existed named its brain the only way it
+    could, in `model_ref`. Eighteen seeded agents were deterministic and
+    carried a sentinel there; folding those to a LanguageModel brain would
+    claim they think with a model that does not exist, so
+    `brain_from_legacy_model_ref` reads the sentinel as the Rule it always
+    was.
+
+    An event carrying neither is not an era, it is corruption: no writer has
+    ever been able to produce one, since `brain` became writable only once
+    `model_ref` was already required. Raising keeps that true rather than
+    inventing a brain to fold with.
+    """
+    if brain is not None:
+        return brain
+    if model_ref is not None:
+        return brain_from_legacy_model_ref(model_ref)
+    raise ValueError("Malformed AgentDefined: carries neither brain nor model_ref")
 
 
 def evolve(state: Agent | None, event: AgentEvent) -> Agent:
@@ -90,14 +114,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=AgentName(name),
                 version=AgentVersion(version),
                 model_ref=model_ref,
-                # A stream written before `brain` existed named its brain the
-                # only way it could, so read that rather than leave folded
-                # state without one. Eighteen seeded agents are deterministic
-                # and carried a sentinel model_ref; folding those to a
-                # LanguageModel brain would claim they think with a model that
-                # does not exist. `brain_from_legacy_model_ref` reads the
-                # sentinel as the Rule it always was.
-                brain=brain if brain is not None else brain_from_legacy_model_ref(model_ref),
+                brain=_effective_brain(brain, model_ref),
                 description=AgentDescription(description) if description is not None else None,
                 canonical_uri=(
                     AgentCanonicalUri(canonical_uri) if canonical_uri is not None else None

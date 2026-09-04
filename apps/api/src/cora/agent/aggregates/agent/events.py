@@ -162,7 +162,10 @@ class AgentDefined:
     kind: str
     name: str
     version: str
-    model_ref: ModelRef
+    # None for anything defined since the seeds and the wire moved to `brain`.
+    # Retained (not removed) because streams written before `brain` existed
+    # name their brain here and nowhere else.
+    model_ref: ModelRef | None
     description: str | None
     canonical_uri: str | None
     prompt_template_id: UUID | None
@@ -386,7 +389,7 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "kind": kind,
                 "name": name,
                 "version": version,
-                "model_ref": serialize_model_ref(model_ref),
+                "model_ref": serialize_model_ref(model_ref) if model_ref is not None else None,
                 "description": description,
                 "canonical_uri": canonical_uri,
                 "prompt_template_id": (
@@ -498,12 +501,15 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                 # faithful record of what was written; the evolver is what
                 # derives the effective brain for folded state.
                 brain_raw = payload.get("brain")
+                model_ref_raw = payload.get("model_ref")
                 return AgentDefined(
                     agent_id=UUID(payload["agent_id"]),
                     kind=payload["kind"],
                     name=payload["name"],
                     version=payload["version"],
-                    model_ref=deserialize_model_ref(payload["model_ref"]),
+                    model_ref=(
+                        deserialize_model_ref(model_ref_raw) if model_ref_raw is not None else None
+                    ),
                     description=payload.get("description"),
                     canonical_uri=payload.get("canonical_uri"),
                     prompt_template_id=(

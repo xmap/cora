@@ -7,36 +7,53 @@ supply it through `define_agent`, while the port's is the wire shape the
 adapter consumes. `cora.infrastructure.ports.llm.ModelRef` documents the
 split and names this per-call translation as the intended seam.
 
-It says the subscriber does this. Until now nothing did. Both debrief
-call sites built their request from a module-level default instead, so
-`Agent.model_ref` was inert and the catalog gate that `define_agent`
-applies to it governed nothing about the call it was supposed to
-govern. The two agreed only because the Agent seed sets its `model_ref`
-from that same default, which is agreement by construction rather than
-by check.
+It says the subscriber does this. For a long time nothing did. Both debrief
+call sites built their request from a module-level default instead, so the
+Agent's declaration was inert and the catalog gate that `define_agent`
+applies to it governed nothing about the call it was supposed to govern.
+The two agreed only because the Agent seed set its model from that same
+default, which is agreement by construction rather than by check.
+
+The declaration now lives on `Agent.brain` rather than in the legacy
+`model_ref` slot, so this seam reads the brain. Reading the old slot would
+reintroduce the same inertness by a different route: it is empty for every
+Agent defined since the seeds moved over.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cora.agent.aggregates.agent import BrainIsNotLanguageModelError, BrainKind
 from cora.infrastructure.ports.llm import ModelRef as PortModelRef
 
 if TYPE_CHECKING:
-    from cora.agent.aggregates.agent import ModelRef as AgentModelRef
+    from cora.agent.aggregates.agent import BrainRef
 
 
-def to_port_model_ref(model_ref: AgentModelRef) -> PortModelRef:
-    """Carry an Agent's declared identity across to the port unchanged.
+def to_port_model_ref(brain: BrainRef | None) -> PortModelRef:
+    """Carry an Agent's declared model across to the port unchanged.
 
-    No validation here. The values were already checked at
-    `define_agent`, and re-checking would put the invariant in two
-    places.
+    Takes the brain rather than the legacy `model_ref` slot, because that
+    slot is empty for every Agent defined since the seeds moved over, and a
+    caller reading it would serve the module default while believing it was
+    serving the Agent's declaration.
+
+    No validation of the values here. They were already checked at
+    `define_agent`, and re-checking would put the invariant in two places.
+    What IS checked is the kind: an LLM call to an Agent whose brain is a
+    rule has no model to name, and inventing one would put a model the
+    catalog never approved behind a real Agent's identity. The evolver never
+    produces state without a brain, so `None` means a caller built an Agent
+    by hand and skipped it.
     """
+    if brain is None or brain.kind is not BrainKind.LANGUAGE_MODEL:
+        raise BrainIsNotLanguageModelError(brain.kind.value if brain is not None else None)
+    assert brain.model_ref is not None  # guaranteed by BrainRef.__post_init__
     return PortModelRef(
-        provider=model_ref.provider,
-        model=model_ref.model,
-        snapshot_pin=model_ref.snapshot_pin,
+        provider=brain.model_ref.provider,
+        model=brain.model_ref.model,
+        snapshot_pin=brain.model_ref.snapshot_pin,
     )
 
 

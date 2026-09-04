@@ -41,8 +41,11 @@ async def test_seed_creates_run_debriefer_local_at_pinned_id() -> None:
     assert agent.kind.value == RUN_DEBRIEFER_LOCAL_AGENT_KIND
     assert agent.version.value == RUN_DEBRIEFER_LOCAL_AGENT_VERSION
     assert agent.prompt_template_id == RUN_DEBRIEF_PROMPT_TEMPLATE_ID
-    assert agent.model_ref.provider == "local"
-    assert agent.model_ref.model == "local-model"
+    assert agent.brain is not None
+    model_ref = agent.brain.model_ref
+    assert model_ref is not None
+    assert model_ref.provider == "local"
+    assert model_ref.model == "local-model"
 
 
 @pytest.mark.unit

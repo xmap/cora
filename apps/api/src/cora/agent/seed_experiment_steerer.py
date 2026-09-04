@@ -21,10 +21,17 @@ the per-agent constants below; the shared scaffolding lives in
     etc.); deployment-stable forever. Changing it orphans every prior
     ExperimentSteerer-authored Decision.
   - DETERMINISTIC agent (the steering brain is the DecidePort, NOT an LLM): no
-    prompt template (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). The model_ref is never used to build an LLM; it
-    only satisfies the Agent aggregate's required field. Same posture as
-    RunSupervisor / RunInitiator.
+    prompt template (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("ExperimentSteerer:v1")`). Same posture as RunSupervisor
+    / RunInitiator.
+
+    The rule is this agent's OWN logic, the across-procedure disposition, and
+    it is genuinely fixed in this repo. The DecidePort is one altitude down: a
+    tool the rule consults, whose substrate (`in_memory`, `grid_walk`, `sobol`,
+    `botorch`, `staged`, `llm`) is deployment config and can differ per
+    iteration. Which substrate actually advised therefore belongs on the
+    per-iteration record, not here, where it would be a claim about the agent
+    that the next deployment falsifies.
 """
 
 from __future__ import annotations
@@ -33,7 +40,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -64,16 +71,6 @@ EXPERIMENT_STEERER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: ExperimentSteerer is DecidePort-driven, not an LLM agent.
-# The Agent aggregate requires a ModelRef; this value is never used to build an
-# LLM (no subscriber / no build_llm call for this agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:ExperimentSteerer:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -91,7 +88,7 @@ async def seed_experiment_steerer_agent(kernel: Kernel) -> None:
         kind=EXPERIMENT_STEERER_AGENT_KIND,
         version=EXPERIMENT_STEERER_AGENT_VERSION,
         description=EXPERIMENT_STEERER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("ExperimentSteerer:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

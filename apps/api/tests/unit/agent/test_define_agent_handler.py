@@ -283,7 +283,7 @@ async def test_handler_rule_brain_skips_the_language_model_catalog() -> None:
     permits. A deterministic rule runs no model, so there is nothing for that
     decision to be about, and requiring an Approved entry would force the
     caller to name a language model it will never call. That is exactly the
-    sentinel the ExperimentSteerer carries today.
+    sentinel eighteen seeded agents carried before they could name a brain.
 
     The lookup is set to refuse everything, so if the gate were still
     unconditional this would raise.

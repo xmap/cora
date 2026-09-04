@@ -556,6 +556,16 @@
       "AgentResponse": {
         "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n\n`defined_at` / `versioned_at` / `deprecated_at` are projection-\nsourced lifecycle timestamps (Path C);\nsee module docstring for null-semantics. `defined_at` is\nnullable (changed from required during lifecycle widening) because\nthe projection can lag; once the projection has folded\n`AgentDefined`, `defined_at` is non-null on every response.",
         "properties": {
+          "brain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrainResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "canonical_uri": {
             "anyOf": [
               {
@@ -629,7 +639,14 @@
             "type": "string"
           },
           "model_ref": {
-            "$ref": "#/components/schemas/ModelRefResponse"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "name": {
             "title": "Name",
@@ -672,7 +689,6 @@
           "kind",
           "name",
           "version",
-          "model_ref",
           "status",
           "capabilities"
         ],
@@ -2063,6 +2079,41 @@
           }
         },
         "title": "BindingsByKind",
+        "type": "object"
+      },
+      "BrainResponse": {
+        "description": "Sub-DTO for the typed BrainRef VO.\n\nExactly one of `model_ref` / `rule` is populated, matching `kind`. The\ntwo are not merged into one string because a caller deciding whether it\nmay invoke this Agent through an LLM needs the kind, not a label it has\nto parse.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BrainResponse",
         "type": "object"
       },
       "CalibrationListPageResponse": {

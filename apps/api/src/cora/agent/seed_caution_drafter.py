@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef, ModelRef
 from cora.agent.prompts.caution_drafter import (
     CAUTION_DRAFTER_PROMPT_TEMPLATE_ID,
     DEFAULT_CAUTION_DRAFTER_MODEL,
@@ -83,10 +83,12 @@ async def seed_caution_drafter_agent(kernel: Kernel) -> None:
         kind=CAUTION_DRAFTER_AGENT_KIND,
         version=CAUTION_DRAFTER_AGENT_VERSION,
         description=CAUTION_DRAFTER_AGENT_DESCRIPTION,
-        model_ref=ModelRef(
-            provider=DEFAULT_CAUTION_DRAFTER_MODEL.provider,
-            model=DEFAULT_CAUTION_DRAFTER_MODEL.model,
-            snapshot_pin=DEFAULT_CAUTION_DRAFTER_MODEL.snapshot_pin,
+        brain=BrainRef.for_model(
+            ModelRef(
+                provider=DEFAULT_CAUTION_DRAFTER_MODEL.provider,
+                model=DEFAULT_CAUTION_DRAFTER_MODEL.model,
+                snapshot_pin=DEFAULT_CAUTION_DRAFTER_MODEL.snapshot_pin,
+            )
         ),
         prompt_template_id=CAUTION_DRAFTER_PROMPT_TEMPLATE_ID,
         agent_event_id=_AGENT_EVENT_ID,

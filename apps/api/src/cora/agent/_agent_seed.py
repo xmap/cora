@@ -56,7 +56,7 @@ from cora.agent.aggregates.agent import (
     AgentStatus,
     AgentVersion,
     AgentVersioned,
-    ModelRef,
+    BrainRef,
     event_type_name,
     load_agent,
     to_payload,
@@ -104,7 +104,7 @@ class AgentSeedIdentity:
     kind: str
     version: str
     description: str
-    model_ref: ModelRef
+    brain: BrainRef
     prompt_template_id: UUID | None
     agent_event_id: UUID
     actor_event_id: UUID
@@ -135,7 +135,11 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
         kind=kind.value,
         name=name.value,
         version=version.value,
-        model_ref=identity.model_ref,
+        # Seeds name their brain in `brain` and leave the legacy slot empty.
+        # A deterministic agent used to fill it with a sentinel model name,
+        # which read as a claim to think with a model that does not exist.
+        model_ref=None,
+        brain=identity.brain,
         description=description.value,
         canonical_uri=None,
         prompt_template_id=identity.prompt_template_id,
