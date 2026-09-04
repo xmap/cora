@@ -31,16 +31,6 @@ Humans, instruments, and AI agents reading one record.<br/>
 A project status, looking for the people who care about the same problem.
 </div>
 
-<!--
-Open with: "I'll tell you what's missing in our field, what CORA
-is doing about it, where the project actually stands, and what
-I'd want from this room. About fifteen minutes. Then Q&A."
-
-The tagline below the venue is the contract for the talk: this
-is not a product pitch. Say it: "I'm here for honest reactions,
-not applause."
--->
-
 ---
 
 # Who I am
@@ -88,11 +78,6 @@ Every visit costs hours just to remember and realign. That is the fragmentation 
 
 </div>
 
-<!--
-Let the teal callout land slowly.
-Cite Polanyi here only; do not cite again later in the deck.
--->
-
 ---
 
 # Where the context lives
@@ -119,13 +104,6 @@ The same kind of information takes a different shape at every phase. The shapes 
 Read across a row. Same kind of thing, three different artifacts, no continuous identity between them.
 
 </div>
-
-<!--
-Reading maneuver: do not enumerate the table. Pick ONE row
-(Sample is most concrete) and read it across. Then say "every
-row reads like that." Pause briefly at "Live state: rarely
-retained" before moving on.
--->
 
 ---
 
@@ -155,11 +133,6 @@ Every piece is real. **No one owns the connections between them.** The picture a
 
 </div>
 
-<!--
-Pause before the table. Pick TWO queries for the room. Read the teal verbs down: joins, links, carries, chains, closes.
-Don't pick up the "agent steer the next scan" thread yet; it sets up "Why now".
--->
-
 ---
 
 # What's been tried
@@ -188,28 +161,6 @@ Each layer below solved a piece. None of them owned the connections.
 Read the right column down. That column is the layer **no one owns**.
 
 </div>
-
-<!--
-This is NOT a critique of the tools. Each layer is excellent at
-its job. The connecting tissue between layers is what nobody
-owns; that is a separate concern, and a real one.
-
-If asked about specific tools: "I use [tool] when I need what
-it does. CORA is for what no tool currently owns. They are
-complementary, not competitive."
-
-Three pre-empts for the sharpest skeptics in the room:
-- Logbook + Phoebus-Olog: yes, Phoebus can auto-stamp PV values
-  into Olog entries via LogPropertyProvider. Reframe: the entry is
-  still operator-authored, not derived from intent, and it carries
-  no causal link to the decision.
-- Catalog + Orchestrator coupling: yes, Bluesky and Tiled share
-  plumbing at NSLS-II. Each layer still owns only its piece; the
-  cross-layer connections (decision → run → catalog → sample →
-  logbook) remain un-owned.
-- Globus: data movement, not catalog or orchestration. Does not
-  belong on any row; deflect if pattern-matched onto one.
--->
 
 ---
 
@@ -248,10 +199,6 @@ Three reasons, in different registers.
 The cultural reason was the load-bearing one. It is about to break: the reasoner is now a model that does not share the room.
 
 </div>
-
-<!--
-Let all three reasons land. The audience picks whichever fits their worldview; all three are honest.
--->
 
 ---
 
@@ -328,10 +275,6 @@ The point is not to record more. **It is to make the record one that humans and 
 
 </div>
 
-<!--
-If asked "isn't this what NeXus / SciCat does?": those are catalogs of finished things. CORA is the record of how they came to exist, including the decisions. Complementary, not competitive; CORA writes to them through adapters.
--->
-
 ---
 
 # What CORA is not
@@ -361,12 +304,6 @@ CORA is intentionally narrow. Each layer below keeps doing its job.
 CORA reads from and writes to these through adapters. **CORA's job is the record above them:** what happened, who decided, and why. LIMS owns sample logistics; CORA records what the beamline did *with* the sample. Where no orchestrator is in place, CORA can sequence runs itself; where one already drives the beamline, it keeps driving and CORA stays the record.
 
 </div>
-
-<!--
-If asked about MCP: agent frameworks run the loop; CORA is the MCP server they call into.
-If asked about LIMS overlap: LIMS owns sample logistics; CORA records what the beamline did with the sample.
-If asked "so does CORA orchestrate or not?": both, depending on the seam. Spine commitment is the record (decision IDs, recipe ladder, trust map). Orchestration is one of four bindable axes (Decide / Orchestrate / Actuate / Observe). At a facility with Bluesky, Bluesky orchestrates and CORA records the decisions and outcomes. At a facility with no orchestrator, CORA's policy/saga can sequence runs directly. The line moves; the spine doesn't.
--->
 
 ---
 
@@ -401,12 +338,6 @@ AI also lies, drifts, and hallucinates. A unified record is what lets you tell w
 
 </div>
 
-<!--
-Speak the bold line slowly: "An agent is only as coherent as the record it can read." Most quotable sentence in the talk.
-
-If asked for citations on row 3 (agents that plan / tune / flag): Vriza, Prince, Zhou et al. 2026 (npj Comp Mat 12:160, APS 26-ID); Maffettone et al. 2024 (bluesky-adaptive).
--->
-
 ---
 
 # A concrete example
@@ -433,23 +364,6 @@ In-situ freezing of brine in a porous sample; 30 minutes into a 4-hour scan, an 
 The cooling happens once. Every zoom either gets recorded against intent, or it gets remembered. Next slide: what that record actually looks like.
 
 </div>
-
-<!--
-This is the in-situ ice-in-brine experiment from the 2-BM streaming demo:
-beam-sensitive, time-evolving, multi-scale via the Optique Peter lens changer.
-Real, demoed, not hypothetical.
-
-Read the leftmost column down once. Then walk ONE row across, picked for the room:
-- "Bound" lands hardest with safety / ops / dose-budget folks
-- "Audit" lands hardest with FAIR / compliance / PI
-- "Recall" lands hardest with AI / agents
-Don't read all six. Let the audience scan the rest.
-
-If asked about Budget: this example exercises the planned Budget BC. The
-"Designed, next" status on the roadmap slide closes the loop — you're
-not asking the audience to imagine it, you're showing the use case
-that triggers the build.
--->
 
 ---
 
@@ -547,15 +461,6 @@ Audit, explainability, and reproducibility become <b>query operations</b>, not h
 
 </div>
 
-<!--
-The three-bullet block is your spoken explanation. Pick the angle the room cares about, riff for ~15 seconds:
-- "One shape" for software / data-model audiences (event envelope is uniform, human or agent)
-- "One log" for ops / SRE / reproducibility (Postgres INSERT-only at the DB role; rebuild from history)
-- "One query" for AI / agents / PI ("why" is the verb; chain not search; no grep across notebooks)
-
-Speak the closing line slowly. The JSON and query trace are illustrative, not literal codebase output; deflect if asked.
--->
-
 ---
 
 # How it's designed
@@ -584,11 +489,6 @@ Six choices. Each is well-known in industry. The new part is the combination, ap
 None of the rows are individually novel. **The combination, applied to scientific instrumentation, is.**
 
 </div>
-
-<!--
-The point is the combination, not the individual choices. Each row alone is well-known elsewhere; the new part is putting them together on a beamline.
-If pressed on any row, expand verbally.
--->
 
 ---
 
@@ -661,13 +561,6 @@ Today: <span class="text-[#0A7E8C]">14 bounded contexts · 20 aggregates · 9,96
 The repo has more under each layer: per-BC aggregates, deciders, projections. **But this is the picture to leave with.**
 
 </div>
-
-<!--
-Layer rationale, if asked:
-- Adapters: today FastAPI + MCP SDK on the same handler signature. EPICS / SciCat / Globus / Bluesky adapters are next; one adapter per external system keeps each contract isolated.
-- Domain BCs: pure Python, no I/O dependencies, tests run in milliseconds. Pyright strict end-to-end (zero errors, zero warnings, zero ignores).
-- Event log: Postgres as the event store; INSERT-only at the DB role level (REVOKE UPDATE/DELETE) is the immutability guarantee. pgvector is in the stack for similarity search ("what worked on similar samples").
--->
 
 ---
 
@@ -757,12 +650,6 @@ Solo, multi-year horizon. Architecture stable; pilot integration ongoing; not ye
 
 </div>
 
-<!--
-At MAX IV: do NOT lean on rung 3 verbally even though it names the venue. The visual shows them they're on the map; that is enough. Leaning in reads as fundraising; staying neutral reads as serious work.
-
-If asked about Strategy / Budget timing: designed in the BC map, waiting for the first concrete use case to trigger the build.
--->
-
 ---
 
 # What I'd want from you
@@ -788,10 +675,6 @@ Depending on who you are, different things help:
 Issues, design memos, BC maps: all public. The repo is the work.
 </div>
 </div>
-
-<!--
-At MAX IV: all three columns apply (beamline staff + software developers + AI researchers in one room).
--->
 
 ---
 
