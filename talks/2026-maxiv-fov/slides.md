@@ -7,7 +7,7 @@ info: |
   Doğa Gürsoy.
 author: Doğa Gürsoy
 keywords: cora, synchrotron, tomography, provenance, ai, autonomy
-presenter: true
+presenter: false
 download: true
 exportFilename: 2026-maxiv-fov
 mdc: true
