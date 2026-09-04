@@ -49,6 +49,7 @@ from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.append_activities.command import AppendProcedureActivities
 from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.end_iteration.command import EndProcedureIteration
+from cora.operation.features.hold_procedure.command import HoldProcedure
 from cora.operation.features.resume_procedure.command import ResumeProcedure
 from cora.operation.features.start_iteration.command import StartProcedureIteration
 from cora.operation.features.start_procedure.command import StartProcedure
@@ -292,7 +293,11 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
             }
         )
 
+    async def hold_procedure(command: HoldProcedure, **_: object) -> None:
+        transcript.events.append(f"hold_procedure[{command.reason}]")
+
     return {
+        "hold_procedure": hold_procedure,
         "start_procedure": start_procedure,
         "complete_procedure": complete_procedure,
         "abort_procedure": abort_procedure,
@@ -316,6 +321,7 @@ def build_conductor(
     append_diagnostics: object | None = None,
     append_outcomes: object | None = None,
     monotonic_clock: object | None = None,
+    principal_liveness_lookup: object | None = None,
 ) -> Conductor:
     handlers = _make_handlers(transcript)
     return Conductor(
@@ -334,6 +340,10 @@ def build_conductor(
         resume_procedure=handlers["resume_procedure"],  # type: ignore[arg-type]
         start_iteration=handlers["start_iteration"],  # type: ignore[arg-type]
         end_iteration=handlers["end_iteration"],  # type: ignore[arg-type]
+        hold_procedure=handlers["hold_procedure"],  # type: ignore[arg-type]
+        # Left None by default: no test drives an agent, so no test opts into
+        # the stand-down check. A test that exercises it injects a fake.
+        principal_liveness_lookup=principal_liveness_lookup,  # type: ignore[arg-type]
         append_diagnostics=append_diagnostics,  # type: ignore[arg-type]
         append_outcomes=append_outcomes,  # type: ignore[arg-type]
     )

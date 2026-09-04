@@ -439,6 +439,11 @@ async def steer_experiment(
                 objective_capture_name=objective_capture_name,
                 decide=decide,
                 budget=budget,
+                # The loop re-reads this agent's stand-down switch at every
+                # iteration boundary. The check above stands the driver down
+                # BETWEEN procedures; this one reaches inside a single
+                # procedure's forty-pass loop, which the between-check cannot.
+                steering_driver_id=EXPERIMENT_STEERER_AGENT_ID,
             ),
             principal_id=principal_id,
             correlation_id=correlation_id,

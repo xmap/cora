@@ -256,6 +256,7 @@ def bind(
                 fsm_iteration_count=procedure.iteration_count,
                 open_iteration_index=procedure.current_iteration_index,
                 budget=command.budget,
+                steering_driver_id=command.steering_driver_id,
             )
         except ValueError as exc:
             # conduct_until_advised_from raises ValueError only from its pre-FSM

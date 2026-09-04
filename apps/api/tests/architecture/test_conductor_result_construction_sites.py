@@ -118,6 +118,14 @@ _EXPECTED_OMISSIONS: dict[tuple[str, int], frozenset[str]] = {
     # correctly always empty here too.
     ("_abort_unconverged_cap", 1): frozenset({"closing_failures", "held"}),
     ("_abort_absolute_ceiling", 1): frozenset({"closing_failures", "held"}),
+    # _hold_driver_stood_down: the same loop-top position as the two aborts
+    # above, and it threads the last pass's ledger the same None-safe way, so
+    # closing_failures is the only gap. Correct for the same reason: closing
+    # steps are v1-refused for the loop slices, and a hold is a pause rather
+    # than a terminal, so no closing has run to report. `held` is NOT omitted
+    # here, unlike the aborts: parking the Procedure is the whole point, and
+    # the field carries whether the park actually took.
+    ("_hold_driver_stood_down", 1): frozenset({"closing_failures"}),
     # conduct_until_advised_from(): a frontier brain fault before any pass ran
     # (no execute() call yet, so no ledger to carry), and a resume-straight-
     # to-Stop synthetic placeholder fed into _complete_advised (same reason).

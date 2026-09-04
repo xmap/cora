@@ -88,6 +88,7 @@ from cora.infrastructure.ports.federation import (
     PublishPort,
     SignaturePort,
 )
+from cora.infrastructure.ports.principal_liveness_lookup import PrincipalLivenessLookup
 from cora.infrastructure.schema_version import SchemaPosture
 
 
@@ -401,6 +402,20 @@ class Kernel:
     profile_store: ProfileStore
     canonicalization_registry: CanonicalizationRegistry
     signing_registry: SigningRegistry
+    principal_liveness_lookup: PrincipalLivenessLookup | None = None
+    """Is a principal registered, and switched on.
+
+    Defaulted because Authorize already holds one internally; this exposes the
+    SAME port to consumers that must re-read liveness OUTSIDE an authz call.
+    The steered loop is the first: `conduct_until_advised` authorizes once at
+    entry, then runs up to forty iterations, so an operator standing the
+    driving agent down mid-flight needs the switch re-read at each boundary.
+
+    None is NOT a permissive default. A consumer that needs it and finds None
+    raises rather than proceeding, so a deployment that forgot to wire it
+    fails loudly instead of losing the check. See
+    `Conductor._driver_stood_down`.
+    """
     pool: asyncpg.Pool | None = None
     schema_posture: SchemaPosture = "matched"
     """Whether the applied database schema is the one this build expects.

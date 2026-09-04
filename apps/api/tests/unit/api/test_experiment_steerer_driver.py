@@ -428,6 +428,39 @@ async def test_steer_posts_each_turns_usage_onto_that_turns_own_decision() -> No
 
 
 @pytest.mark.unit
+async def test_steer_names_itself_as_the_loop_driver() -> None:
+    """The driver stamps its agent onto the conduct so the steered loop can
+    re-read the stand-down switch at every iteration boundary.
+
+    Without this the whole boundary check is inert in production: the
+    conductor only consults the switch when a caller names a driver, and
+    `steer_experiment` is the only caller that has one.
+    """
+    kernel = _kernel()
+    await seed_experiment_steerer_agent(kernel)
+    p0 = uuid4()
+
+    _steps, conduct, _hold = await _steer(
+        kernel, procedure_ids=[p0], results={p0: _ok_result(p0, _TARGET)}
+    )
+
+    assert conduct.calls[0].steering_driver_id == EXPERIMENT_STEERER_AGENT_ID
+
+
+@pytest.mark.unit
+def test_steering_driver_id_is_absent_from_the_conduct_wire_models() -> None:
+    """Same attribution boundary as `spend_agent_id`: a route caller must not
+    be able to claim an agent drives its conduct, which would let it park a
+    Procedure under that agent's name."""
+    from cora.operation.features.conduct_until_advised.route import (
+        ConductUntilAdvisedRequest,
+    )
+
+    assert "steering_driver_id" not in ConductUntilAdvisedRequest.model_fields
+    assert ConductUntilAdvisedRequest.model_config.get("extra") == "forbid"
+
+
+@pytest.mark.unit
 def test_spend_agent_id_is_absent_from_the_conduct_wire_model() -> None:
     """The attribution boundary: route and MCP callers must not be able
     to charge an agent. DecideConfigRequest forbids extras, so absence

@@ -191,6 +191,7 @@ def make_postgres_kernel(
     family_lookup: FamilyLookup | None = None,
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
+    principal_liveness_lookup: PrincipalLivenessLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
     language_model_lookup: LanguageModelLookup | None = None,
     model_usage_lookup: ModelUsageLookup | None = None,
@@ -364,6 +365,7 @@ def make_postgres_kernel(
         clock=clock,
         id_generator=id_generator,
         authz=authz,
+        principal_liveness_lookup=principal_liveness_lookup,
         schema_posture=schema_posture,
         event_store=event_store if event_store is not None else PostgresEventStore(pool),
         idempotency_store=(
@@ -469,6 +471,7 @@ def make_inmemory_kernel(
     family_lookup: FamilyLookup | None = None,
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
+    principal_liveness_lookup: PrincipalLivenessLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
     language_model_lookup: LanguageModelLookup | None = None,
     model_usage_lookup: ModelUsageLookup | None = None,
@@ -614,6 +617,7 @@ def make_inmemory_kernel(
         clock=clock,
         id_generator=id_generator,
         authz=authz,
+        principal_liveness_lookup=principal_liveness_lookup,
         event_store=event_store if event_store is not None else InMemoryEventStore(),
         idempotency_store=(
             idempotency_store if idempotency_store is not None else InMemoryIdempotencyStore()
@@ -1179,19 +1183,24 @@ async def build_kernel(
     if settings.app_env == "test":
         event_store: EventStore = InMemoryEventStore()
         idempotency_store: IdempotencyStore = InMemoryIdempotencyStore()
+        # Built once and shared: authz gates each command with it, and the
+        # Kernel hands the same instance to consumers that re-read liveness
+        # outside an authz call (the steered loop's per-iteration check).
+        liveness_lookup = (
+            principal_liveness_lookup_factory(event_store)
+            if principal_liveness_lookup_factory is not None
+            else None
+        )
         authz = authorize_factory(
             settings,
             event_store,
             pool=None,
             clock=clock,
             id_generator=id_generator,
-            liveness_lookup=(
-                principal_liveness_lookup_factory(event_store)
-                if principal_liveness_lookup_factory is not None
-                else None
-            ),
+            liveness_lookup=liveness_lookup,
         )
         kernel = make_inmemory_kernel(
+            principal_liveness_lookup=liveness_lookup,
             settings=settings,
             clock=clock,
             id_generator=id_generator,
@@ -1236,17 +1245,21 @@ async def build_kernel(
             pg_event_store, applied=schema.applied, expected=schema.expected
         )
     pg_idempotency_store: IdempotencyStore = PostgresIdempotencyStore(pool)
+    # Built once and shared: authz gates each command with it, and the
+    # Kernel hands the same instance to consumers that re-read liveness
+    # outside an authz call (the steered loop's per-iteration check).
+    liveness_lookup = (
+        principal_liveness_lookup_factory(pg_event_store)
+        if principal_liveness_lookup_factory is not None
+        else None
+    )
     authz = authorize_factory(
         settings,
         pg_event_store,
         pool=pool,
         clock=clock,
         id_generator=id_generator,
-        liveness_lookup=(
-            principal_liveness_lookup_factory(pg_event_store)
-            if principal_liveness_lookup_factory is not None
-            else None
-        ),
+        liveness_lookup=liveness_lookup,
     )
     clearance_lookup: ClearanceLookup = (
         clearance_lookup_factory(pool)
@@ -1334,6 +1347,7 @@ async def build_kernel(
     llm: LLM | None = llm_factory(settings) if llm_factory is not None else None
     kernel = make_postgres_kernel(
         pool,
+        principal_liveness_lookup=liveness_lookup,
         settings=settings,
         clock=clock,
         id_generator=id_generator,
