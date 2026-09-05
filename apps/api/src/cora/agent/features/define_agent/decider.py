@@ -47,7 +47,6 @@ from cora.agent.aggregates.agent import (
     AGENT_CAPABILITIES_MAX_COUNT,
     Agent,
     AgentAlreadyExistsError,
-    AgentBrainUnspecifiedError,
     AgentCanonicalUri,
     AgentCapability,
     AgentDefined,
@@ -55,6 +54,7 @@ from cora.agent.aggregates.agent import (
     AgentKind,
     AgentName,
     AgentVersion,
+    InvalidAgentBrainError,
     InvalidAgentCapabilitiesError,
 )
 from cora.agent.features.define_agent.command import DefineAgent
@@ -84,7 +84,7 @@ def decide(
       - Each capability must be valid -> InvalidAgentCapabilityError
         (via AgentCapability VO)
       - Exactly one of `brain` / `model_ref` must be named
-        -> AgentBrainUnspecifiedError
+        -> InvalidAgentBrainError
     """
     if state is not None:
         raise AgentAlreadyExistsError(state.id)
@@ -95,7 +95,7 @@ def decide(
     # decider keeps the invariant with the aggregate rather than with one of
     # its two front doors.
     if command.brain is None and command.model_ref is None:
-        raise AgentBrainUnspecifiedError
+        raise InvalidAgentBrainError
 
     # Validate + trim core fields via VOs (each raises Invalid<X> on bad input).
     kind = AgentKind(command.kind)

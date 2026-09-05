@@ -341,6 +341,38 @@ class AgentTargetPlanUpdated:
 
 
 # Discriminated union of every event the Agent aggregate emits.
+@dataclass(frozen=True)
+class AgentDefinitionRestated:
+    """An existing Agent's name and/or brain was restated on its own stream.
+
+    Events are INSERT-only, so a stream written before `brain` existed cannot
+    be rewritten to carry one. This is the forward-only way to say what such
+    an Agent thinks with: append the correction rather than edit the record.
+    Eighteen seeded agents named their brain in a sentinel `model_ref` because
+    that was the only slot the schema then had, and this is how they stop
+    depending on `brain_from_legacy_model_ref` to be read correctly.
+
+    Both fields are optional and at least one must be set; the decider
+    enforces that, because an event restating nothing is a governance write
+    with no content. A field left None means "unchanged", NOT "cleared":
+    neither a name nor a brain has a meaningful empty value, so there is
+    nothing for a clear to mean.
+
+    `reason` is required. Appending to an append-only governance record is an
+    act someone chooses, and the record should say why they chose it.
+
+    `agent_id` is never touched, so historical Decisions attributed to this
+    agent stay attributed to it. What is restated is what `AgentDefined`
+    SAID, not who the agent is.
+    """
+
+    agent_id: UUID
+    name: str | None
+    brain: BrainRef | None
+    reason: str
+    occurred_at: datetime
+
+
 AgentEvent = (
     AgentDefined
     | AgentVersioned
@@ -351,6 +383,7 @@ AgentEvent = (
     | AgentToolRevoked
     | AgentBudgetUpdated
     | AgentTargetPlanUpdated
+    | AgentDefinitionRestated
 )
 
 
@@ -463,6 +496,20 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "agent_id": str(agent_id),
                 "monthly_usd_cap": monthly_usd_cap,
                 "daily_token_cap": daily_token_cap,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case AgentDefinitionRestated(
+            agent_id=agent_id,
+            name=name,
+            brain=brain,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "agent_id": str(agent_id),
+                "name": name,
+                "brain": serialize_brain_ref(brain) if brain is not None else None,
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case AgentTargetPlanUpdated(
@@ -587,6 +634,21 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                     agent_id=UUID(payload["agent_id"]),
                     monthly_usd_cap=payload.get("monthly_usd_cap"),
                     daily_token_cap=payload.get("daily_token_cap"),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
+        case "AgentDefinitionRestated":
+            return deserialize_or_raise(
+                "AgentDefinitionRestated",
+                lambda: AgentDefinitionRestated(
+                    agent_id=UUID(payload["agent_id"]),
+                    name=payload.get("name"),
+                    brain=(
+                        deserialize_brain_ref(raw)
+                        if (raw := payload.get("brain")) is not None
+                        else None
+                    ),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

@@ -11,8 +11,8 @@ import pytest
 
 from cora.agent._model_ref import to_port_model_ref
 from cora.agent.aggregates.agent import (
-    BrainIsNotLanguageModelError,
     BrainRef,
+    InvalidAgentBrainKindError,
     ModelRef,
 )
 
@@ -32,7 +32,7 @@ def test_language_model_brain_carries_every_field_to_the_port() -> None:
 
 @pytest.mark.unit
 def test_rule_brain_refuses_rather_than_serving_a_model_it_does_not_have() -> None:
-    with pytest.raises(BrainIsNotLanguageModelError) as excinfo:
+    with pytest.raises(InvalidAgentBrainKindError) as excinfo:
         to_port_model_ref(BrainRef.for_rule("ProcedureWatcher:v1"))
 
     assert excinfo.value.kind == "Rule"
@@ -43,7 +43,7 @@ def test_absent_brain_refuses() -> None:
     """State without a brain is unreachable through the evolver, so a caller
     holding one built an Agent by hand. Refusing keeps the seam's guarantee
     from depending on how the Agent was constructed."""
-    with pytest.raises(BrainIsNotLanguageModelError) as excinfo:
+    with pytest.raises(InvalidAgentBrainKindError) as excinfo:
         to_port_model_ref(None)
 
     assert excinfo.value.kind is None

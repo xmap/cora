@@ -14435,6 +14435,128 @@
         "title": "RequestRatificationResponse",
         "type": "object"
       },
+      "RestateAgentDefinitionRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /agents/{agent_id}/restate-definition`.",
+        "properties": {
+          "brain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RestatedBrainRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this Agent thinks with. Omit to leave the brain unchanged."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New display name. Omit to leave the name unchanged.",
+            "title": "Name"
+          },
+          "reason": {
+            "description": "Why this restatement is being appended. Required: writing to an append-only governance record is an act someone chooses, and the record should say why they chose it.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RestateAgentDefinitionRequest",
+        "type": "object"
+      },
+      "RestatedBrainRequest": {
+        "additionalProperties": false,
+        "description": "Sub-body for the typed BrainRef VO, discriminated by `kind`.",
+        "properties": {
+          "kind": {
+            "description": "`LanguageModel` carries model_ref; `Rule` carries rule.",
+            "enum": [
+              "LanguageModel",
+              "Rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RestatedModelRefRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RestatedBrainRequest",
+        "type": "object"
+      },
+      "RestatedModelRefRequest": {
+        "additionalProperties": false,
+        "description": "Sub-body for the typed ModelRef VO.",
+        "properties": {
+          "model": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "snapshot_pin": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Pin"
+          }
+        },
+        "required": [
+          "provider",
+          "model"
+        ],
+        "title": "RestatedModelRefRequest",
+        "type": "object"
+      },
       "RestoreAssetRequest": {
         "description": "Body for `POST /assets/{asset_id}/restore`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining the repair. Examples: \"replaced flat cable\", \"cleaned\nsample stage and recalibrated\", \"vacuum pump rebuild complete\".",
         "properties": {
@@ -19832,6 +19954,106 @@
           }
         },
         "summary": "Deprecate an Agent (Defined | Versioned -> Deprecated; terminal)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/agents/{agent_id}/restate-definition": {
+      "post": {
+        "operationId": "post_agents_restate_definition_agents__agent_id__restate_definition_post",
+        "parameters": [
+          {
+            "description": "Target agent's id.",
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "description": "Target agent's id.",
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestateAgentDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only name or reason, or a brain whose payload disagrees with its kind)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No agent exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Agent is `Deprecated` (only blocking source state)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation, including a body that restates neither a name nor a brain."
+          }
+        },
+        "summary": "Restate an existing Agent's name and/or brain (omitted fields stay unchanged)",
         "tags": [
           "agent"
         ]

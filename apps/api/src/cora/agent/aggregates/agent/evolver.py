@@ -16,6 +16,8 @@ Status mapping per event type:
   - `AgentToolRevoked`   -> status unchanged (subtractive set mutation)
   - `AgentBudgetUpdated` -> status unchanged (budget field replace)
   - `AgentTargetPlanUpdated` -> status unchanged (target_plan_id field replace)
+  - `AgentDefinitionRestated` -> status unchanged (name / brain field replace,
+                                None meaning unchanged rather than cleared)
 
 Source-state guards live at the decider, NOT here; the evolver trusts
 the event log (folded events have already passed their decider).
@@ -35,6 +37,7 @@ from typing import assert_never
 from cora.agent.aggregates.agent.events import (
     AgentBudgetUpdated,
     AgentDefined,
+    AgentDefinitionRestated,
     AgentDeprecated,
     AgentEvent,
     AgentResumed,
@@ -309,6 +312,36 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 deprecation_reason=prior.deprecation_reason,
                 tools=prior.tools,
                 budget=_decode_budget(monthly_usd_cap, daily_token_cap),
+                suspended_at=prior.suspended_at,
+                resumed_at=prior.resumed_at,
+                suspension_reason=prior.suspension_reason,
+                suspended_by=prior.suspended_by,
+                resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
+            )
+        case AgentDefinitionRestated(name=restated_name, brain=restated_brain, occurred_at=_):
+            prior = require_state(state, "AgentDefinitionRestated")
+            # None means UNCHANGED, not cleared: neither a name nor a brain
+            # has a meaningful empty value, so there is nothing a clear could
+            # mean. The decider refuses an event that restates neither.
+            return Agent(
+                id=prior.id,
+                kind=prior.kind,
+                name=AgentName(restated_name) if restated_name is not None else prior.name,
+                version=prior.version,
+                # The legacy slot is left exactly as the genesis wrote it. This
+                # event is how an Agent stops DEPENDING on it, not a rewrite of
+                # what that Agent originally said.
+                model_ref=prior.model_ref,
+                brain=restated_brain if restated_brain is not None else prior.brain,
+                description=prior.description,
+                canonical_uri=prior.canonical_uri,
+                prompt_template_id=prior.prompt_template_id,
+                capabilities=prior.capabilities,
+                status=prior.status,
+                deprecation_reason=prior.deprecation_reason,
+                tools=prior.tools,
+                budget=prior.budget,
                 suspended_at=prior.suspended_at,
                 resumed_at=prior.resumed_at,
                 suspension_reason=prior.suspension_reason,

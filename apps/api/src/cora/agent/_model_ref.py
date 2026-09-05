@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cora.agent.aggregates.agent import BrainIsNotLanguageModelError, BrainKind
+from cora.agent.aggregates.agent import BrainKind, InvalidAgentBrainKindError
 from cora.infrastructure.ports.llm import ModelRef as PortModelRef
 
 if TYPE_CHECKING:
@@ -48,7 +48,7 @@ def to_port_model_ref(brain: BrainRef | None) -> PortModelRef:
     by hand and skipped it.
     """
     if brain is None or brain.kind is not BrainKind.LANGUAGE_MODEL:
-        raise BrainIsNotLanguageModelError(brain.kind.value if brain is not None else None)
+        raise InvalidAgentBrainKindError(brain.kind.value if brain is not None else None)
     assert brain.model_ref is not None  # guaranteed by BrainRef.__post_init__
     return PortModelRef(
         provider=brain.model_ref.provider,

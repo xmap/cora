@@ -30,6 +30,7 @@ from cora.agent.features.regenerate_run_debrief import tool as regenerate_run_de
 from cora.agent.features.regenerate_run_debrief.handler import (
     IdempotentHandler as RegenerateRunDebriefHandler,
 )
+from cora.agent.features.restate_agent_definition import tool as restate_agent_definition_tool
 from cora.agent.features.resume_agent import tool as resume_agent_tool
 from cora.agent.features.retire_language_model import tool as retire_language_model_tool
 from cora.agent.features.revoke_tool_from_agent import tool as revoke_tool_from_agent_tool
@@ -77,6 +78,10 @@ def register_agent_tools(
     update_agent_budget_tool.register(
         mcp,
         get_handler=lambda: get_handlers().update_agent_budget,
+    )
+    restate_agent_definition_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().restate_agent_definition,
     )
     update_agent_target_plan_tool.register(
         mcp,

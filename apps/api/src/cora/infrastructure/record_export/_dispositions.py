@@ -112,6 +112,21 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "tools": "drop:text",
         "version": "drop:text",
     },
+    "AgentDefinitionRestated": {
+        "agent_id": "token:uuid",
+        "brain": {
+            "kind": "keep:enum:BrainKind",
+            "model_ref": {
+                "model": "drop:text",
+                "provider": "drop:text",
+                "snapshot_pin": "drop:text",
+            },
+            "rule": "drop:text",
+        },
+        "name": "drop:text",
+        "occurred_at": "keep:time",
+        "reason": "drop:text",
+    },
     "AgentDeprecated": {
         "agent_id": "token:uuid",
         "occurred_at": "keep:time",

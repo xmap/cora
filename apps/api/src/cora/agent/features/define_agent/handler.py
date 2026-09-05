@@ -47,9 +47,9 @@ from cora.access.aggregates.actor import (
 )
 from cora.agent.aggregates.agent import AgentName, event_type_name, to_payload
 from cora.agent.aggregates.agent.state import (
-    AgentBrainUnspecifiedError,
     BrainKind,
     BrainRef,
+    InvalidAgentBrainError,
 )
 from cora.agent.aggregates.language_model import (
     LanguageModelNotApprovedError,
@@ -201,7 +201,7 @@ def bind(deps: Kernel, *, profile_store: ProfileStore) -> Handler:
         elif command.model_ref is not None:
             effective_brain = BrainRef.for_model(command.model_ref)
         else:
-            raise AgentBrainUnspecifiedError
+            raise InvalidAgentBrainError
         match effective_brain.kind:
             case BrainKind.LANGUAGE_MODEL:
                 assert effective_brain.model_ref is not None  # BrainRef invariant

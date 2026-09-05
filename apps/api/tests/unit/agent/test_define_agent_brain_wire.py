@@ -11,17 +11,10 @@ would not say, and silently picking one makes the wire lie about what was
 asked for.
 """
 
-# `_brain_from` is the wire-to-VO mapping under test, and it is private
-# because nothing outside the route should build a BrainRef from a request
-# body. Exercising it directly beats the alternatives: making it public to
-# test it would widen the surface for the test's benefit, and reaching it
-# through the endpoint would need a handler and a transport to assert a pure
-# mapping. Mirrors the repo's existing private-access pragma precedent.
-# pyright: reportPrivateUsage=false
-
 import pytest
 from pydantic import ValidationError
 
+from cora.agent._brain_wire import brain_from_body
 from cora.agent.aggregates.agent import (
     BrainKind,
     BrainRef,
@@ -32,7 +25,6 @@ from cora.agent.features.define_agent.route import (
     BrainRequest,
     DefineAgentRequest,
     ModelRefRequest,
-    _brain_from,
 )
 
 _MODEL = ModelRefRequest(provider="anthropic", model="claude-sonnet-4-6")
@@ -50,7 +42,7 @@ def test_a_rule_brain_needs_no_model_ref() -> None:
         **_body(brain=BrainRequest(kind="Rule", rule="ExperimentSteerer:v1"))  # type: ignore[arg-type]
     )
 
-    brain = _brain_from(request.brain)
+    brain = brain_from_body(request.brain)
 
     assert brain == BrainRef.for_rule("ExperimentSteerer:v1")
 
@@ -61,7 +53,7 @@ def test_a_language_model_brain_carries_its_model() -> None:
         **_body(brain=BrainRequest(kind="LanguageModel", model_ref=_MODEL))  # type: ignore[arg-type]
     )
 
-    brain = _brain_from(request.brain)
+    brain = brain_from_body(request.brain)
 
     assert brain is not None
     assert brain.kind is BrainKind.LANGUAGE_MODEL
@@ -102,10 +94,10 @@ def test_a_kind_that_disagrees_with_its_payload_is_refused() -> None:
     """The wire cannot express kind-consistency on its own, so the payload
     goes to the VO. A Rule body carrying a model_ref is not coerced."""
     with pytest.raises(InvalidBrainRefError):
-        _brain_from(BrainRequest(kind="Rule", rule="X:v1", model_ref=_MODEL))
+        brain_from_body(BrainRequest(kind="Rule", rule="X:v1", model_ref=_MODEL))
 
     with pytest.raises(InvalidBrainRefError):
-        _brain_from(BrainRequest(kind="LanguageModel"))
+        brain_from_body(BrainRequest(kind="LanguageModel"))
 
 
 @pytest.mark.unit

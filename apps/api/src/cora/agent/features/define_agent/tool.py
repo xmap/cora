@@ -5,12 +5,13 @@ Context Protocol tool. MCP tools currently bypass header extraction
 """
 
 from collections.abc import Callable
-from typing import Annotated, Any, Literal, assert_never
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
+from cora.agent._brain_wire import brain_from_body, model_ref_from_body
 from cora.agent.aggregates.agent import (
     AGENT_CANONICAL_URI_MAX_LENGTH,
     AGENT_CAPABILITIES_MAX_COUNT,
@@ -23,10 +24,6 @@ from cora.agent.aggregates.agent import (
     MODEL_REF_MODEL_MAX_LENGTH,
     MODEL_REF_PROVIDER_MAX_LENGTH,
     MODEL_REF_SNAPSHOT_PIN_MAX_LENGTH,
-    BrainKind,
-    BrainRef,
-    InvalidBrainRefError,
-    ModelRef,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.handler import IdempotentHandler
@@ -82,35 +79,6 @@ class DefineAgentOutput(BaseModel):
     """Structured output of the `define_agent` MCP tool."""
 
     agent_id: UUID
-
-
-def _model_ref_from(value: ModelRefInput | None) -> ModelRef | None:
-    if value is None:
-        return None
-    return ModelRef(provider=value.provider, model=value.model, snapshot_pin=value.snapshot_pin)
-
-
-def _brain_from(value: BrainInput | None) -> BrainRef | None:
-    """Build the typed BrainRef, letting the VO enforce kind consistency.
-
-    Mirrors the route helper: one home for the invariant, so a body whose
-    payload disagrees with its kind surfaces as `InvalidBrainRefError` rather
-    than being coerced into something the caller did not ask for.
-    """
-    if value is None:
-        return None
-    match value.kind:
-        case "LanguageModel":
-            model_ref = _model_ref_from(value.model_ref)
-            if model_ref is None:
-                raise InvalidBrainRefError("a LanguageModel brain carries model_ref and no rule")
-            return BrainRef(kind=BrainKind.LANGUAGE_MODEL, model_ref=model_ref, rule=value.rule)
-        case "Rule":
-            return BrainRef(
-                kind=BrainKind.RULE, rule=value.rule, model_ref=_model_ref_from(value.model_ref)
-            )
-        case _:  # pragma: no cover - exhaustive over the Literal
-            assert_never(value.kind)
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> None:
@@ -213,8 +181,8 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 kind=kind,
                 name=name,
                 version=version,
-                model_ref=_model_ref_from(model_ref),
-                brain=_brain_from(brain),
+                model_ref=model_ref_from_body(model_ref),
+                brain=brain_from_body(brain),
                 description=description,
                 canonical_uri=canonical_uri,
                 prompt_template_id=prompt_template_id,

@@ -5,12 +5,13 @@ optional description / canonical_uri / prompt_template_id /
 capabilities. Returns 201 + `{agent_id}` on success.
 """
 
-from typing import Annotated, Literal, assert_never
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from cora.agent._brain_wire import brain_from_body, model_ref_from_body
 from cora.agent.aggregates.agent import (
     AGENT_CANONICAL_URI_MAX_LENGTH,
     AGENT_CAPABILITIES_MAX_COUNT,
@@ -23,10 +24,6 @@ from cora.agent.aggregates.agent import (
     MODEL_REF_MODEL_MAX_LENGTH,
     MODEL_REF_PROVIDER_MAX_LENGTH,
     MODEL_REF_SNAPSHOT_PIN_MAX_LENGTH,
-    BrainKind,
-    BrainRef,
-    InvalidBrainRefError,
-    ModelRef,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.handler import IdempotentHandler
@@ -196,42 +193,6 @@ def _get_handler(request: Request) -> IdempotentHandler:
     return handler
 
 
-def _model_ref_from(request: ModelRefRequest | None) -> ModelRef | None:
-    if request is None:
-        return None
-    return ModelRef(
-        provider=request.provider,
-        model=request.model,
-        snapshot_pin=request.snapshot_pin,
-    )
-
-
-def _brain_from(request: BrainRequest | None) -> BrainRef | None:
-    """Build the typed BrainRef, letting the VO enforce kind consistency.
-
-    The wire cannot express "kind says Rule but only model_ref is set"
-    safely on its own, so the payload is handed to the VO rather than
-    re-validated here: one home for the invariant, and a mismatched body
-    surfaces as `InvalidBrainRefError` (400) rather than being coerced.
-    """
-    if request is None:
-        return None
-    match request.kind:
-        case "LanguageModel":
-            model_ref = _model_ref_from(request.model_ref)
-            if model_ref is None:
-                raise InvalidBrainRefError("a LanguageModel brain carries model_ref and no rule")
-            return BrainRef(kind=BrainKind.LANGUAGE_MODEL, model_ref=model_ref, rule=request.rule)
-        case "Rule":
-            return BrainRef(
-                kind=BrainKind.RULE,
-                rule=request.rule,
-                model_ref=_model_ref_from(request.model_ref),
-            )
-        case _:  # pragma: no cover - exhaustive over the Literal
-            assert_never(request.kind)
-
-
 router = APIRouter(tags=["agent"])
 
 
@@ -286,8 +247,8 @@ async def post_agents(
             # NOT translated to a brain here: the decider keeps the event a
             # faithful record of what was asked, and the evolver derives the
             # effective brain when folding.
-            model_ref=_model_ref_from(body.model_ref),
-            brain=_brain_from(body.brain),
+            model_ref=model_ref_from_body(body.model_ref),
+            brain=brain_from_body(body.brain),
             description=body.description,
             canonical_uri=body.canonical_uri,
             prompt_template_id=body.prompt_template_id,

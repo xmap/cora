@@ -59,6 +59,7 @@ from cora.agent.features import (
     list_at_risk_results,
     promote_caution_proposal,
     regenerate_run_debrief,
+    restate_agent_definition,
     resume_agent,
     retire_language_model,
     revoke_tool_from_agent,
@@ -86,6 +87,7 @@ class AgentHandlers:
     grant_tool_to_agent: grant_tool_to_agent.Handler
     revoke_tool_from_agent: revoke_tool_from_agent.Handler
     update_agent_budget: update_agent_budget.Handler
+    restate_agent_definition: restate_agent_definition.Handler
     update_agent_target_plan: update_agent_target_plan.Handler
     get_agent: get_agent.Handler
     regenerate_run_debrief: regenerate_run_debrief.IdempotentHandler | None
@@ -178,6 +180,11 @@ def wire_agent(deps: Kernel) -> AgentHandlers:
         update_agent_budget=with_tracing(
             update_agent_budget.bind(deps),
             command_name="UpdateAgentBudget",
+            bc=_BC,
+        ),
+        restate_agent_definition=with_tracing(
+            restate_agent_definition.bind(deps),
+            command_name="RestateAgentDefinition",
             bc=_BC,
         ),
         update_agent_target_plan=with_tracing(

@@ -9,6 +9,7 @@ import pytest
 from cora.agent.aggregates.agent.events import (
     AgentBudgetUpdated,
     AgentDefined,
+    AgentDefinitionRestated,
     AgentDeprecated,
     AgentResumed,
     AgentSuspended,
@@ -93,6 +94,16 @@ def _genesis(
                 agent_id=_AGENT_ID, monthly_usd_cap=5.0, daily_token_cap=None, occurred_at=_T1
             ),
         ),
+        (
+            "identity_restated",
+            AgentDefinitionRestated(
+                agent_id=_AGENT_ID,
+                name="Renamed",
+                brain=BrainRef.for_rule("Restated:v2"),
+                reason="restated for the carry-forward guard",
+                occurred_at=_T1,
+            ),
+        ),
     ],
 )
 def test_every_follow_on_event_carries_forward_every_field(label: str, follow_on: object) -> None:
@@ -119,6 +130,7 @@ def test_every_follow_on_event_carries_forward_every_field(label: str, follow_on
         "suspended": {"status", "suspended_at", "suspension_reason", "suspended_by"},
         "tool_granted": {"tools"},
         "budget_updated": {"budget"},
+        "identity_restated": {"name", "brain"},
     }[label]
 
     carried = {

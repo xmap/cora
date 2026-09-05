@@ -182,7 +182,7 @@ class InvalidAgentCapabilityError(ValueError):
         self.value = value
 
 
-class BrainIsNotLanguageModelError(ValueError):
+class InvalidAgentBrainKindError(ValueError):
     """An LLM call was routed to an Agent that does not think with a model.
 
     Reachable only by pointing a designated-agent setting at an Agent whose
@@ -288,7 +288,46 @@ class InvalidModelRefError(ValueError):
 # ---------------------------------------------------------------------------
 
 
-class AgentBrainUnspecifiedError(ValueError):
+class InvalidAgentDefinitionRestatementError(ValueError):
+    """A restatement named neither a name nor a brain.
+
+    An event restating nothing is a governance write with no content: it
+    appends to an append-only record and says nothing. Refused rather than
+    silently emitting no event, because a caller who meant to change
+    something and mistyped the field name deserves to hear about it.
+    """
+
+    def __init__(self, agent_id: UUID) -> None:
+        super().__init__(f"Agent {agent_id} restatement must supply a name, a brain, or both")
+        self.agent_id = agent_id
+
+
+class InvalidAgentRestatementReasonError(ValueError):
+    """The supplied restatement reason is empty, whitespace-only, or too long."""
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Agent restatement reason must be 1-{REASON_MAX_LENGTH} chars after trimming "
+            f"(got: {value!r})"
+        )
+        self.value = value
+
+
+class AgentCannotRestateDefinitionError(Exception):
+    """The Agent is Deprecated, so its record is closed to restatement.
+
+    Mirrors `AgentCannotUpdateTargetPlanError`: Deprecated is the only
+    blocking state. Restating what a retired agent thinks with says nothing
+    anyone can act on.
+    """
+
+    def __init__(self, agent_id: UUID, status: "AgentStatus") -> None:
+        super().__init__(f"Agent {agent_id} cannot be restated from status {status.value}")
+        self.agent_id = agent_id
+        self.status = status
+
+
+class InvalidAgentBrainError(ValueError):
     """A `define_agent` command named neither a brain nor a legacy model_ref.
 
     An Agent that names nothing to think with produces an `AgentDefined` the

@@ -26,8 +26,8 @@ from cora.agent.aggregates.agent import (
 from cora.agent.aggregates.agent.state import (
     Agent,
     AgentAlreadyExistsError,
-    AgentBrainUnspecifiedError,
     BrainRef,
+    InvalidAgentBrainError,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.decider import decide
@@ -58,7 +58,7 @@ def test_command_naming_neither_brain_nor_model_ref_is_refused() -> None:
     caller. The invariant lives with the aggregate rather than with one of
     its two front doors, or a third front door would arrive without it.
     """
-    with pytest.raises(AgentBrainUnspecifiedError):
+    with pytest.raises(InvalidAgentBrainError):
         decide(None, _command(model_ref=None), now=_NOW, new_id=_NEW_ID)
 
 
