@@ -2081,6 +2081,51 @@
         "title": "BindingsByKind",
         "type": "object"
       },
+      "BrainRequest": {
+        "additionalProperties": false,
+        "description": "Sub-body for the typed BrainRef VO: what this Agent thinks with.\n\nDiscriminated by `kind`; exactly the payload belonging to that kind may\nbe set. A flat body carrying every possible field could disagree with\nitself, which is the shape `BrainRef` exists to make unrepresentable.",
+        "properties": {
+          "kind": {
+            "description": "Which kind of brain. `LanguageModel` carries `model_ref` and is gated against the approved LanguageModel catalog. `Rule` carries `rule` and needs no approval: it runs no external model and spends nothing.",
+            "enum": [
+              "LanguageModel",
+              "Rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when `kind` is `LanguageModel`, forbidden otherwise."
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when `kind` is `Rule`, forbidden otherwise. Names and versions the decision rule (convention: `ExperimentSteerer:v1`).",
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BrainRequest",
+        "type": "object"
+      },
       "BrainResponse": {
         "description": "Sub-DTO for the typed BrainRef VO.\n\nExactly one of `model_ref` / `rule` is populated, matching `kind`. The\ntwo are not merged into one string because a caller deciding whether it\nmay invoke this Agent through an LLM needs the kind, not a label it has\nto parse.",
         "properties": {
@@ -5697,6 +5742,17 @@
       "DefineAgentRequest": {
         "description": "Body for `POST /agents`.",
         "properties": {
+          "brain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrainRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this Agent thinks with. Supply exactly one of `model_ref` or `brain`; `brain` is the only way to define an Agent whose brain is not a language model."
+          },
           "canonical_uri": {
             "anyOf": [
               {
@@ -5742,8 +5798,15 @@
             "type": "string"
           },
           "model_ref": {
-            "$ref": "#/components/schemas/ModelRefRequest",
-            "description": "Required model identity (provider + model + optional snapshot pin) so 8f-b's LLM has the identity available immediately."
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Model identity (provider + model + optional snapshot pin). The legacy way to name a LanguageModel brain, kept for callers that predate `brain`. Supply exactly one of `model_ref` or `brain`."
           },
           "name": {
             "description": "Human-readable display name.",
@@ -5776,8 +5839,7 @@
         "required": [
           "kind",
           "name",
-          "version",
-          "model_ref"
+          "version"
         ],
         "title": "DefineAgentRequest",
         "type": "object"

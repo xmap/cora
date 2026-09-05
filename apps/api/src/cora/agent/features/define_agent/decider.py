@@ -47,6 +47,7 @@ from cora.agent.aggregates.agent import (
     AGENT_CAPABILITIES_MAX_COUNT,
     Agent,
     AgentAlreadyExistsError,
+    AgentBrainUnspecifiedError,
     AgentCanonicalUri,
     AgentCapability,
     AgentDefined,
@@ -82,9 +83,19 @@ def decide(
         -> InvalidAgentCapabilitiesError
       - Each capability must be valid -> InvalidAgentCapabilityError
         (via AgentCapability VO)
+      - Exactly one of `brain` / `model_ref` must be named
+        -> AgentBrainUnspecifiedError
     """
     if state is not None:
         raise AgentAlreadyExistsError(state.id)
+
+    # An Agent that names no brain has nothing to think with, and the evolver
+    # would refuse to fold the event it produced. The wire already rejects
+    # this, so reaching here means an in-process caller; catching it at the
+    # decider keeps the invariant with the aggregate rather than with one of
+    # its two front doors.
+    if command.brain is None and command.model_ref is None:
+        raise AgentBrainUnspecifiedError
 
     # Validate + trim core fields via VOs (each raises Invalid<X> on bad input).
     kind = AgentKind(command.kind)

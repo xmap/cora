@@ -30,7 +30,7 @@ class DefineAgent:
     kind: str
     name: str
     version: str
-    model_ref: ModelRef
+    model_ref: ModelRef | None = None
     description: str | None = None
     canonical_uri: str | None = None
     prompt_template_id: UUID | None = None

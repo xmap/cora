@@ -26,6 +26,8 @@ from cora.agent.aggregates.agent import (
 from cora.agent.aggregates.agent.state import (
     Agent,
     AgentAlreadyExistsError,
+    AgentBrainUnspecifiedError,
+    BrainRef,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.decider import decide
@@ -44,6 +46,36 @@ def _command(**overrides: object) -> DefineAgent:
     }
     base.update(overrides)
     return DefineAgent(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.unit
+def test_command_naming_neither_brain_nor_model_ref_is_refused() -> None:
+    """An Agent that names nothing to think with produces an `AgentDefined`
+    the evolver refuses to fold, so it is caught at write time rather than
+    discovered at replay.
+
+    The wire rejects this first, so reaching the decider means an in-process
+    caller. The invariant lives with the aggregate rather than with one of
+    its two front doors, or a third front door would arrive without it.
+    """
+    with pytest.raises(AgentBrainUnspecifiedError):
+        decide(None, _command(model_ref=None), now=_NOW, new_id=_NEW_ID)
+
+
+@pytest.mark.unit
+def test_a_rule_brained_command_needs_no_model_ref() -> None:
+    """The whole point of the slice: defining a rule-brained Agent without
+    inventing a language model it will never call."""
+    events = decide(
+        None,
+        _command(model_ref=None, brain=BrainRef.for_rule("ExperimentSteerer:v1")),
+        now=_NOW,
+        new_id=_NEW_ID,
+    )
+
+    assert len(events) == 1
+    assert events[0].model_ref is None
+    assert events[0].brain == BrainRef.for_rule("ExperimentSteerer:v1")
 
 
 @pytest.mark.unit

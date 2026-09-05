@@ -46,7 +46,11 @@ from cora.access.aggregates.actor import (
     to_payload as actor_to_payload,
 )
 from cora.agent.aggregates.agent import AgentName, event_type_name, to_payload
-from cora.agent.aggregates.agent.state import BrainKind, BrainRef
+from cora.agent.aggregates.agent.state import (
+    AgentBrainUnspecifiedError,
+    BrainKind,
+    BrainRef,
+)
 from cora.agent.aggregates.language_model import (
     LanguageModelNotApprovedError,
     LanguageModelStatus,
@@ -189,9 +193,15 @@ def bind(deps: Kernel, *, profile_store: ProfileStore) -> Handler:
         # type-checking here until the new kind states its gate, so a brain
         # cannot arrive ungated by omission. That is why BrainKind has no
         # OPTIMIZER member yet.
-        effective_brain = (
-            command.brain if command.brain is not None else BrainRef.for_model(command.model_ref)
-        )
+        # A command naming neither is refused by the decider below; the gate
+        # must not be reached with nothing to gate, so it refuses here too
+        # rather than skipping itself on a None.
+        if command.brain is not None:
+            effective_brain = command.brain
+        elif command.model_ref is not None:
+            effective_brain = BrainRef.for_model(command.model_ref)
+        else:
+            raise AgentBrainUnspecifiedError
         match effective_brain.kind:
             case BrainKind.LANGUAGE_MODEL:
                 assert effective_brain.model_ref is not None  # BrainRef invariant

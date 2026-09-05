@@ -62,6 +62,11 @@ AGENT_TOOL_NAME_MAX_LENGTH = 100
 AGENT_TOOLS_MAX_COUNT = 32
 MODEL_REF_PROVIDER_MAX_LENGTH = 100
 MODEL_REF_MODEL_MAX_LENGTH = 200
+BRAIN_RULE_MAX_LENGTH = 200
+"""Bound on a Rule brain's name. Matched to `MODEL_REF_MODEL_MAX_LENGTH`
+because the two are the same thing at different kinds: the identity of the
+brain an Agent thinks with. Unbounded was tolerable while only seeds wrote it;
+it is wire-supplied now."""
 MODEL_REF_SNAPSHOT_PIN_MAX_LENGTH = 100
 
 
@@ -281,6 +286,19 @@ class InvalidModelRefError(ValueError):
 # ---------------------------------------------------------------------------
 # Aggregate-level guard errors (genesis collision / not-found / cannot-transition)
 # ---------------------------------------------------------------------------
+
+
+class AgentBrainUnspecifiedError(ValueError):
+    """A `define_agent` command named neither a brain nor a legacy model_ref.
+
+    An Agent that names nothing to think with produces an `AgentDefined` the
+    evolver refuses to fold, so this is caught at write time rather than
+    discovered at replay. The wire rejects it first; reaching this means an
+    in-process caller.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Agent must name exactly one of brain or model_ref")
 
 
 class AgentAlreadyExistsError(Exception):
@@ -890,6 +908,13 @@ class BrainRef:
             case BrainKind.RULE:
                 if self.rule is None or self.model_ref is not None:
                     raise InvalidBrainRefError("a Rule brain carries rule and no model_ref")
+                rule_trimmed = self.rule.strip()
+                if not rule_trimmed:
+                    raise InvalidBrainRefError("rule must be non-empty after trim")
+                if len(rule_trimmed) > BRAIN_RULE_MAX_LENGTH:
+                    raise InvalidBrainRefError(
+                        f"rule exceeds {BRAIN_RULE_MAX_LENGTH} chars after trim"
+                    )
             case _:  # pragma: no cover - exhaustive over a closed enum
                 assert_never(self.kind)
 

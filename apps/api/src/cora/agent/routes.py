@@ -31,6 +31,7 @@ from fastapi.responses import JSONResponse
 
 from cora.agent.aggregates.agent import (
     AgentAlreadyExistsError,
+    AgentBrainUnspecifiedError,
     AgentCannotDeprecateError,
     AgentCannotGrantToolError,
     AgentCannotResumeError,
@@ -221,6 +222,7 @@ def register_agent_routes(app: FastAPI) -> None:
         InvalidModelRefError,
         InvalidBrainRefError,
         BrainIsNotLanguageModelError,
+        AgentBrainUnspecifiedError,
         AgentNotSeededError,
         AgentKindMismatchError,
         AgentDeactivatedError,
