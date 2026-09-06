@@ -557,6 +557,16 @@ class ProcedureIterationEnded:
     see `decider_replayability`). TIER-1 replay is recording only: it does NOT
     re-seed the loop on replay (that resume leg stays deferred).
 
+    `advice_latency_ms` is how long the brain took to answer this iteration,
+    measured by the conductor off its injected clock rather than self-reported
+    by the brain. It is recorded because it is the ONLY budget dimension a
+    non-LLM brain spends: money and tokens are gated at both enforcement tiers,
+    but a Gaussian process costs neither, and at a beamline the scarce resource
+    is beam time. Measuring it is the prerequisite for deciding whether a
+    wall-clock cap belongs on the brain, the Procedure or the Allocation; no cap
+    is enforced here. Present on both the advised and the brain-faulted paths,
+    since a brain that hung and then raised is exactly the case worth seeing.
+
     All default to absent: a convergence or manual end leaves them unset. The
     evolver folds none of them (it still folds only `converged`);
     `from_stored` reads them via `.get()` so pre-existing payloads deserialize
@@ -575,6 +585,7 @@ class ProcedureIterationEnded:
     alternatives: tuple[str, ...] = ()
     model_ref: str | None = None
     advised_next_point: Mapping[str, Any] | None = None
+    advice_latency_ms: float | None = None
 
 
 @dataclass(frozen=True)
@@ -921,6 +932,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             alternatives=alternatives,
             model_ref=model_ref,
             advised_next_point=advised_next_point,
+            advice_latency_ms=advice_latency_ms,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -939,6 +951,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "advised_next_point": (
                     dict(advised_next_point) if advised_next_point is not None else None
                 ),
+                "advice_latency_ms": advice_latency_ms,
             }
         case RecipeExpansionRecorded(
             procedure_id=procedure_id,
@@ -1249,6 +1262,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     alternatives=tuple(payload.get("alternatives", ())),
                     model_ref=payload.get("model_ref"),
                     advised_next_point=payload.get("advised_next_point"),
+                    advice_latency_ms=payload.get("advice_latency_ms"),
                 ),
             )
         case "RecipeExpansionRecorded":

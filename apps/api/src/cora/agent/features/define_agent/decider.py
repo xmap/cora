@@ -54,6 +54,7 @@ from cora.agent.aggregates.agent import (
     AgentKind,
     AgentName,
     AgentVersion,
+    InvalidAgentBrainError,
     InvalidAgentCapabilitiesError,
 )
 from cora.agent.features.define_agent.command import DefineAgent
@@ -82,9 +83,19 @@ def decide(
         -> InvalidAgentCapabilitiesError
       - Each capability must be valid -> InvalidAgentCapabilityError
         (via AgentCapability VO)
+      - Exactly one of `brain` / `model_ref` must be named
+        -> InvalidAgentBrainError
     """
     if state is not None:
         raise AgentAlreadyExistsError(state.id)
+
+    # An Agent that names no brain has nothing to think with, and the evolver
+    # would refuse to fold the event it produced. The wire already rejects
+    # this, so reaching here means an in-process caller; catching it at the
+    # decider keeps the invariant with the aggregate rather than with one of
+    # its two front doors.
+    if command.brain is None and command.model_ref is None:
+        raise InvalidAgentBrainError
 
     # Validate + trim core fields via VOs (each raises Invalid<X> on bad input).
     kind = AgentKind(command.kind)
@@ -116,5 +127,10 @@ def decide(
             prompt_template_id=command.prompt_template_id,
             capabilities=frozenset(c.value for c in capabilities),
             occurred_at=now,
+            # Recorded exactly as the caller named it, including None. The
+            # evolver derives the effective brain when folding, so a stream
+            # stays a faithful record of what was asked rather than of what
+            # was inferred.
+            brain=command.brain,
         )
     ]

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef, ModelRef
 from cora.agent.prompts import CAUTION_DRAFTER_PROMPT_TEMPLATE_ID
 
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ async def seed_caution_drafter_local_agent(kernel: Kernel) -> None:
         kind=CAUTION_DRAFTER_LOCAL_AGENT_KIND,
         version=CAUTION_DRAFTER_LOCAL_AGENT_VERSION,
         description=CAUTION_DRAFTER_LOCAL_AGENT_DESCRIPTION,
-        model_ref=ModelRef(provider="local", model="local-model"),
+        brain=BrainRef.for_model(ModelRef(provider="local", model="local-model")),
         prompt_template_id=CAUTION_DRAFTER_PROMPT_TEMPLATE_ID,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

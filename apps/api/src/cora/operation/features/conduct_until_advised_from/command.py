@@ -39,6 +39,14 @@ class ConductUntilAdvisedFrom:
     objective_capture_name: str
     decide: DecidePortConfig
     budget: SteeringBudget | None = None
+    steering_driver_id: UUID | None = None
+    """The agent whose stand-down switch governs this resumed loop, or None.
+
+    A resume enters the SAME `_run_decide_loop` as a fresh conduct, so without
+    this the boundary check would be absent on exactly the path an operator
+    takes after a stand-down parked the Procedure. In-process only, mirroring
+    `ConductUntilAdvised.steering_driver_id`.
+    """
 
 
 @dataclass(frozen=True)

@@ -30,7 +30,7 @@ _log = get_logger("list_procedure_iterations")
 
 _SELECT_SQL = """
 SELECT procedure_id, iteration_index, started_at, ended_at, converged, reason,
-       advised_stop, model_ref, advised_next_point
+       advised_stop, model_ref, advised_next_point, advice_latency_ms
 FROM proj_operation_procedure_iterations
 WHERE procedure_id = $1
 ORDER BY iteration_index ASC
@@ -44,6 +44,7 @@ class ProcedureIterationItem:
     `advised_stop` / `model_ref` / `advised_next_point` are the steering
     decision trail for a steered conduct (NULL on a plain convergence
     iteration); `advised_next_point` is the coordinate map the brain advised.
+    `advice_latency_ms` is how long that brain took to answer.
     """
 
     procedure_id: UUID
@@ -55,6 +56,7 @@ class ProcedureIterationItem:
     advised_stop: bool | None
     model_ref: str | None
     advised_next_point: Mapping[str, Any] | None
+    advice_latency_ms: float | None
 
 
 @dataclass(frozen=True)
@@ -92,6 +94,9 @@ def _row_to_item(row: Any) -> ProcedureIterationItem:
         advised_stop=row["advised_stop"],
         model_ref=str(row["model_ref"]) if row["model_ref"] is not None else None,
         advised_next_point=advised_next_point,
+        advice_latency_ms=(
+            float(row["advice_latency_ms"]) if row["advice_latency_ms"] is not None else None
+        ),
     )
 
 

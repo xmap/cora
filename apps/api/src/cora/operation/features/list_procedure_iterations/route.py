@@ -32,6 +32,7 @@ class ProcedureIterationDTO(BaseModel):
     decision trail for a steered conduct (null on a plain convergence pass);
     `advised_next_point` is the coordinate map the brain advised for the next
     pass, letting a reader reconstruct a GP-steered run's decisions.
+    `advice_latency_ms` is how long that brain took to answer.
     """
 
     iteration_index: int
@@ -42,6 +43,7 @@ class ProcedureIterationDTO(BaseModel):
     advised_stop: bool | None = None
     model_ref: str | None = None
     advised_next_point: dict[str, Any] | None = None
+    advice_latency_ms: float | None = None
 
 
 class ProcedureIterationsResponse(BaseModel):
@@ -99,6 +101,7 @@ async def list_procedure_iterations(
                 advised_next_point=(
                     dict(item.advised_next_point) if item.advised_next_point is not None else None
                 ),
+                advice_latency_ms=item.advice_latency_ms,
             )
             for item in result.items
         ]

@@ -51,6 +51,19 @@ class ConductUntilAdvised:
     objective_capture_name: str
     decide: DecidePortConfig
     budget: SteeringBudget | None = None
+    steering_driver_id: UUID | None = None
+    """The agent whose stand-down switch governs this loop, or None when no
+    agent drives it (a human calling the route owns their own conduct).
+
+    In-process only: set by agent drivers (`steer_experiment`) and deliberately
+    NOT on the conduct wire models, mirroring `decide.spend_agent_id`, so a
+    route caller cannot claim to be driven by an agent.
+
+    Distinct from `decide.spend_agent_id` even though both name the
+    ExperimentCoordinator today. That one answers who PAYS for the brain's calls;
+    this one answers who may be switched OFF mid-loop. Merging them would mean
+    a deployment that gates spend elsewhere silently loses the stand-down.
+    """
 
 
 @dataclass(frozen=True)

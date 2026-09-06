@@ -90,6 +90,15 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "AgentDefined": {
         "agent_id": "token:uuid",
+        "brain": {
+            "kind": "keep:enum:BrainKind",
+            "model_ref": {
+                "model": "drop:text",
+                "provider": "drop:text",
+                "snapshot_pin": "drop:text",
+            },
+            "rule": "drop:text",
+        },
         "canonical_uri": "drop:text",
         "capabilities": "drop:text",
         "daily_token_cap": "keep:number",
@@ -102,6 +111,21 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "prompt_template_id": "token:uuid",
         "tools": "drop:text",
         "version": "drop:text",
+    },
+    "AgentDefinitionRestated": {
+        "agent_id": "token:uuid",
+        "brain": {
+            "kind": "keep:enum:BrainKind",
+            "model_ref": {
+                "model": "drop:text",
+                "provider": "drop:text",
+                "snapshot_pin": "drop:text",
+            },
+            "rule": "drop:text",
+        },
+        "name": "drop:text",
+        "occurred_at": "keep:time",
+        "reason": "drop:text",
     },
     "AgentDeprecated": {
         "agent_id": "token:uuid",
@@ -1413,6 +1437,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "reason": "drop:text",
     },
     "ProcedureIterationEnded": {
+        "advice_latency_ms": "keep:number",
         "advised_next_point": "drop:opaque",
         "advised_stop": "keep:number",
         "alternatives": "drop:text",

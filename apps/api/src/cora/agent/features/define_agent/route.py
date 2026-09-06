@@ -5,12 +5,13 @@ optional description / canonical_uri / prompt_template_id /
 capabilities. Returns 201 + `{agent_id}` on success.
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from cora.agent._brain_wire import brain_from_body, model_ref_from_body
 from cora.agent.aggregates.agent import (
     AGENT_CANONICAL_URI_MAX_LENGTH,
     AGENT_CAPABILITIES_MAX_COUNT,
@@ -19,10 +20,10 @@ from cora.agent.aggregates.agent import (
     AGENT_KIND_MAX_LENGTH,
     AGENT_NAME_MAX_LENGTH,
     AGENT_VERSION_MAX_LENGTH,
+    BRAIN_RULE_MAX_LENGTH,
     MODEL_REF_MODEL_MAX_LENGTH,
     MODEL_REF_PROVIDER_MAX_LENGTH,
     MODEL_REF_SNAPSHOT_PIN_MAX_LENGTH,
-    ModelRef,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.handler import IdempotentHandler
@@ -60,6 +61,40 @@ class ModelRefRequest(BaseModel):
     )
 
 
+class BrainRequest(BaseModel):
+    """Sub-body for the typed BrainRef VO: what this Agent thinks with.
+
+    Discriminated by `kind`; exactly the payload belonging to that kind may
+    be set. A flat body carrying every possible field could disagree with
+    itself, which is the shape `BrainRef` exists to make unrepresentable.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["LanguageModel", "Rule"] = Field(
+        ...,
+        description=(
+            "Which kind of brain. `LanguageModel` carries `model_ref` and is "
+            "gated against the approved LanguageModel catalog. `Rule` carries "
+            "`rule` and needs no approval: it runs no external model and "
+            "spends nothing."
+        ),
+    )
+    model_ref: ModelRefRequest | None = Field(
+        default=None,
+        description="Required when `kind` is `LanguageModel`, forbidden otherwise.",
+    )
+    rule: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=BRAIN_RULE_MAX_LENGTH,
+        description=(
+            "Required when `kind` is `Rule`, forbidden otherwise. Names and "
+            "versions the decision rule (convention: `ExperimentCoordinator:v1`)."
+        ),
+    )
+
+
 class DefineAgentRequest(BaseModel):
     """Body for `POST /agents`."""
 
@@ -84,11 +119,20 @@ class DefineAgentRequest(BaseModel):
         max_length=AGENT_VERSION_MAX_LENGTH,
         description="Semver-like version identifier (`v1`, `1.0.0`, etc.).",
     )
-    model_ref: ModelRefRequest = Field(
-        ...,
+    model_ref: ModelRefRequest | None = Field(
+        default=None,
         description=(
-            "Required model identity (provider + model + optional snapshot pin) "
-            "so 8f-b's LLM has the identity available immediately."
+            "Model identity (provider + model + optional snapshot pin). The "
+            "legacy way to name a LanguageModel brain, kept for callers that "
+            "predate `brain`. Supply exactly one of `model_ref` or `brain`."
+        ),
+    )
+    brain: BrainRequest | None = Field(
+        default=None,
+        description=(
+            "What this Agent thinks with. Supply exactly one of `model_ref` or "
+            "`brain`; `brain` is the only way to define an Agent whose brain is "
+            "not a language model."
         ),
     )
     description: str | None = Field(
@@ -122,6 +166,20 @@ class DefineAgentRequest(BaseModel):
             "chars after trim. Empty list IS allowed."
         ),
     )
+
+    @model_validator(mode="after")
+    def _exactly_one_brain_declaration(self) -> "DefineAgentRequest":
+        """Reject a body that names both a brain and a legacy model_ref.
+
+        Not "brain wins": two declarations that disagree mean the caller
+        believes something the record would not say, and picking one silently
+        makes the wire lie about what was asked for. Rejecting is cheap, and a
+        caller that meant a LanguageModel brain can say so either way.
+        """
+        if (self.model_ref is None) == (self.brain is None):
+            msg = "supply exactly one of `model_ref` or `brain`"
+            raise ValueError(msg)
+        return self
 
 
 class DefineAgentResponse(BaseModel):
@@ -185,11 +243,12 @@ async def post_agents(
             kind=body.kind,
             name=body.name,
             version=body.version,
-            model_ref=ModelRef(
-                provider=body.model_ref.provider,
-                model=body.model_ref.model,
-                snapshot_pin=body.model_ref.snapshot_pin,
-            ),
+            # Recorded as the caller named it. A legacy `model_ref` body is
+            # NOT translated to a brain here: the decider keeps the event a
+            # faithful record of what was asked, and the evolver derives the
+            # effective brain when folding.
+            model_ref=model_ref_from_body(body.model_ref),
+            brain=brain_from_body(body.brain),
             description=body.description,
             canonical_uri=body.canonical_uri,
             prompt_template_id=body.prompt_template_id,

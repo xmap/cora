@@ -13,8 +13,8 @@ Per [[project-caution-promoter-design]]:
     RunDebriefer `aaaa00XX`, CautionDrafter `bbbb00XX`, and RunSupervisor
     `cccc00XX` ranges); deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`), never used to build an LLM.
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("CautionPromoter:v1")`), never used to build an LLM.
   - Authorization: the subscriber calls the Authorize port (command
     `PromoteCautionProposal`) before writing the live Caution, parity with
     the human promote path. No separate Policy is seeded (operator-config,
@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -53,16 +53,6 @@ CAUTION_PROMOTER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: CautionPromoter is rule-based, not an LLM agent. The
-# Agent aggregate requires a ModelRef; this value is never used to build an
-# LLM (the subscriber's gate is a deterministic check, no build_llm call).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:CautionPromoter:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -80,7 +70,7 @@ async def seed_caution_promoter_agent(kernel: Kernel) -> None:
         kind=CAUTION_PROMOTER_AGENT_KIND,
         version=CAUTION_PROMOTER_AGENT_VERSION,
         description=CAUTION_PROMOTER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("CautionPromoter:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

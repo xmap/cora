@@ -31,7 +31,7 @@ when a deployment stands up a real catalog.
 command (None for HTTP / MCP root calls).
 """
 
-from typing import Protocol
+from typing import Protocol, assert_never
 from uuid import UUID
 
 from cora.access.aggregates.actor import (
@@ -46,6 +46,11 @@ from cora.access.aggregates.actor import (
     to_payload as actor_to_payload,
 )
 from cora.agent.aggregates.agent import AgentName, event_type_name, to_payload
+from cora.agent.aggregates.agent.state import (
+    BrainKind,
+    BrainRef,
+    InvalidAgentBrainError,
+)
 from cora.agent.aggregates.language_model import (
     LanguageModelNotApprovedError,
     LanguageModelStatus,
@@ -175,19 +180,45 @@ def bind(deps: Kernel, *, profile_store: ProfileStore) -> Handler:
             kind=ActorKind.AGENT,
         )
 
-        # Catalog gate: the declared model identity must hold an
-        # Approved catalog entry. Runs BEFORE the vault upsert and the
+        # Brain gate, dispatched on KIND. Runs BEFORE the vault upsert and the
         # append so a refused registration leaves no orphan profile row.
-        entry = await deps.language_model_lookup.find_by_model(
-            provider=command.model_ref.provider,
-            model=command.model_ref.model,
-        )
-        if entry is None or entry.status != LanguageModelStatus.APPROVED.value:
-            raise LanguageModelNotApprovedError(
-                command.model_ref.provider,
-                command.model_ref.model,
-                entry.status if entry is not None else None,
-            )
+        #
+        # The gate is per-kind because approval means different things per
+        # kind: a language model must hold an Approved catalog entry (the
+        # facility's model-provenance decision), while a deterministic rule
+        # runs no external model, spends nothing, and has no catalog to be
+        # approved against.
+        #
+        # `assert_never` is the forcing function: widening BrainKind fails
+        # type-checking here until the new kind states its gate, so a brain
+        # cannot arrive ungated by omission. That is why BrainKind has no
+        # OPTIMIZER member yet.
+        # A command naming neither is refused by the decider below; the gate
+        # must not be reached with nothing to gate, so it refuses here too
+        # rather than skipping itself on a None.
+        if command.brain is not None:
+            effective_brain = command.brain
+        elif command.model_ref is not None:
+            effective_brain = BrainRef.for_model(command.model_ref)
+        else:
+            raise InvalidAgentBrainError
+        match effective_brain.kind:
+            case BrainKind.LANGUAGE_MODEL:
+                assert effective_brain.model_ref is not None  # BrainRef invariant
+                entry = await deps.language_model_lookup.find_by_model(
+                    provider=effective_brain.model_ref.provider,
+                    model=effective_brain.model_ref.model,
+                )
+                if entry is None or entry.status != LanguageModelStatus.APPROVED.value:
+                    raise LanguageModelNotApprovedError(
+                        effective_brain.model_ref.provider,
+                        effective_brain.model_ref.model,
+                        entry.status if entry is not None else None,
+                    )
+            case BrainKind.RULE:
+                pass
+            case _:  # pragma: no cover - exhaustive over a closed enum
+                assert_never(effective_brain.kind)
 
         agent_new_events = [
             to_new_event(

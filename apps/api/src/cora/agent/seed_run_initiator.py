@@ -14,10 +14,9 @@ except for the per-agent constants below; the shared scaffolding lives in
     repeated-quad scheme continued into the numeric range now that the
     `aaaa`-`ffff` letter blocks are taken). Deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). The model_ref is never used to build an
-    LLM (the runtime is a separate entry point, not an LLM subscriber); it
-    only satisfies the Agent aggregate's required field.
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("RunInitiator:v1")`). The runtime is a separate entry
+    point, not an LLM subscriber.
   - Authorization: the runtime issues `start_run` through the Authorize
     port like any principal. Under the default AllowAllAuthorize it is
     permitted; under TrustAuthorize the operator's single configured Policy
@@ -35,7 +34,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -65,16 +64,6 @@ RUN_INITIATOR_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: RunInitiator is rule-based, not an LLM agent. The
-# Agent aggregate requires a ModelRef; this value is never used to build an
-# LLM (no subscriber / no build_llm call for this agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:RunInitiator:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -92,7 +81,7 @@ async def seed_run_initiator_agent(kernel: Kernel) -> None:
         kind=RUN_INITIATOR_AGENT_KIND,
         version=RUN_INITIATOR_AGENT_VERSION,
         description=RUN_INITIATOR_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("RunInitiator:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

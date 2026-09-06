@@ -578,9 +578,7 @@ class RunDebrieferSubscriber:
         request = build_run_debrief_chat_request(
             payload,
             model_ref=(
-                to_port_model_ref(agent.model_ref)
-                if agent is not None
-                else DEFAULT_RUN_DEBRIEF_MODEL
+                to_port_model_ref(agent.brain) if agent is not None else DEFAULT_RUN_DEBRIEF_MODEL
             ),
         )
 

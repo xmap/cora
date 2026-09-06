@@ -1,5 +1,6 @@
 """Procedure event (de)serialization + roundtrip tests."""
 
+import dataclasses
 import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -31,6 +32,7 @@ from cora.operation.aggregates.procedure import (
     from_stored,
     to_payload,
 )
+from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.shared.steering import (
     SteeringAxis,
@@ -827,6 +829,7 @@ def test_to_payload_serializes_iteration_ended(converged: bool | None, reason: s
         "alternatives": [],
         "model_ref": None,
         "advised_next_point": None,
+        "advice_latency_ms": None,
     }
 
 
@@ -870,6 +873,51 @@ def test_iteration_ended_round_trips_with_advised_next_point() -> None:
     payload = to_payload(event)
     assert payload["advised_next_point"] == {"energy": 7.2, "gap": 3.1}
     rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_iteration_ended_round_trips_with_every_field_set() -> None:
+    """No field of the iteration carrier is dropped by to_payload.
+
+    The other round-trip tests above leave most optional fields at their
+    defaults, so `rebuilt == event` passes even when `to_payload` forgets one:
+    None serializes to absent and deserializes back to None, and the equality
+    holds for the wrong reason. That is how `advice_latency_ms` was added to
+    the dataclass, the decider, the projection and the read surface while
+    `to_payload` silently dropped it, with the whole unit suite green.
+
+    This fixture sets EVERY field to a non-default value, and the assertion
+    below refuses to let it drift back: if someone adds a field and does not
+    populate it here, the guard fails rather than going quietly blind.
+    """
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=7,
+        converged=False,
+        reason="off by 2px",
+        occurred_at=_NOW,
+        advised_stop=True,
+        reasoning="the posterior mean flattened",
+        confidence=0.62,
+        confidence_source=DecisionConfidenceSource.SELF_REPORTED,
+        alternatives=("keep going",),
+        model_ref="botorch",
+        advised_next_point={"energy": 7.2, "gap": 3.1},
+        advice_latency_ms=1234.5,
+    )
+
+    # The fixture must exercise every field, or the equality below is vacuous
+    # for whichever field was left alone.
+    defaults = {
+        f.name: f.default
+        for f in dataclasses.fields(ProcedureIterationEnded)
+        if f.default is not dataclasses.MISSING
+    }
+    at_default = [name for name, default in defaults.items() if getattr(event, name) == default]
+    assert at_default == [], f"fixture leaves fields at their default: {at_default}"
+
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", to_payload(event)))
     assert rebuilt == event
 
 

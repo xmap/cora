@@ -556,6 +556,16 @@
       "AgentResponse": {
         "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. Decouples the wire format\nfrom the domain model so the two can evolve independently.\n\n`defined_at` / `versioned_at` / `deprecated_at` are projection-\nsourced lifecycle timestamps (Path C);\nsee module docstring for null-semantics. `defined_at` is\nnullable (changed from required during lifecycle widening) because\nthe projection can lag; once the projection has folded\n`AgentDefined`, `defined_at` is non-null on every response.",
         "properties": {
+          "brain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrainResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "canonical_uri": {
             "anyOf": [
               {
@@ -629,7 +639,14 @@
             "type": "string"
           },
           "model_ref": {
-            "$ref": "#/components/schemas/ModelRefResponse"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "name": {
             "title": "Name",
@@ -672,7 +689,6 @@
           "kind",
           "name",
           "version",
-          "model_ref",
           "status",
           "capabilities"
         ],
@@ -2063,6 +2079,86 @@
           }
         },
         "title": "BindingsByKind",
+        "type": "object"
+      },
+      "BrainRequest": {
+        "additionalProperties": false,
+        "description": "Sub-body for the typed BrainRef VO: what this Agent thinks with.\n\nDiscriminated by `kind`; exactly the payload belonging to that kind may\nbe set. A flat body carrying every possible field could disagree with\nitself, which is the shape `BrainRef` exists to make unrepresentable.",
+        "properties": {
+          "kind": {
+            "description": "Which kind of brain. `LanguageModel` carries `model_ref` and is gated against the approved LanguageModel catalog. `Rule` carries `rule` and needs no approval: it runs no external model and spends nothing.",
+            "enum": [
+              "LanguageModel",
+              "Rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when `kind` is `LanguageModel`, forbidden otherwise."
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when `kind` is `Rule`, forbidden otherwise. Names and versions the decision rule (convention: `ExperimentCoordinator:v1`).",
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BrainRequest",
+        "type": "object"
+      },
+      "BrainResponse": {
+        "description": "Sub-DTO for the typed BrainRef VO.\n\nExactly one of `model_ref` / `rule` is populated, matching `kind`. The\ntwo are not merged into one string because a caller deciding whether it\nmay invoke this Agent through an LLM needs the kind, not a label it has\nto parse.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "BrainResponse",
         "type": "object"
       },
       "CalibrationListPageResponse": {
@@ -5646,6 +5742,17 @@
       "DefineAgentRequest": {
         "description": "Body for `POST /agents`.",
         "properties": {
+          "brain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrainRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this Agent thinks with. Supply exactly one of `model_ref` or `brain`; `brain` is the only way to define an Agent whose brain is not a language model."
+          },
           "canonical_uri": {
             "anyOf": [
               {
@@ -5691,8 +5798,15 @@
             "type": "string"
           },
           "model_ref": {
-            "$ref": "#/components/schemas/ModelRefRequest",
-            "description": "Required model identity (provider + model + optional snapshot pin) so 8f-b's LLM has the identity available immediately."
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRefRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Model identity (provider + model + optional snapshot pin). The legacy way to name a LanguageModel brain, kept for callers that predate `brain`. Supply exactly one of `model_ref` or `brain`."
           },
           "name": {
             "description": "Human-readable display name.",
@@ -5725,8 +5839,7 @@
         "required": [
           "kind",
           "name",
-          "version",
-          "model_ref"
+          "version"
         ],
         "title": "DefineAgentRequest",
         "type": "object"
@@ -11117,8 +11230,19 @@
         "type": "object"
       },
       "ProcedureIterationDTO": {
-        "description": "One convergence-loop iteration of a Procedure.\n\n`advised_stop` / `model_ref` / `advised_next_point` are the steering\ndecision trail for a steered conduct (null on a plain convergence pass);\n`advised_next_point` is the coordinate map the brain advised for the next\npass, letting a reader reconstruct a GP-steered run's decisions.",
+        "description": "One convergence-loop iteration of a Procedure.\n\n`advised_stop` / `model_ref` / `advised_next_point` are the steering\ndecision trail for a steered conduct (null on a plain convergence pass);\n`advised_next_point` is the coordinate map the brain advised for the next\npass, letting a reader reconstruct a GP-steered run's decisions.\n`advice_latency_ms` is how long that brain took to answer.",
         "properties": {
+          "advice_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Latency Ms"
+          },
           "advised_next_point": {
             "anyOf": [
               {
@@ -14309,6 +14433,128 @@
           "ratification_id"
         ],
         "title": "RequestRatificationResponse",
+        "type": "object"
+      },
+      "RestateAgentDefinitionRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /agents/{agent_id}/restate-definition`.",
+        "properties": {
+          "brain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RestatedBrainRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What this Agent thinks with. Omit to leave the brain unchanged."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New display name. Omit to leave the name unchanged.",
+            "title": "Name"
+          },
+          "reason": {
+            "description": "Why this restatement is being appended. Required: writing to an append-only governance record is an act someone chooses, and the record should say why they chose it.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RestateAgentDefinitionRequest",
+        "type": "object"
+      },
+      "RestatedBrainRequest": {
+        "additionalProperties": false,
+        "description": "Sub-body for the typed BrainRef VO, discriminated by `kind`.",
+        "properties": {
+          "kind": {
+            "description": "`LanguageModel` carries model_ref; `Rule` carries rule.",
+            "enum": [
+              "LanguageModel",
+              "Rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RestatedModelRefRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RestatedBrainRequest",
+        "type": "object"
+      },
+      "RestatedModelRefRequest": {
+        "additionalProperties": false,
+        "description": "Sub-body for the typed ModelRef VO.",
+        "properties": {
+          "model": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "snapshot_pin": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Pin"
+          }
+        },
+        "required": [
+          "provider",
+          "model"
+        ],
+        "title": "RestatedModelRefRequest",
         "type": "object"
       },
       "RestoreAssetRequest": {
@@ -19708,6 +19954,106 @@
           }
         },
         "summary": "Deprecate an Agent (Defined | Versioned -> Deprecated; terminal)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/agents/{agent_id}/restate-definition": {
+      "post": {
+        "operationId": "post_agents_restate_definition_agents__agent_id__restate_definition_post",
+        "parameters": [
+          {
+            "description": "Target agent's id.",
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "description": "Target agent's id.",
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestateAgentDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only name or reason, or a brain whose payload disagrees with its kind)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No agent exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Agent is `Deprecated` (only blocking source state)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation, including a body that restates neither a name nor a brain."
+          }
+        },
+        "summary": "Restate an existing Agent's name and/or brain (omitted fields stay unchanged)",
         "tags": [
           "agent"
         ]

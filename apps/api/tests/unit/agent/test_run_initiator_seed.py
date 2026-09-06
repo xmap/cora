@@ -1,6 +1,6 @@
 """Unit tests for the RunInitiator Agent bootstrap seed.
 
-RunInitiator is a deterministic agent (no prompt template, sentinel ModelRef:
+RunInitiator is a deterministic agent (no prompt template, a Rule brain (`RunInitiator:v1`):
 it is rule-based, never builds an LLM). It is the agent that autonomously
 STARTS Runs, distinct from the RunSupervisor. These tests pin that shape
 alongside the shared seed scaffolding.
@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cora.agent.aggregates.agent import load_agent
+from cora.agent.aggregates.agent import BrainRef, load_agent
 from cora.agent.seed_run_initiator import (
     RUN_INITIATOR_AGENT_ID,
     RUN_INITIATOR_AGENT_KIND,
@@ -48,16 +48,17 @@ async def test_seed_creates_run_initiator_at_pinned_id() -> None:
 
 
 @pytest.mark.unit
-async def test_seed_is_deterministic_no_prompt_sentinel_model() -> None:
-    """Deterministic agent: no prompt template, sentinel (non-LLM) model_ref."""
+async def test_seed_is_deterministic_no_prompt_rule_brain() -> None:
+    """Deterministic agent: no prompt template, and a Rule brain rather
+    than a model it does not have."""
     kernel = _kernel()
     await seed_run_initiator_agent(kernel)
 
     agent = await load_agent(kernel.event_store, RUN_INITIATOR_AGENT_ID)
     assert agent is not None
     assert agent.prompt_template_id is None
-    assert agent.model_ref.provider == "deterministic"
-    assert agent.model_ref.model == "agent:RunInitiator:v1"
+    assert agent.model_ref is None
+    assert agent.brain == BrainRef.for_rule("RunInitiator:v1")
 
 
 @pytest.mark.unit

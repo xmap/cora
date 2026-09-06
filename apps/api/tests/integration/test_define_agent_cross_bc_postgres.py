@@ -29,7 +29,7 @@ import asyncpg
 import pytest
 
 from cora.access.aggregates.actor import ActorKind, load_actor
-from cora.agent.aggregates.agent import AgentStatus, ModelRef, load_agent
+from cora.agent.aggregates.agent import AgentStatus, BrainRef, ModelRef, load_agent
 from cora.agent.features import define_agent
 from cora.agent.features.define_agent import DefineAgent
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
@@ -70,7 +70,11 @@ async def test_define_agent_writes_both_streams_atomically(
     assert agent.id == agent_id
     assert agent.kind.value == "RunDebriefer"
     assert agent.status is AgentStatus.DEFINED
+    # A wire-defined agent still records `model_ref`, and its brain derives
+    # from it: only the seeds have moved to declaring `brain` directly.
+    assert agent.model_ref is not None
     assert agent.model_ref.snapshot_pin == "20251001"
+    assert agent.brain == BrainRef.for_model(agent.model_ref)
     assert agent.canonical_uri is not None
     assert agent.canonical_uri.value == "https://example.org/agents/run-debrief"
 

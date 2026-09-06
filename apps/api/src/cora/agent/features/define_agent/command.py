@@ -20,7 +20,7 @@ Per the design lock, fields explicitly NOT on the command:
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef, ModelRef
 
 
 @dataclass(frozen=True)
@@ -30,8 +30,13 @@ class DefineAgent:
     kind: str
     name: str
     version: str
-    model_ref: ModelRef
+    model_ref: ModelRef | None = None
     description: str | None = None
     canonical_uri: str | None = None
     prompt_template_id: UUID | None = None
     capabilities: frozenset[str] = field(default_factory=frozenset[str])
+    # The brain to run on. Optional during the migration only: omitting it
+    # means "the LanguageModel named by model_ref", which is what every caller
+    # meant before brains had kinds. A caller that names a Rule brain does not
+    # have to invent a sentinel ModelRef to satisfy the older field.
+    brain: BrainRef | None = None

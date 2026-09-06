@@ -194,6 +194,7 @@ def bind(
                 objective_capture_name=command.objective_capture_name,
                 point_to_captures=_identity_point_to_captures,
                 budget=command.budget,
+                steering_driver_id=command.steering_driver_id,
             )
         except ValueError as exc:
             # conduct_until_advised raises ValueError only from its pre-FSM wire

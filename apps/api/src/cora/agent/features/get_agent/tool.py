@@ -20,7 +20,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.agent.aggregates.agent import AgentStatus
+from cora.agent.aggregates.agent import AgentStatus, BrainRef, ModelRef
 from cora.agent.features.get_agent.handler import Handler
 from cora.agent.features.get_agent.query import GetAgent
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
@@ -37,6 +37,17 @@ class ModelRefOutput(BaseModel):
     snapshot_pin: str | None = None
 
 
+class BrainOutput(BaseModel):
+    """Sub-output for the typed BrainRef VO.
+
+    Exactly one of `model_ref` / `rule` is populated, matching `kind`.
+    """
+
+    kind: str
+    model_ref: ModelRefOutput | None = None
+    rule: str | None = None
+
+
 class AgentOutput(BaseModel):
     """Structured output of the `get_agent` MCP tool (on hit).
 
@@ -50,7 +61,9 @@ class AgentOutput(BaseModel):
     kind: str
     name: str
     version: str
-    model_ref: ModelRefOutput
+    # Null for an Agent whose brain is not a language model.
+    model_ref: ModelRefOutput | None = None
+    brain: BrainOutput | None = None
     status: AgentStatus
     defined_at: datetime | None = None
     description: str | None = None
@@ -60,6 +73,26 @@ class AgentOutput(BaseModel):
     versioned_at: datetime | None = None
     deprecated_at: datetime | None = None
     deprecation_reason: DeprecationReason | None = None
+
+
+def _model_ref_output(model_ref: ModelRef | None) -> ModelRefOutput | None:
+    if model_ref is None:
+        return None
+    return ModelRefOutput(
+        provider=model_ref.provider,
+        model=model_ref.model,
+        snapshot_pin=model_ref.snapshot_pin,
+    )
+
+
+def _brain_output(brain: BrainRef | None) -> BrainOutput | None:
+    if brain is None:
+        return None
+    return BrainOutput(
+        kind=brain.kind.value,
+        model_ref=_model_ref_output(brain.model_ref),
+        rule=brain.rule,
+    )
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -98,11 +131,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             kind=agent.kind.value,
             name=agent.name.value,
             version=agent.version.value,
-            model_ref=ModelRefOutput(
-                provider=agent.model_ref.provider,
-                model=agent.model_ref.model,
-                snapshot_pin=agent.model_ref.snapshot_pin,
-            ),
+            # Sourced from the brain, not the legacy `model_ref` slot,
+            # which is empty for every Agent defined since the seeds moved over.
+            model_ref=_model_ref_output(agent.brain.model_ref if agent.brain else None),
+            brain=_brain_output(agent.brain),
             status=agent.status,
             defined_at=timestamps.created_at if timestamps is not None else None,
             description=agent.description.value if agent.description is not None else None,

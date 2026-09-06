@@ -1,7 +1,7 @@
 """Unit tests for the CautionPromoter Agent bootstrap seed.
 
 CautionPromoter is the second DETERMINISTIC agent: no prompt template and
-a sentinel ModelRef (it is rule-based, never builds an LLM). These tests
+a Rule brain (`CautionPromoter:v1`) (it is rule-based, never builds an LLM). These tests
 pin that shape alongside the shared seed scaffolding.
 """
 
@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cora.agent.aggregates.agent import load_agent
+from cora.agent.aggregates.agent import BrainRef, load_agent
 from cora.agent.seed_caution_promoter import (
     CAUTION_PROMOTER_AGENT_ID,
     CAUTION_PROMOTER_AGENT_KIND,
@@ -47,16 +47,17 @@ async def test_seed_creates_caution_promoter_at_pinned_id() -> None:
 
 
 @pytest.mark.unit
-async def test_seed_is_deterministic_no_prompt_sentinel_model() -> None:
-    """Deterministic agent: no prompt template, sentinel (non-LLM) model_ref."""
+async def test_seed_is_deterministic_no_prompt_rule_brain() -> None:
+    """Deterministic agent: no prompt template, and a Rule brain rather
+    than a model it does not have."""
     kernel = _kernel()
     await seed_caution_promoter_agent(kernel)
 
     agent = await load_agent(kernel.event_store, CAUTION_PROMOTER_AGENT_ID)
     assert agent is not None
     assert agent.prompt_template_id is None
-    assert agent.model_ref.provider == "deterministic"
-    assert agent.model_ref.model == "agent:CautionPromoter:v1"
+    assert agent.model_ref is None
+    assert agent.brain == BrainRef.for_rule("CautionPromoter:v1")
 
 
 @pytest.mark.unit

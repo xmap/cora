@@ -14,8 +14,8 @@ Per [[project-procedure-watcher-design]]:
     `cccc00XX`, CautionPromoter `dddd00XX`, ClearanceExpirer `eeee00XX`,
     ClearanceWatcher `ffff00XX`, CalibrationWatcher `ca1100XX`);
     deployment-stable forever.
-  - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template and a sentinel
-    `ModelRef` (`provider="deterministic"`), never used to build an LLM (the
+  - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template and a Rule
+    brain (`BrainRef.for_rule("ProcedureWatcher:v1")`), never used to build an LLM (the
     runtime is a periodic staleness comparison over in-conduct procedures).
   - FLAG-ONLY: the runtime issues NO write command (unlike ClearanceExpirer's
     expire_clearance), so there is no per-command Policy grant to seed. It does
@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -60,16 +60,6 @@ PROCEDURE_WATCHER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: ProcedureWatcher is rule-based, not an LLM agent. The
-# Agent aggregate requires a ModelRef; this value is never used to build an LLM
-# (the runtime is a periodic staleness comparison, no build_llm call).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:ProcedureWatcher:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -87,7 +77,7 @@ async def seed_procedure_watcher_agent(kernel: Kernel) -> None:
         kind=PROCEDURE_WATCHER_AGENT_KIND,
         version=PROCEDURE_WATCHER_AGENT_VERSION,
         description=PROCEDURE_WATCHER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("ProcedureWatcher:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

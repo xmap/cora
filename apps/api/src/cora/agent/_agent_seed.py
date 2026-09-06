@@ -39,7 +39,7 @@ the prior convention).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, assert_never
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import (
@@ -56,10 +56,15 @@ from cora.agent.aggregates.agent import (
     AgentStatus,
     AgentVersion,
     AgentVersioned,
-    ModelRef,
+    BrainKind,
+    BrainRef,
     event_type_name,
     load_agent,
     to_payload,
+)
+from cora.agent.aggregates.language_model import (
+    LanguageModelNotApprovedError,
+    LanguageModelStatus,
 )
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
@@ -104,12 +109,48 @@ class AgentSeedIdentity:
     kind: str
     version: str
     description: str
-    model_ref: ModelRef
+    brain: BrainRef
     prompt_template_id: UUID | None
     agent_event_id: UUID
     actor_event_id: UUID
     correlation_id: UUID
     command_name: str
+
+
+async def _require_approved_brain(kernel: Kernel, identity: AgentSeedIdentity) -> None:
+    """Refuse to seed an Agent whose language model the facility never approved.
+
+    The same check `define_agent` applies to an operator, applied to the
+    shipped fleet. Until now no seeded agent passed it: `seed_agent` appends
+    directly rather than going through that handler, so of twenty seeded
+    agents, zero were gated, including the two that think with real models.
+
+    Dispatched on brain kind, and `assert_never` is the forcing function: a
+    widened `BrainKind` fails type-checking here until it states its gate, so
+    a new kind cannot arrive ungated by omission.
+
+    Raises rather than warning. A shipped agent naming an unapproved model is
+    a packaging error, and booting with it is the thing this closes.
+    """
+    match identity.brain.kind:
+        case BrainKind.LANGUAGE_MODEL:
+            assert identity.brain.model_ref is not None  # BrainRef invariant
+            entry = await kernel.language_model_lookup.find_by_model(
+                provider=identity.brain.model_ref.provider,
+                model=identity.brain.model_ref.model,
+            )
+            if entry is None or entry.status != LanguageModelStatus.APPROVED.value:
+                raise LanguageModelNotApprovedError(
+                    identity.brain.model_ref.provider,
+                    identity.brain.model_ref.model,
+                    entry.status if entry is not None else None,
+                )
+        case BrainKind.RULE:
+            # A rule runs no external model and spends nothing, so there is
+            # no catalog decision for it to be subject to.
+            pass
+        case _:  # pragma: no cover - exhaustive over a closed enum
+            assert_never(identity.brain.kind)
 
 
 async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
@@ -121,6 +162,14 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
     from cora.infrastructure.event_envelope import to_new_event
 
     now = kernel.clock.now()
+
+    # Gate only a FIRST write. The append below is optimistically idempotent
+    # (ConcurrencyError means already seeded), so an unconditional gate would
+    # re-run every boot, and a catalog that later un-approves a model would
+    # then brick the boot of a deployment whose agent already exists. That is
+    # curation, not a definition error.
+    if await load_agent(kernel.event_store, identity.agent_id) is None:
+        await _require_approved_brain(kernel, identity)
 
     # Validate the constants by routing them through the same VOs
     # the decider uses. If a constant is invalid (eg. too long) we
@@ -135,7 +184,11 @@ async def seed_agent(kernel: Kernel, identity: AgentSeedIdentity) -> None:
         kind=kind.value,
         name=name.value,
         version=version.value,
-        model_ref=identity.model_ref,
+        # Seeds name their brain in `brain` and leave the legacy slot empty.
+        # A deterministic agent used to fill it with a sentinel model name,
+        # which read as a claim to think with a model that does not exist.
+        model_ref=None,
+        brain=identity.brain,
         description=description.value,
         canonical_uri=None,
         prompt_template_id=identity.prompt_template_id,

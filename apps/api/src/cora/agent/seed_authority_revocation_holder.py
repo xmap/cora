@@ -20,12 +20,12 @@ the T-ASE resource-accountability paper's four-gates plan):
     deployment-stable forever. Changing it orphans every prior holder-authored
     Decision.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). The model_ref is never used to build an LLM
-    (the runtime is an event-triggered subscriber, not an LLM call); it only
-    satisfies the Agent aggregate's required field. Watch: the Agent aggregate is
-    LLM-shaped; revisit a first-class deterministic-agent shape if more rule-
-    agents land (the same watch RunSupervisor carries).
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("AuthorityRevocationHolder:v1")`). The runtime is an
+    event-triggered subscriber, not an LLM call. The watch this bullet used to
+    carry, that the Agent aggregate was LLM-shaped and wanted a first-class
+    deterministic-agent shape if more rule-agents landed, has fired and been
+    answered: eighteen landed, and `BrainRef` is that shape.
   - Authorization: the subscriber authorizes HoldRun through the Authorize port
     as its own principal before writing RunHeld. Under the default
     AllowAllAuthorize it is permitted (the bootstrap window: holds are ungated
@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -72,16 +72,6 @@ AUTHORITY_REVOCATION_HOLDER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: the holder is rule-based, not an LLM agent. The Agent
-# aggregate requires a ModelRef; this value is never used to build an LLM (no
-# build_llm call for this agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:AuthorityRevocationHolder:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -99,7 +89,7 @@ async def seed_authority_revocation_holder_agent(kernel: Kernel) -> None:
         kind=AUTHORITY_REVOCATION_HOLDER_AGENT_KIND,
         version=AUTHORITY_REVOCATION_HOLDER_AGENT_VERSION,
         description=AUTHORITY_REVOCATION_HOLDER_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("AuthorityRevocationHolder:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

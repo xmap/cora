@@ -419,7 +419,7 @@ def objective_is_satisfied(
     The single definition of "the objective is met", shared by every consumer that
     needs it: the within-loop brain (`GridWalkDecidePort`'s early Stop, passing its
     latest observation's measurements) and the across-procedure driver (the
-    ExperimentSteerer's Continue-vs-Conclude rule, passing the conduct result's
+    ExperimentCoordinator's Continue-vs-Conclude rule, passing the conduct result's
     measurements). Takes the measurement tuple directly, not a whole
     `SteeringObservation`, so a caller that holds only a `ConductorResult` (no
     point) does not fabricate one. Non-`Satisfy` objectives (Minimize / Maximize /

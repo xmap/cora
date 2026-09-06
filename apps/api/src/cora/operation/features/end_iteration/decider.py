@@ -94,5 +94,6 @@ def decide(
             alternatives=command.alternatives,
             model_ref=command.model_ref,
             advised_next_point=command.advised_next_point,
+            advice_latency_ms=command.advice_latency_ms,
         )
     ]

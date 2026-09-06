@@ -2,7 +2,7 @@
 
 One catalog entry per model the shipped agent fleet declares:
 the RunDebriefer default, the CautionDrafter default, and the
-ExperimentSteerer LLM-decide default. Each entry is born Defined AND
+ExperimentCoordinator LLM-decide default. Each entry is born Defined AND
 Approved (two events on the fresh stream) because seeds bypass the
 handlers: the `define_agent` gate refuses any model identity without
 an Approved entry, and a fresh deployment must not refuse
@@ -135,7 +135,7 @@ class LanguageModelSeedEntry:
     served_via: ServingRoute
 
 
-# The ExperimentSteerer default is `DEFAULT_LLM_DECIDE_MODEL` in
+# The ExperimentCoordinator default is `DEFAULT_LLM_DECIDE_MODEL` in
 # `cora.operation.adapters._llm_decide_prompt`, mirrored here as
 # literals because `cora.agent` does not depend on `cora.operation`
 # (tach boundary). The consistency test in

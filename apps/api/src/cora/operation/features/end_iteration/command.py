@@ -27,6 +27,13 @@ matching the Decision record so the two audit homes stay type-faithful.
 `advised_next_point` is the coordinate the brain advised for the next pass
 (a `SteeringPoint.coordinates` map), recorded so a finished GP-steered run's
 decision trail is complete (TIER-1 replay; recording only, no re-seed).
+
+`advice_latency_ms` is how long the brain took to answer, measured by the
+conductor rather than reported by the brain. It is the only budget dimension
+a non-LLM brain spends: a Gaussian process costs no money, so the spend gates
+are blind to it, while at a beamline the scarce resource is beam time. Measured
+off the injected clock, never wall clock, so a re-drive under a fixed clock
+reproduces the ledger byte-for-byte.
 """
 
 from collections.abc import Mapping
@@ -52,3 +59,4 @@ class EndProcedureIteration:
     alternatives: tuple[str, ...] = ()
     model_ref: str | None = None
     advised_next_point: Mapping[str, Any] | None = None
+    advice_latency_ms: float | None = None

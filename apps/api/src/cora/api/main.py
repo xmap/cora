@@ -72,7 +72,7 @@ from cora.agent import (
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
     seed_durable_copy_registrar_agent,
-    seed_experiment_steerer_agent,
+    seed_experiment_coordinator_agent,
     seed_language_models,
     seed_procedure_watcher_agent,
     seed_ratification_enforcer_agent,
@@ -1187,6 +1187,21 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_budget_subscribers(registry, deps)
             app.state.projections = registry
 
+            # The LanguageModel catalog is seeded BEFORE any Agent, and its
+            # projection drained, because `seed_agent` now applies the same
+            # approval gate `define_agent` applies to an operator. Seeding an
+            # LLM-brained agent against an empty catalog would refuse boot.
+            #
+            # The old order was the reverse, and only worked because the seeds
+            # bypassed the gate entirely: the comment on the later drain says
+            # the catalog exists "so the define_agent gate never refuses the
+            # shipped fleet", while the shipped fleet was seeded before it.
+            # The bypass and the ordering propped each other up.
+            await seed_language_models(deps)
+            catalog_registry = ProjectionRegistry()
+            register_agent_projections(catalog_registry, deps)
+            if deps.pool is not None:
+                await drain_projections(deps.pool, catalog_registry, deadline_seconds=5.0)
             # seed the AuthorityRevocationHolder Agent record FIRST: the
             # kill-switch subscriber (K3) registers unconditionally and must
             # resolve its `actor_id` at apply()-time. Idempotent across restarts.
@@ -1218,15 +1233,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # default (unset designation) case always resolves an Agent;
             # a report, never a gate, so it never refuses boot.
             await report_designated_agents(deps)
-            # LanguageModel catalog entries for the fleet's three default
-            # models, born Defined AND Approved so the define_agent gate
-            # never refuses the shipped fleet on a fresh deployment.
-            await seed_language_models(deps)
-            # Drain Agent-owned projections synchronously (the federation /
-            # enclosure drain shape below): first boot must not refuse
-            # define_agent for the models the seed just approved while the
-            # worker catches up, and PostgresLanguageModelLookup reads
-            # proj_agent_language_model_summary. Cheap no-op in-memory.
+            # Second drain, covering the Agents seeded above (the catalog and
+            # its own drain moved ahead of them for the seed gate). Kept
+            # rather than folded into that earlier drain so those Agents'
+            # projections still land during boot exactly as before; a drain
+            # that is already caught up returns immediately.
             agent_only_registry = ProjectionRegistry()
             register_agent_projections(agent_only_registry, deps)
             if deps.pool is not None:
@@ -1253,9 +1264,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_procedure_watcher_agent(deps)
             # same shape for CampaignWatcher (deterministic flag-only agent).
             await seed_campaign_watcher_agent(deps)
-            # same shape for ExperimentSteerer (deterministic L3 steering agent;
+            # same shape for ExperimentCoordinator (deterministic L3 steering agent;
             # identity + Decision seam now, proactive driver loop in a later slice).
-            await seed_experiment_steerer_agent(deps)
+            await seed_experiment_coordinator_agent(deps)
             # same shape for RunTranslator (deterministic capture-promotion
             # agent; renamed from RunWitness -- seed_run_witness_agent stays
             # below it forever, retired-but-source-tracked, per that

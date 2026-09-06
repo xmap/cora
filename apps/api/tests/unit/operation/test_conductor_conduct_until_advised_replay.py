@@ -238,6 +238,13 @@ def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> 
     landed `advised_next_point`; the deferred RESUME leg (re-seed closed passes
     + consult the brain only at the open frontier) would add a decide-loop
     resume entry + a ValueCaptured channel, NOT more carrier fields.
+
+    `advice_latency_ms` is the one later addition, and it is measurement rather
+    than replay: wall clock is the only budget dimension no gate watches, since
+    a non-LLM brain spends neither money nor tokens. It rides here because it is
+    per-iteration advice provenance like the fields above it, and it does not
+    disturb replay because it is read from a monotonic port that a test clock
+    never advances.
     """
     assert {f.name for f in dataclasses.fields(EndProcedureIteration)} == {
         "procedure_id",
@@ -251,6 +258,7 @@ def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> 
         "alternatives",
         "model_ref",
         "advised_next_point",
+        "advice_latency_ms",
     }
     assert {f.name for f in dataclasses.fields(ProcedureIterationEnded)} == {
         "procedure_id",
@@ -265,4 +273,5 @@ def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> 
         "alternatives",
         "model_ref",
         "advised_next_point",
+        "advice_latency_ms",
     }

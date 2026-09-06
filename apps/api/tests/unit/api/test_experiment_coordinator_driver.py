@@ -1,4 +1,4 @@
-"""Tests for the ExperimentSteerer across-procedure driver (steer_experiment).
+"""Tests for the ExperimentCoordinator across-procedure driver (steer_experiment).
 
 White-box tests of the proactive across-procedure loop: it drives the
 conduct_until_advised handler per procedure, applies the v1 deterministic
@@ -20,11 +20,11 @@ from uuid import UUID, uuid4, uuid5
 
 import pytest
 
-from cora.agent.seed_experiment_steerer import (
-    EXPERIMENT_STEERER_AGENT_ID,
-    seed_experiment_steerer_agent,
+from cora.agent.seed_experiment_coordinator import (
+    EXPERIMENT_COORDINATOR_AGENT_ID,
+    seed_experiment_coordinator_agent,
 )
-from cora.api._experiment_steerer import _derive_decision_id, steer_experiment
+from cora.api._experiment_coordinator import _derive_decision_id, steer_experiment
 from cora.decision.aggregates.decision import load_decision
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
@@ -164,7 +164,7 @@ async def _steer(
         space=_space(),
         objective_capture_name=_OBJECTIVE_NAME,
         decide=DecidePortConfig(substrate="grid_walk"),
-        principal_id=EXPERIMENT_STEERER_AGENT_ID,
+        principal_id=EXPERIMENT_COORDINATOR_AGENT_ID,
         correlation_id=uuid4(),
     )
     return steps, conduct, hold
@@ -177,7 +177,7 @@ def test_driver_choice_constants_are_experiment_steering_choices() -> None:
     They are re-declared string literals; this pins them to ExperimentSteeringChoice
     so a future enum rename cannot silently leave the driver emitting stale choices.
     """
-    from cora.api._experiment_steerer import (
+    from cora.api._experiment_coordinator import (
         _CHOICE_CONCLUDE,
         _CHOICE_CONTINUE,
         _CHOICE_HOLD,
@@ -191,7 +191,7 @@ def test_driver_choice_constants_are_experiment_steering_choices() -> None:
 async def test_steer_continues_until_objective_met_then_concludes() -> None:
     """Two procedures miss the target (Continue), the third meets it (Conclude)."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0, p1, p2, p3 = uuid4(), uuid4(), uuid4(), uuid4()
     results = {
         p0: _ok_result(p0, 1030.0),
@@ -215,7 +215,7 @@ async def test_steer_continues_until_objective_met_then_concludes() -> None:
         assert decision is not None
         assert decision.context.value == "ExperimentSteering"
         assert decision.choice.value == s.choice
-        assert decision.decided_by == EXPERIMENT_STEERER_AGENT_ID
+        assert decision.decided_by == EXPERIMENT_COORDINATOR_AGENT_ID
 
 
 @pytest.mark.unit
@@ -223,7 +223,7 @@ async def test_steer_holds_on_faulted_procedure_and_links_decision() -> None:
     """A faulted steered procedure -> Hold, and an agent-issued hold_procedure
     carries the recorded Decision id via decided_by_decision_id."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0, p1 = uuid4(), uuid4()
     results = {p0: _faulted_result(p0), p1: _ok_result(p1, _TARGET)}
 
@@ -241,7 +241,7 @@ async def test_steer_holds_on_faulted_procedure_and_links_decision() -> None:
 async def test_steer_stops_on_list_exhaustion_all_continue() -> None:
     """If no procedure meets the objective, the loop ends when the list is exhausted."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0, p1 = uuid4(), uuid4()
     results = {p0: _ok_result(p0, 1030.0), p1: _ok_result(p1, 1029.0)}
 
@@ -260,9 +260,9 @@ async def test_steer_records_signed_decisions() -> None:
     from cora.infrastructure.signing import verify_signature
     from tests.unit.agent._helpers import Ed25519FakeSigner
 
-    signer = Ed25519FakeSigner(kid="kid-experiment-steerer")
+    signer = Ed25519FakeSigner(kid="kid-experiment-coordinator")
     kernel = dataclasses.replace(_kernel(), signer=signer)
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0 = uuid4()
 
     steps, _conduct, _hold = await _steer(
@@ -274,7 +274,7 @@ async def test_steer_records_signed_decisions() -> None:
     events, _ = await kernel.event_store.load("Decision", steps[0].decision_id)
     stored = events[0]
     assert stored.signature is not None
-    assert stored.signature_kid == "kid-experiment-steerer"
+    assert stored.signature_kid == "kid-experiment-coordinator"
 
     async def _resolver(kid: str) -> bytes:
         return signer.public_key_bytes
@@ -293,7 +293,7 @@ async def test_steer_stands_down_when_agent_unseeded() -> None:
     """No seeded agent -> the loop stops BEFORE conducting anything: a
     stood-down steerer must not burn LLM calls whose spend has no
     Decision to land on."""
-    kernel = _kernel()  # ExperimentSteerer NOT seeded
+    kernel = _kernel()  # ExperimentCoordinator NOT seeded
     p0, p1 = uuid4(), uuid4()
     results = {p0: _ok_result(p0, 1030.0), p1: _ok_result(p1, 1029.0)}
 
@@ -334,7 +334,7 @@ async def test_steer_posts_llm_usage_to_the_inference_ledger() -> None:
     kernel = _kernel()
     recorder = FakeInferenceRecorder()
     object.__setattr__(kernel, "inference_recorder", recorder)
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0 = uuid4()
     result = dc_replace(_ok_result(p0, _TARGET), llm_calls=(_sonnet_call(), _sonnet_call(2000, 50)))
     steps, _conduct, _hold = await _steer(kernel, procedure_ids=[p0], results={p0: result})
@@ -347,8 +347,8 @@ async def test_steer_posts_llm_usage_to_the_inference_ledger() -> None:
     assert first.trace.decision_id == decision_id
     assert first.trace.event_id == uuid5(decision_id, "inference:0")
     assert recorder.calls[1].trace.event_id == uuid5(decision_id, "inference:1")
-    assert first.trace.agent_id == str(EXPERIMENT_STEERER_AGENT_ID)
-    assert first.principal_id == EXPERIMENT_STEERER_AGENT_ID
+    assert first.trace.agent_id == str(EXPERIMENT_COORDINATOR_AGENT_ID)
+    assert first.principal_id == EXPERIMENT_COORDINATOR_AGENT_ID
     assert first.trace.provider_name == "anthropic"
     assert first.trace.request_model == "claude-sonnet-4-5"
     assert first.trace.response_model == "claude-sonnet-4-5-20250929"
@@ -387,19 +387,19 @@ async def test_steer_stood_down_records_no_usage() -> None:
 
 
 @pytest.mark.unit
-async def test_steer_stamps_the_steerer_agent_id_onto_the_decide_config() -> None:
+async def test_steer_stamps_the_coordinator_agent_id_onto_the_decide_config() -> None:
     """The driver stamps its agent onto the brain config so the
     pre-estimate gate has someone to charge; route callers cannot set
     this (the field is not on the wire models)."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0 = uuid4()
 
     _steps, conduct, _hold = await _steer(
         kernel, procedure_ids=[p0], results={p0: _ok_result(p0, _TARGET)}
     )
 
-    assert conduct.calls[0].decide.spend_agent_id == EXPERIMENT_STEERER_AGENT_ID
+    assert conduct.calls[0].decide.spend_agent_id == EXPERIMENT_COORDINATOR_AGENT_ID
 
 
 @pytest.mark.unit
@@ -410,7 +410,7 @@ async def test_steer_posts_each_turns_usage_onto_that_turns_own_decision() -> No
     kernel = _kernel()
     recorder = FakeInferenceRecorder()
     object.__setattr__(kernel, "inference_recorder", recorder)
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     p0, p1 = uuid4(), uuid4()
     results = {
         p0: dc_replace(_ok_result(p0, 1030.0), llm_calls=(_sonnet_call(),)),
@@ -425,6 +425,39 @@ async def test_steer_posts_each_turns_usage_onto_that_turns_own_decision() -> No
         assert step.decision_id is not None
         assert recorded.trace.decision_id == step.decision_id
         assert recorded.trace.event_id == uuid5(step.decision_id, "inference:0")
+
+
+@pytest.mark.unit
+async def test_steer_names_itself_as_the_loop_driver() -> None:
+    """The driver stamps its agent onto the conduct so the steered loop can
+    re-read the stand-down switch at every iteration boundary.
+
+    Without this the whole boundary check is inert in production: the
+    conductor only consults the switch when a caller names a driver, and
+    `steer_experiment` is the only caller that has one.
+    """
+    kernel = _kernel()
+    await seed_experiment_coordinator_agent(kernel)
+    p0 = uuid4()
+
+    _steps, conduct, _hold = await _steer(
+        kernel, procedure_ids=[p0], results={p0: _ok_result(p0, _TARGET)}
+    )
+
+    assert conduct.calls[0].steering_driver_id == EXPERIMENT_COORDINATOR_AGENT_ID
+
+
+@pytest.mark.unit
+def test_steering_driver_id_is_absent_from_the_conduct_wire_models() -> None:
+    """Same attribution boundary as `spend_agent_id`: a route caller must not
+    be able to claim an agent drives its conduct, which would let it park a
+    Procedure under that agent's name."""
+    from cora.operation.features.conduct_until_advised.route import (
+        ConductUntilAdvisedRequest,
+    )
+
+    assert "steering_driver_id" not in ConductUntilAdvisedRequest.model_fields
+    assert ConductUntilAdvisedRequest.model_config.get("extra") == "forbid"
 
 
 @pytest.mark.unit

@@ -48,7 +48,7 @@ below is confirmed present in the real wire surface via
     there is nothing for a Policy to grant it.
   - Eight synthetic Decision-envelope labels (`CampaignWatcherTick`,
     `ClearanceWatcherTick`, `ClearanceExpirerTick`, `ProcedureWatcherTick`,
-    `CalibrationWatcherTick`, `ExperimentSteererTurn`,
+    `CalibrationWatcherTick`, `ExperimentCoordinatorTurn`,
     `CautionPromoterSubscriber`, `AuthorityRevocationHolderSubscriber`):
     these are `command_name=` values written directly via
     `to_new_event(...)` + `event_store.append(...)`, audit labels on a
@@ -89,7 +89,7 @@ from cora.agent.seed_caution_promoter import CAUTION_PROMOTER_AGENT_ID
 from cora.agent.seed_clearance_expirer import CLEARANCE_EXPIRER_AGENT_ID
 from cora.agent.seed_clearance_watcher import CLEARANCE_WATCHER_AGENT_ID
 from cora.agent.seed_durable_copy_registrar import DURABLE_COPY_REGISTRAR_AGENT_ID
-from cora.agent.seed_experiment_steerer import EXPERIMENT_STEERER_AGENT_ID
+from cora.agent.seed_experiment_coordinator import EXPERIMENT_COORDINATOR_AGENT_ID
 from cora.agent.seed_procedure_watcher import PROCEDURE_WATCHER_AGENT_ID
 from cora.agent.seed_ratification_enforcer import RATIFICATION_ENFORCER_AGENT_ID
 from cora.agent.seed_run_debriefer_external import RUN_DEBRIEFER_EXTERNAL_AGENT_ID
@@ -117,7 +117,7 @@ IN_PROCESS_GRANTS: Final[Mapping[UUID, frozenset[str]]] = MappingProxyType(
         CLEARANCE_EXPIRER_AGENT_ID: frozenset({"ListClearances", "ExpireClearance"}),
         CLEARANCE_WATCHER_AGENT_ID: frozenset({"ListClearances", "GetClearance"}),
         DURABLE_COPY_REGISTRAR_AGENT_ID: frozenset({"RegisterDistribution"}),
-        EXPERIMENT_STEERER_AGENT_ID: frozenset({"HoldProcedure", "AppendInferences"}),
+        EXPERIMENT_COORDINATOR_AGENT_ID: frozenset({"HoldProcedure", "AppendInferences"}),
         PROCEDURE_WATCHER_AGENT_ID: frozenset({"ListProcedures"}),
         RATIFICATION_ENFORCER_AGENT_ID: frozenset({"HoldRun", "ResumeRun"}),
         RUN_DEBRIEFER_EXTERNAL_AGENT_ID: frozenset({"AppendInferences"}),

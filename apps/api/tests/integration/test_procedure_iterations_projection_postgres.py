@@ -118,8 +118,11 @@ async def test_steering_trail_is_projected_and_read_back(db_pool: asyncpg.Pool) 
     """TIER-1 replay: a steered iteration's advised trail projects + reads back.
 
     Ends an iteration carrying advised_stop / model_ref / advised_next_point
-    (as the conductor does for a GP-steered pass) and asserts the trail is
-    reconstructable by READING the list handler -- the core replay property.
+    / advice_latency_ms (as the conductor does for a GP-steered pass) and
+    asserts the trail is reconstructable by READING the list handler -- the
+    core replay property. The latency rides the same path because it exists to
+    be aggregated over, which means it has to survive into the read model, not
+    just onto the stream.
     """
     proc_id = uuid4()
     deps = _build_deps(db_pool, [proc_id, *[uuid4() for _ in range(6)]])
@@ -147,6 +150,7 @@ async def test_steering_trail_is_projected_and_read_back(db_pool: asyncpg.Pool) 
             advised_stop=False,
             model_ref="botorch",
             advised_next_point={"energy": 7.2, "gap": 3.1},
+            advice_latency_ms=1234.5,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -163,6 +167,7 @@ async def test_steering_trail_is_projected_and_read_back(db_pool: asyncpg.Pool) 
     assert item.advised_stop is False
     assert item.model_ref == "botorch"
     assert item.advised_next_point == {"energy": 7.2, "gap": 3.1}
+    assert item.advice_latency_ms == 1234.5
 
 
 @pytest.mark.integration

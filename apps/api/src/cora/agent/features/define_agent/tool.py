@@ -5,12 +5,13 @@ Context Protocol tool. MCP tools currently bypass header extraction
 """
 
 from collections.abc import Callable
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
+from cora.agent._brain_wire import brain_from_body, model_ref_from_body
 from cora.agent.aggregates.agent import (
     AGENT_CANONICAL_URI_MAX_LENGTH,
     AGENT_CAPABILITIES_MAX_COUNT,
@@ -19,16 +20,37 @@ from cora.agent.aggregates.agent import (
     AGENT_KIND_MAX_LENGTH,
     AGENT_NAME_MAX_LENGTH,
     AGENT_VERSION_MAX_LENGTH,
+    BRAIN_RULE_MAX_LENGTH,
     MODEL_REF_MODEL_MAX_LENGTH,
     MODEL_REF_PROVIDER_MAX_LENGTH,
     MODEL_REF_SNAPSHOT_PIN_MAX_LENGTH,
-    ModelRef,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.handler import IdempotentHandler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+
+
+class BrainInput(BaseModel):
+    """Sub-input for the typed BrainRef VO: what this Agent thinks with."""
+
+    kind: Literal["LanguageModel", "Rule"] = Field(
+        ...,
+        description=(
+            "`LanguageModel` carries model_ref and is gated against the "
+            "approved catalog; `Rule` carries rule and needs no approval."
+        ),
+    )
+    model_ref: "ModelRefInput | None" = Field(
+        default=None, description="Required when kind is LanguageModel."
+    )
+    rule: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=BRAIN_RULE_MAX_LENGTH,
+        description="Required when kind is Rule (convention: `ExperimentCoordinator:v1`).",
+    )
 
 
 class ModelRefInput(BaseModel):
@@ -95,11 +117,27 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             ),
         ],
         model_ref: Annotated[
-            ModelRefInput,
+            ModelRefInput | None,
             Field(
-                description="Model identity: provider, model name, and an optional snapshot pin."
+                default=None,
+                description=(
+                    "Model identity: provider, model name, and an optional snapshot "
+                    "pin. The legacy way to name a LanguageModel brain. Supply "
+                    "exactly one of model_ref or brain."
+                ),
             ),
-        ],
+        ] = None,
+        brain: Annotated[
+            BrainInput | None,
+            Field(
+                default=None,
+                description=(
+                    "What this Agent thinks with. Supply exactly one of model_ref "
+                    "or brain; brain is the only way to define an Agent whose "
+                    "brain is not a language model."
+                ),
+            ),
+        ] = None,
         description: Annotated[
             str | None,
             Field(
@@ -134,17 +172,17 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             ),
         ] = None,
     ) -> DefineAgentOutput:
+        if (model_ref is None) == (brain is None):
+            msg = "supply exactly one of model_ref or brain"
+            raise ValueError(msg)
         handler = get_handler()
         agent_id = await handler(
             DefineAgent(
                 kind=kind,
                 name=name,
                 version=version,
-                model_ref=ModelRef(
-                    provider=model_ref.provider,
-                    model=model_ref.model,
-                    snapshot_pin=model_ref.snapshot_pin,
-                ),
+                model_ref=model_ref_from_body(model_ref),
+                brain=brain_from_body(brain),
                 description=description,
                 canonical_uri=canonical_uri,
                 prompt_template_id=prompt_template_id,

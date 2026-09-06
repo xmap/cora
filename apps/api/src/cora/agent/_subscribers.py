@@ -209,21 +209,34 @@ async def report_designated_agents(deps: Kernel) -> None:
                 agent_id=str(agent_id),
             )
             continue
+        # An LLM subscriber designated to a rule-brained Agent has no provider
+        # to report or compare. Say so at startup rather than logging a blank
+        # provider that reads as agreement with the configured one.
+        brain = agent.brain
+        model_ref = brain.model_ref if brain is not None else None
         _log.info(
             "agent_subscriber.designated_agent",
             subscriber=subscriber_name,
             agent_id=str(agent_id),
             agent_name=agent.name.value,
             agent_kind=agent.kind.value,
-            provider=agent.model_ref.provider,
-            model=agent.model_ref.model,
+            brain_kind=brain.kind.value if brain is not None else None,
+            provider=model_ref.provider if model_ref is not None else None,
+            model=model_ref.model if model_ref is not None else None,
         )
-        if agent.model_ref.provider != deps.settings.llm_provider:
+        if model_ref is None:
+            _log.warning(
+                "agent_subscriber.designated_agent_has_no_model",
+                subscriber=subscriber_name,
+                agent_id=str(agent_id),
+                brain_kind=brain.kind.value if brain is not None else None,
+            )
+        elif model_ref.provider != deps.settings.llm_provider:
             _log.warning(
                 "agent_subscriber.designated_agent_provider_mismatch",
                 subscriber=subscriber_name,
                 agent_id=str(agent_id),
-                agent_provider=agent.model_ref.provider,
+                agent_provider=model_ref.provider,
                 configured_llm_provider=deps.settings.llm_provider,
             )
 

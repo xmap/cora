@@ -387,14 +387,14 @@ RunInitiationChoice = Literal["Start"]
 RUN_INITIATION_CHOICES: Final = frozenset({"Start"})
 
 
-# ExperimentSteerer agent writes one Decision per ACROSS-procedure steering
+# ExperimentCoordinator agent writes one Decision per ACROSS-procedure steering
 # disposition: after one steered Procedure (the within-procedure loop, whose
 # per-iteration advice provenance already lands on `ProcedureIterationEnded`)
-# reaches its terminal, the steerer decides what the experiment does next.
+# reaches its terminal, the ExperimentCoordinator decides what happens next.
 # Open-ended convention identical to RunSupervision / RunInitiation; the closed
 # choice vocabulary lives in the `ExperimentSteeringChoice` Literal below. See
-# [[project_decide_layer_stage1_design]] (the L3 ExperimentSteerer) + the seam in
-# `cora.api._experiment_steerer`.
+# [[project_decide_layer_stage1_design]] (the L3 ExperimentCoordinator) + the seam in
+# `cora.api._experiment_coordinator`.
 DECISION_CONTEXT_EXPERIMENT_STEERING = "ExperimentSteering"
 
 

@@ -43,6 +43,7 @@ no polymorphism, no saga compensation.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from typing import assert_never
 from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
@@ -61,6 +62,11 @@ AGENT_TOOL_NAME_MAX_LENGTH = 100
 AGENT_TOOLS_MAX_COUNT = 32
 MODEL_REF_PROVIDER_MAX_LENGTH = 100
 MODEL_REF_MODEL_MAX_LENGTH = 200
+BRAIN_RULE_MAX_LENGTH = 200
+"""Bound on a Rule brain's name. Matched to `MODEL_REF_MODEL_MAX_LENGTH`
+because the two are the same thing at different kinds: the identity of the
+brain an Agent thinks with. Unbounded was tolerable while only seeds wrote it;
+it is wire-supplied now."""
 MODEL_REF_SNAPSHOT_PIN_MAX_LENGTH = 100
 
 
@@ -176,6 +182,33 @@ class InvalidAgentCapabilityError(ValueError):
         self.value = value
 
 
+class InvalidAgentBrainKindError(ValueError):
+    """An LLM call was routed to an Agent that does not think with a model.
+
+    Reachable only by pointing a designated-agent setting at an Agent whose
+    brain is a rule, which is a deployment misconfiguration rather than an
+    operator mistake at the wire. Loud rather than tolerated: the quiet
+    alternative is serving a module-default model under that Agent's
+    identity, which is the exact shape of the sentinel this type replaced.
+    """
+
+    def __init__(self, kind: str | None) -> None:
+        super().__init__(
+            f"Agent brain must be a {BrainKind.LANGUAGE_MODEL.value} to serve an LLM call "
+            f"(got: {kind!r})"
+        )
+        self.kind = kind
+
+
+class InvalidBrainRefError(ValueError):
+    """A `BrainRef`'s payload does not match its own `kind`.
+
+    Raised by the VO rather than by a decider: the type exists so that a brain
+    cannot be named ambiguously, so a half-filled one must not be constructible
+    anywhere, including in a test fixture or a seed.
+    """
+
+
 class InvalidAgentCapabilitiesError(ValueError):
     """The supplied capabilities frozenset has too many entries."""
 
@@ -253,6 +286,58 @@ class InvalidModelRefError(ValueError):
 # ---------------------------------------------------------------------------
 # Aggregate-level guard errors (genesis collision / not-found / cannot-transition)
 # ---------------------------------------------------------------------------
+
+
+class InvalidAgentDefinitionRestatementError(ValueError):
+    """A restatement named neither a name nor a brain.
+
+    An event restating nothing is a governance write with no content: it
+    appends to an append-only record and says nothing. Refused rather than
+    silently emitting no event, because a caller who meant to change
+    something and mistyped the field name deserves to hear about it.
+    """
+
+    def __init__(self, agent_id: UUID) -> None:
+        super().__init__(f"Agent {agent_id} restatement must supply a name, a brain, or both")
+        self.agent_id = agent_id
+
+
+class InvalidAgentRestatementReasonError(ValueError):
+    """The supplied restatement reason is empty, whitespace-only, or too long."""
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Agent restatement reason must be 1-{REASON_MAX_LENGTH} chars after trimming "
+            f"(got: {value!r})"
+        )
+        self.value = value
+
+
+class AgentCannotRestateDefinitionError(Exception):
+    """The Agent is Deprecated, so its record is closed to restatement.
+
+    Mirrors `AgentCannotUpdateTargetPlanError`: Deprecated is the only
+    blocking state. Restating what a retired agent thinks with says nothing
+    anyone can act on.
+    """
+
+    def __init__(self, agent_id: UUID, status: "AgentStatus") -> None:
+        super().__init__(f"Agent {agent_id} cannot be restated from status {status.value}")
+        self.agent_id = agent_id
+        self.status = status
+
+
+class InvalidAgentBrainError(ValueError):
+    """A `define_agent` command named neither a brain nor a legacy model_ref.
+
+    An Agent that names nothing to think with produces an `AgentDefined` the
+    evolver refuses to fold, so this is caught at write time rather than
+    discovered at replay. The wire rejects it first; reaching this means an
+    in-process caller.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Agent must name exactly one of brain or model_ref")
 
 
 class AgentAlreadyExistsError(Exception):
@@ -811,6 +896,110 @@ class ModelRef:
 # ---------------------------------------------------------------------------
 
 
+class BrainKind(StrEnum):
+    """What KIND of thinking part an Agent runs on.
+
+    An Agent is an identity plus authority plus a brain. The brain is the part
+    that decides; the Agent is the part that acts, holds the caps and can be
+    stood down. Until this enum existed the brain slot was `ModelRef`, which
+    only describes an LLM, so an Agent whose brain is a deterministic rule had
+    to declare a sentinel `ModelRef` that its own comment admitted was never
+    used to build an LLM.
+
+    `OPTIMIZER` is deliberately ABSENT. A search brain (a Gaussian process, a
+    Sobol seeder) is a real brain kind, but it has no catalog to be approved
+    against yet, and adding a member here that no gate checks would ship a
+    silently ungated brain. Widening this enum forces the `assert_never` in the
+    approval dispatch to fail type-checking, so the gate cannot be forgotten.
+    See [[project-brain-modeling-design]].
+    """
+
+    LANGUAGE_MODEL = "LanguageModel"
+    RULE = "Rule"
+
+
+@dataclass(frozen=True)
+class BrainRef:
+    """Which specific brain an Agent thinks with, discriminated by kind.
+
+    Exactly one of the per-kind payloads is set, matching `kind`. The
+    invariant is enforced here rather than at each call site, because the
+    whole point of the type is that a caller cannot name a brain ambiguously.
+
+    `model_ref` is set iff kind is LANGUAGE_MODEL, and is gated at
+    `define_agent` against the approved `LanguageModel` catalog.
+    `rule` is set iff kind is RULE: a deterministic decision rule, named and
+    versioned (`ExperimentCoordinator:v1`), which needs no approval because it
+    runs no external model and spends nothing.
+    """
+
+    kind: BrainKind
+    model_ref: ModelRef | None = None
+    rule: str | None = None
+
+    def __post_init__(self) -> None:
+        match self.kind:
+            case BrainKind.LANGUAGE_MODEL:
+                if self.model_ref is None or self.rule is not None:
+                    raise InvalidBrainRefError(
+                        "a LanguageModel brain carries model_ref and no rule"
+                    )
+            case BrainKind.RULE:
+                if self.rule is None or self.model_ref is not None:
+                    raise InvalidBrainRefError("a Rule brain carries rule and no model_ref")
+                rule_trimmed = self.rule.strip()
+                if not rule_trimmed:
+                    raise InvalidBrainRefError("rule must be non-empty after trim")
+                if len(rule_trimmed) > BRAIN_RULE_MAX_LENGTH:
+                    raise InvalidBrainRefError(
+                        f"rule exceeds {BRAIN_RULE_MAX_LENGTH} chars after trim"
+                    )
+            case _:  # pragma: no cover - exhaustive over a closed enum
+                assert_never(self.kind)
+
+    @staticmethod
+    def for_model(model_ref: ModelRef) -> "BrainRef":
+        """The LanguageModel-kind brain for `model_ref`.
+
+        Also the back-compat path: a stream written before `brain` existed
+        carries only `model_ref`, and folds to exactly this.
+        """
+        return BrainRef(kind=BrainKind.LANGUAGE_MODEL, model_ref=model_ref)
+
+    @staticmethod
+    def for_rule(rule: str) -> "BrainRef":
+        """The Rule-kind brain named `rule` (convention: `<Name>:v<N>`)."""
+        return BrainRef(kind=BrainKind.RULE, rule=rule)
+
+
+DETERMINISTIC_BRAIN_PROVIDER = "deterministic"
+_SENTINEL_MODEL_PREFIX = "agent:"
+
+
+def brain_from_legacy_model_ref(model_ref: ModelRef) -> BrainRef:
+    """Read the brain a pre-`BrainRef` stream MEANT, from its `model_ref`.
+
+    Eighteen seeded agents predate this type. `model_ref` was required and
+    LLM-shaped, so the deterministic ones had to name a model they never call,
+    and every one of them used the same deliberate sentinel: provider
+    `deterministic`, model `agent:<Name>:v1`. That is a Rule brain written the
+    only way the schema then allowed, and folding it to a LanguageModel brain
+    would claim those agents think with a language model that does not exist
+    and was never approved.
+
+    Used ONLY when interpreting history, never when accepting new input. A
+    caller defining an agent today states its brain explicitly; deriving Rule
+    from a magic provider string at define time would let a caller skip the
+    model-approval gate by naming a provider, which is a bypass rather than a
+    reading. See the dispatch in `define_agent`'s handler.
+    """
+    if model_ref.provider == DETERMINISTIC_BRAIN_PROVIDER and model_ref.model.startswith(
+        _SENTINEL_MODEL_PREFIX
+    ):
+        return BrainRef.for_rule(model_ref.model.removeprefix(_SENTINEL_MODEL_PREFIX))
+    return BrainRef.for_model(model_ref)
+
+
 @dataclass(frozen=True)
 class Agent:
     """Aggregate root: an AI agent's typed configuration record.
@@ -819,9 +1008,10 @@ class Agent:
     integration. Identity is a stable opaque `id: UUID` SHARED with
     Access BC's `Actor.id` for the same agent.
 
-    Required day-1 fields: `id`, `kind`, `name`, `version`, `model_ref`,
-    `status` (defaults to `Defined` at construction; evolver sets
-    explicitly).
+    Required day-1 fields: `id`, `kind`, `name`, `version`, `status`
+    (defaults to `Defined` at construction; evolver sets explicitly).
+    `brain` is not declared required by the type, but the evolver never
+    produces state without one: see `_effective_brain` in the evolver.
 
     Optional fields: `description`, `canonical_uri`,
     `prompt_template_id` (None if no template registry entry exists;
@@ -860,7 +1050,15 @@ class Agent:
     kind: AgentKind
     name: AgentName
     version: AgentVersion
-    model_ref: ModelRef
+    # Legacy input path, written only by streams that predate `brain` and by
+    # wire callers that still send it. None for anything defined since the
+    # seeds moved over. Read `brain` instead; this field is kept so an old
+    # stream stays a faithful record of what was written.
+    model_ref: ModelRef | None = None
+    # The brain, always present in folded state even for a stream written
+    # before `brain` existed: the evolver derives one from `model_ref` in that
+    # case, so a reader never has to know which era the stream came from.
+    brain: BrainRef | None = None
     description: AgentDescription | None = None
     canonical_uri: AgentCanonicalUri | None = None
     prompt_template_id: UUID | None = None

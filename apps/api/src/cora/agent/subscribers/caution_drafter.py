@@ -501,7 +501,7 @@ class CautionDrafterSubscriber:
         request = build_caution_drafter_chat_request(
             payload,
             model_ref=(
-                to_port_model_ref(agent.model_ref)
+                to_port_model_ref(agent.brain)
                 if agent is not None
                 else DEFAULT_CAUTION_DRAFTER_MODEL
             ),

@@ -12,12 +12,12 @@ lives in `cora.agent._agent_seed`.
   - Pinned UUID opens a NEW numeric-mnemonic block, `1465` (`INGEST` on a
     phone keypad; the mnemonic ranges already claimed are `1111`
     RunInitiator, `2222` RunWitness, `3333` CaptureProgressFeeder,
-    `ba5e` CaptureBaselineReader, `5733` ExperimentSteerer, and the
+    `ba5e` CaptureBaselineReader, `5733` ExperimentCoordinator, and the
     hex-word blocks `cab1`/`b111`/`ca11`/`dddd`/`eeee`/`bbbb`/`cccc`/
     `ffff`/`0c0c`/`fac0`). Deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template
-    (`prompt_template_id=None`) and a sentinel `ModelRef`
-    (`provider="deterministic"`). The sweep is a poll-and-append loop,
+    (`prompt_template_id=None`) and a Rule brain
+    (`BrainRef.for_rule("CaptureScanIngestor:v1")`). The sweep is a poll-and-append loop,
     not an LLM subscriber.
   - A SEPARATE principal from RunTranslator, CaptureProgressFeeder, and
     CaptureBaselineReader, deliberately: an operator can revoke
@@ -40,7 +40,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.agent._agent_seed import AgentSeedIdentity, seed_agent
-from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.agent import BrainRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
@@ -70,16 +70,6 @@ CAPTURE_SCAN_INGESTOR_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: CaptureScanIngestor is rule-based, not an LLM agent.
-# The Agent aggregate requires a ModelRef; this value is never used to
-# build an LLM (no subscriber / no build_llm call for this agent).
-_DETERMINISTIC_MODEL_REF = ModelRef(
-    provider="deterministic",
-    model="agent:CaptureScanIngestor:v1",
-    snapshot_pin=None,
-)
-
-
 # ---------------------------------------------------------------------------
 # Deterministic IDs for the bootstrap write envelope
 # ---------------------------------------------------------------------------
@@ -97,7 +87,7 @@ async def seed_capture_scan_ingestor_agent(kernel: Kernel) -> None:
         kind=CAPTURE_SCAN_INGESTOR_AGENT_KIND,
         version=CAPTURE_SCAN_INGESTOR_AGENT_VERSION,
         description=CAPTURE_SCAN_INGESTOR_AGENT_DESCRIPTION,
-        model_ref=_DETERMINISTIC_MODEL_REF,
+        brain=BrainRef.for_rule("CaptureScanIngestor:v1"),
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,

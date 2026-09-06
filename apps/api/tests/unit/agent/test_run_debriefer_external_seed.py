@@ -53,9 +53,12 @@ async def test_seed_model_ref_matches_the_original_default() -> None:
 
     agent = await load_agent(kernel.event_store, RUN_DEBRIEFER_EXTERNAL_AGENT_ID)
     assert agent is not None
-    assert agent.model_ref.provider == DEFAULT_RUN_DEBRIEF_MODEL.provider
-    assert agent.model_ref.model == DEFAULT_RUN_DEBRIEF_MODEL.model
-    assert agent.model_ref.snapshot_pin == DEFAULT_RUN_DEBRIEF_MODEL.snapshot_pin
+    assert agent.brain is not None
+    model_ref = agent.brain.model_ref
+    assert model_ref is not None
+    assert model_ref.provider == DEFAULT_RUN_DEBRIEF_MODEL.provider
+    assert model_ref.model == DEFAULT_RUN_DEBRIEF_MODEL.model
+    assert model_ref.snapshot_pin == DEFAULT_RUN_DEBRIEF_MODEL.snapshot_pin
 
 
 @pytest.mark.unit

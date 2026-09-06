@@ -122,9 +122,13 @@ from typing import Any, Protocol, cast
 from uuid import UUID
 
 from cora.infrastructure.edge_runtime import abort_orphan_on_cancel
-from cora.infrastructure.ports.clock import Clock
+from cora.infrastructure.ports.clock import Clock, MonotonicClock, SystemMonotonicClock
 from cora.infrastructure.ports.event_store import ConcurrencyError
 from cora.infrastructure.ports.id_generator import IdGenerator
+from cora.infrastructure.ports.principal_liveness_lookup import (
+    PrincipalLiveness,
+    PrincipalLivenessLookup,
+)
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation._control_dispatch_context import with_dispatch_correlation_id
 from cora.operation.aggregates.procedure import (
@@ -355,6 +359,16 @@ uncapped loop with a never-matching criterion would actuate without bound. The
 ceiling is generous (a real alignment converges in single-digit passes); it is
 a runaway backstop, not a tuning knob."""
 
+_ERROR_STEERING_DRIVER_STOOD_DOWN = "SteeringDriverStoodDown"
+"""error_class on the lifecycle `ConductorFailure` that `conduct_until_advised`
+returns when the agent driving the loop was switched off mid-flight.
+
+Held, not aborted: the Procedure itself is healthy and its measured passes are
+worth keeping. Standing an agent down means "stop acting", not "destroy the
+run", so an operator who reactivates the Actor resumes from where it parked.
+Distinct from every pass-fault hold: nothing failed here.
+"""
+
 _ERROR_ABSOLUTE_ITERATION_CEILING = "AbsoluteIterationCeilingReached"
 """error_class on the lifecycle `ConductorFailure` that `conduct_until_converged`
 returns when the absolute iteration ceiling (`_ABSOLUTE_MAX_ITERATIONS`) trips.
@@ -453,6 +467,7 @@ Activity entry; the failure surfaces only on the result."""
 _LIFECYCLE_TARGET_START = "start"
 _LIFECYCLE_TARGET_COMPLETE = "complete"
 _LIFECYCLE_TARGET_ABORT = "abort"
+_LIFECYCLE_TARGET_HOLD = "hold"
 
 _RESULT_OK = "ok"
 _RESULT_FAILED = "failed"
@@ -746,6 +761,19 @@ def steering_probe_point(space: SteeringSpace) -> SteeringPoint:
             for axis in space.axes
         }
     )
+
+
+def _elapsed_ms(started: float, finished: float) -> float:
+    """Milliseconds between two monotonic reads, floored at zero.
+
+    Both reads come from the Conductor's injected `MonotonicClock`, so a
+    `FakeMonotonicClock` that is never advanced yields 0.0 and a re-drive
+    reproduces the ledger byte-for-byte. The floor is belt-and-braces: a
+    monotonic source should never go backwards, and if one ever does, a
+    negative duration would silently poison any aggregate computed over the
+    column later.
+    """
+    return max(0.0, (finished - started) * 1000.0)
 
 
 def _validate_advice_point(point: SteeringPoint | None, space: SteeringSpace) -> None:
@@ -1113,6 +1141,7 @@ class Conductor:
         append_step: AppendProcedureActivitiesHandler,
         clock: Clock,
         id_generator: IdGenerator,
+        monotonic_clock: MonotonicClock | None = None,
         action_registry: ActionRegistry | None = None,
         compute_port: ComputePort | None = None,
         start_procedure: StartProcedureHandler | None = None,
@@ -1120,6 +1149,7 @@ class Conductor:
         abort_procedure: AbortProcedureHandler | None = None,
         resume_procedure: ResumeProcedureHandler | None = None,
         hold_procedure: HoldProcedureHandler | None = None,
+        principal_liveness_lookup: PrincipalLivenessLookup | None = None,
         start_iteration: StartProcedureIterationHandler | None = None,
         end_iteration: EndProcedureIterationHandler | None = None,
         append_diagnostics: AppendProcedureDiagnosticsHandler | None = None,
@@ -1148,6 +1178,14 @@ class Conductor:
         # replay-determinism property is untouched.
         self._append_outcomes = append_outcomes
         self._clock = clock
+        # Durations are measured off a MONOTONIC source, never off `clock`:
+        # wall-clock time can step backwards under an NTP correction, which
+        # would make an elapsed measurement wrong or negative (the same reason
+        # GPU accounting has its own port). Defaulted rather than required so
+        # every existing construction site keeps working; a test injects
+        # `FakeMonotonicClock`, which starts at 0.0 and only moves when told,
+        # so a re-drive that never advances it reproduces the ledger exactly.
+        self._monotonic_clock: MonotonicClock = monotonic_clock or SystemMonotonicClock()
         self._id_generator = id_generator
         self._action_registry: ActionRegistry = action_registry or InMemoryActionRegistry({})
         # BORROWED reference: the composition root owns the single ComputePort
@@ -1160,6 +1198,7 @@ class Conductor:
         self._abort_procedure = abort_procedure
         self._resume_procedure = resume_procedure
         self._hold_procedure = hold_procedure
+        self._principal_liveness_lookup = principal_liveness_lookup
         self._start_iteration = start_iteration
         self._end_iteration = end_iteration
 
@@ -2417,6 +2456,90 @@ class Conductor:
             substrate_writes=substrate_writes,
         )
 
+    async def _driver_stood_down(self, steering_driver_id: UUID | None) -> bool:
+        """True if the agent driving this loop has been switched off.
+
+        False when no agent drives the loop: a human calling the route owns
+        their own conduct and has no stand-down switch to consult.
+
+        A driver id with no lookup wired is a construction error, not a pass.
+        The permissive-default shape every sibling lookup port ships
+        (`AlwaysLivePrincipalLivenessLookup`) would make this check silently
+        absent in exactly the deployment that forgot to wire it, which is the
+        deployment that needs it. The opt-in is the driver id; once a caller
+        claims to be agent-driven, the switch has to be real.
+
+        UNREGISTERED counts as stood down. A driver whose Actor stream does
+        not exist cannot have been switched on, and treating "cannot find it"
+        as "carry on" is the same silent pass by another name.
+        """
+        if steering_driver_id is None:
+            return False
+        if self._principal_liveness_lookup is None:
+            msg = (
+                "conduct_until_advised was given steering_driver_id "
+                f"{steering_driver_id} but no principal_liveness_lookup, so the "
+                "driver's stand-down switch cannot be read"
+            )
+            raise ValueError(msg)
+        liveness = await self._principal_liveness_lookup.liveness_of(steering_driver_id)
+        return liveness is not PrincipalLiveness.ACTIVE
+
+    async def _hold_driver_stood_down(
+        self,
+        *,
+        procedure_id: UUID,
+        steering_driver_id: UUID,
+        iteration_count: int,
+        folded_kind: str | None,
+        last_result: ConductorResult | None,
+        envelope_kwargs: dict[str, Any],
+    ) -> ConductorResult:
+        """Park a steered loop whose driver was switched off mid-flight.
+
+        Fires at the loop top with no iteration open, so the hold is the only
+        FSM transition, exactly as `_abort_absolute_ceiling` does. Held rather
+        than aborted: see `_ERROR_STEERING_DRIVER_STOOD_DOWN`.
+
+        Best-effort, matching every other lifecycle transition here: if the
+        hold itself fails, the Procedure is left Running and the result says
+        `held=False`, so a caller never reads a park that did not happen.
+        """
+        msg = (
+            f"steering driver {steering_driver_id} was stood down after "
+            f"{iteration_count} iteration(s)"
+        )
+        reason = msg[:REASON_MAX_LENGTH]
+        held_ok = False
+        with contextlib.suppress(Exception):
+            await self._hold_procedure(  # type: ignore[misc]
+                HoldProcedure(procedure_id=procedure_id, reason=reason, actuation_kind=folded_kind),
+                **envelope_kwargs,
+            )
+            held_ok = True
+        # None-safe carry-forward; see `_abort_absolute_ceiling` for why every
+        # ledger field, not just completed_count, must be threaded from
+        # `last_result`. A held Procedure is parked mid-flight awaiting an
+        # operator, which is exactly when `substrate_writes` has to survive:
+        # it is the list of what CORA left set.
+        return ConductorResult(
+            procedure_id=procedure_id,
+            completed_count=last_result.completed_count if last_result is not None else 0,
+            failure=ConductorFailure(
+                step_index=None,
+                source_kind=_SOURCE_KIND_LIFECYCLE,
+                target=_LIFECYCLE_TARGET_HOLD,
+                error_class=_ERROR_STEERING_DRIVER_STOOD_DOWN,
+                message=msg,
+            ),
+            actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
+            measurements=last_result.measurements if last_result is not None else (),
+            artifacts=last_result.artifacts if last_result is not None else (),
+            outputs=last_result.outputs if last_result is not None else {},
+            substrate_writes=last_result.substrate_writes if last_result is not None else {},
+            held=held_ok,
+        )
+
     async def _abort_after_failed_pass(
         self,
         *,
@@ -2460,6 +2583,7 @@ class Conductor:
         | None = None,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        steering_driver_id: UUID | None = None,
     ) -> ConductorResult:
         """Drive an autonomous measure-then-advise loop steered by a `DecidePort`.
 
@@ -2583,6 +2707,7 @@ class Conductor:
                 correlation_id=correlation_id,
                 causation_id=causation_id,
                 surface_id=surface_id,
+                steering_driver_id=steering_driver_id,
             )
 
     def _validate_steering_wire(
@@ -2666,6 +2791,7 @@ class Conductor:
         correlation_id: UUID,
         causation_id: UUID | None,
         surface_id: UUID,
+        steering_driver_id: UUID | None = None,
         resume_from: _ResumeState | None = None,
     ) -> ConductorResult:
         """The post-start decide loop body of `conduct_until_advised`.
@@ -2725,6 +2851,23 @@ class Conductor:
             resume_from.pending_point if resume_from is not None else None
         )
         while True:
+            # Re-read the driver's stand-down switch at EVERY iteration
+            # boundary, not once at conduct entry. `conduct_until_advised`
+            # authorizes once, and its authz includes liveness, but that is a
+            # single read before a loop that can run for forty passes: an
+            # operator switching the agent off mid-flight would otherwise wait
+            # out the whole loop. Checked here, at the top with no iteration
+            # open, so parking is one clean FSM transition.
+            if await self._driver_stood_down(steering_driver_id):
+                assert steering_driver_id is not None  # guarded by _driver_stood_down
+                return await self._hold_driver_stood_down(
+                    procedure_id=procedure_id,
+                    steering_driver_id=steering_driver_id,
+                    iteration_count=iteration_count,
+                    folded_kind=folded_kind,
+                    last_result=last_result,
+                    envelope_kwargs=envelope_kwargs,
+                )
             if iteration_count >= _ABSOLUTE_MAX_ITERATIONS:
                 return await self._abort_absolute_ceiling(
                     procedure_id=procedure_id,
@@ -2848,8 +2991,18 @@ class Conductor:
                 iteration_index=iteration_count - 1,
                 procedure_id=procedure_id,
             )
+            # Timed off the injected MONOTONIC clock, never `self._clock`: wall
+            # time can step backwards under an NTP correction and yield a
+            # negative duration. The varying value still enters through a port,
+            # per the non-determinism rule. The faulted path is timed too,
+            # because a brain that hung and then raised is the case most worth
+            # seeing.
+            advice_started = self._monotonic_clock.now()
             try:
                 advice = await decide_port.advise_next(evidence)
+                # Stopped the moment the brain answers: validation below is
+                # CORA's work, not the brain's, and must not be charged to it.
+                advice_finished = self._monotonic_clock.now()
                 if advice.verdict is SteeringVerdict.MEASURE:
                     _validate_advice_point(advice.next_point, space)
             except _DECIDE_ERRORS as exc:
@@ -2860,6 +3013,7 @@ class Conductor:
                         converged=None,
                         reason=str(exc)[:REASON_MAX_LENGTH],
                         advised_stop=None,
+                        advice_latency_ms=_elapsed_ms(advice_started, self._monotonic_clock.now()),
                     ),
                     **envelope_kwargs,
                 )
@@ -2906,6 +3060,7 @@ class Conductor:
                         if advice.next_point is not None
                         else None
                     ),
+                    advice_latency_ms=_elapsed_ms(advice_started, advice_finished),
                 ),
                 **envelope_kwargs,
             )
@@ -3205,6 +3360,7 @@ class Conductor:
         | None = None,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
+        steering_driver_id: UUID | None = None,
     ) -> ConductorResult:
         """Resume a Held steered Procedure, re-seeding the brain from the record.
 
@@ -3408,6 +3564,7 @@ class Conductor:
                 correlation_id=correlation_id,
                 causation_id=causation_id,
                 surface_id=surface_id,
+                steering_driver_id=steering_driver_id,
                 resume_from=resume_from,
             )
 

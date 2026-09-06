@@ -16,6 +16,8 @@ Status mapping per event type:
   - `AgentToolRevoked`   -> status unchanged (subtractive set mutation)
   - `AgentBudgetUpdated` -> status unchanged (budget field replace)
   - `AgentTargetPlanUpdated` -> status unchanged (target_plan_id field replace)
+  - `AgentDefinitionRestated` -> status unchanged (name / brain field replace,
+                                None meaning unchanged rather than cleared)
 
 Source-state guards live at the decider, NOT here; the evolver trusts
 the event log (folded events have already passed their decider).
@@ -35,6 +37,7 @@ from typing import assert_never
 from cora.agent.aggregates.agent.events import (
     AgentBudgetUpdated,
     AgentDefined,
+    AgentDefinitionRestated,
     AgentDeprecated,
     AgentEvent,
     AgentResumed,
@@ -55,10 +58,35 @@ from cora.agent.aggregates.agent.state import (
     AgentStatus,
     AgentSuspensionReason,
     AgentVersion,
+    BrainRef,
+    ModelRef,
     ToolName,
+    brain_from_legacy_model_ref,
 )
 from cora.infrastructure.evolver import require_state
 from cora.shared.deprecation import DeprecationReason
+
+
+def _effective_brain(brain: BrainRef | None, model_ref: ModelRef | None) -> BrainRef:
+    """The brain an `AgentDefined` names, whichever era wrote it.
+
+    A stream written before `brain` existed named its brain the only way it
+    could, in `model_ref`. Eighteen seeded agents were deterministic and
+    carried a sentinel there; folding those to a LanguageModel brain would
+    claim they think with a model that does not exist, so
+    `brain_from_legacy_model_ref` reads the sentinel as the Rule it always
+    was.
+
+    An event carrying neither is not an era, it is corruption: no writer has
+    ever been able to produce one, since `brain` became writable only once
+    `model_ref` was already required. Raising keeps that true rather than
+    inventing a brain to fold with.
+    """
+    if brain is not None:
+        return brain
+    if model_ref is not None:
+        return brain_from_legacy_model_ref(model_ref)
+    raise ValueError("Malformed AgentDefined: carries neither brain nor model_ref")
 
 
 def evolve(state: Agent | None, event: AgentEvent) -> Agent:
@@ -78,6 +106,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
             tools=tools,
             monthly_usd_cap=monthly_usd_cap,
             daily_token_cap=daily_token_cap,
+            brain=brain,
         ):
             _ = state  # AgentDefined is the genesis event; prior state ignored
             # Path C: `defined_at` no longer on state — folded into
@@ -88,6 +117,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=AgentName(name),
                 version=AgentVersion(version),
                 model_ref=model_ref,
+                brain=_effective_brain(brain, model_ref),
                 description=AgentDescription(description) if description is not None else None,
                 canonical_uri=(
                     AgentCanonicalUri(canonical_uri) if canonical_uri is not None else None
@@ -108,6 +138,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -135,6 +166,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -163,6 +195,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -186,6 +219,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -217,6 +251,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -240,6 +275,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -267,6 +303,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,
@@ -282,6 +319,36 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 resumed_by=prior.resumed_by,
                 target_plan_id=prior.target_plan_id,
             )
+        case AgentDefinitionRestated(name=restated_name, brain=restated_brain, occurred_at=_):
+            prior = require_state(state, "AgentDefinitionRestated")
+            # None means UNCHANGED, not cleared: neither a name nor a brain
+            # has a meaningful empty value, so there is nothing a clear could
+            # mean. The decider refuses an event that restates neither.
+            return Agent(
+                id=prior.id,
+                kind=prior.kind,
+                name=AgentName(restated_name) if restated_name is not None else prior.name,
+                version=prior.version,
+                # The legacy slot is left exactly as the genesis wrote it. This
+                # event is how an Agent stops DEPENDING on it, not a rewrite of
+                # what that Agent originally said.
+                model_ref=prior.model_ref,
+                brain=restated_brain if restated_brain is not None else prior.brain,
+                description=prior.description,
+                canonical_uri=prior.canonical_uri,
+                prompt_template_id=prior.prompt_template_id,
+                capabilities=prior.capabilities,
+                status=prior.status,
+                deprecation_reason=prior.deprecation_reason,
+                tools=prior.tools,
+                budget=prior.budget,
+                suspended_at=prior.suspended_at,
+                resumed_at=prior.resumed_at,
+                suspension_reason=prior.suspension_reason,
+                suspended_by=prior.suspended_by,
+                resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
+            )
         case AgentTargetPlanUpdated(target_plan_id=target_plan_id, occurred_at=_):
             prior = require_state(state, "AgentTargetPlanUpdated")
             return Agent(
@@ -290,6 +357,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 name=prior.name,
                 version=prior.version,
                 model_ref=prior.model_ref,
+                brain=prior.brain,
                 description=prior.description,
                 canonical_uri=prior.canonical_uri,
                 prompt_template_id=prior.prompt_template_id,

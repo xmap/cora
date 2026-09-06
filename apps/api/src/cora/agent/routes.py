@@ -33,6 +33,7 @@ from cora.agent.aggregates.agent import (
     AgentAlreadyExistsError,
     AgentCannotDeprecateError,
     AgentCannotGrantToolError,
+    AgentCannotRestateDefinitionError,
     AgentCannotResumeError,
     AgentCannotRevokeToolError,
     AgentCannotSuspendError,
@@ -45,16 +46,21 @@ from cora.agent.aggregates.agent import (
     AgentNotSeededError,
     AgentNotVersionedError,
     AgentSuspendedError,
+    InvalidAgentBrainError,
+    InvalidAgentBrainKindError,
     InvalidAgentBudgetError,
     InvalidAgentCanonicalUriError,
     InvalidAgentCapabilitiesError,
     InvalidAgentCapabilityError,
+    InvalidAgentDefinitionRestatementError,
     InvalidAgentDescriptionError,
     InvalidAgentKindError,
     InvalidAgentNameError,
+    InvalidAgentRestatementReasonError,
     InvalidAgentSuspensionReasonError,
     InvalidAgentToolsError,
     InvalidAgentVersionError,
+    InvalidBrainRefError,
     InvalidModelRefError,
     InvalidToolNameError,
 )
@@ -97,6 +103,7 @@ from cora.agent.features import (
     list_at_risk_results,
     promote_caution_proposal,
     regenerate_run_debrief,
+    restate_agent_definition,
     resume_agent,
     retire_language_model,
     revoke_tool_from_agent,
@@ -184,6 +191,7 @@ def register_agent_routes(app: FastAPI) -> None:
     app.include_router(grant_tool_to_agent.router)
     app.include_router(revoke_tool_from_agent.router)
     app.include_router(update_agent_budget.router)
+    app.include_router(restate_agent_definition.router)
     app.include_router(update_agent_target_plan.router)
     app.include_router(get_agent.router)
     app.include_router(regenerate_run_debrief.router)
@@ -217,6 +225,11 @@ def register_agent_routes(app: FastAPI) -> None:
         InvalidAgentBudgetError,
         InvalidAgentToolsError,
         InvalidModelRefError,
+        InvalidBrainRefError,
+        InvalidAgentBrainKindError,
+        InvalidAgentBrainError,
+        InvalidAgentDefinitionRestatementError,
+        InvalidAgentRestatementReasonError,
         AgentNotSeededError,
         AgentKindMismatchError,
         AgentDeactivatedError,
@@ -254,6 +267,7 @@ def register_agent_routes(app: FastAPI) -> None:
         AgentCannotGrantToolError,
         AgentCannotRevokeToolError,
         AgentCannotUpdateBudgetError,
+        AgentCannotRestateDefinitionError,
         AgentCannotUpdateTargetPlanError,
         EventAlreadyDismissedError,
         LanguageModelCannotApproveError,

@@ -25,7 +25,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from pydantic import BaseModel
 
-from cora.agent.aggregates.agent import AgentStatus
+from cora.agent.aggregates.agent import AgentStatus, BrainRef, ModelRef
 from cora.agent.features.get_agent.handler import AgentView, Handler
 from cora.agent.features.get_agent.query import GetAgent
 from cora.infrastructure.routing import (
@@ -43,6 +43,20 @@ class ModelRefResponse(BaseModel):
     provider: str
     model: str
     snapshot_pin: str | None = None
+
+
+class BrainResponse(BaseModel):
+    """Sub-DTO for the typed BrainRef VO.
+
+    Exactly one of `model_ref` / `rule` is populated, matching `kind`. The
+    two are not merged into one string because a caller deciding whether it
+    may invoke this Agent through an LLM needs the kind, not a label it has
+    to parse.
+    """
+
+    kind: str
+    model_ref: ModelRefResponse | None = None
+    rule: str | None = None
 
 
 class AgentResponse(BaseModel):
@@ -63,7 +77,11 @@ class AgentResponse(BaseModel):
     kind: str
     name: str
     version: str
-    model_ref: ModelRefResponse
+    # Null for an Agent whose brain is not a language model. Kept alongside
+    # `brain` so a caller that only ever wanted the served model does not
+    # have to reach through the discriminated shape to find it.
+    model_ref: ModelRefResponse | None = None
+    brain: BrainResponse | None = None
     status: AgentStatus
     defined_at: datetime | None = None
     description: str | None = None
@@ -75,19 +93,39 @@ class AgentResponse(BaseModel):
     deprecation_reason: DeprecationReason | None = None
 
 
+def _model_ref_response(model_ref: ModelRef | None) -> ModelRefResponse | None:
+    if model_ref is None:
+        return None
+    return ModelRefResponse(
+        provider=model_ref.provider,
+        model=model_ref.model,
+        snapshot_pin=model_ref.snapshot_pin,
+    )
+
+
+def _brain_response(brain: BrainRef | None) -> BrainResponse | None:
+    if brain is None:
+        return None
+    return BrainResponse(
+        kind=brain.kind.value,
+        model_ref=_model_ref_response(brain.model_ref),
+        rule=brain.rule,
+    )
+
+
 def _response_from_view(view: AgentView) -> AgentResponse:
     agent = view.agent
     timestamps = view.timestamps
+    brain = agent.brain
     return AgentResponse(
         id=agent.id,
         kind=agent.kind.value,
         name=agent.name.value,
         version=agent.version.value,
-        model_ref=ModelRefResponse(
-            provider=agent.model_ref.provider,
-            model=agent.model_ref.model,
-            snapshot_pin=agent.model_ref.snapshot_pin,
-        ),
+        # Sourced from the brain, not from the legacy `model_ref` slot, which
+        # is empty for every Agent defined since the seeds moved over.
+        model_ref=_model_ref_response(brain.model_ref if brain is not None else None),
+        brain=_brain_response(brain),
         status=agent.status,
         defined_at=timestamps.created_at if timestamps is not None else None,
         description=agent.description.value if agent.description is not None else None,
