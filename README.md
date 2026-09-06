@@ -1514,7 +1514,7 @@
 | src/cora/infrastructure/capture\_scan\_ingestor\_binding.py                              |       77 |        0 |       20 |        0 |    100.0% |           |
 | src/cora/infrastructure/config.py                                                        |      403 |       11 |       76 |        6 |     96.5% |1010, 1853-1857, 1940-1944, 1952-1956, 1965-1969, 2116-2121 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/deps.py                                                          |      131 |        1 |       18 |        2 |     98.0% |1244, 1440-\>1436 |
+| src/cora/infrastructure/deps.py                                                          |      133 |        1 |       20 |        2 |     98.0% |1263, 1456-\>1452 |
 | src/cora/infrastructure/edge\_runtime.py                                                 |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/event\_envelope.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/event\_payload.py                                                |       13 |        0 |        8 |        0 |    100.0% |           |
@@ -2733,7 +2733,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **63167** | **1402** | **9692** |  **439** | **97.3%** |           |
+| **TOTAL**                                                                                | **63169** | **1402** | **9694** |  **439** | **97.3%** |           |
 
 
 ## Setup coverage badge
