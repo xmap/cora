@@ -1520,7 +1520,7 @@
 | src/cora/infrastructure/event\_payload.py                                                |       13 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/infrastructure/evolver.py                                                       |        6 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/idempotency.py                                                   |       98 |        1 |       38 |        1 |     98.5% |115, 332-\>exit |
-| src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        1 |        4 |        0 |     97.4% |        95 |
+| src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/kernel.py                                                        |       39 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/list\_query.py                                                   |       94 |        0 |       30 |        0 |    100.0% |           |
 | src/cora/infrastructure/logging.py                                                       |       26 |        0 |        2 |        0 |    100.0% |           |
@@ -2733,7 +2733,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **63169** | **1402** | **9694** |  **439** | **97.3%** |           |
+| **TOTAL**                                                                                | **63169** | **1401** | **9694** |  **439** | **97.3%** |           |
 
 
 ## Setup coverage badge
