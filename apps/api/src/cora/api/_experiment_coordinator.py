@@ -1,4 +1,4 @@
-"""ExperimentSteerer runtime seam: the agent that records ACROSS-procedure steering.
+"""ExperimentCoordinator runtime seam: the agent that records ACROSS-procedure steering.
 
 Hosted at the composition root (`cora.api`) for the same reason as
 `_run_initiator` / `_run_supervisor`: it composes a Decision BC event AND will
@@ -10,10 +10,10 @@ packages, not the composition root).
 
 The decide layer runs ONE steered Procedure autonomously
 (`conduct_until_advised`), recording each iteration's advice on
-`ProcedureIterationEnded`. The ExperimentSteerer is the L3 layer above that: it
+`ProcedureIterationEnded`. The ExperimentCoordinator is the L3 layer above that: it
 owns a steered experiment ACROSS more than one Procedure, and records each
 across-procedure disposition as one
-`Decision(context=ExperimentSteering)` authored by the ExperimentSteerer agent.
+`Decision(context=ExperimentSteering)` authored by the ExperimentCoordinator agent.
 
 `record_steering_decision` is that seam: given a procedure that just terminated
 and the across-procedure choice (Continue / Conclude / Hold / ...), it composes,
@@ -29,7 +29,7 @@ driven white-box by tests / a future loop.
 
 ## Why a callable, not a subscriber
 
-The ExperimentSteerer is proactive: it acts BETWEEN steered Procedures, with no
+The ExperimentCoordinator is proactive: it acts BETWEEN steered Procedures, with no
 natural trigger event to subscribe to (the reactive run_debriefer / caution_drafter
 subscribe to terminal Run events; there is no "campaign should advance" event).
 So this is a callable seam the future driver invokes, mirroring `_run_initiator`,
@@ -42,7 +42,7 @@ rejects `ActorKind.AGENT`). Agent Decisions go through this signed direct-append
 path: compose `DecisionRegistered` from public Decision VOs, sign via the Signer
 port (DecisionRegistered is in `SIGNED_EVENT_TYPES`, so an AI-agent row is signed
 at write time per the design lock), and append. The runtime gates on
-`Actor.active`, so deactivating the ExperimentSteerer Actor stands it down.
+`Actor.active`, so deactivating the ExperimentCoordinator Actor stands it down.
 """
 
 from __future__ import annotations
@@ -52,9 +52,9 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
-from cora.agent.seed_experiment_steerer import (
-    EXPERIMENT_STEERER_AGENT_ID,
-    EXPERIMENT_STEERER_AGENT_NAME,
+from cora.agent.seed_experiment_coordinator import (
+    EXPERIMENT_COORDINATOR_AGENT_ID,
+    EXPERIMENT_COORDINATOR_AGENT_NAME,
 )
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_EXPERIMENT_STEERING,
@@ -107,7 +107,7 @@ if TYPE_CHECKING:
 
 _log = get_logger(__name__)
 
-_RULE = "agent:ExperimentSteerer:v1"
+_RULE = "agent:ExperimentCoordinator:v1"
 
 # Across-procedure dispositions (ExperimentSteeringChoice values). v1 is a
 # deterministic rule, the corpus's "first minimal slice" stand-in for the
@@ -115,7 +115,7 @@ _RULE = "agent:ExperimentSteerer:v1"
 _CHOICE_CONTINUE = "Continue"
 _CHOICE_CONCLUDE = "Conclude"
 _CHOICE_HOLD = "Hold"
-_COMMAND_NAME = "ExperimentSteererTurn"
+_COMMAND_NAME = "ExperimentCoordinatorTurn"
 _STREAM_TYPE = "Decision"
 
 # Stable namespace for deriving deterministic Decision ids from a
@@ -167,7 +167,7 @@ async def record_steering_decision(
 
     Composes, signs, and appends one
     `Decision(context=ExperimentSteering, choice=<choice>)` authored by the
-    ExperimentSteerer agent. `choice` is an `ExperimentSteeringChoice` value
+    ExperimentCoordinator agent. `choice` is an `ExperimentSteeringChoice` value
     (Continue / Conclude / Hold / SteeringDeferred / SteeringConflicted).
     `advice_audit` is the decide layer's `AdviceAuditFields` (the same provenance
     that lands on the iteration ledger), mapped onto the Decision's
@@ -189,9 +189,9 @@ async def record_steering_decision(
     Returns None when the agent is not seeded / deactivated (a logged stand-down,
     no bypass), mirroring `_run_initiator`.
     """
-    actor = await load_actor(deps.event_store, EXPERIMENT_STEERER_AGENT_ID)
+    actor = await load_actor(deps.event_store, EXPERIMENT_COORDINATOR_AGENT_ID)
     if actor is None or not actor.active:
-        _log.info("experiment_steerer.stood_down", seeded=actor is not None)
+        _log.info("experiment_coordinator.stood_down", seeded=actor is not None)
         return None
 
     now = deps.clock.now()
@@ -206,7 +206,7 @@ async def record_steering_decision(
     )
     domain_event = DecisionRegistered(
         decision_id=decision_id,
-        decided_by=ActorId(EXPERIMENT_STEERER_AGENT_ID),
+        decided_by=ActorId(EXPERIMENT_COORDINATOR_AGENT_ID),
         context=DecisionContext(DECISION_CONTEXT_EXPERIMENT_STEERING).value,
         choice=DecisionChoice(choice).value,
         parent_id=None,
@@ -232,9 +232,9 @@ async def record_steering_decision(
         command_name=_COMMAND_NAME,
         correlation_id=deps.id_generator.new_id(),
         causation_id=None,
-        principal_id=EXPERIMENT_STEERER_AGENT_ID,
+        principal_id=EXPERIMENT_COORDINATOR_AGENT_ID,
     )
-    new_event = await _maybe_sign(deps.signer, new_event, actor_id=EXPERIMENT_STEERER_AGENT_ID)
+    new_event = await _maybe_sign(deps.signer, new_event, actor_id=EXPERIMENT_COORDINATOR_AGENT_ID)
     try:
         await deps.event_store.append(
             stream_type=_STREAM_TYPE,
@@ -245,11 +245,11 @@ async def record_steering_decision(
     except ConcurrencyError:
         # Deterministic id + retry: the Decision is already recorded. Treat as a
         # no-op success and return the id so the caller can still link to it.
-        _log.info("experiment_steerer.decision_already_written", decision_id=str(decision_id))
+        _log.info("experiment_coordinator.decision_already_written", decision_id=str(decision_id))
         return decision_id
 
     _log.info(
-        "experiment_steerer.decision_recorded",
+        "experiment_coordinator.decision_recorded",
         decision_id=str(decision_id),
         procedure_id=str(procedure_id),
         turn=turn,
@@ -314,8 +314,8 @@ async def _record_steering_inferences(
             request_max_tokens=call.request_max_tokens,
             request_temperature=call.request_temperature,
             request_top_p=call.request_top_p,
-            agent_id=str(EXPERIMENT_STEERER_AGENT_ID),
-            agent_name=EXPERIMENT_STEERER_AGENT_NAME,
+            agent_id=str(EXPERIMENT_COORDINATOR_AGENT_ID),
+            agent_name=EXPERIMENT_COORDINATOR_AGENT_NAME,
             output_type="json",
             duration=call.duration_ms,
             tool_call_id=call.tool_call_id,
@@ -325,12 +325,12 @@ async def _record_steering_inferences(
         )
         await deps.inference_recorder.record(
             trace,
-            principal_id=EXPERIMENT_STEERER_AGENT_ID,
+            principal_id=EXPERIMENT_COORDINATOR_AGENT_ID,
             correlation_id=correlation_id,
         )
     if calls:
         _log.info(
-            "experiment_steerer.inferences_recorded",
+            "experiment_coordinator.inferences_recorded",
             decision_id=str(decision_id),
             call_count=len(calls),
         )
@@ -382,7 +382,7 @@ async def steer_experiment(
     correlation_id: UUID,
     budget: SteeringBudget | None = None,
 ) -> list[SteerExperimentStepResult]:
-    """Drive the ExperimentSteerer across a sequence of steered procedures.
+    """Drive the ExperimentCoordinator across a sequence of steered procedures.
 
     The proactive across-procedure loop the 2a seam was built for. For each
     procedure in `procedure_ids` (the 0-based across-procedure `turn`):
@@ -416,17 +416,17 @@ async def steer_experiment(
     if decide.spend_agent_id is None:
         # The brain's pre-estimate gate charges the steering agent; route
         # callers cannot set this (the field is not on the wire models).
-        decide = replace(decide, spend_agent_id=EXPERIMENT_STEERER_AGENT_ID)
+        decide = replace(decide, spend_agent_id=EXPERIMENT_COORDINATOR_AGENT_ID)
     results: list[SteerExperimentStepResult] = []
     for turn, procedure_id in enumerate(procedure_ids):
         # Stand down BEFORE conducting, not only at record time: a
         # deactivated Actor must not burn a whole turn of LLM calls whose
         # spend then has no Decision to land on (the ledger would never
         # see it, and no cap could).
-        actor = await load_actor(deps.event_store, EXPERIMENT_STEERER_AGENT_ID)
+        actor = await load_actor(deps.event_store, EXPERIMENT_COORDINATOR_AGENT_ID)
         if actor is None or not actor.active:
             _log.info(
-                "experiment_steerer.stood_down_before_conduct",
+                "experiment_coordinator.stood_down_before_conduct",
                 turn=turn,
                 seeded=actor is not None,
             )
@@ -443,7 +443,7 @@ async def steer_experiment(
                 # iteration boundary. The check above stands the driver down
                 # BETWEEN procedures; this one reaches inside a single
                 # procedure's forty-pass loop, which the between-check cannot.
-                steering_driver_id=EXPERIMENT_STEERER_AGENT_ID,
+                steering_driver_id=EXPERIMENT_COORDINATOR_AGENT_ID,
             ),
             principal_id=principal_id,
             correlation_id=correlation_id,
@@ -489,16 +489,18 @@ async def steer_experiment(
         if decision_id is None:
             # Stand-down: the agent is unseeded / deactivated. Record nothing
             # further, take no follow-on action, stop the loop (no bypass).
-            _log.info("experiment_steerer.stood_down_mid_loop", turn=turn)
+            _log.info("experiment_coordinator.stood_down_mid_loop", turn=turn)
             break
         if choice == _CHOICE_HOLD:
             await hold_procedure(
                 HoldProcedure(
                     procedure_id=procedure_id,
-                    reason="ExperimentSteerer paused the campaign after a faulted procedure",
+                    reason=(
+                        "ExperimentCoordinator held the procedure after a fault; steering stopped"
+                    ),
                     decided_by_decision_id=decision_id,
                 ),
-                principal_id=EXPERIMENT_STEERER_AGENT_ID,
+                principal_id=EXPERIMENT_COORDINATOR_AGENT_ID,
                 correlation_id=correlation_id,
                 surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
             )
@@ -511,7 +513,7 @@ async def steer_experiment(
 def _reasoning_for(choice: str) -> str:
     """The deterministic across-procedure rationale recorded on the Decision."""
     if choice == _CHOICE_HOLD:
-        return "Steered procedure faulted; paused the campaign for operator review."
+        return "Steered procedure faulted; held it and stopped steering for operator review."
     if choice == _CHOICE_CONCLUDE:
         return "Campaign objective met by the steered procedure; concluded the campaign."
     return "Campaign objective not yet met; steering the next procedure."

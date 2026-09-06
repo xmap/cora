@@ -14,10 +14,10 @@ rather than "nothing ever writes this."
 The first version of this file checked completeness against the UNION of
 every construction site in the tree: a field only had to be passed by SOME
 producer, somewhere, to count as covered. `run_debriefer` alone passes all
-25 declared fields, so that check stayed green while `_experiment_steerer`
+25 declared fields, so that check stayed green while `_experiment_coordinator`
 built an `AgentInferenceTrace` passing only 12 of them, writing NULL into
 the other 13 columns for every steering call, forever. The union check
-could not see this because a field the ExperimentSteerer producer never
+could not see this because a field the ExperimentCoordinator producer never
 touched was still "covered" by an entirely different producer's row.
 
 This file checks each construction site independently instead. A field

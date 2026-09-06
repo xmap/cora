@@ -12,7 +12,7 @@ lives in `cora.agent._agent_seed`.
   - Pinned UUID opens a NEW numeric-mnemonic block, `1465` (`INGEST` on a
     phone keypad; the mnemonic ranges already claimed are `1111`
     RunInitiator, `2222` RunWitness, `3333` CaptureProgressFeeder,
-    `ba5e` CaptureBaselineReader, `5733` ExperimentSteerer, and the
+    `ba5e` CaptureBaselineReader, `5733` ExperimentCoordinator, and the
     hex-word blocks `cab1`/`b111`/`ca11`/`dddd`/`eeee`/`bbbb`/`cccc`/
     `ffff`/`0c0c`/`fac0`). Deployment-stable forever.
   - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template

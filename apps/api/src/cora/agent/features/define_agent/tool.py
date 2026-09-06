@@ -49,7 +49,7 @@ class BrainInput(BaseModel):
         default=None,
         min_length=1,
         max_length=BRAIN_RULE_MAX_LENGTH,
-        description="Required when kind is Rule (convention: `ExperimentSteerer:v1`).",
+        description="Required when kind is Rule (convention: `ExperimentCoordinator:v1`).",
     )
 
 

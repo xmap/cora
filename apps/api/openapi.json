@@ -2116,7 +2116,7 @@
                 "type": "null"
               }
             ],
-            "description": "Required when `kind` is `Rule`, forbidden otherwise. Names and versions the decision rule (convention: `ExperimentSteerer:v1`).",
+            "description": "Required when `kind` is `Rule`, forbidden otherwise. Names and versions the decision rule (convention: `ExperimentCoordinator:v1`).",
             "title": "Rule"
           }
         },

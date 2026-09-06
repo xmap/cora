@@ -929,7 +929,7 @@ class BrainRef:
     `model_ref` is set iff kind is LANGUAGE_MODEL, and is gated at
     `define_agent` against the approved `LanguageModel` catalog.
     `rule` is set iff kind is RULE: a deterministic decision rule, named and
-    versioned (`ExperimentSteerer:v1`), which needs no approval because it
+    versioned (`ExperimentCoordinator:v1`), which needs no approval because it
     runs no external model and spends nothing.
     """
 

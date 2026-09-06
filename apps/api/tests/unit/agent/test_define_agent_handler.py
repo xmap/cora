@@ -293,7 +293,7 @@ async def test_handler_rule_brain_skips_the_language_model_catalog() -> None:
     handler = define_agent.bind(deps, profile_store=make_profile_store())
 
     agent_id = await handler(
-        _command(brain=BrainRef.for_rule("ExperimentSteerer:v1")),
+        _command(brain=BrainRef.for_rule("ExperimentCoordinator:v1")),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -1,7 +1,7 @@
 """Unit tests for the LanguageModel catalog seed.
 
 Pins two consistency contracts. First, every model the shipped fleet
-declares (RunDebriefer, CautionDrafter, and the ExperimentSteerer
+declares (RunDebriefer, CautionDrafter, and the ExperimentCoordinator
 LLM-decide default, whose identity the seed mirrors as literals across
 the tach boundary) has a seeded catalog entry, born Approved, at a
 deterministic id, with pricing figures matching the observability

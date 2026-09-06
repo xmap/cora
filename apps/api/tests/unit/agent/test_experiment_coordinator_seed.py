@@ -1,8 +1,9 @@
-"""Unit tests for the ExperimentSteerer Agent bootstrap seed.
+"""Unit tests for the ExperimentCoordinator Agent bootstrap seed.
 
-ExperimentSteerer is a DETERMINISTIC agent (the steering brain is the DecidePort,
-not an LLM): no prompt template + a Rule brain (`ExperimentSteerer:v1`). These tests pin that shape
-alongside the shared seed scaffolding, and the idempotency of a re-run seed.
+ExperimentCoordinator is a DETERMINISTIC agent (the steering brain is the DecidePort,
+not an LLM): no prompt template + a Rule brain (`ExperimentCoordinator:v1`). These
+tests pin that shape alongside the shared seed scaffolding, and the idempotency
+of a re-run seed.
 """
 
 from datetime import UTC, datetime
@@ -10,12 +11,12 @@ from datetime import UTC, datetime
 import pytest
 
 from cora.agent.aggregates.agent import BrainRef, load_agent
-from cora.agent.seed_experiment_steerer import (
-    EXPERIMENT_STEERER_AGENT_ID,
-    EXPERIMENT_STEERER_AGENT_KIND,
-    EXPERIMENT_STEERER_AGENT_NAME,
-    EXPERIMENT_STEERER_AGENT_VERSION,
-    seed_experiment_steerer_agent,
+from cora.agent.seed_experiment_coordinator import (
+    EXPERIMENT_COORDINATOR_AGENT_ID,
+    EXPERIMENT_COORDINATOR_AGENT_KIND,
+    EXPERIMENT_COORDINATOR_AGENT_NAME,
+    EXPERIMENT_COORDINATOR_AGENT_VERSION,
+    seed_experiment_coordinator_agent,
 )
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
@@ -34,16 +35,16 @@ def _kernel() -> Kernel:
 
 
 @pytest.mark.unit
-async def test_seed_creates_experiment_steerer_at_pinned_id() -> None:
+async def test_seed_creates_experiment_coordinator_at_pinned_id() -> None:
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
 
-    agent = await load_agent(kernel.event_store, EXPERIMENT_STEERER_AGENT_ID)
+    agent = await load_agent(kernel.event_store, EXPERIMENT_COORDINATOR_AGENT_ID)
     assert agent is not None
-    assert agent.id == EXPERIMENT_STEERER_AGENT_ID
-    assert agent.name.value == EXPERIMENT_STEERER_AGENT_NAME
-    assert agent.kind.value == EXPERIMENT_STEERER_AGENT_KIND
-    assert agent.version.value == EXPERIMENT_STEERER_AGENT_VERSION
+    assert agent.id == EXPERIMENT_COORDINATOR_AGENT_ID
+    assert agent.name.value == EXPERIMENT_COORDINATOR_AGENT_NAME
+    assert agent.kind.value == EXPERIMENT_COORDINATOR_AGENT_KIND
+    assert agent.version.value == EXPERIMENT_COORDINATOR_AGENT_VERSION
 
 
 @pytest.mark.unit
@@ -51,13 +52,13 @@ async def test_seed_is_deterministic_no_prompt_rule_brain() -> None:
     """Deterministic agent: no prompt template, and a Rule brain rather
     than a model it does not have."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
 
-    agent = await load_agent(kernel.event_store, EXPERIMENT_STEERER_AGENT_ID)
+    agent = await load_agent(kernel.event_store, EXPERIMENT_COORDINATOR_AGENT_ID)
     assert agent is not None
     assert agent.prompt_template_id is None
     assert agent.model_ref is None
-    assert agent.brain == BrainRef.for_rule("ExperimentSteerer:v1")
+    assert agent.brain == BrainRef.for_rule("ExperimentCoordinator:v1")
 
 
 @pytest.mark.unit
@@ -66,11 +67,11 @@ async def test_seed_co_registers_actor() -> None:
     from cora.access.aggregates.actor import load_actor
 
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
 
-    actor = await load_actor(kernel.event_store, EXPERIMENT_STEERER_AGENT_ID)
+    actor = await load_actor(kernel.event_store, EXPERIMENT_COORDINATOR_AGENT_ID)
     assert actor is not None
-    assert actor.id == EXPERIMENT_STEERER_AGENT_ID
+    assert actor.id == EXPERIMENT_COORDINATOR_AGENT_ID
     assert actor.active
 
 
@@ -78,15 +79,15 @@ async def test_seed_co_registers_actor() -> None:
 async def test_seed_is_idempotent() -> None:
     """Re-running the seed is a no-op (ConcurrencyError swallowed), not a duplicate."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
 
-    events, _ = await kernel.event_store.load("Agent", EXPERIMENT_STEERER_AGENT_ID)
+    events, _ = await kernel.event_store.load("Agent", EXPERIMENT_COORDINATOR_AGENT_ID)
     assert len(events) == 2, "one bootstrap writes define + promote; a repeat writes nothing"
 
 
 @pytest.mark.unit
-def test_experiment_steerer_id_distinct_from_other_agents() -> None:
+def test_experiment_coordinator_id_distinct_from_other_agents() -> None:
     """The seeded agents share the UUID-range scheme but must NOT collide. Checks
     against the full seeded set so a copy-paste collision is caught."""
     from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
@@ -112,4 +113,4 @@ def test_experiment_steerer_id_distinct_from_other_agents() -> None:
         CAMPAIGN_WATCHER_AGENT_ID,
         PROCEDURE_WATCHER_AGENT_ID,
     }
-    assert EXPERIMENT_STEERER_AGENT_ID not in others
+    assert EXPERIMENT_COORDINATOR_AGENT_ID not in others

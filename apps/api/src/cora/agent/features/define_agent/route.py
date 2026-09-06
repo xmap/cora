@@ -90,7 +90,7 @@ class BrainRequest(BaseModel):
         max_length=BRAIN_RULE_MAX_LENGTH,
         description=(
             "Required when `kind` is `Rule`, forbidden otherwise. Names and "
-            "versions the decision rule (convention: `ExperimentSteerer:v1`)."
+            "versions the decision rule (convention: `ExperimentCoordinator:v1`)."
         ),
     )
 

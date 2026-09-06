@@ -1,4 +1,4 @@
-"""Tests for the ExperimentSteerer Decision seam (cora.api._experiment_steerer).
+"""Tests for the ExperimentCoordinator Decision seam (cora.api._experiment_coordinator).
 
 Covers the across-procedure steering-Decision write: the signed agent-write path
 (an Agent cannot use register_decision), the AdviceAuditFields -> Decision
@@ -16,11 +16,11 @@ from uuid import uuid4
 
 import pytest
 
-from cora.agent.seed_experiment_steerer import (
-    EXPERIMENT_STEERER_AGENT_ID,
-    seed_experiment_steerer_agent,
+from cora.agent.seed_experiment_coordinator import (
+    EXPERIMENT_COORDINATOR_AGENT_ID,
+    seed_experiment_coordinator_agent,
 )
-from cora.api._experiment_steerer import _derive_decision_id, record_steering_decision
+from cora.api._experiment_coordinator import _derive_decision_id, record_steering_decision
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_EXPERIMENT_STEERING,
     DecisionConfidenceSource,
@@ -69,7 +69,7 @@ def _audit(
 async def test_record_steering_decision_writes_experiment_steering_decision() -> None:
     """One Decision(context=ExperimentSteering) is written, authored by the agent."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     procedure_id = uuid4()
 
     decision_id = await record_steering_decision(
@@ -85,16 +85,16 @@ async def test_record_steering_decision_writes_experiment_steering_decision() ->
     assert decision is not None
     assert decision.context.value == DECISION_CONTEXT_EXPERIMENT_STEERING
     assert decision.choice.value == "Conclude"
-    assert decision.decided_by == EXPERIMENT_STEERER_AGENT_ID
+    assert decision.decided_by == EXPERIMENT_COORDINATOR_AGENT_ID
     assert decision.rule is not None
-    assert decision.rule.value == "agent:ExperimentSteerer:v1"
+    assert decision.rule.value == "agent:ExperimentCoordinator:v1"
 
 
 @pytest.mark.unit
 async def test_record_steering_decision_maps_advice_audit_fields() -> None:
     """The AdviceAuditFields land on the Decision provenance (shared mapping)."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     procedure_id = uuid4()
 
     decision_id = await record_steering_decision(
@@ -127,9 +127,9 @@ async def test_record_steering_decision_maps_advice_audit_fields() -> None:
 @pytest.mark.unit
 async def test_record_steering_decision_signs_when_signer_configured() -> None:
     """The agent-authored DecisionRegistered is signed (AI-agent rows are signed)."""
-    signer = Ed25519FakeSigner(kid="kid-experiment-steerer")
+    signer = Ed25519FakeSigner(kid="kid-experiment-coordinator")
     kernel = _kernel(signer=signer)
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     procedure_id = uuid4()
 
     decision_id = await record_steering_decision(
@@ -144,14 +144,14 @@ async def test_record_steering_decision_signs_when_signer_configured() -> None:
     events, _ = await kernel.event_store.load("Decision", decision_id)
     stored = events[0]
     assert stored.signature is not None
-    assert stored.signature_kid == "kid-experiment-steerer"
+    assert stored.signature_kid == "kid-experiment-coordinator"
     assert len(stored.signature) == 64
     # The seam MUST sign as the agent's id (a dropped actor_id would sign with the
     # wrong identity in production but pass without this lock).
-    assert signer.received_actor_ids == [EXPERIMENT_STEERER_AGENT_ID]
+    assert signer.received_actor_ids == [EXPERIMENT_COORDINATOR_AGENT_ID]
 
     async def _resolver(kid: str) -> bytes:
-        assert kid == "kid-experiment-steerer"
+        assert kid == "kid-experiment-coordinator"
         return signer.public_key_bytes
 
     await verify_signature(
@@ -167,7 +167,7 @@ async def test_record_steering_decision_signs_when_signer_configured() -> None:
 async def test_record_steering_decision_deterministic_id_idempotent() -> None:
     """A retried record (same procedure + turn) is a no-op, not a duplicate."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     procedure_id = uuid4()
 
     first = await record_steering_decision(
@@ -188,7 +188,7 @@ async def test_record_steering_decision_deterministic_id_idempotent() -> None:
 async def test_record_steering_decision_distinct_turns_distinct_decisions() -> None:
     """Each across-procedure turn derives its own Decision id."""
     kernel = _kernel()
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     procedure_id = uuid4()
 
     turn0 = await record_steering_decision(
@@ -206,7 +206,7 @@ async def test_record_steering_decision_distinct_turns_distinct_decisions() -> N
 @pytest.mark.unit
 async def test_record_steering_decision_stands_down_when_agent_unseeded() -> None:
     """No seeded agent -> stand down (None), no Decision written, no bypass."""
-    kernel = _kernel()  # ExperimentSteerer NOT seeded
+    kernel = _kernel()  # ExperimentCoordinator NOT seeded
     procedure_id = uuid4()
 
     decision_id = await record_steering_decision(
@@ -235,7 +235,7 @@ async def test_steering_decision_links_a_follow_on_procedure_hold() -> None:
     kernel = _kernel()
     assert isinstance(kernel.event_store, InMemoryEventStore)
     store = kernel.event_store
-    await seed_experiment_steerer_agent(kernel)
+    await seed_experiment_coordinator_agent(kernel)
     procedure_id = uuid4()
     correlation_id = uuid4()
     await seed_running_procedure(
@@ -243,7 +243,7 @@ async def test_steering_decision_links_a_follow_on_procedure_hold() -> None:
         procedure_id=procedure_id,
         when=_NOW,
         correlation_id=correlation_id,
-        principal_id=EXPERIMENT_STEERER_AGENT_ID,
+        principal_id=EXPERIMENT_COORDINATOR_AGENT_ID,
     )
 
     decision_id = await record_steering_decision(
@@ -254,10 +254,10 @@ async def test_steering_decision_links_a_follow_on_procedure_hold() -> None:
     await bind_hold_procedure(kernel)(
         HoldProcedure(
             procedure_id=procedure_id,
-            reason="ExperimentSteerer paused the campaign between procedures",
+            reason="ExperimentCoordinator paused the campaign between procedures",
             decided_by_decision_id=decision_id,
         ),
-        principal_id=EXPERIMENT_STEERER_AGENT_ID,
+        principal_id=EXPERIMENT_COORDINATOR_AGENT_ID,
         correlation_id=correlation_id,
     )
 

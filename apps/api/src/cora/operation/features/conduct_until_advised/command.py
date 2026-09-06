@@ -60,7 +60,7 @@ class ConductUntilAdvised:
     route caller cannot claim to be driven by an agent.
 
     Distinct from `decide.spend_agent_id` even though both name the
-    ExperimentSteerer today. That one answers who PAYS for the brain's calls;
+    ExperimentCoordinator today. That one answers who PAYS for the brain's calls;
     this one answers who may be switched OFF mid-loop. Merging them would mean
     a deployment that gates spend elsewhere silently loses the stand-down.
     """

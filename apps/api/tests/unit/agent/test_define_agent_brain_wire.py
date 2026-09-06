@@ -39,12 +39,12 @@ def _body(**overrides: object) -> dict[str, object]:
 @pytest.mark.unit
 def test_a_rule_brain_needs_no_model_ref() -> None:
     request = DefineAgentRequest(
-        **_body(brain=BrainRequest(kind="Rule", rule="ExperimentSteerer:v1"))  # type: ignore[arg-type]
+        **_body(brain=BrainRequest(kind="Rule", rule="ExperimentCoordinator:v1"))  # type: ignore[arg-type]
     )
 
     brain = brain_from_body(request.brain)
 
-    assert brain == BrainRef.for_rule("ExperimentSteerer:v1")
+    assert brain == BrainRef.for_rule("ExperimentCoordinator:v1")
 
 
 @pytest.mark.unit
@@ -84,7 +84,7 @@ def test_naming_both_is_rejected() -> None:
         DefineAgentRequest(
             **_body(  # type: ignore[arg-type]
                 model_ref=_MODEL,
-                brain=BrainRequest(kind="Rule", rule="ExperimentSteerer:v1"),
+                brain=BrainRequest(kind="Rule", rule="ExperimentCoordinator:v1"),
             )
         )
 

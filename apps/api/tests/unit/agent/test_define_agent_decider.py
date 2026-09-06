@@ -68,14 +68,14 @@ def test_a_rule_brained_command_needs_no_model_ref() -> None:
     inventing a language model it will never call."""
     events = decide(
         None,
-        _command(model_ref=None, brain=BrainRef.for_rule("ExperimentSteerer:v1")),
+        _command(model_ref=None, brain=BrainRef.for_rule("ExperimentCoordinator:v1")),
         now=_NOW,
         new_id=_NEW_ID,
     )
 
     assert len(events) == 1
     assert events[0].model_ref is None
-    assert events[0].brain == BrainRef.for_rule("ExperimentSteerer:v1")
+    assert events[0].brain == BrainRef.for_rule("ExperimentCoordinator:v1")
 
 
 @pytest.mark.unit

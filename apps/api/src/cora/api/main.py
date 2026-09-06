@@ -72,7 +72,7 @@ from cora.agent import (
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
     seed_durable_copy_registrar_agent,
-    seed_experiment_steerer_agent,
+    seed_experiment_coordinator_agent,
     seed_language_models,
     seed_procedure_watcher_agent,
     seed_ratification_enforcer_agent,
@@ -1264,9 +1264,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_procedure_watcher_agent(deps)
             # same shape for CampaignWatcher (deterministic flag-only agent).
             await seed_campaign_watcher_agent(deps)
-            # same shape for ExperimentSteerer (deterministic L3 steering agent;
+            # same shape for ExperimentCoordinator (deterministic L3 steering agent;
             # identity + Decision seam now, proactive driver loop in a later slice).
-            await seed_experiment_steerer_agent(deps)
+            await seed_experiment_coordinator_agent(deps)
             # same shape for RunTranslator (deterministic capture-promotion
             # agent; renamed from RunWitness -- seed_run_witness_agent stays
             # below it forever, retired-but-source-tracked, per that
