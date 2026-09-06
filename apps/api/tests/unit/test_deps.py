@@ -22,7 +22,12 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.adapters.in_memory_idempotency_store import InMemoryIdempotencyStore
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import build_kernel
-from cora.infrastructure.ports import AllowAllAuthorize, FakeLLM
+from cora.infrastructure.ports import (
+    AllowAllAuthorize,
+    AlwaysZeroSpendLookup,
+    FakeLLM,
+    NoActiveAllocationLookup,
+)
 from cora.trust import build_authorize
 from cora.trust.authorize import TrustAuthorize
 
@@ -37,6 +42,27 @@ async def test_build_kernel_refuses_a_postgres_deployment_without_financial_look
 
     with pytest.raises(ValueError, match="financial lookup"):
         await build_kernel(authorize_factory=build_authorize, settings=settings)
+
+
+@pytest.mark.unit
+async def test_build_kernel_refuses_a_postgres_deployment_without_the_model_catalog_lookup() -> (
+    None
+):
+    """A missing catalog binding does not weaken the model-approval gate,
+    it removes it: `AlwaysApprovedLanguageModelLookup` answers every
+    identity Approved, so `define_agent` and `seed_agent` both keep
+    passing and nothing records that no catalog was consulted. Financial
+    factories are supplied here so the guard under test is the one that
+    fires, not the financial one above it."""
+    settings = Settings(app_env="production")  # type: ignore[call-arg]
+
+    with pytest.raises(ValueError, match="language_model_lookup_factory"):
+        await build_kernel(
+            authorize_factory=build_authorize,
+            settings=settings,
+            spend_lookup_factory=lambda pool: AlwaysZeroSpendLookup(),
+            allocation_lookup_factory=lambda pool: NoActiveAllocationLookup(),
+        )
 
 
 @pytest.mark.unit

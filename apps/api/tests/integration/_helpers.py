@@ -63,6 +63,7 @@ from cora.infrastructure.ports import (
     FixedIdGenerator,
     IdempotencyStore,
     IdGenerator,
+    LanguageModelLookup,
     ProfileStore,
     RoleLookup,
     RunActorInvolvementLookup,
@@ -97,6 +98,7 @@ def build_postgres_deps(
     run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
     consequence_lookup: ConsequenceLookup | None = None,
     profile_store: ProfileStore | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
     llm: LLM | None = None,
 ) -> Kernel:
     """Build a Kernel for integration-test handler invocation against real Postgres.
@@ -140,6 +142,7 @@ def build_postgres_deps(
         run_actor_involvement_lookup=run_actor_involvement_lookup,
         consequence_lookup=consequence_lookup,
         profile_store=profile_store,
+        language_model_lookup=language_model_lookup,
         llm=llm,
     )
 
