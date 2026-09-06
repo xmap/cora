@@ -187,9 +187,12 @@ class Kernel:
     `PostgresLanguageModelLookup` as the production adapter (reads
     `proj_agent_language_model_summary`).
     Defaults to `AlwaysApprovedLanguageModelLookup` (every identity
-    Approved) so tests and catalog-less deployments keep the
-    pre-catalog behavior; standing up a real catalog is what arms the
-    gate. Mirrors the `spend_lookup` opt-in posture.
+    Approved) so tests keep the pre-catalog behavior. Mirrors the
+    `spend_lookup` posture, BOTH halves of it: permissive at this
+    layer, and required one layer up, where `build_kernel` refuses a
+    Postgres deployment that did not bind the real adapter. Reading
+    only the first half is what left this field out of that guard
+    while `define_agent` and `seed_agent` were both gated on it.
 
     `model_usage_lookup`: cross-BC port consumed by Agent BC's
     `list_at_risk_results` read slice to enumerate the Decisions whose
@@ -476,11 +479,11 @@ class Kernel:
         default_factory=AlwaysApprovedLanguageModelLookup
     )
     """Resolve a model identity (provider + model) to its catalog entry.
-    Defaults to the always-approved stub so tests and deployments without
-    a catalog keep the pre-catalog `define_agent` behavior; the
-    composition root binds the Agent BC's `PostgresLanguageModelLookup`
-    over `proj_agent_language_model_summary` when a pool exists, arming
-    the Approved-entry gate."""
+    Defaults to the always-approved stub so tests keep the pre-catalog
+    `define_agent` behavior; the composition root binds the Agent BC's
+    `PostgresLanguageModelLookup` over `proj_agent_language_model_summary`,
+    arming the Approved-entry gate, and refuses to build a Postgres kernel
+    without it."""
 
     model_usage_lookup: ModelUsageLookup = field(default_factory=AlwaysEmptyModelUsageLookup)
     """Enumerate the Decisions whose recorded LLM calls touched one

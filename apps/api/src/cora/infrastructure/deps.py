@@ -337,7 +337,11 @@ def make_postgres_kernel(
     a catalog keep the define_agent gate disarmed. Production's
     `build_kernel` injects the real `PostgresLanguageModelLookup` via
     the `language_model_lookup_factory` argument; gate-specific tests
-    override here explicitly.
+    override here explicitly. Like the financial pair, the permissive
+    default here is only the first half of the posture: the fail-loud
+    requirement lives one layer up, in `build_kernel`'s Postgres branch,
+    which raises when the factory is missing so a real deployment can
+    never silently answer every identity Approved.
 
     `model_usage_lookup` defaults to `AlwaysEmptyModelUsageLookup` (no
     recorded call touched any model) so tests that don't exercise the
@@ -1227,6 +1231,21 @@ async def build_kernel(
             "financial lookup would silently meter zero and disarm the "
             "spend envelope"
         )
+    if language_model_lookup_factory is None:
+        # Same layer, same reason, different stake. The always-approved stub
+        # answers every identity with an Approved entry, so falling back to it
+        # in a Postgres deployment does not weaken the model-approval gate, it
+        # removes it: define_agent and seed_agent both keep passing, and an
+        # agent can be registered on a model the facility never approved with
+        # nothing anywhere recording that no catalog was consulted. The gate is
+        # how the provenance constraint is enforced at all, so its absence must
+        # stop startup rather than read as agreement.
+        raise ValueError(
+            "build_kernel requires language_model_lookup_factory in a Postgres "
+            "deployment; the always-approved stub would answer every identity "
+            "Approved, silently disarming the model-approval gate that "
+            "define_agent and seed_agent both rely on"
+        )
     pool = await create_pool(
         settings.database_url,
         min_size=settings.db_pool_min_size,
@@ -1283,11 +1302,8 @@ async def build_kernel(
     )
     # Non-None guaranteed by the fail-loud guard above.
     spend_lookup: SpendLookup = spend_lookup_factory(pool)
-    language_model_lookup: LanguageModelLookup = (
-        language_model_lookup_factory(pool)
-        if language_model_lookup_factory is not None
-        else AlwaysApprovedLanguageModelLookup()
-    )
+    # Non-None guaranteed by the fail-loud guard above.
+    language_model_lookup: LanguageModelLookup = language_model_lookup_factory(pool)
     model_usage_lookup: ModelUsageLookup = (
         model_usage_lookup_factory(pool)
         if model_usage_lookup_factory is not None

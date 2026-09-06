@@ -21,13 +21,18 @@ not.
 
 ## Failure direction
 
-The kernel default is the always-approved stub, so tests and
-deployments that have not stood up a catalog are unaffected (the same
-opt-in posture as every lookup in the family: declaring a catalog is
-what arms the gate). The Postgres adapter answers with the newest
-APPROVED entry only; None means "nothing currently approved for this
-identity" (never cataloged, or every entry for it is Defined or
-terminal), which the gate treats as refusal once a catalog exists.
+The kernel default is the always-approved stub, so tests that have not
+stood up a catalog are unaffected. That permissiveness is scoped to the
+kernel layer only: `build_kernel` refuses a Postgres deployment that did
+not bind the real adapter, because the stub does not weaken this gate,
+it removes it. Silence from a disarmed gate is indistinguishable from
+approval, and the gate is the only place the facility's model-provenance
+constraint is enforced.
+
+The Postgres adapter answers with the newest APPROVED entry only; None
+means "nothing currently approved for this identity" (never cataloged,
+or every entry for it is Defined or terminal), which the gate treats as
+refusal.
 """
 
 from dataclasses import dataclass
