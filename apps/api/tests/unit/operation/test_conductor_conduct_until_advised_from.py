@@ -30,10 +30,12 @@ from cora.infrastructure.ports.clock import FakeClock
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
+from cora.operation.aggregates.procedure import ProcedureTerminationReason
 from cora.operation.conductor import Conductor
 from cora.operation.ports.control_port import ActuationKind
 from cora.operation.ports.decide_port import (
     SteeringAdvice,
+    SteeringBudget,
     SteeringObservation,
     SteeringPoint,
     SteeringVerdict,
@@ -108,6 +110,7 @@ async def _conduct_from(
     fsm_iteration_count: int,
     open_iteration_index: int | None,
     brain: InMemoryDecidePort,
+    budget: SteeringBudget | None = None,
 ) -> object:
     return await conductor.conduct_until_advised_from(
         procedure_id=uuid4(),
@@ -122,6 +125,7 @@ async def _conduct_from(
         closed_observations=closed,
         fsm_iteration_count=fsm_iteration_count,
         open_iteration_index=open_iteration_index,
+        budget=budget,
     )
 
 
@@ -324,6 +328,69 @@ async def test_conduct_from_closed_passes_consume_no_hardware() -> None:
     assert result.succeeded is True  # type: ignore[attr-defined]
     assert transcript.resume_boundaries == [3]
     assert transcript.start_iteration_indices == [4]
+
+
+@pytest.mark.unit
+async def test_a_resumed_segment_gets_its_own_budget_not_the_prior_segments_remainder() -> None:
+    """A resumed call's `SteeringBudget` is PER-CALL, not the remainder of
+    whatever the prior segment had left. 5 recovered passes + `iterations_
+    remaining=2` must run exactly 2 NEW passes (indices 6, 7), continuing the
+    FSM count as `conduct_from` always does; it must NOT compare against the
+    resumed `fsm_iteration_count` and refuse to run at all, which is what a
+    cumulative (rather than per-call) accounting would do here.
+    """
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(0.2),),) * 4)
+    brain = InMemoryDecidePort()
+    # 5 recovered passes -> frontier re-ask at index 4 (MEASURE). The new
+    # passes are fsm indices 6 and 7; their post-pass advises are at
+    # iteration_count-1 = 5 and 6 respectively (both MEASURE, so the budget
+    # guard, not the brain, is what ends the call).
+    brain.set_advice_sequence(
+        [
+            SteeringAdvice(verdict=SteeringVerdict.STOP),  # 0-3 unused
+            SteeringAdvice(verdict=SteeringVerdict.STOP),
+            SteeringAdvice(verdict=SteeringVerdict.STOP),
+            SteeringAdvice(verdict=SteeringVerdict.STOP),
+            SteeringAdvice(
+                verdict=SteeringVerdict.MEASURE,
+                next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 1.0}),
+            ),  # 4: frontier re-ask (5 recovered observations)
+            SteeringAdvice(
+                verdict=SteeringVerdict.MEASURE,
+                next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 2.0}),
+            ),  # 5: post-pass advise for new pass at fsm index 6
+            SteeringAdvice(
+                verdict=SteeringVerdict.MEASURE,
+                next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 3.0}),
+            ),  # 6: post-pass advise for new pass at fsm index 7
+        ]
+    )
+    conductor = _conductor(transcript, compute_port=compute, control_port=control)
+
+    result = await _conduct_from(
+        conductor,
+        closed=(
+            _closed_pass(0.0, 2.0),
+            _closed_pass(1.0, 2.0),
+            _closed_pass(2.0, 2.0),
+            _closed_pass(3.0, 2.0),
+            _closed_pass(4.0, 2.0),
+        ),
+        fsm_iteration_count=5,
+        open_iteration_index=None,
+        brain=brain,
+        budget=SteeringBudget(iterations_remaining=2),
+    )
+
+    assert result.succeeded is True  # type: ignore[attr-defined]
+    assert transcript.start_iteration_indices == [6, 7]
+    assert transcript.complete_termination_reasons == [
+        ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED
+    ]
 
 
 @pytest.mark.unit

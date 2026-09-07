@@ -134,6 +134,7 @@ from cora.operation._control_dispatch_context import with_dispatch_correlation_i
 from cora.operation.aggregates.procedure import (
     ProcedureIterationLimitReachedError,
     ProcedureNotFoundError,
+    ProcedureTerminationReason,
     merge_actuation_kinds,
 )
 from cora.operation.errors import (
@@ -774,6 +775,41 @@ def _elapsed_ms(started: float, finished: float) -> float:
     column later.
     """
     return max(0.0, (finished - started) * 1000.0)
+
+
+def _budget_exhausted(
+    budget: SteeringBudget | None,
+    *,
+    passes_this_call: int,
+    elapsed_ms: float,
+) -> ProcedureTerminationReason | None:
+    """Has this call's declared `SteeringBudget` run out, and on which axis.
+
+    None when there is no budget, or the budget sets neither dimension, or
+    neither dimension is yet spent: the common case, so the loop stays
+    uncapped unless a caller opted in.
+
+    Iterations checked before wall clock. The tie only matters when both
+    dimensions are set AND both are spent on the same turn (a budget that
+    under-estimated both at once); iterations is the exactly-countable
+    dimension, wall clock a varying reading off a real clock, so counting
+    decides the tie rather than whichever comparison happens to run second.
+
+    Both comparisons are `>=`: `iterations_remaining=0` (a real wire input,
+    the field is `ge=0` not `gt=0`) exhausts before the first pass this call
+    makes, mirroring the convergence twin's `cap=0` stopping before its first
+    `start_iteration`.
+    """
+    if budget is None:
+        return None
+    if budget.iterations_remaining is not None and passes_this_call >= budget.iterations_remaining:
+        return ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED
+    if (
+        budget.wall_clock_seconds_remaining is not None
+        and elapsed_ms >= budget.wall_clock_seconds_remaining * 1000.0
+    ):
+        return ProcedureTerminationReason.BUDGET_WALL_CLOCK_EXHAUSTED
+    return None
 
 
 def _validate_advice_point(point: SteeringPoint | None, space: SteeringSpace) -> None:
@@ -2628,12 +2664,33 @@ class Conductor:
         "fold a raised exception into a recorded steering decision rather than
         crashing the loop". A non-`Decide*Error` propagates.
 
-        `budget` is threaded informationally into the `SteeringEvidence` the
-        brain weighs; it is NOT enforced in the loop at this slice (budget
-        exhaustion is a normal non-error end the brain signals via Stop, not a
-        caller-side abort). The only loop backstop is the absolute iteration
-        ceiling (`_ABSOLUTE_MAX_ITERATIONS`), reused verbatim from the
-        convergence twin, which bounds a brain that never advises Stop.
+        `budget` is threaded into the `SteeringEvidence` the brain weighs AND
+        enforced by the loop itself, checked at the top of every pass, before
+        the stand-down and absolute-ceiling checks below and before the next
+        `start_iteration`. Precedence when more than one condition applies on
+        the same turn: the brain's own Stop wins (it is checked at the BOTTOM
+        of the prior pass, so a Stop on the last budgeted pass completes for
+        the brain's reason, never the budget's), then an exhausted budget,
+        then the absolute iteration ceiling backstop below.
+
+        Budget exhaustion is a normal non-error end, per
+        [[project_decide_layer_stage1_design]]'s corpus lock over scipy /
+        Optuna / Ax / Ray Tune / bluesky: none of them treats running out of
+        an allowance as a failure or a dedicated status, and the
+        converged-vs-budget distinction is universally a separate reason
+        channel. It completes exactly like a brain-advised Stop
+        (`_complete_advised`), with `ProcedureCompleted.termination_reason`
+        recording which dimension ran out; `Aborted` is deliberately not
+        used here (that shape means the loop was INTERRUPTED mid-pass or the
+        criterion was never met, and a spent budget is neither: the loop did
+        exactly what it was asked). The absolute iteration ceiling
+        (`_ABSOLUTE_MAX_ITERATIONS`), reused verbatim from the convergence
+        twin, remains the unconditional runaway backstop for a caller who
+        supplies no budget, or a brain that never advises Stop.
+
+        The enforced budget is PER-CALL, not cumulative across resumes; see
+        `SteeringBudget`'s docstring for the resume semantics and the
+        wall-clock gap that leaves open.
 
         `record_turn`, when supplied, is awaited per pass with the advice, the
         observation, and the 0-based loop turn; the route / tool pass None (the
@@ -2799,11 +2856,13 @@ class Conductor:
         Twin of `_run_convergence_loop`: extracted so the start_iteration /
         seed / execute / advise / end_iteration sequencing is one linear read.
         The Procedure is already Running. Returns the terminal ConductorResult
-        after the brain advised Stop (complete), a pass faulted or the brain
-        raised (abort), or the absolute ceiling tripped (abort). The
-        observation history + the pending point are tracked locally: the loop
-        owns every iteration boundary, so it reconstructs the evidence each
-        pass without re-loading aggregate state.
+        after: the brain advised Stop (complete); the declared `SteeringBudget`
+        ran out (complete, `termination_reason` set); the driver was stood down
+        (hold); a pass faulted or the brain raised (abort); or the absolute
+        ceiling tripped (abort). The observation history + the pending point
+        are tracked locally: the loop owns every iteration boundary, so it
+        reconstructs the evidence each pass without re-loading aggregate
+        state.
 
         REPLAY DETERMINISM: because the loop is pure in-process state from
         iteration 0 (it never reads the event store) and the one-pass block is
@@ -2850,6 +2909,8 @@ class Conductor:
         pending_point: SteeringPoint | None = (
             resume_from.pending_point if resume_from is not None else None
         )
+        loop_started = self._monotonic_clock.now()
+        passes_at_entry = iteration_count
         while True:
             # Re-read the driver's stand-down switch at EVERY iteration
             # boundary, not once at conduct entry. `conduct_until_advised`
@@ -2867,6 +2928,36 @@ class Conductor:
                     folded_kind=folded_kind,
                     last_result=last_result,
                     envelope_kwargs=envelope_kwargs,
+                )
+            # Budget before the absolute ceiling: both are loop-top, nothing-
+            # open checks, but the operator's declared cap is the honest
+            # attribution when a run without one would also have tripped the
+            # runaway backstop. "This many more passes / this much more time
+            # IN THIS CALL": a caller restates the budget on every resume
+            # (`conduct_until_advised_from` passes it straight through,
+            # deliberately not compared against the prior pin), so
+            # `passes_this_call` is measured from THIS call's entry, not the
+            # FSM total the absolute ceiling below uses. That per-call framing
+            # is what a resuming caller controls and is why it cannot be used
+            # to evade the pass-count ceiling: the FSM total keeps climbing
+            # underneath a per-call budget that resets on every resume. Wall
+            # clock has no such backstop; see `SteeringBudget`'s docstring.
+            budget_reason = _budget_exhausted(
+                budget,
+                passes_this_call=iteration_count - passes_at_entry,
+                elapsed_ms=_elapsed_ms(loop_started, self._monotonic_clock.now()),
+            )
+            if budget_reason is not None:
+                return await self._complete_advised(
+                    procedure_id=procedure_id,
+                    result=(
+                        last_result
+                        if last_result is not None
+                        else ConductorResult(procedure_id=procedure_id, completed_count=0)
+                    ),
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                    termination_reason=budget_reason,
                 )
             if iteration_count >= _ABSOLUTE_MAX_ITERATIONS:
                 return await self._abort_absolute_ceiling(
@@ -3091,8 +3182,15 @@ class Conductor:
         result: ConductorResult,
         folded_kind: str | None,
         envelope_kwargs: dict[str, Any],
+        termination_reason: ProcedureTerminationReason | None = None,
     ) -> ConductorResult:
-        """Complete a brain-advised-Stop steering loop; thin twin of `_complete_converged`."""
+        """Complete a steered loop; thin twin of `_complete_converged`.
+
+        `termination_reason` is None for the brain's own Stop (both call
+        sites below leave it unset, so that payload is byte-identical to
+        before this parameter existed) and set only by the budget-exhausted
+        terminal in `_run_decide_loop`, which passes it explicitly.
+        """
         assert self._complete_procedure is not None
         merged = replace(
             result,
@@ -3100,7 +3198,11 @@ class Conductor:
         )
         try:
             await self._complete_procedure(
-                CompleteProcedure(procedure_id=procedure_id, actuation_kind=folded_kind),
+                CompleteProcedure(
+                    procedure_id=procedure_id,
+                    actuation_kind=folded_kind,
+                    termination_reason=termination_reason,
+                ),
                 **envelope_kwargs,
             )
         except _LIFECYCLE_RERAISE:

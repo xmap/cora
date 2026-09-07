@@ -25,6 +25,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureRegistered,
     ProcedureResumed,
     ProcedureStarted,
+    ProcedureTerminationReason,
     ProcedureTruncated,
     RecipeExpansionRecorded,
     SteeringDesignRecorded,
@@ -300,6 +301,7 @@ def test_to_payload_serializes_procedure_completed() -> None:
         "procedure_id": str(procedure_id),
         "occurred_at": _NOW.isoformat(),
         "actuation_kind": None,
+        "termination_reason": None,
     }
 
 
@@ -310,6 +312,17 @@ def test_to_payload_serializes_procedure_completed_with_actuation_kind() -> None
         procedure_id=procedure_id, occurred_at=_NOW, actuation_kind="Simulated"
     )
     assert to_payload(event)["actuation_kind"] == "Simulated"
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_procedure_completed_with_termination_reason() -> None:
+    procedure_id = UUID("01900000-0000-7000-8000-00000000b014")
+    event = ProcedureCompleted(
+        procedure_id=procedure_id,
+        occurred_at=_NOW,
+        termination_reason=ProcedureTerminationReason.BUDGET_WALL_CLOCK_EXHAUSTED,
+    )
+    assert to_payload(event)["termination_reason"] == "BudgetWallClockExhausted"
 
 
 @pytest.mark.unit
@@ -384,6 +397,34 @@ def test_from_stored_procedure_completed_reads_actuation_kind() -> None:
     rebuilt = from_stored(stored)
     assert isinstance(rebuilt, ProcedureCompleted)
     assert rebuilt.actuation_kind == "Simulated"
+
+
+@pytest.mark.unit
+def test_from_stored_procedure_completed_legacy_payload_folds_termination_reason_to_none() -> None:
+    """Pre-budget-enforcement ProcedureCompleted payloads omit
+    termination_reason; they must fold to None, not raise."""
+    stored = _stored(
+        "ProcedureCompleted",
+        {"procedure_id": str(uuid4()), "occurred_at": _NOW.isoformat()},
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureCompleted)
+    assert rebuilt.termination_reason is None
+
+
+@pytest.mark.unit
+def test_from_stored_procedure_completed_reads_termination_reason() -> None:
+    stored = _stored(
+        "ProcedureCompleted",
+        {
+            "procedure_id": str(uuid4()),
+            "occurred_at": _NOW.isoformat(),
+            "termination_reason": "BudgetIterationsExhausted",
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureCompleted)
+    assert rebuilt.termination_reason is ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED
 
 
 @pytest.mark.unit
@@ -1194,6 +1235,43 @@ def test_steering_design_recorded_disposition_classifies_every_field() -> None:
         "design_source": "keep:enum:SteeringDesignSource",
         "occurred_at": "keep:time",
     }
+
+
+@pytest.mark.unit
+def test_procedure_completed_disposition_classifies_termination_reason_as_an_enum() -> None:
+    """`termination_reason` must regenerate as `keep:enum:ProcedureTerminationReason`,
+    not `drop:text`.
+
+    It is typed directly on this aggregate's event, unlike `actuation_kind`
+    (stranded as a raw string because `ActuationKind` lives in
+    `cora.operation.ports`, which this aggregate cannot import under tach).
+    A future retype to a bare `str` would regenerate to `drop:text` and the
+    field would silently vanish from published records; this pin is what
+    catches that, since `test_record_dispositions_drift.py` only proves the
+    committed table matches a fresh run of the same generator.
+    """
+    from cora.infrastructure.record_export._dispositions import DISPOSITIONS
+
+    assert DISPOSITIONS["ProcedureCompleted"] == {
+        "procedure_id": "token:uuid",
+        "occurred_at": "keep:time",
+        "actuation_kind": "drop:text",
+        "termination_reason": "keep:enum:ProcedureTerminationReason",
+    }
+
+
+@pytest.mark.unit
+def test_procedure_completed_export_publishes_the_termination_reason() -> None:
+    """Drives the real redactor, so both sides of the check are not derived
+    from the same generator."""
+    event = ProcedureCompleted(
+        procedure_id=uuid4(),
+        occurred_at=_NOW,
+        termination_reason=ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED,
+    )
+    exported = redact_tier1_payload("ProcedureCompleted", to_payload(event), token_map=TokenMap())
+
+    assert exported["termination_reason"] == "BudgetIterationsExhausted"
 
 
 @pytest.mark.unit

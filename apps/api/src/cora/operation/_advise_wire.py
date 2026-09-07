@@ -81,7 +81,8 @@ class SteeringSpaceRequest(BaseModel):
 
 
 class SteeringBudgetRequest(BaseModel):
-    """JSON wire shape for a `SteeringBudget` (informational for the brain)."""
+    """JSON wire shape for a `SteeringBudget`: both advice input for the brain
+    and a per-call stop condition the loop itself enforces between passes."""
 
     iterations_remaining: int | None = Field(default=None, ge=0)
     wall_clock_seconds_remaining: float | None = Field(default=None, ge=0.0)

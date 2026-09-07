@@ -17,6 +17,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureName,
     ProcedureNotFoundError,
     ProcedureStatus,
+    ProcedureTerminationReason,
 )
 from cora.operation.features import complete_procedure
 from cora.operation.features.complete_procedure import CompleteProcedure
@@ -67,6 +68,23 @@ def test_decide_snapshots_actuation_kind_onto_completed_event(kind: str) -> None
         now=_NOW,
     )
     assert events[0].actuation_kind == kind
+
+
+@pytest.mark.unit
+def test_decide_snapshots_termination_reason_onto_completed_event() -> None:
+    """The Conductor supplies the reason on the command when a steered loop's
+    budget ran out; the decider snapshots it verbatim, exactly like
+    actuation_kind. Unset (the ordinary happy path) stays None."""
+    proc = _procedure()
+    events = complete_procedure.decide(
+        state=proc,
+        command=CompleteProcedure(
+            procedure_id=proc.id,
+            termination_reason=ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED,
+        ),
+        now=_NOW,
+    )
+    assert events[0].termination_reason is ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED
 
 
 @pytest.mark.unit

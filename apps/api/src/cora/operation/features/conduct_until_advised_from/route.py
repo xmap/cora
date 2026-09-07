@@ -79,7 +79,10 @@ class ConductUntilAdvisedFromRequest(BaseModel):
     )
     budget: SteeringBudgetRequest | None = Field(
         default=None,
-        description="Optional informational budget surfaced to the brain (not enforced here).",
+        description=(
+            "Optional per-call budget: surfaced to the brain, and enforced by "
+            "the loop between passes."
+        ),
     )
 
     model_config = {"extra": "forbid"}

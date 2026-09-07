@@ -73,6 +73,7 @@ from uuid import UUID
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.beam_availability_lookup import BeamState
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.operation.aggregates.procedure.state import ProcedureTerminationReason
 from cora.shared.beam_requirement import BeamRequirement
 from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.decision_signals import DecisionConfidenceSource
@@ -250,11 +251,23 @@ class ProcedureCompleted:
     Additive payload field: legacy streams fold via
     `payload.get("actuation_kind")` -> None. This is the gate carrier
     the Data BC reads back at Dataset registration.
+
+    `termination_reason` is None for the ordinary happy path (a flat
+    conduct, or a steered loop the brain itself ended via Stop) and
+    `ProcedureTerminationReason.BUDGET_ITERATIONS_EXHAUSTED` /
+    `BUDGET_WALL_CLOCK_EXHAUSTED` for a steered loop the Conductor ended
+    because the caller's declared `SteeringBudget` ran out first. Typed
+    directly on this event (unlike `actuation_kind`, which is stranded as
+    a raw string because `ActuationKind` lives in `cora.operation.ports`
+    and this aggregate cannot import it under tach) so it survives record
+    export as a queryable enum rather than dropped free text. Additive:
+    legacy streams fold via `payload.get("termination_reason")` -> None.
     """
 
     procedure_id: UUID
     occurred_at: datetime
     actuation_kind: str | None = None
+    termination_reason: ProcedureTerminationReason | None = None
 
 
 @dataclass(frozen=True)
@@ -804,6 +817,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             procedure_id=procedure_id,
             occurred_at=occurred_at,
             actuation_kind=actuation_kind,
+            termination_reason=termination_reason,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -811,6 +825,9 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 # Raw ActuationKind value or None. Pre-activation streams
                 # fold via `.get("actuation_kind")` -> None in from_stored.
                 "actuation_kind": actuation_kind,
+                "termination_reason": (
+                    termination_reason.value if termination_reason is not None else None
+                ),
             }
         case ProcedureAborted(
             procedure_id=procedure_id,
@@ -1142,6 +1159,11 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     # Additive: pre-activation streams omit the key -> None.
                     actuation_kind=payload.get("actuation_kind"),
+                    termination_reason=(
+                        ProcedureTerminationReason(payload["termination_reason"])
+                        if payload.get("termination_reason") is not None
+                        else None
+                    ),
                 ),
             )
         case "ProcedureAborted":

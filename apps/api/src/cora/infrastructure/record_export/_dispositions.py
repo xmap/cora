@@ -1421,6 +1421,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "actuation_kind": "drop:text",
         "occurred_at": "keep:time",
         "procedure_id": "token:uuid",
+        "termination_reason": "keep:enum:ProcedureTerminationReason",
     },
     "ProcedureDiagnosticLogbookOpened": {
         "kind": "drop:text",
