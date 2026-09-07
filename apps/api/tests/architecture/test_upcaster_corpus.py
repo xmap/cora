@@ -55,6 +55,8 @@ from cora.access.aggregates.actor import (
     ActorRegistered,
 )
 from cora.access.aggregates.actor import from_stored as actor_from_stored
+from cora.agent.aggregates.agent import AgentDefined, ModelRef
+from cora.agent.aggregates.agent import from_stored as agent_from_stored
 from tests._strategies import make_stored_event
 
 if TYPE_CHECKING:
@@ -66,18 +68,30 @@ _CORPUS_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "event_corpus"
 
 _BC_REGISTRY: dict[tuple[str, str], tuple[Callable[[StoredEvent], Any], str]] = {
     ("access", "actor"): (actor_from_stored, "Actor"),
+    ("agent", "agent"): (agent_from_stored, "Agent"),
 }
 
 _EVENT_CLASSES: dict[str, type] = {
     "ActorRegistered": ActorRegistered,
     "ActorDeactivated": ActorDeactivated,
     "ActorProfileForgotten": ActorProfileForgotten,
+    "AgentDefined": AgentDefined,
 }
 
 _FIELD_COERCERS: dict[str, Callable[[Any], Any]] = {
     "actor_id": lambda v: UUID(v),
     "occurred_at": lambda v: datetime.fromisoformat(v),
-    "kind": lambda v: ActorKind(v),
+    "agent_id": lambda v: UUID(v),
+    "model_ref": lambda v: ModelRef(**v),
+    "capabilities": lambda v: frozenset(v),
+    "prompt_template_id": lambda v: None if v is None else UUID(v),
+}
+
+# Keyed by (bc, field) and consulted before `_FIELD_COERCERS`, because a field
+# name is only unique within a BC: Actor's `kind` is an enum and Agent's is a
+# plain string, so a single global entry for it would coerce one of them wrong.
+_BC_FIELD_COERCERS: dict[tuple[str, str], Callable[[Any], Any]] = {
+    ("access", "kind"): lambda v: ActorKind(v),
 }
 
 
@@ -100,7 +114,14 @@ def _bc_and_aggregate(p: Path) -> tuple[str, str]:
     return rel[0], rel[1]
 
 
-def _build_expected(expected: dict[str, Any]) -> Any:
+def _coercer_for(bc: str, field: str) -> Callable[[Any], Any]:
+    scoped = _BC_FIELD_COERCERS.get((bc, field))
+    if scoped is not None:
+        return scoped
+    return _FIELD_COERCERS.get(field, lambda v: v)
+
+
+def _build_expected(expected: dict[str, Any], bc: str) -> Any:
     class_name = expected["class"]
     if class_name not in _EVENT_CLASSES:
         msg = (
@@ -110,7 +131,7 @@ def _build_expected(expected: dict[str, Any]) -> Any:
         raise AssertionError(msg)
     cls = _EVENT_CLASSES[class_name]
     kwargs = {
-        field: _FIELD_COERCERS.get(field, lambda v: v)(value)
+        field: _coercer_for(bc, field)(value)
         for field, value in expected.items()
         if field != "class"
     }
@@ -137,7 +158,7 @@ def test_legacy_event_corpus_upcasts_to_current_dataclass(fixture_path: Path) ->
         payload=record["payload"],
     )
     actual = from_stored(stored)
-    expected = _build_expected(record["expected"])
+    expected = _build_expected(record["expected"], bc)
     assert actual == expected, (
         f"{_fixture_id(fixture_path)}: upcaster produced {actual!r}, expected {expected!r}"
     )
@@ -151,7 +172,7 @@ def test_event_corpus_walker_actually_finds_fixtures() -> None:
     Lock a floor matching the live upcaster arms covered today.
     """
     found = _fixture_files()
-    assert len(found) >= 3, (
-        f"Expected at least 3 corpus fixtures under {_CORPUS_ROOT}, "
+    assert len(found) >= 4, (
+        f"Expected at least 4 corpus fixtures under {_CORPUS_ROOT}, "
         f"found {len(found)}: {[_fixture_id(p) for p in found]}"
     )
