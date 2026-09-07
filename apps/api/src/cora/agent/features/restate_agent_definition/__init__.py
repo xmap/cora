@@ -6,9 +6,18 @@ existed cannot be rewritten to carry one; this is the forward-only way to say
 what such an Agent thinks with.
 
 Eighteen seeded agents named their brain in a sentinel `model_ref` because
-that was the only slot the schema then had. Restating them is what lets
-`brain_from_legacy_model_ref` and `Agent.model_ref` be removed rather than
-kept forever as a compatibility layer.
+that was the only slot the schema then had. Restating them says so on the
+record, in a governance event that carries a reason.
+
+It does NOT retire `brain_from_legacy_model_ref`, and an earlier version of
+this docstring claimed it would. A fold replays a stream in order, so the
+genesis `AgentDefined` reaches `_effective_brain` before any restatement in
+the same stream is read; the correction is never reached in time to spare the
+reader. That reader is permanent by decision, not by neglect. See its own
+docstring in `aggregates/agent/state.py`.
+
+What this slice is for stands on its own: making an old agent's current state
+say what it actually thinks with, and recording who decided that and why.
 
 An omitted field means UNCHANGED, not cleared: neither a name nor a brain has
 a meaningful empty value. At least one must be supplied, so a restatement

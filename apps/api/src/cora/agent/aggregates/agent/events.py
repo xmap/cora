@@ -349,8 +349,13 @@ class AgentDefinitionRestated:
     be rewritten to carry one. This is the forward-only way to say what such
     an Agent thinks with: append the correction rather than edit the record.
     Eighteen seeded agents named their brain in a sentinel `model_ref` because
-    that was the only slot the schema then had, and this is how they stop
-    depending on `brain_from_legacy_model_ref` to be read correctly.
+    that was the only slot the schema then had, and this is how they say so on
+    the record.
+
+    It does not stop them depending on `brain_from_legacy_model_ref`, which an
+    earlier version of this docstring claimed. The fold reads their genesis
+    event before it reads this one, so the reader is still what gets that first
+    event through. It is permanent by decision; see its docstring.
 
     Both fields are optional and at least one must be set; the decider
     enforces that, because an event restating nothing is a governance write

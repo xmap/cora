@@ -1,9 +1,13 @@
 """Decider tests for `restate_agent_definition`.
 
 Events are INSERT-only, so a stream written before `brain` existed cannot be
-rewritten to carry one. This slice appends the correction instead, which is
-what lets `brain_from_legacy_model_ref` and `Agent.model_ref` eventually be
-removed rather than kept forever.
+rewritten to carry one. This slice appends the correction instead.
+
+That does not retire `brain_from_legacy_model_ref`, though this docstring
+used to say it would: the fold reads the genesis event before the correction,
+so the reader is still what gets the stream started. It stays permanently, by
+decision. What the slice buys is a current state that says what an old agent
+actually thinks with, and a governance record of who decided that.
 
 The same event serves the rename: supply `name` and omit `brain`.
 """

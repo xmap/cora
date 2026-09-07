@@ -979,6 +979,24 @@ _SENTINEL_MODEL_PREFIX = "agent:"
 def brain_from_legacy_model_ref(model_ref: ModelRef) -> BrainRef:
     """Read the brain a pre-`BrainRef` stream MEANT, from its `model_ref`.
 
+    PERMANENT, and deliberately so. This was once described as a transitional
+    compatibility layer that `restate_agent_definition` would let us delete.
+    That was wrong on the mechanics: a fold replays a stream in order, so the
+    genesis `AgentDefined` reaches this function before any restatement in the
+    same stream is read. Appending a correction cannot change what the first
+    event needs in order to fold, so no amount of restating retires this.
+
+    What could retire it is having no pre-`brain` genesis event anywhere, which
+    means discarding the record that contains them. Decided 2026-09-07 not to:
+    CORA can read its own record back to the first event ever written, and that
+    property is worth more than deleting one function. It also outlives the
+    live store, since archives and record exports keep those payloads after any
+    reset. Removing this would make them unreadable by current code.
+
+    Guarded by `test_pre_brain_deterministic_sentinel_folds_to_a_rule_brain`
+    for the fold and by the `agent/agent/agent_defined_v1_pre_brain` golden
+    payload in the upcaster corpus for the read.
+
     Eighteen seeded agents predate this type. `model_ref` was required and
     LLM-shaped, so the deterministic ones had to name a model they never call,
     and every one of them used the same deliberate sentinel: provider

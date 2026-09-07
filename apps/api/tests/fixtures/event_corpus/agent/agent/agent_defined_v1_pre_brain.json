@@ -1,0 +1,35 @@
+{
+  "event_type": "AgentDefined",
+  "payload": {
+    "agent_id": "8f2c1d40-6b93-4a27-91e5-c07d4a8b3e11",
+    "kind": "RunSupervisor",
+    "name": "RunSupervisor",
+    "version": "1.0.0",
+    "model_ref": {
+      "provider": "deterministic",
+      "model": "agent:RunSupervisor:v1",
+      "snapshot_pin": null
+    },
+    "description": "Assembles and checks a Run's envelope before it starts.",
+    "capabilities": [],
+    "occurred_at": "2026-03-04T09:17:52+00:00"
+  },
+  "expected": {
+    "class": "AgentDefined",
+    "agent_id": "8f2c1d40-6b93-4a27-91e5-c07d4a8b3e11",
+    "kind": "RunSupervisor",
+    "name": "RunSupervisor",
+    "version": "1.0.0",
+    "model_ref": {
+      "provider": "deterministic",
+      "model": "agent:RunSupervisor:v1",
+      "snapshot_pin": null
+    },
+    "description": "Assembles and checks a Run's envelope before it starts.",
+    "canonical_uri": null,
+    "prompt_template_id": null,
+    "capabilities": [],
+    "occurred_at": "2026-03-04T09:17:52+00:00",
+    "brain": null
+  }
+}
