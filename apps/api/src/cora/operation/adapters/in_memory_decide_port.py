@@ -22,8 +22,9 @@ from cora.operation.ports.decide_port import (
     SteeringEvidence,
     SteeringVerdict,
 )
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
-_MODEL_REF = "in_memory"
+_BRAIN = DecidingBrainRef(substrate=SteeringSubstrate.IN_MEMORY)
 
 
 class InMemoryDecidePort:
@@ -70,7 +71,7 @@ class InMemoryDecidePort:
         self._received.append(evidence)
         if 0 <= evidence.iteration_index < len(self._advice):
             return self._advice[evidence.iteration_index]
-        return SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref=_MODEL_REF)
+        return SteeringAdvice(verdict=SteeringVerdict.STOP, deciding_brain=_BRAIN)
 
     async def aclose(self) -> None:
         """No-op: the fake holds no resources."""

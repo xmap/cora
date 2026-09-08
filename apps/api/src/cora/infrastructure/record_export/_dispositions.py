@@ -1445,6 +1445,11 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "confidence": "keep:number",
         "confidence_source": "keep:enum:DecisionConfidenceSource",
         "converged": "keep:number",
+        "deciding_brain": {
+            "model": "drop:text",
+            "provider": "drop:text",
+            "substrate": "keep:enum:SteeringSubstrate",
+        },
         "iteration_index": "keep:number",
         "model_ref": "drop:text",
         "occurred_at": "keep:time",

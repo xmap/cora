@@ -289,7 +289,10 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
                 "confidence": command.confidence,
                 "confidence_source": command.confidence_source,
                 "alternatives": command.alternatives,
-                "model_ref": command.model_ref,
+                "deciding_brain": command.deciding_brain,
+                "model_ref": (
+                    str(command.deciding_brain) if command.deciding_brain is not None else None
+                ),
                 "reason": command.reason,
                 "advised_next_point": command.advised_next_point,
             }

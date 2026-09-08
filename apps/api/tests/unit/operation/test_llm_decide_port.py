@@ -54,6 +54,7 @@ from cora.operation.ports.decide_port import (
 )
 from cora.operation.ports.measurement import Measurement, Quality
 from cora.shared.decision_signals import DecisionConfidenceSource
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 _T0 = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -121,7 +122,11 @@ async def test_advise_next_measure_returns_valid_point() -> None:
     assert advice.next_point.coordinates == {"x": 4.2}
     assert advice.confidence == 0.7
     assert advice.confidence_source is DecisionConfidenceSource.SELF_REPORTED
-    assert advice.model_ref == "anthropic:claude-sonnet-4-5"
+    assert advice.deciding_brain is not None
+    assert advice.deciding_brain == DecidingBrainRef(
+        substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-5"
+    )
+    assert str(advice.deciding_brain) == "anthropic:claude-sonnet-4-5"
 
 
 async def test_advise_next_stop_carries_no_point() -> None:

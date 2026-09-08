@@ -76,12 +76,13 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
 )
 from cora.shared.quality import actionable
-from cora.shared.steering import SteeringObjectiveKind
+from cora.shared.steering import DecidingBrainRef, SteeringObjectiveKind, SteeringSubstrate
 
 if TYPE_CHECKING:
     from cora.shared.steering import SteeringAxis
 
-_MODEL_REF = "botorch"
+_BRAIN = DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH)
+_SUBSTRATE = _BRAIN.substrate.value
 _DEFAULT_MIN_OBSERVATIONS = 5
 _DEFAULT_NUM_RESTARTS = 10
 _DEFAULT_RAW_SAMPLES = 256
@@ -118,8 +119,8 @@ class BoTorchDecidePort:
             raise ValueError(f"num_restarts must be >= 1, got {num_restarts}")
         if raw_samples < 1:
             raise ValueError(f"raw_samples must be >= 1, got {raw_samples}")
-        require_torch(_MODEL_REF)
-        require_botorch(_MODEL_REF)
+        require_torch(_SUBSTRATE)
+        require_botorch(_SUBSTRATE)
         self._min_observations = min_observations
         self._num_restarts = num_restarts
         self._raw_samples = raw_samples
@@ -143,7 +144,7 @@ class BoTorchDecidePort:
         usable = [obs for obs in evidence.observations if _is_usable(obs, target)]
         if len(usable) < self._min_observations:
             raise DecideColdStartError(
-                f"the {_MODEL_REF!r} decider needs >= {self._min_observations} usable "
+                f"the {_SUBSTRATE!r} decider needs >= {self._min_observations} usable "
                 f"observations to fit a GP, got {len(usable)}; seed the space first"
             )
 
@@ -154,7 +155,7 @@ class BoTorchDecidePort:
             verdict=SteeringVerdict.MEASURE,
             next_point=SteeringPoint(coordinates=dict(zip(names, next_point, strict=True))),
             rationale=(f"GP-BO over {len(usable)} observations; acquisition value {acq_value:.4g}"),
-            model_ref=_MODEL_REF,
+            deciding_brain=_BRAIN,
             diagnostics=diagnostics,
         )
 
@@ -277,13 +278,13 @@ def _require_supported_objective(objective: SteeringObjective) -> None:
     """Reject an objective kind the GP brain does not handle, or a missing target."""
     if objective.kind not in _SUPPORTED_KINDS:
         raise DecideEvidenceRejectedError(
-            f"the {_MODEL_REF!r} decider supports only Minimize / Maximize objectives, "
+            f"the {_SUBSTRATE!r} decider supports only Minimize / Maximize objectives, "
             f"got {objective.kind.value}"
         )
     if objective.target_measurement_name is None:
         raise DecideEvidenceRejectedError(
             f"a {objective.kind.value} objective needs a target_measurement_name for the "
-            f"{_MODEL_REF!r} decider"
+            f"{_SUBSTRATE!r} decider"
         )
 
 
@@ -294,12 +295,12 @@ def _continuous_axis_names(space: SteeringSpace) -> list[str]:
     for axis in space.axes:
         if axis.choices:
             raise DecideEvidenceRejectedError(
-                f"axis {axis.name!r} carries choices; the {_MODEL_REF!r} decider "
+                f"axis {axis.name!r} carries choices; the {_SUBSTRATE!r} decider "
                 "optimizes only bounded continuous axes"
             )
         if axis.lower is None or axis.upper is None:
             raise DecideEvidenceRejectedError(
-                f"axis {axis.name!r} has no [lower, upper] bound; the {_MODEL_REF!r} "
+                f"axis {axis.name!r} has no [lower, upper] bound; the {_SUBSTRATE!r} "
                 "decider cannot optimize it"
             )
     return [axis.name for axis in space.axes]

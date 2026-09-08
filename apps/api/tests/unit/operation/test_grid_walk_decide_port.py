@@ -25,6 +25,7 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
 )
 from cora.operation.ports.measurement import Measurement
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 _T0 = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -119,6 +120,9 @@ async def test_grid_walk_position_follows_observation_count() -> None:
     advice = await port.advise_next(evidence)
     assert advice.next_point is not None
     assert advice.next_point.coordinates["energy"] == 2.0
+    # The identity an iteration records, so a run steered by this adapter
+    # classifies as replay-safe rather than by whatever string it once spelled.
+    assert advice.deciding_brain == DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK)
 
 
 async def test_grid_walk_stops_when_satisfy_target_met_exactly() -> None:

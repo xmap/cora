@@ -3148,7 +3148,7 @@ class Conductor:
                     confidence=audit.confidence,
                     confidence_source=audit.confidence_source,
                     alternatives=audit.alternatives,
-                    model_ref=audit.model_ref,
+                    deciding_brain=advice.deciding_brain,
                     # TIER-1 replay: record the advised coordinate on a Measure
                     # verdict (None on Stop) so a finished GP-steered run's
                     # decision trail is reconstructable by reading the log.
@@ -3163,6 +3163,7 @@ class Conductor:
             )
             await self._record_diagnostics(
                 advice=advice,
+                model_ref=audit.model_ref,
                 procedure_id=procedure_id,
                 iteration_index=next_index,
                 principal_id=principal_id,
@@ -4653,6 +4654,7 @@ class Conductor:
         self,
         *,
         advice: SteeringAdvice,
+        model_ref: str | None,
         procedure_id: UUID,
         iteration_index: int,
         principal_id: UUID,
@@ -4669,6 +4671,13 @@ class Conductor:
         Procedure's diagnostics logbook (a side table that does NOT fold into
         aggregate state), so it never affects the loop's decisions, seeds, or
         the replay property; it is pure audit.
+
+        `model_ref` arrives already rendered, from the same
+        `advice_to_audit_fields` mapping the iteration ledger's provenance
+        comes from, rather than being spelled again off the advice here. The
+        diagnostics ledger is the one home that still keys rows by the flat
+        string, so taking it from the mapper keeps a single producer for it
+        instead of a second call site that could drift.
         """
         if advice.diagnostics is None or self._append_diagnostics is None:
             return
@@ -4676,7 +4685,7 @@ class Conductor:
         entry = DiagnosticInput(
             event_id=self._id_generator.new_id(),
             iteration_index=iteration_index,
-            model_ref=advice.model_ref if advice.model_ref is not None else "unknown",
+            model_ref=model_ref if model_ref is not None else "unknown",
             payload=dict(advice.diagnostics),
             sampled_at=now,
             occurred_at=now,

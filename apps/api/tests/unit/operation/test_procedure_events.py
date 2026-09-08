@@ -3,6 +3,7 @@
 import dataclasses
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -37,6 +38,7 @@ from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.shared.steering import (
     BoTorchBrain,
+    DecidingBrainRef,
     GridWalkBrain,
     InMemoryBrain,
     LlmBrain,
@@ -875,6 +877,7 @@ def test_to_payload_serializes_iteration_ended(converged: bool | None, reason: s
         "confidence": None,
         "confidence_source": None,
         "alternatives": [],
+        "deciding_brain": None,
         "model_ref": None,
         "advised_next_point": None,
         "advice_latency_ms": None,
@@ -915,6 +918,7 @@ def test_iteration_ended_round_trips_with_advised_next_point() -> None:
         reason=None,
         occurred_at=_NOW,
         advised_stop=False,
+        deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
         model_ref="botorch",
         advised_next_point={"energy": 7.2, "gap": 3.1},
     )
@@ -950,7 +954,10 @@ def test_iteration_ended_round_trips_with_every_field_set() -> None:
         confidence=0.62,
         confidence_source=DecisionConfidenceSource.SELF_REPORTED,
         alternatives=("keep going",),
-        model_ref="botorch",
+        deciding_brain=DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+        model_ref="anthropic:claude-sonnet-4-6",
         advised_next_point={"energy": 7.2, "gap": 3.1},
         advice_latency_ms=1234.5,
     )
@@ -984,6 +991,144 @@ def test_iteration_ended_pre_tier1_stream_folds_advised_next_point_to_none() -> 
     rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
     assert isinstance(rebuilt, ProcedureIterationEnded)
     assert rebuilt.advised_next_point is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "brain",
+    [
+        DecidingBrainRef(substrate=SteeringSubstrate.IN_MEMORY),
+        DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK),
+        DecidingBrainRef(substrate=SteeringSubstrate.SOBOL),
+        DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
+        # The one arm with a payload of its own. Hardcoding provider / model
+        # to None in `deserialize_deciding_brain_ref` survives every other case
+        # here, because the other four carry nothing to lose.
+        DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+    ],
+)
+def test_iteration_ended_round_trips_every_deciding_brain(brain: DecidingBrainRef) -> None:
+    """Each brain an adapter can record survives JSON-shaped storage intact."""
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=4,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        deciding_brain=brain,
+        model_ref=str(brain),
+    )
+
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", to_payload(event)))
+
+    assert isinstance(rebuilt, ProcedureIterationEnded)
+    assert rebuilt.deciding_brain == brain
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_iteration_ended_pre_deciding_brain_stream_folds_to_none_and_keeps_the_ref() -> None:
+    """A pre-`deciding_brain` row folds to None rather than being reconstructed.
+
+    `model_ref` alone determines the brain, and `replayability_of` reads it, so
+    the fold COULD parse one back. It deliberately does not: a heuristic on the
+    fold path would turn an unrecognised historical ref into an unreadable
+    stream. The row keeps its flat ref, and a consumer that wants the legacy
+    answer classifies that string outside the fold.
+    """
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=1,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
+        model_ref="botorch",
+    )
+    payload = to_payload(event)
+    del payload["deciding_brain"]  # simulate a stream written before the field
+
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
+
+    assert isinstance(rebuilt, ProcedureIterationEnded)
+    assert rebuilt.deciding_brain is None
+    assert rebuilt.model_ref == "botorch"
+
+
+@pytest.mark.unit
+def test_iteration_ended_export_tells_a_grid_walk_run_from_an_llm_one() -> None:
+    """The gap this field closes, read off the REAL redactor rather than the table.
+
+    Before it, the only brain fact on the event was the free-text `model_ref`,
+    which classifies `drop:text`: an exported steered run published how
+    confident the brain was and how long it took, while withholding whether a
+    deterministic grid walker or a language model chose the points. That is the
+    input `decider_replayability` turns on, so the published record could not
+    be classified at all. Both rows are exported here and compared to each
+    other, because a single row asserting its own substrate would pass just as
+    well if every row published the same constant.
+    """
+
+    def exported(brain: DecidingBrainRef) -> dict[str, Any]:
+        event = ProcedureIterationEnded(
+            procedure_id=uuid4(),
+            iteration_index=1,
+            converged=None,
+            reason=None,
+            occurred_at=_NOW,
+            advised_stop=False,
+            deciding_brain=brain,
+            model_ref=str(brain),
+        )
+        return redact_tier1_payload(
+            "ProcedureIterationEnded", to_payload(event), token_map=TokenMap()
+        )
+
+    grid_walk = exported(DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK))
+    llm = exported(
+        DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        )
+    )
+
+    assert grid_walk["deciding_brain"] == {"substrate": "grid_walk"}
+    assert llm["deciding_brain"] == {"substrate": "llm"}
+    assert "model_ref" not in grid_walk, "the flat ref is free text and must not publish"
+    assert "model_ref" not in llm
+
+
+@pytest.mark.unit
+def test_iteration_ended_export_withholds_which_model_an_llm_run_used() -> None:
+    """The half this does NOT close, pinned so it stays a known gap.
+
+    `provider` / `model` are unconstrained strings and drop as free text, the
+    same rule and the same gap [[project-brain-family-coverage]] records for
+    `SteeringDesignRecorded`. Unlike there, the row is not left saying nothing:
+    `substrate` survives inside the same object, so an exported iteration is
+    still identifiable as LLM-decided. Only WHICH model is withheld.
+    """
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=1,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        deciding_brain=DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+        model_ref="anthropic:claude-sonnet-4-6",
+    )
+
+    exported = redact_tier1_payload(
+        "ProcedureIterationEnded", to_payload(event), token_map=TokenMap()
+    )
+
+    assert exported["deciding_brain"] == {"substrate": "llm"}
 
 
 @pytest.mark.unit

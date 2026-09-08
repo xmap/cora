@@ -79,15 +79,18 @@ from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookSchema
 from cora.shared.steering import (
+    DecidingBrainRef,
     SteeringBrain,
     SteeringDesignSource,
     SteeringObjective,
     SteeringSpace,
     SteeringSubstrate,
     deserialize_brain,
+    deserialize_deciding_brain_ref,
     deserialize_objective,
     deserialize_space,
     serialize_brain,
+    serialize_deciding_brain_ref,
     serialize_objective,
     serialize_space,
 )
@@ -559,10 +562,37 @@ class ProcedureIterationEnded:
     False continue, None no-verdict), kept distinct from `converged` so a
     steering pass leaves `converged` None and the convergence streak never
     bites. `reasoning` / `confidence` / `confidence_source` / `alternatives`
-    / `model_ref` are the advice provenance for the in-conductor audit ledger
-    (from `advice_to_audit_fields`, carrying the SAME names the mapper emits).
+    are the advice provenance for the in-conductor audit ledger (from
+    `advice_to_audit_fields`, carrying the SAME names the mapper emits).
     `confidence_source` is the typed `DecisionConfidenceSource`, matching the
     Decision record so the two audit homes stay type-faithful on replay.
+
+    `deciding_brain` and `model_ref` both name WHICH brain decided this pass,
+    and they are one fact rendered twice, not two fields: the decider derives
+    the string from the typed value (`str(DecidingBrainRef)`), and the command
+    carries only the typed one, so they cannot drift. Both are recorded
+    because they publish differently. `model_ref` is free text, so the export
+    generator classifies it `drop:text` and a tier-1 row carries nothing at
+    all about the brain; `deciding_brain.substrate` is a `SteeringSubstrate`
+    enum and survives as `keep:enum`. Without the typed field an exported
+    steered run says how confident the brain was and how long it took while
+    withholding whether it was a deterministic grid walker or a language
+    model, which is the distinction `decider_replayability` turns on. The
+    llm arm's `provider` / `model` are free text and still drop, so what the
+    export gains is the SUBSTRATE, not the model identity; the same gap
+    [[project-brain-family-coverage]] records for `SteeringDesignRecorded`.
+
+    `deciding_brain` names the DECIDING LEAF, never a composite: `staged`
+    returns its child's advice unchanged, so an iteration in the seeding
+    phase records `sobol` and one past handoff records `botorch`. That is a
+    fact the segment's `SteeringDesignRecorded` cannot supply, which is why
+    the iteration records a brain of its own rather than deferring to the
+    design pin.
+
+    `model_ref` is retained rather than replaced: streams written before this
+    field existed carry only it, the `procedure_iterations` projection reads
+    it into a column, and `list_procedure_iterations` serves it over REST and
+    MCP. Retiring it is an API-version question, not a fold one.
 
     `advised_next_point` is the coordinate the brain advised for the NEXT pass
     (the `SteeringPoint.coordinates` map, axis-name -> value), present on a
@@ -599,6 +629,7 @@ class ProcedureIterationEnded:
     confidence: float | None = None
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
+    deciding_brain: DecidingBrainRef | None = None
     model_ref: str | None = None
     advised_next_point: Mapping[str, Any] | None = None
     advice_latency_ms: float | None = None
@@ -998,6 +1029,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             confidence=confidence,
             confidence_source=confidence_source,
             alternatives=alternatives,
+            deciding_brain=deciding_brain,
             model_ref=model_ref,
             advised_next_point=advised_next_point,
             advice_latency_ms=advice_latency_ms,
@@ -1015,6 +1047,11 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                     confidence_source.value if confidence_source is not None else None
                 ),
                 "alternatives": list(alternatives),
+                "deciding_brain": (
+                    serialize_deciding_brain_ref(deciding_brain)
+                    if deciding_brain is not None
+                    else None
+                ),
                 "model_ref": model_ref,
                 "advised_next_point": (
                     dict(advised_next_point) if advised_next_point is not None else None
@@ -1132,6 +1169,25 @@ def _steering_brain_from(payload: dict[str, Any]) -> SteeringBrain | None:
     if raw is None:
         return None
     return deserialize_brain(SteeringSubstrate(payload["substrate"]), raw)
+
+
+def _deciding_brain_from(payload: dict[str, Any]) -> DecidingBrainRef | None:
+    """Fold the brain that decided an iteration, or None if it predates the field.
+
+    `.get`, not `["deciding_brain"]`, for the same reason as the sibling
+    above. It does NOT reconstruct one from the legacy `model_ref` the row
+    does carry, even though that string determines the brain and
+    `decider_replayability` reads it. Parsing it here would put a heuristic
+    (a colon means `provider:model`) on the fold path of every historical
+    iteration, where an unrecognised ref could only raise, making a readable
+    stream unreadable. A consumer that wants the legacy answer keeps calling
+    `replayability_of(model_ref)`, which is built to classify the string and
+    to fail loudly OUTSIDE the fold.
+    """
+    raw = payload.get("deciding_brain")
+    if raw is None:
+        return None
+    return deserialize_deciding_brain_ref(raw)
 
 
 def _beam_requirement_from(payload: dict[str, Any]) -> BeamRequirement:
@@ -1359,6 +1415,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                         else None
                     ),
                     alternatives=tuple(payload.get("alternatives", ())),
+                    deciding_brain=_deciding_brain_from(payload),
                     model_ref=payload.get("model_ref"),
                     advised_next_point=payload.get("advised_next_point"),
                     advice_latency_ms=payload.get("advice_latency_ms"),

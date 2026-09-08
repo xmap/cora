@@ -35,7 +35,7 @@ and only the Operation BC consumes them.
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, assert_never
+from typing import Any, Final, assert_never
 
 
 class SteeringObjectiveKind(StrEnum):
@@ -287,6 +287,133 @@ class reference), so the comparison is a real check, not a decorative
 one that agrees with itself by construction.
 """
 
+LLM_REF_SEPARATOR: Final = ":"
+"""What separates provider from model in an `llm` brain's flat `model_ref`.
+
+Shared by the renderer (`DecidingBrainRef.__str__`) and the reader
+(`decider_replayability._is_llm_ref`) on purpose. The two must agree for a
+recorded ref to survive a round trip, so they are deliberately NOT
+independent sides of a check: one constant, one convention.
+"""
+
+
+class InvalidDecidingBrainRefError(ValueError):
+    """A `DecidingBrainRef` names a substrate and a payload that cannot co-occur."""
+
+
+@dataclass(frozen=True)
+class DecidingBrainRef:
+    """WHICH brain decided one steered iteration, typed rather than spelled.
+
+    The `Ref` suffix carries the axis that separates this from `SteeringBrain`
+    above, matching `BrainRef` in the Agent BC, which is the same shape for
+    the same question. `SteeringBrain` is design-time CONFIG: the dials a
+    segment's brain was built with, pinned once on `SteeringDesignRecorded`.
+    This is run-time IDENTITY: which brain answered one pass, recorded on every
+    `ProcedureIterationEnded` a steered conduct writes. A `staged` segment is
+    the case that makes them different facts rather than two spellings of
+    one. Its design pins the composite; each iteration is decided by
+    whichever child the composite had handed off to by then, which the design
+    cannot say and only the iteration knows.
+
+    Carries exactly what the free-text `model_ref` it stands beside encodes,
+    and nothing more: four substrates spell their own name, `llm` spells
+    `provider:model`. `str()` renders that spelling back, so the two
+    recorded forms are one fact rendered twice rather than two fields that
+    can drift. `snapshot_pin` is deliberately absent even though `LlmBrain`
+    carries it: a pin is a dial on the model, so it belongs to the design,
+    and repeating it once per pass would re-record configuration as though it
+    were an observation.
+
+    `STAGED` is rejected rather than representable. The composite returns its
+    child's advice unchanged, so what reaches an iteration is `sobol` or
+    `botorch`; a `DecidingBrainRef` naming the composite would mean the
+    composite had grown an identity of its own, which `decider_replayability`
+    already refuses to classify. Rejecting it at construction makes that
+    state unwritable instead of merely unreadable.
+    """
+
+    substrate: SteeringSubstrate
+    provider: str | None = None
+    model: str | None = None
+
+    def __post_init__(self) -> None:
+        match self.substrate:
+            case SteeringSubstrate.LLM:
+                if not self.provider or not self.model:
+                    raise InvalidDecidingBrainRefError(
+                        "an llm brain is named by a non-empty provider and model"
+                    )
+            case (
+                SteeringSubstrate.IN_MEMORY
+                | SteeringSubstrate.GRID_WALK
+                | SteeringSubstrate.SOBOL
+                | SteeringSubstrate.BOTORCH
+            ):
+                if self.provider is not None or self.model is not None:
+                    raise InvalidDecidingBrainRefError(
+                        f"the {self.substrate.value!r} brain is named by its substrate "
+                        "alone and carries no provider or model"
+                    )
+            case SteeringSubstrate.STAGED:
+                raise InvalidDecidingBrainRefError(
+                    "the staged composite decides no iteration itself; name the child "
+                    "brain it had handed off to"
+                )
+            case _:  # pragma: no cover - exhaustive over a closed enum
+                assert_never(self.substrate)
+
+    def __str__(self) -> str:
+        """Render the flat `model_ref` spelling the record still carries.
+
+        The single producer of that string, so the typed field and the legacy
+        one on the same event are one fact rendered twice. Total over every
+        constructible brain, and readable by `decider_replayability`, which
+        still classifies the string form because a stream written before this
+        type existed carries only that.
+
+        `__str__` rather than a named converter, following `ControlAddress`
+        (the union shape this module's `SteeringBrain` already copies) and
+        `FacilityCode`: both render a discriminated value object to the flat
+        form the wire carries this way. A `to_model_ref` would read as
+        returning `cora.infrastructure.ports.llm.ModelRef`, since every `to_X`
+        in the tree returns the type it names, and this returns a string.
+        No matching `parse` is offered: the fold deliberately does not
+        reconstruct a brain from a legacy ref, and `decider_replayability`
+        already reads that form.
+        """
+        if self.substrate is SteeringSubstrate.LLM:
+            return f"{self.provider}{LLM_REF_SEPARATOR}{self.model}"
+        return self.substrate.value
+
+
+def serialize_deciding_brain_ref(brain: DecidingBrainRef) -> dict[str, Any]:
+    """Encode a `DecidingBrainRef` to a JSON-friendly dict.
+
+    Writes `substrate` into the payload, unlike `serialize_brain`, whose
+    substrate the sibling `SteeringDesignRecorded.substrate` field already
+    carries. An iteration event has no such sibling, so the tag rides here.
+    """
+    return {
+        "substrate": brain.substrate.value,
+        "provider": brain.provider,
+        "model": brain.model,
+    }
+
+
+def deserialize_deciding_brain_ref(payload: Mapping[str, Any]) -> DecidingBrainRef:
+    """Decode a JSON-friendly dict to a `DecidingBrainRef`.
+
+    Re-runs `__post_init__`, so a payload whose substrate and model half
+    disagree raises on the fold rather than folding to a brain no adapter
+    could have produced.
+    """
+    return DecidingBrainRef(
+        substrate=SteeringSubstrate(payload["substrate"]),
+        provider=payload.get("provider"),
+        model=payload.get("model"),
+    )
+
 
 @dataclass(frozen=True)
 class SteeringObjective:
@@ -450,9 +577,12 @@ def deserialize_brain(substrate: SteeringSubstrate, payload: Mapping[str, Any]) 
 
 __all__ = [
     "BRAIN_TYPE_BY_SUBSTRATE",
+    "LLM_REF_SEPARATOR",
     "BoTorchBrain",
+    "DecidingBrainRef",
     "GridWalkBrain",
     "InMemoryBrain",
+    "InvalidDecidingBrainRefError",
     "LlmBrain",
     "SobolBrain",
     "StagedBrain",
@@ -465,9 +595,11 @@ __all__ = [
     "SteeringSpace",
     "SteeringSubstrate",
     "deserialize_brain",
+    "deserialize_deciding_brain_ref",
     "deserialize_objective",
     "deserialize_space",
     "serialize_brain",
+    "serialize_deciding_brain_ref",
     "serialize_objective",
     "serialize_space",
 ]

@@ -41,6 +41,7 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
 )
 from cora.shared.decision_signals import DecisionConfidenceSource
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 from tests.unit.operation._helpers import (
     FIXED_NOW as _FIXED_NOW,
 )
@@ -77,6 +78,9 @@ from tests.unit.operation._helpers import (
 from tests.unit.operation._helpers import (
     space as _space,
 )
+
+_GRID_WALK = DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK)
+_BOTORCH = DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH)
 
 
 @pytest.mark.unit
@@ -546,7 +550,7 @@ async def test_conduct_until_advised_threads_advice_provenance_onto_end_iteratio
                 confidence=0.9,
                 confidence_source=DecisionConfidenceSource.SELF_REPORTED,
                 alternatives=("motor=1.0",),
-                model_ref="grid_walk",
+                deciding_brain=_GRID_WALK,
             )
         ]
     )
@@ -608,12 +612,12 @@ async def test_conduct_until_advised_writes_diagnostics_when_brain_supplies_them
             SteeringAdvice(
                 verdict=SteeringVerdict.MEASURE,
                 next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 3.0}),
-                model_ref="botorch",
+                deciding_brain=_BOTORCH,
                 diagnostics={"lengthscale_offset": 0.8, "noise": 0.005, "acquisition_value": 0.12},
             ),
             SteeringAdvice(
                 verdict=SteeringVerdict.STOP,
-                model_ref="botorch",
+                deciding_brain=_BOTORCH,
                 diagnostics={"lengthscale_offset": 0.7, "noise": 0.004, "acquisition_value": 0.03},
             ),
         ]
@@ -653,7 +657,9 @@ async def test_conduct_until_advised_writes_no_diagnostics_for_stateless_brain()
     compute = InMemoryComputePort()
     compute.set_measurement_sequence(((_objective_measurement(0.0),),))
     brain = InMemoryDecidePort()
-    brain.set_advice_sequence([SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref="grid_walk")])
+    brain.set_advice_sequence(
+        [SteeringAdvice(verdict=SteeringVerdict.STOP, deciding_brain=_GRID_WALK)]
+    )
     recorder = _CapturingAppendDiagnostics()
     conductor = _conductor(
         transcript, compute_port=compute, control_port=control, append_diagnostics=recorder
@@ -710,9 +716,9 @@ async def test_conduct_until_advised_records_one_outcome_per_measured_pass() -> 
             SteeringAdvice(
                 verdict=SteeringVerdict.MEASURE,
                 next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 3.0}),
-                model_ref="grid_walk",
+                deciding_brain=_GRID_WALK,
             ),
-            SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref="grid_walk"),
+            SteeringAdvice(verdict=SteeringVerdict.STOP, deciding_brain=_GRID_WALK),
         ]
     )
     recorder = _CapturingAppendOutcomes()
@@ -753,7 +759,9 @@ async def test_conduct_until_advised_records_no_outcomes_when_handler_unwired() 
     compute = InMemoryComputePort()
     compute.set_measurement_sequence(((_objective_measurement(0.0),),))
     brain = InMemoryDecidePort()
-    brain.set_advice_sequence([SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref="grid_walk")])
+    brain.set_advice_sequence(
+        [SteeringAdvice(verdict=SteeringVerdict.STOP, deciding_brain=_GRID_WALK)]
+    )
     conductor = _conductor(transcript, compute_port=compute, control_port=control)
 
     result = await conductor.conduct_until_advised(

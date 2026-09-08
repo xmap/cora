@@ -33,6 +33,7 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
 )
 from cora.operation.ports.measurement import Measurement, Quality
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 _T0 = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -88,7 +89,7 @@ async def test_botorch_proposes_point_within_bounds() -> None:
     assert advice.next_point is not None
     x = advice.next_point.coordinates["x"]
     assert 0.0 <= x <= 10.0
-    assert advice.model_ref == "botorch"
+    assert advice.deciding_brain == DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH)
 
 
 async def test_botorch_advice_carries_fit_diagnostics() -> None:

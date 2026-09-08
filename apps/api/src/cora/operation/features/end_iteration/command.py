@@ -16,10 +16,16 @@ a steered conduct records (`conduct_until_advised`): `advised_stop` is the
 steering verdict (True advised-stop, False continue, None no-verdict, so
 `converged` stays None for a steering pass and the convergence streak never
 bites), and `reasoning` / `confidence` / `confidence_source` /
-`alternatives` / `decision_model_ref` are the advice provenance for the
-in-conductor audit ledger, sourced from `advice_to_audit_fields` (so they
-carry the SAME names the mapper emits). They are stream-only and default to
-absent: a plain convergence or manual `end_iteration` leaves them unset.
+`alternatives` are the advice provenance for the in-conductor audit ledger,
+sourced from `advice_to_audit_fields` (so they carry the SAME names the mapper
+emits). `deciding_brain` is WHICH brain answered this pass, and it is the one
+steering field the mapper does NOT supply: it is taken from the advice
+directly, because the mapper's own `model_ref` spans two brain vocabularies
+(see `AdviceAuditFields`) while this one is a steering substrate. It is the
+SINGLE source for both recorded forms, so the decider renders the event's
+legacy `model_ref` off it rather than accepting a second, separately-supplied
+string that could disagree. They are stream-only and default to absent: a
+plain convergence or manual `end_iteration` leaves them unset.
 They arrive pre-validated from a self-validated `SteeringAdvice` (confidence
 in [0,1], rationale bounded), so the decider passes them through rather than
 re-validating. `confidence_source` is the typed `DecisionConfidenceSource`,
@@ -42,6 +48,7 @@ from typing import Any
 from uuid import UUID
 
 from cora.shared.decision_signals import DecisionConfidenceSource
+from cora.shared.steering import DecidingBrainRef
 
 
 @dataclass(frozen=True)
@@ -57,6 +64,6 @@ class EndProcedureIteration:
     confidence: float | None = None
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
-    model_ref: str | None = None
+    deciding_brain: DecidingBrainRef | None = None
     advised_next_point: Mapping[str, Any] | None = None
     advice_latency_ms: float | None = None

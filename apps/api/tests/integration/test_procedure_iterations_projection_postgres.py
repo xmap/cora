@@ -30,6 +30,7 @@ from cora.operation.features.start_iteration import StartProcedureIteration
 from cora.operation.features.start_iteration import bind as bind_start_iteration
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
@@ -148,7 +149,7 @@ async def test_steering_trail_is_projected_and_read_back(db_pool: asyncpg.Pool) 
             converged=None,
             reason=None,
             advised_stop=False,
-            model_ref="botorch",
+            deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
             advised_next_point={"energy": 7.2, "gap": 3.1},
             advice_latency_ms=1234.5,
         ),
