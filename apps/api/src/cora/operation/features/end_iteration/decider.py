@@ -16,11 +16,16 @@ rejected and the persisted `ProcedureIterationEnded.reason` carries the
 trimmed string. None passes through unvalidated.
 
 The steering-provenance fields (`advised_stop`, `reasoning`,
-`confidence`, `confidence_source`, `alternatives`, `model_ref`) are
+`confidence`, `confidence_source`, `alternatives`, `deciding_brain`) are
 stream-only and pass through to the event as-is. They arrive
 pre-validated from a self-validated `SteeringAdvice` (the only writer,
 via `conduct_until_advised`: confidence in [0,1], rationale bounded), so
 the decider does not re-bound them.
+
+The one field this decider DERIVES rather than passes through is the
+event's legacy `model_ref`: it is `str(deciding_brain)`, so the typed
+and flat forms on one event are one fact rendered twice. The command
+carries no `model_ref` of its own to disagree with.
 
 Invariants:
   - state is None -> ProcedureNotFoundError
@@ -92,7 +97,8 @@ def decide(
             confidence=command.confidence,
             confidence_source=command.confidence_source,
             alternatives=command.alternatives,
-            model_ref=command.model_ref,
+            deciding_brain=command.deciding_brain,
+            model_ref=(str(command.deciding_brain) if command.deciding_brain is not None else None),
             advised_next_point=command.advised_next_point,
             advice_latency_ms=command.advice_latency_ms,
         )

@@ -91,6 +91,7 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
 )
 from cora.shared.decision_signals import DecisionConfidenceSource
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -274,7 +275,11 @@ class LlmDecidePort:
             rationale=str(rationale) if rationale is not None else None,
             confidence=float(confidence) if confidence is not None else None,
             confidence_source=DecisionConfidenceSource.SELF_REPORTED,
-            model_ref=f"{self._model_ref.provider}:{self._model_ref.model}",
+            deciding_brain=DecidingBrainRef(
+                substrate=SteeringSubstrate.LLM,
+                provider=self._model_ref.provider,
+                model=self._model_ref.model,
+            ),
         )
 
     async def aclose(self) -> None:

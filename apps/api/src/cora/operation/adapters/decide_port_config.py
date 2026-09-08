@@ -15,7 +15,9 @@ decider substrate:
     with `sobol` then hands off to `botorch` on a successful-observation
     count; needs the optional `bo` group)
   - `LlmDecidePort` (`llm` substrate; an LLM steering brain; needs an injected
-    `LLM` port via the `llm` argument, not an optional dependency group)
+    `LLM` port via the `llm` argument, not an optional dependency group, and
+    takes its model from `DecidePortConfig.llm`, a per-substrate arm rather
+    than another flat field)
 
 These arms mirror `build_compute_port`, and a routing registry is earned only
 when the substrate count makes the if-chain unwieldy, exactly as ControlPort
@@ -47,6 +49,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from cora.operation.adapters._llm_decide_prompt import DEFAULT_LLM_DECIDE_MODEL
 from cora.operation.adapters.botorch_decide_port import BoTorchDecidePort
 from cora.operation.adapters.grid_walk_decide_port import GridWalkDecidePort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
@@ -59,7 +62,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from cora.infrastructure.ports.clock import Clock
-    from cora.infrastructure.ports.llm import LLM
+    from cora.infrastructure.ports.llm import LLM, ModelRef
     from cora.infrastructure.ports.spend_guard import SpendGuard
     from cora.operation.ports.decide_port import DecidePort, SteeringLlmCall
 
@@ -89,6 +92,27 @@ Literal.
 
 
 @dataclass(frozen=True)
+class LlmDecidePortConfig:
+    """The `llm` substrate's own configuration: which model steers.
+
+    Carried in its own arm rather than as one more field on
+    `DecidePortConfig`, because it is meaningful for no other substrate.
+    The flat shape already costs this config a `seed` that a grid-walk run
+    records as a design fact which had no effect; a model name on a Sobol
+    run would be a second one.
+
+    `model_ref` defaults to the same `DEFAULT_LLM_DECIDE_MODEL` the adapter
+    used to reach for on its own, so which model runs is unchanged. What
+    changes is that the answer is now READABLE from the config. Until now
+    `build_decide_port` never passed `model_ref`, so `LlmDecidePort` always
+    fell back to the module constant and no caller could say which model
+    had steered; a consumer wanting to record it had nothing to read.
+    """
+
+    model_ref: ModelRef = DEFAULT_LLM_DECIDE_MODEL
+
+
+@dataclass(frozen=True)
 class DecidePortConfig:
     """Deployment config for the DecidePort substrate.
 
@@ -99,6 +123,11 @@ class DecidePortConfig:
     successful-observation count at which the `staged` composite hands off
     from the Sobol seeder to the brain; it must be >= `min_observations`. A
     full route table is deferred, mirroring `ComputePortConfig`.
+
+    Those tunables are flat for historical reasons and a substrate records
+    the ones that had no effect on it. `llm` is deliberately NOT flattened
+    the same way: its config is an arm, `LlmDecidePortConfig`, so a field that is
+    meaningful for one substrate does not become a field on all six.
     """
 
     substrate: DecideSubstrate = "in_memory"
@@ -113,6 +142,25 @@ class DecidePortConfig:
     raw_samples: int = 256
     seed: int = 0
     staged_threshold: int = 5
+    llm: LlmDecidePortConfig | None = None
+    """The llm substrate's own config, set iff `substrate` is `llm`.
+
+    Materialised with its defaults at construction rather than left None,
+    so a reader always sees the model that will actually steer instead of
+    having to know the adapter's fallback. Supplying it for any other
+    substrate raises, mirroring how `BrainRef` refuses a brain named
+    ambiguously: the invariant lives in the type, so no call site has to
+    re-derive the pairing."""
+
+    def __post_init__(self) -> None:
+        if self.substrate == "llm":
+            if self.llm is None:
+                object.__setattr__(self, "llm", LlmDecidePortConfig())
+        elif self.llm is not None:
+            raise ValueError(
+                f"llm config supplied for the {self.substrate!r} substrate; "
+                "it is meaningful only for 'llm'"
+            )
 
 
 def build_decide_port(
@@ -131,11 +179,12 @@ def build_decide_port(
     GP brain (both probe the optional `bo` dependency at construction, raising
     `ValueError` if it is missing). `staged` composes a Sobol seeder + a
     BoTorch brain into the two-phase composite. `llm` returns an
-    `LlmDecidePort` steered by the injected `llm` port, raising `ValueError`
-    if `llm` is None (mirroring the `bo`-missing guard: a config error surfaces
-    at construction, mapping to HTTP 422 before any FSM transition). Other arms
-    ignore the `llm` argument. New arms are added here as they are earned,
-    exactly as `build_compute_port` grew its `local_process` arm.
+    `LlmDecidePort` steered by the injected `llm` port at the model named by
+    `config.llm.model_ref`, raising `ValueError` if `llm` is None (mirroring
+    the `bo`-missing guard: a config error surfaces at construction, mapping
+    to HTTP 422 before any FSM transition). Other arms ignore the `llm`
+    argument. New arms are added here as they are earned, exactly as
+    `build_compute_port` grew its `local_process` arm.
     """
     resolved = config if config is not None else DecidePortConfig()
     if resolved.substrate == "in_memory":
@@ -159,8 +208,10 @@ def build_decide_port(
                 "the 'llm' decide substrate requires an llm port; "
                 "pass build_decide_port(config, llm=deps.llm)"
             )
+        brain = resolved.llm if resolved.llm is not None else LlmDecidePortConfig()
         return LlmDecidePort(
             llm=llm,
+            model_ref=brain.model_ref,
             usage_sink=usage_sink,
             spend_guard=spend_guard,
             spend_agent_id=resolved.spend_agent_id,
@@ -184,6 +235,7 @@ def _build_botorch(config: DecidePortConfig) -> BoTorchDecidePort:
 __all__ = [
     "DecidePortConfig",
     "DecideSubstrate",
+    "LlmDecidePortConfig",
     "WireDecideSubstrate",
     "build_decide_port",
 ]

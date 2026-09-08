@@ -23,6 +23,7 @@ from cora.operation.aggregates.procedure import (
 from cora.operation.features import end_iteration
 from cora.operation.features.end_iteration import EndProcedureIteration
 from cora.shared.decision_signals import DecisionConfidenceSource
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 _NOW = datetime(2026, 6, 13, 12, 0, 0, tzinfo=UTC)
 
@@ -81,7 +82,7 @@ def test_decide_passes_steering_provenance_through_to_event() -> None:
             confidence=0.8,
             confidence_source=DecisionConfidenceSource.SELF_REPORTED,
             alternatives=("energy=9.0",),
-            model_ref="grid_walk",
+            deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK),
         ),
         now=_NOW,
     )
@@ -93,6 +94,7 @@ def test_decide_passes_steering_provenance_through_to_event() -> None:
     assert event.confidence == 0.8
     assert event.confidence_source is DecisionConfidenceSource.SELF_REPORTED
     assert event.alternatives == ("energy=9.0",)
+    assert event.deciding_brain == DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK)
     assert event.model_ref == "grid_walk"
 
 
@@ -113,6 +115,7 @@ def test_decide_leaves_steering_provenance_absent_by_default() -> None:
     assert event.confidence is None
     assert event.confidence_source is None
     assert event.alternatives == ()
+    assert event.deciding_brain is None
     assert event.model_ref is None
 
 
@@ -248,3 +251,47 @@ def test_decide_is_pure_same_inputs_same_outputs() -> None:
     first = end_iteration.decide(state=proc, command=cmd, now=_NOW)
     second = end_iteration.decide(state=proc, command=cmd, now=_NOW)
     assert first == second
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "brain",
+    [
+        DecidingBrainRef(substrate=SteeringSubstrate.IN_MEMORY),
+        DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK),
+        DecidingBrainRef(substrate=SteeringSubstrate.SOBOL),
+        DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
+        DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+    ],
+)
+def test_decide_derives_the_flat_ref_from_the_typed_brain(brain: DecidingBrainRef) -> None:
+    """The event's two brain fields are one fact rendered twice.
+
+    They are recorded separately because they publish differently (the typed
+    substrate survives export, the flat ref drops), which is exactly the shape
+    where two fields drift apart. Here they cannot: the command carries only
+    the typed brain, and the decider is the single place the string is spelled.
+    Ranged over every substrate rather than asserted once, because a derivation
+    that hardcoded one arm would pass a single-case check.
+    """
+    proc = _procedure()
+
+    events = end_iteration.decide(
+        state=proc,
+        command=EndProcedureIteration(
+            procedure_id=proc.id,
+            iteration_index=1,
+            converged=None,
+            reason=None,
+            advised_stop=False,
+            deciding_brain=brain,
+        ),
+        now=_NOW,
+    )
+
+    event = events[0]
+    assert isinstance(event, ProcedureIterationEnded)
+    assert event.deciding_brain == brain
+    assert event.model_ref == str(brain)

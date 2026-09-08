@@ -3,6 +3,7 @@
 import dataclasses
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -36,7 +37,15 @@ from cora.operation.aggregates.procedure import (
 from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.shared.steering import (
+    BoTorchBrain,
+    DecidingBrainRef,
+    GridWalkBrain,
+    InMemoryBrain,
+    LlmBrain,
+    SobolBrain,
+    StagedBrain,
     SteeringAxis,
+    SteeringBrain,
     SteeringDesignSource,
     SteeringObjective,
     SteeringObjectiveKind,
@@ -868,6 +877,7 @@ def test_to_payload_serializes_iteration_ended(converged: bool | None, reason: s
         "confidence": None,
         "confidence_source": None,
         "alternatives": [],
+        "deciding_brain": None,
         "model_ref": None,
         "advised_next_point": None,
         "advice_latency_ms": None,
@@ -908,6 +918,7 @@ def test_iteration_ended_round_trips_with_advised_next_point() -> None:
         reason=None,
         occurred_at=_NOW,
         advised_stop=False,
+        deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
         model_ref="botorch",
         advised_next_point={"energy": 7.2, "gap": 3.1},
     )
@@ -943,7 +954,10 @@ def test_iteration_ended_round_trips_with_every_field_set() -> None:
         confidence=0.62,
         confidence_source=DecisionConfidenceSource.SELF_REPORTED,
         alternatives=("keep going",),
-        model_ref="botorch",
+        deciding_brain=DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+        model_ref="anthropic:claude-sonnet-4-6",
         advised_next_point={"energy": 7.2, "gap": 3.1},
         advice_latency_ms=1234.5,
     )
@@ -977,6 +991,144 @@ def test_iteration_ended_pre_tier1_stream_folds_advised_next_point_to_none() -> 
     rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
     assert isinstance(rebuilt, ProcedureIterationEnded)
     assert rebuilt.advised_next_point is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "brain",
+    [
+        DecidingBrainRef(substrate=SteeringSubstrate.IN_MEMORY),
+        DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK),
+        DecidingBrainRef(substrate=SteeringSubstrate.SOBOL),
+        DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
+        # The one arm with a payload of its own. Hardcoding provider / model
+        # to None in `deserialize_deciding_brain_ref` survives every other case
+        # here, because the other four carry nothing to lose.
+        DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+    ],
+)
+def test_iteration_ended_round_trips_every_deciding_brain(brain: DecidingBrainRef) -> None:
+    """Each brain an adapter can record survives JSON-shaped storage intact."""
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=4,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        deciding_brain=brain,
+        model_ref=str(brain),
+    )
+
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", to_payload(event)))
+
+    assert isinstance(rebuilt, ProcedureIterationEnded)
+    assert rebuilt.deciding_brain == brain
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_iteration_ended_pre_deciding_brain_stream_folds_to_none_and_keeps_the_ref() -> None:
+    """A pre-`deciding_brain` row folds to None rather than being reconstructed.
+
+    `model_ref` alone determines the brain, and `replayability_of` reads it, so
+    the fold COULD parse one back. It deliberately does not: a heuristic on the
+    fold path would turn an unrecognised historical ref into an unreadable
+    stream. The row keeps its flat ref, and a consumer that wants the legacy
+    answer classifies that string outside the fold.
+    """
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=1,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH),
+        model_ref="botorch",
+    )
+    payload = to_payload(event)
+    del payload["deciding_brain"]  # simulate a stream written before the field
+
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
+
+    assert isinstance(rebuilt, ProcedureIterationEnded)
+    assert rebuilt.deciding_brain is None
+    assert rebuilt.model_ref == "botorch"
+
+
+@pytest.mark.unit
+def test_iteration_ended_export_tells_a_grid_walk_run_from_an_llm_one() -> None:
+    """The gap this field closes, read off the REAL redactor rather than the table.
+
+    Before it, the only brain fact on the event was the free-text `model_ref`,
+    which classifies `drop:text`: an exported steered run published how
+    confident the brain was and how long it took, while withholding whether a
+    deterministic grid walker or a language model chose the points. That is the
+    input `decider_replayability` turns on, so the published record could not
+    be classified at all. Both rows are exported here and compared to each
+    other, because a single row asserting its own substrate would pass just as
+    well if every row published the same constant.
+    """
+
+    def exported(brain: DecidingBrainRef) -> dict[str, Any]:
+        event = ProcedureIterationEnded(
+            procedure_id=uuid4(),
+            iteration_index=1,
+            converged=None,
+            reason=None,
+            occurred_at=_NOW,
+            advised_stop=False,
+            deciding_brain=brain,
+            model_ref=str(brain),
+        )
+        return redact_tier1_payload(
+            "ProcedureIterationEnded", to_payload(event), token_map=TokenMap()
+        )
+
+    grid_walk = exported(DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK))
+    llm = exported(
+        DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        )
+    )
+
+    assert grid_walk["deciding_brain"] == {"substrate": "grid_walk"}
+    assert llm["deciding_brain"] == {"substrate": "llm"}
+    assert "model_ref" not in grid_walk, "the flat ref is free text and must not publish"
+    assert "model_ref" not in llm
+
+
+@pytest.mark.unit
+def test_iteration_ended_export_withholds_which_model_an_llm_run_used() -> None:
+    """The half this does NOT close, pinned so it stays a known gap.
+
+    `provider` / `model` are unconstrained strings and drop as free text, the
+    same rule and the same gap [[project-brain-family-coverage]] records for
+    `SteeringDesignRecorded`. Unlike there, the row is not left saying nothing:
+    `substrate` survives inside the same object, so an exported iteration is
+    still identifiable as LLM-decided. Only WHICH model is withheld.
+    """
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=1,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        deciding_brain=DecidingBrainRef(
+            substrate=SteeringSubstrate.LLM, provider="anthropic", model="claude-sonnet-4-6"
+        ),
+        model_ref="anthropic:claude-sonnet-4-6",
+    )
+
+    exported = redact_tier1_payload(
+        "ProcedureIterationEnded", to_payload(event), token_map=TokenMap()
+    )
+
+    assert exported["deciding_brain"] == {"substrate": "llm"}
 
 
 @pytest.mark.unit
@@ -1124,6 +1276,10 @@ def _steering_design_recorded(**overrides: object) -> SteeringDesignRecorded:
         "spend_agent_id": uuid4(),
         "design_source": SteeringDesignSource.REQUEST,
         "occurred_at": _NOW,
+        # Matches the scalars above (min_observations=3, num_restarts=10,
+        # raw_samples=512, seed=7) so a test overriding one and not the
+        # other cannot silently drift the two apart.
+        "brain": BoTorchBrain(min_observations=3, num_restarts=10, raw_samples=512, seed=7),
     }
     fields.update(overrides)
     return SteeringDesignRecorded(**fields)  # type: ignore[arg-type]
@@ -1164,6 +1320,12 @@ def test_to_payload_serializes_steering_design_recorded_to_primitives() -> None:
         "spend_agent_id": str(event.spend_agent_id),
         "design_source": "Request",
         "occurred_at": _NOW.isoformat(),
+        "brain": {
+            "min_observations": 3,
+            "num_restarts": 10,
+            "raw_samples": 512,
+            "seed": 7,
+        },
     }
     # THE ASSERTION THAT MATTERS: `objective` / `space` must stay JSON
     # primitives all the way down, or the disposition generator would
@@ -1190,6 +1352,144 @@ def test_steering_design_recorded_round_trips_with_null_budget_and_spend_agent()
     )
     rebuilt = from_stored(_stored("SteeringDesignRecorded", to_payload(event)))
     assert rebuilt == event
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("substrate", "brain"),
+    [
+        (SteeringSubstrate.IN_MEMORY, InMemoryBrain()),
+        (SteeringSubstrate.GRID_WALK, GridWalkBrain(points_per_axis=9)),
+        (SteeringSubstrate.SOBOL, SobolBrain()),
+        (
+            SteeringSubstrate.BOTORCH,
+            BoTorchBrain(min_observations=3, num_restarts=10, raw_samples=512, seed=7),
+        ),
+        (
+            SteeringSubstrate.STAGED,
+            StagedBrain(
+                threshold=8,
+                handoff_brain=BoTorchBrain(
+                    min_observations=3, num_restarts=10, raw_samples=512, seed=7
+                ),
+            ),
+        ),
+        (
+            SteeringSubstrate.LLM,
+            LlmBrain(provider="anthropic", model="claude-sonnet-4-5", snapshot_pin=None),
+        ),
+        # snapshot_pin SET, not just defaulted. Hardcoding it to None in
+        # `deserialize_brain` otherwise survives the whole suite, and this
+        # is the field that distinguishes a pinned model from a floating
+        # alias, which is the difference between a reproducible sampling
+        # rule and one that can change under a deployment upgrade.
+        (
+            SteeringSubstrate.LLM,
+            LlmBrain(
+                provider="anthropic",
+                model="claude-sonnet-4-5",
+                snapshot_pin="claude-sonnet-4-5-20260101",
+            ),
+        ),
+    ],
+)
+def test_steering_design_recorded_round_trips_every_brain(
+    substrate: SteeringSubstrate, brain: SteeringBrain
+) -> None:
+    """One brain per substrate through to_payload/from_stored, not just BoTorch.
+
+    Every other test on this event either uses the shared BoTorch-only
+    default fixture or omits `brain` altogether; this is the only place
+    all six variants -- including `llm`, which no fixture otherwise
+    constructs -- actually round-trip through JSON-shaped storage.
+    """
+    event = _steering_design_recorded(substrate=substrate, brain=brain)
+    rebuilt = from_stored(_stored("SteeringDesignRecorded", to_payload(event)))
+    assert isinstance(rebuilt, SteeringDesignRecorded)
+    assert rebuilt == event
+    assert rebuilt.brain == brain
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_export_drops_llm_identity_but_keeps_substrate() -> None:
+    """The one substrate whose brain config exports as `{}` -- by the SAME
+    rule already accepted for `objective`, not a new gap.
+
+    `provider` / `model` / `snapshot_pin` are unconstrained strings (a
+    provider set is deliberately open: `ModelRef`'s own docstring names
+    `OpenAILLM` as a near-future addition), so they drop as free text
+    exactly as `objective_capture_name` and `target_measurement_name`
+    already do on this same event. The reader is not left with nothing:
+    `substrate` is a SIBLING top-level field, `keep:enum:SteeringSubstrate`
+    always, so an LLM-steered segment is still identifiable as one --
+    only WHICH model is withheld, not THAT one steered. Pinned here so a
+    future change that closes this gap (or accidentally widens it further)
+    shows up as a deliberate diff instead of a silent one.
+    """
+    event = _steering_design_recorded(
+        substrate=SteeringSubstrate.LLM,
+        brain=LlmBrain(provider="anthropic", model="claude-sonnet-4-5", snapshot_pin=None),
+    )
+
+    exported = redact_tier1_payload(
+        "SteeringDesignRecorded", to_payload(event), token_map=TokenMap()
+    )
+
+    assert exported["substrate"] == "llm"
+    assert exported["brain"] == {}
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_export_publishes_a_non_llm_brain() -> None:
+    """The inverse of the llm case: a brain whose fields are all numbers
+    survives export in full, keyed exactly as `to_payload` stored it."""
+    event = _steering_design_recorded()  # default fixture: BoTorch
+
+    exported = redact_tier1_payload(
+        "SteeringDesignRecorded", to_payload(event), token_map=TokenMap()
+    )
+
+    assert exported["brain"] == {
+        "min_observations": 3,
+        "num_restarts": 10,
+        "raw_samples": 512,
+        "seed": 7,
+    }
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_export_publishes_the_nested_staged_brain() -> None:
+    """The one arm whose disposition recurses TWO levels, through the real redactor.
+
+    `StagedBrain.handoff_brain` is the only nested value object inside the
+    merged union rule. The merge folds every arm's keys into one dict, so
+    the nested arm's rule sits beside its siblings' scalar rules; if the
+    redactor met it with the wrong shape it would fall through to OMITTED
+    and the handoff brain would vanish while the rest of the row survived.
+    """
+    event = _steering_design_recorded(
+        substrate=SteeringSubstrate.STAGED,
+        brain=StagedBrain(
+            threshold=8,
+            handoff_brain=BoTorchBrain(
+                min_observations=3, num_restarts=10, raw_samples=512, seed=7
+            ),
+        ),
+    )
+
+    exported = redact_tier1_payload(
+        "SteeringDesignRecorded", to_payload(event), token_map=TokenMap()
+    )
+
+    assert exported["brain"] == {
+        "threshold": 8,
+        "handoff_brain": {
+            "min_observations": 3,
+            "num_restarts": 10,
+            "raw_samples": 512,
+            "seed": 7,
+        },
+    }
 
 
 @pytest.mark.unit
@@ -1234,6 +1534,36 @@ def test_steering_design_recorded_disposition_classifies_every_field() -> None:
         "spend_agent_id": "token:uuid",
         "design_source": "keep:enum:SteeringDesignSource",
         "occurred_at": "keep:time",
+        # The MERGED rule across all six SteeringBrain variants (see
+        # `SteeringBrain`'s own docstring): every arm's keys folded into
+        # one dict, so `redact_tier1_payload` recurses correctly whichever
+        # substrate actually stored the row. `provider` / `model` /
+        # `snapshot_pin` (the `llm` arm) drop as free text by the SAME
+        # rule protecting every other unconstrained string on this event
+        # (`objective_capture_name`, `space.axes[*].name`); an LLM-steered
+        # segment's exact model does not survive tier-1 export, ONLY its
+        # `substrate` does (a sibling top-level field, always
+        # `keep:enum:SteeringSubstrate`). Deliberate, precedented by
+        # `target_measurement_name`'s identical gap on `objective` above,
+        # not a regression: see
+        # `test_steering_design_recorded_export_drops_llm_identity_but_keeps_substrate`.
+        "brain": {
+            "points_per_axis": "keep:number",
+            "min_observations": "keep:number",
+            "num_restarts": "keep:number",
+            "raw_samples": "keep:number",
+            "seed": "keep:number",
+            "threshold": "keep:number",
+            "handoff_brain": {
+                "min_observations": "keep:number",
+                "num_restarts": "keep:number",
+                "raw_samples": "keep:number",
+                "seed": "keep:number",
+            },
+            "provider": "drop:text",
+            "model": "drop:text",
+            "snapshot_pin": "drop:text",
+        },
     }
 
 
@@ -1318,16 +1648,45 @@ def test_steering_design_recorded_export_publishes_every_axis_bound() -> None:
 
 @pytest.mark.unit
 def test_steering_design_recorded_from_stored_raises_on_any_missing_field() -> None:
-    """Every required key, dropped one at a time.
+    """Every required key, dropped one at a time -- except `brain`.
 
     The shared malformed-payload case passes `{}`, so it only ever exercises
     the first subscript and proves nothing about the fields after it. A
     `.get()` creeping into a later field would let a corrupt row deserialize
     with a plausible default, and an absent budget would become
     indistinguishable from a legitimately exhausted one.
+
+    `brain` is deliberately excluded: it is the ONE field this event folds
+    via `.get(...)`, on purpose, because a stream written before it existed
+    genuinely has no such key and that is not corruption -- it is exactly
+    what a pre-slice stream looks like.
+    `test_steering_design_recorded_from_stored_folds_a_missing_brain_to_none`
+    is the dedicated positive-case test for that fold; this test would
+    otherwise assert the opposite of what `from_stored`'s own `.get(...)`
+    is there to do.
     """
     payload = to_payload(_steering_design_recorded())
     for key in payload:
+        if key == "brain":
+            continue
         partial = {k: v for k, v in payload.items() if k != key}
         with pytest.raises(ValueError, match="Malformed SteeringDesignRecorded"):
             from_stored(_stored("SteeringDesignRecorded", partial))
+
+
+@pytest.mark.unit
+def test_steering_design_recorded_from_stored_folds_a_missing_brain_to_none() -> None:
+    """A stream written before `brain` existed folds to `brain=None`, not a raise.
+
+    The positive case `test_steering_design_recorded_from_stored_raises_on_any_missing_field`
+    carves `brain` out of: dropping any OTHER key is corruption and must
+    raise, but a pre-slice row never had this key at all, and `from_stored`
+    must still fold it into a valid `Procedure` stream.
+    """
+    payload = to_payload(_steering_design_recorded())
+    del payload["brain"]
+
+    event = from_stored(_stored("SteeringDesignRecorded", payload))
+
+    assert isinstance(event, SteeringDesignRecorded)
+    assert event.brain is None

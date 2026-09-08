@@ -29,6 +29,7 @@ from cora.operation.ports.decide_port import (
     advice_to_audit_fields,
 )
 from cora.shared.decision_signals import REASONING_MAX_LENGTH, DecisionConfidenceSource
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 
 def _objective() -> SteeringObjective:
@@ -97,7 +98,7 @@ def test_advice_to_audit_fields_projects_provenance_subset() -> None:
         confidence=0.8,
         confidence_source=DecisionConfidenceSource.LOGPROB,
         alternatives=("energy=9.0", "energy=10.0"),
-        model_ref="gridwalk:v1",
+        deciding_brain=DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK),
     )
     fields = advice_to_audit_fields(advice)
     assert fields == AdviceAuditFields(
@@ -105,7 +106,7 @@ def test_advice_to_audit_fields_projects_provenance_subset() -> None:
         confidence=0.8,
         confidence_source=DecisionConfidenceSource.LOGPROB,
         alternatives=("energy=9.0", "energy=10.0"),
-        model_ref="gridwalk:v1",
+        model_ref="grid_walk",
     )
 
 
@@ -145,6 +146,7 @@ async def test_in_memory_decide_port_advises_stop_with_no_sequence() -> None:
     port = InMemoryDecidePort()
     advice = await port.advise_next(_evidence(0))
     assert advice.verdict is SteeringVerdict.STOP
+    assert advice.deciding_brain == DecidingBrainRef(substrate=SteeringSubstrate.IN_MEMORY)
 
 
 async def test_in_memory_decide_port_aclose_is_noop() -> None:

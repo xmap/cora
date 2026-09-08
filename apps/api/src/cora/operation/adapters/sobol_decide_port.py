@@ -60,11 +60,13 @@ from cora.operation.ports.decide_port import (
     SteeringSpace,
     SteeringVerdict,
 )
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 if TYPE_CHECKING:
     from cora.shared.steering import SteeringAxis
 
-_MODEL_REF = "sobol"
+_BRAIN = DecidingBrainRef(substrate=SteeringSubstrate.SOBOL)
+_SUBSTRATE = _BRAIN.substrate.value
 
 
 class SobolDecidePort:
@@ -78,7 +80,7 @@ class SobolDecidePort:
     """
 
     def __init__(self) -> None:
-        require_torch(_MODEL_REF)
+        require_torch(_SUBSTRATE)
 
     async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
         """Advise the next Sobol point for the current sequence position.
@@ -95,7 +97,7 @@ class SobolDecidePort:
             verdict=SteeringVerdict.MEASURE,
             next_point=SteeringPoint(coordinates=dict(zip(names, point, strict=True))),
             rationale=f"sobol initial-design point {position + 1}",
-            model_ref=_MODEL_REF,
+            deciding_brain=_BRAIN,
         )
 
     async def aclose(self) -> None:

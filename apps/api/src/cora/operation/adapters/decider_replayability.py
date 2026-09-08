@@ -51,6 +51,18 @@ sets, so it agreed by construction, and it never ranged over the adapters at
 all. It reported nothing while the `llm` substrate shipped a `model_ref` that
 no set could ever contain.
 
+## This module classifies the STRING form, and why that is still the job
+
+`ProcedureIterationEnded` now also carries `deciding_brain`, a typed
+`DecidingBrainRef` whose `substrate` indexes this map directly, with no parsing
+and no unclassifiable input (the type refuses `staged` at construction). This
+module keeps taking a `str` because the typed field is absent from every
+iteration written before it existed, and those rows carry only the flat ref.
+`DecidingBrainRef.__str__` is the single producer of that flat form and shares
+`LLM_REF_SEPARATOR` with the reader below, so what a new run records and what
+this module parses are the same convention rather than two that happen to
+agree.
+
 ## Substrate name is not the same thing as recorded ref
 
 Four substrates record their own name verbatim, so their recorded ref and their
@@ -71,6 +83,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
+
+from cora.shared.steering import LLM_REF_SEPARATOR
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -128,8 +142,6 @@ Kept equal to `DecideSubstrate` in both directions by
 `tests/unit/operation/test_decider_replayability.py`.
 """
 
-_LLM_REF_SEPARATOR = ":"
-
 
 def _is_llm_ref(model_ref: str) -> bool:
     """True if `model_ref` has the `llm` substrate's `provider:model` shape.
@@ -140,7 +152,7 @@ def _is_llm_ref(model_ref: str) -> bool:
     this shape, so it falls through to the unclassified branch and raises
     rather than being read as a nameless model.
     """
-    provider, _, model = model_ref.partition(_LLM_REF_SEPARATOR)
+    provider, _, model = model_ref.partition(LLM_REF_SEPARATOR)
     return bool(provider) and bool(model)
 
 

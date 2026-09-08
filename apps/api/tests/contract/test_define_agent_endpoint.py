@@ -145,6 +145,20 @@ def test_post_agents_round_trips_prompt_template_id() -> None:
 
 
 @pytest.mark.contract
+def test_post_agents_400_on_rule_brain_with_prompt_template() -> None:
+    """A Rule brain runs no prompt; naming one over the wire is a 400, not a
+    silently-accepted value nobody reads."""
+    body = _body(
+        model_ref=None,
+        brain={"kind": "Rule", "rule": "ExperimentCoordinator:v1"},
+        prompt_template_id="01900000-0000-7000-8000-00000000aaaa",
+    )
+    with TestClient(create_app()) as client:
+        response = client.post("/agents", json=body)
+    assert response.status_code == 400, response.text
+
+
+@pytest.mark.contract
 def test_post_agents_returns_403_when_authorize_denies() -> None:
     """Authorize-deny surfaces as 403 with the deny reason in detail.
 

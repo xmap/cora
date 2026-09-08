@@ -28,6 +28,7 @@ from cora.agent.aggregates.agent.state import (
     AgentAlreadyExistsError,
     BrainRef,
     InvalidAgentBrainError,
+    InvalidAgentPromptTemplateError,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.decider import decide
@@ -76,6 +77,78 @@ def test_a_rule_brained_command_needs_no_model_ref() -> None:
     assert len(events) == 1
     assert events[0].model_ref is None
     assert events[0].brain == BrainRef.for_rule("ExperimentCoordinator:v1")
+
+
+@pytest.mark.unit
+def test_a_rule_brained_command_naming_a_prompt_template_is_refused() -> None:
+    """A Rule brain runs no prompt, so a `prompt_template_id` beside it can
+    only be a stale value carried over from a different agent, never a real
+    design input. Caught here rather than left representable: see
+    InvalidAgentPromptTemplateError.
+    """
+    with pytest.raises(InvalidAgentPromptTemplateError):
+        decide(
+            None,
+            _command(
+                model_ref=None,
+                brain=BrainRef.for_rule("ExperimentCoordinator:v1"),
+                prompt_template_id=uuid4(),
+            ),
+            now=_NOW,
+            new_id=_NEW_ID,
+        )
+
+
+@pytest.mark.unit
+def test_a_rule_brained_command_with_no_prompt_template_is_accepted() -> None:
+    """The common Rule-brained shape (no prompt at all) stays legal."""
+    events = decide(
+        None,
+        _command(
+            model_ref=None,
+            brain=BrainRef.for_rule("ExperimentCoordinator:v1"),
+            prompt_template_id=None,
+        ),
+        now=_NOW,
+        new_id=_NEW_ID,
+    )
+
+    assert events[0].prompt_template_id is None
+
+
+@pytest.mark.unit
+def test_a_language_model_brained_command_may_name_a_prompt_template() -> None:
+    """The guard fires on brain KIND, not on the mere presence of the field:
+    an explicit `brain=` naming LANGUAGE_MODEL may still carry a prompt."""
+    template_id = uuid4()
+    events = decide(
+        None,
+        _command(
+            model_ref=None,
+            brain=BrainRef.for_model(_MODEL),
+            prompt_template_id=template_id,
+        ),
+        now=_NOW,
+        new_id=_NEW_ID,
+    )
+
+    assert events[0].prompt_template_id == template_id
+
+
+@pytest.mark.unit
+def test_the_legacy_model_ref_path_may_name_a_prompt_template() -> None:
+    """The back-compat `model_ref=` path always builds a LANGUAGE_MODEL
+    brain (`BrainRef.for_model`), so it is never reachable by the Rule guard.
+    """
+    template_id = uuid4()
+    events = decide(
+        None,
+        _command(prompt_template_id=template_id),  # model_ref from _command's base
+        now=_NOW,
+        new_id=_NEW_ID,
+    )
+
+    assert events[0].prompt_template_id == template_id
 
 
 @pytest.mark.unit

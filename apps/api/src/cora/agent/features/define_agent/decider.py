@@ -35,6 +35,10 @@ don't recompute).
     allowed.
   - `model_ref` is a typed VO; its construction has already
     validated provider / model / snapshot_pin shape.
+  - A Rule-brained command (`brain.kind is RULE`) must not also name a
+    `prompt_template_id` -> `InvalidAgentPromptTemplateError`. A Rule brain
+    runs no prompt, so the field can only be a stale value carried over from
+    a different agent, never a real design input.
 
 Initial status is implicit `Defined` (event type IS the state-change
 indicator; the genesis evolver hardcodes the mapping).
@@ -54,8 +58,10 @@ from cora.agent.aggregates.agent import (
     AgentKind,
     AgentName,
     AgentVersion,
+    BrainKind,
     InvalidAgentBrainError,
     InvalidAgentCapabilitiesError,
+    InvalidAgentPromptTemplateError,
 )
 from cora.agent.features.define_agent.command import DefineAgent
 
@@ -85,6 +91,8 @@ def decide(
         (via AgentCapability VO)
       - Exactly one of `brain` / `model_ref` must be named
         -> InvalidAgentBrainError
+      - A Rule-brained command must not also name a `prompt_template_id`
+        -> InvalidAgentPromptTemplateError
     """
     if state is not None:
         raise AgentAlreadyExistsError(state.id)
@@ -96,6 +104,14 @@ def decide(
     # its two front doors.
     if command.brain is None and command.model_ref is None:
         raise InvalidAgentBrainError
+
+    # The legacy model_ref path only ever builds a LANGUAGE_MODEL brain
+    # (BrainRef.for_model), so the Rule case is reachable only via `brain`.
+    effective_brain_kind = (
+        command.brain.kind if command.brain is not None else BrainKind.LANGUAGE_MODEL
+    )
+    if effective_brain_kind is BrainKind.RULE and command.prompt_template_id is not None:
+        raise InvalidAgentPromptTemplateError(effective_brain_kind.value)
 
     # Validate + trim core fields via VOs (each raises Invalid<X> on bad input).
     kind = AgentKind(command.kind)

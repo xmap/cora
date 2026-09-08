@@ -93,6 +93,7 @@ if TYPE_CHECKING:
 # DecisionConfidenceSource / REASONING_MAX_LENGTH living in
 # cora.shared.decision_signals. The ADVICE side of the seam stays below.
 from cora.shared.steering import (
+    DecidingBrainRef,
     SteeringAxis,
     SteeringObjective,
     SteeringObjectiveKind,
@@ -343,11 +344,22 @@ class SteeringAdvice:
 
     `verdict` fuses continue-vs-stop with the suggestion: `Measure` carries
     a `next_point`, `Stop` carries none. `rationale` / `confidence` /
-    `confidence_source` / `alternatives` / `model_ref` are the provenance a
+    `confidence_source` / `alternatives` / `deciding_brain` are the provenance a
     caller records (the in-conductor home onto the iteration ledger; an
     across-Run steerer onto a `Decision`). `confidence_source` reuses the
     shared `DecisionConfidenceSource` so a recorded confidence carries the
     same ISO-42001 derivation label whatever the home.
+
+    `deciding_brain` is WHICH brain produced this advice, typed. It replaced a free
+    `model_ref: str` that every adapter filled from a private module
+    constant: the string was the port's contract by convention only, so
+    nothing stopped an adapter naming a substrate that does not exist, and a
+    reader had to know that a colon means `provider:model` while a bare word
+    means a substrate. `str()` on it still renders that string for
+    the recording homes, from the typed value, so the two cannot disagree. A
+    composite (`StagedDecidePort`) returns its child's advice unchanged,
+    which is what makes this the DECIDING LEAF rather than the configured
+    brain.
 
     `diagnostics` is an OPAQUE, adapter-supplied map of named scalar
     breadcrumbs the caller may record for audit ("why did this brain advise
@@ -371,7 +383,7 @@ class SteeringAdvice:
     confidence: float | None = None
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
-    model_ref: str | None = None
+    deciding_brain: DecidingBrainRef | None = None
     diagnostics: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
@@ -400,6 +412,13 @@ class AdviceAuditFields:
     confidence, confidence_source, alternatives} stay parity-consistent
     across homes; `model_ref` rides along but is convention-only on the
     Decision side until a typed validator is earned.
+
+    `model_ref` stays a `str` here even though `SteeringAdvice.deciding_brain` is
+    typed. This shape has a second producer: the across-Run experiment
+    coordinator fills it with its own Rule brain's name, which is not a
+    steering substrate at all, so the field spans two brain vocabularies and
+    a `DecidingBrainRef` would be wrong for half of them. The steering half is
+    rendered by `str(DecidingBrainRef)`, never hand-spelled.
     """
 
     reasoning: str | None
@@ -422,7 +441,7 @@ def advice_to_audit_fields(advice: SteeringAdvice) -> AdviceAuditFields:
         confidence=advice.confidence,
         confidence_source=advice.confidence_source,
         alternatives=advice.alternatives,
-        model_ref=advice.model_ref,
+        model_ref=str(advice.deciding_brain) if advice.deciding_brain is not None else None,
     )
 
 

@@ -30,13 +30,24 @@ from cora.operation.ports.decide_port import (
     SteeringSpace,
     SteeringVerdict,
 )
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
+
+_SOBOL = DecidingBrainRef(substrate=SteeringSubstrate.SOBOL)
+_BOTORCH = DecidingBrainRef(substrate=SteeringSubstrate.BOTORCH)
 
 
 @dataclass
 class _RecordingDecider:
-    """A fake DecidePort that returns a fixed verdict and records its calls."""
+    """A fake DecidePort that returns a fixed verdict and records its calls.
 
-    label: str
+    `deciding_brain` is the child's typed identity, and the composite
+    forwarding it unchanged is what makes an iteration record the DECIDING
+    LEAF. The two children are named for the substrates the real composite
+    pairs, so a routing assertion reads as the brain that answered rather
+    than as a test string.
+    """
+
+    deciding_brain: DecidingBrainRef
     verdict: SteeringVerdict = SteeringVerdict.MEASURE
     calls: int = 0
     closed: bool = False
@@ -50,7 +61,9 @@ class _RecordingDecider:
             if self.verdict is SteeringVerdict.MEASURE
             else None
         )
-        return SteeringAdvice(verdict=self.verdict, next_point=next_point, model_ref=self.label)
+        return SteeringAdvice(
+            verdict=self.verdict, next_point=next_point, deciding_brain=self.deciding_brain
+        )
 
     async def aclose(self) -> None:
         self.closed = True
@@ -60,7 +73,7 @@ class _RecordingDecider:
 class _RaisingDecider:
     """A fake DecidePort brain that always raises a given exception."""
 
-    label: str
+    deciding_brain: DecidingBrainRef
     exc: Exception
     calls: int = 0
 
@@ -94,31 +107,31 @@ def _evidence(observations: tuple[SteeringObservation, ...]) -> SteeringEvidence
 
 
 async def test_staged_routes_to_seeder_below_threshold() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=3, brain_min_observations=3)
     advice = await port.advise_next(_evidence((_obs(), _obs())))  # 2 < 3
-    assert advice.model_ref == "seeder"
+    assert advice.deciding_brain == _SOBOL
     assert seeder.calls == 1 and brain.calls == 0
 
 
 async def test_staged_routes_to_brain_at_threshold() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=3, brain_min_observations=3)
     advice = await port.advise_next(_evidence((_obs(), _obs(), _obs())))  # 3 >= 3
-    assert advice.model_ref == "brain"
+    assert advice.deciding_brain == _BOTORCH
     assert brain.calls == 1 and seeder.calls == 0
 
 
 async def test_staged_counts_only_successful_observations() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
     # 3 observations but only 1 succeeded -> still seeding.
     obs = (_obs(), _obs(succeeded=False), _obs(succeeded=False))
     advice = await port.advise_next(_evidence(obs))
-    assert advice.model_ref == "seeder"
+    assert advice.deciding_brain == _SOBOL
 
 
 async def test_staged_falls_back_to_seeder_when_brain_cold() -> None:
@@ -126,13 +139,15 @@ async def test_staged_falls_back_to_seeder_when_brain_cold() -> None:
     # USABLE observations than it needs, e.g. non-Good-quality points counted
     # toward the threshold). The composite must fall back to the seeder so the
     # loop keeps seeding, not propagate the reject and abort the run.
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RaisingDecider(label="brain", exc=DecideColdStartError("needs more usable points"))
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RaisingDecider(
+        deciding_brain=_BOTORCH, exc=DecideColdStartError("needs more usable points")
+    )
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
     advice = await port.advise_next(_evidence((_obs(), _obs(), _obs())))  # 3 >= 2
     assert brain.calls == 1  # the brain was tried
     assert seeder.calls == 1  # and the seeder produced the fallback point
-    assert advice.model_ref == "seeder"
+    assert advice.deciding_brain == _SOBOL
     assert advice.verdict is SteeringVerdict.MEASURE
 
 
@@ -140,9 +155,9 @@ async def test_staged_propagates_permanent_brain_rejection() -> None:
     # A permanent DecideEvidenceRejectedError (not the cold-start subtype) is
     # NOT fixable by more seeding, so it must propagate and let the loop abort
     # rather than seed forever.
-    seeder = _RecordingDecider(label="seeder")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
     brain = _RaisingDecider(
-        label="brain", exc=DecideEvidenceRejectedError("unsupported objective kind")
+        deciding_brain=_BOTORCH, exc=DecideEvidenceRejectedError("unsupported objective kind")
     )
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
     with pytest.raises(DecideEvidenceRejectedError, match="unsupported objective"):
@@ -152,45 +167,45 @@ async def test_staged_propagates_permanent_brain_rejection() -> None:
 
 
 async def test_staged_phase_is_stateless_same_evidence_same_route() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
     ev = _evidence((_obs(), _obs()))  # exactly at threshold -> brain
     first = await port.advise_next(ev)
     second = await port.advise_next(ev)
-    assert first.model_ref == "brain" and second.model_ref == "brain"
+    assert first.deciding_brain == _BOTORCH and second.deciding_brain == _BOTORCH
 
 
 async def test_staged_stop_only_reachable_in_brain_phase() -> None:
     # A seeder that (wrongly) tried to Stop is never consulted past handoff;
     # in the seed phase the composite returns the seeder's verdict, and the
     # Sobol seeder never stops. Here we assert the brain's Stop propagates.
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain", verdict=SteeringVerdict.STOP)
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH, verdict=SteeringVerdict.STOP)
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
     advice = await port.advise_next(_evidence((_obs(), _obs())))
     assert advice.verdict is SteeringVerdict.STOP
-    assert advice.model_ref == "brain"
+    assert advice.deciding_brain == _BOTORCH
 
 
 async def test_staged_aclose_closes_both_children() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
     await port.aclose()
     assert seeder.closed and brain.closed
 
 
 def test_staged_rejects_threshold_below_brain_floor() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     with pytest.raises(ValueError, match="cold-start floor"):
         StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=5)
 
 
 def test_staged_rejects_nonpositive_threshold() -> None:
-    seeder = _RecordingDecider(label="seeder")
-    brain = _RecordingDecider(label="brain")
+    seeder = _RecordingDecider(deciding_brain=_SOBOL)
+    brain = _RecordingDecider(deciding_brain=_BOTORCH)
     with pytest.raises(ValueError, match="threshold"):
         StagedDecidePort(seeder=seeder, brain=brain, threshold=0, brain_min_observations=0)
 

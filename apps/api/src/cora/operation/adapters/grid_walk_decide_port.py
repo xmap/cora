@@ -55,8 +55,9 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
     objective_is_satisfied,
 )
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
-_MODEL_REF = "grid_walk"
+_BRAIN = DecidingBrainRef(substrate=SteeringSubstrate.GRID_WALK)
 
 
 class GridWalkDecidePort:
@@ -85,7 +86,7 @@ class GridWalkDecidePort:
             return SteeringAdvice(
                 verdict=SteeringVerdict.STOP,
                 rationale="satisfy objective met by the latest observation",
-                model_ref=_MODEL_REF,
+                deciding_brain=_BRAIN,
             )
         lattice = _lattice(evidence.space, self._points_per_axis)
         position = len(evidence.observations)
@@ -93,13 +94,13 @@ class GridWalkDecidePort:
             return SteeringAdvice(
                 verdict=SteeringVerdict.STOP,
                 rationale=f"grid exhausted after {len(lattice)} points",
-                model_ref=_MODEL_REF,
+                deciding_brain=_BRAIN,
             )
         return SteeringAdvice(
             verdict=SteeringVerdict.MEASURE,
             next_point=lattice[position],
             rationale=f"grid walk point {position + 1} of {len(lattice)}",
-            model_ref=_MODEL_REF,
+            deciding_brain=_BRAIN,
         )
 
     async def aclose(self) -> None:

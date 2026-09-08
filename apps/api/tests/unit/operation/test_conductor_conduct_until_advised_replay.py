@@ -245,6 +245,14 @@ def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> 
     per-iteration advice provenance like the fields above it, and it does not
     disturb replay because it is read from a monotonic port that a test clock
     never advances.
+
+    `deciding_brain` is the second later addition, and the two sets diverge on
+    it deliberately. The COMMAND carries only the typed brain: it is the single
+    source, and the decider renders the event's flat `model_ref` off it, so no
+    second string can arrive to disagree. The EVENT carries both, because they
+    publish differently: `model_ref` is free text and drops from a tier-1
+    export, while `deciding_brain.substrate` is an enum that survives, and
+    without it an exported steered run cannot say which brain decided.
     """
     assert {f.name for f in dataclasses.fields(EndProcedureIteration)} == {
         "procedure_id",
@@ -256,7 +264,7 @@ def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> 
         "confidence",
         "confidence_source",
         "alternatives",
-        "model_ref",
+        "deciding_brain",
         "advised_next_point",
         "advice_latency_ms",
     }
@@ -271,6 +279,7 @@ def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> 
         "confidence",
         "confidence_source",
         "alternatives",
+        "deciding_brain",
         "model_ref",
         "advised_next_point",
         "advice_latency_ms",

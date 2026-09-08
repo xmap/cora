@@ -79,7 +79,11 @@ from cora.recipe.aggregates.recipe import (
 )
 from cora.recipe.aggregates.recipe import event_type_name as recipe_event_type_name
 from cora.recipe.aggregates.recipe import to_payload as recipe_to_payload
-from cora.shared.steering import SteeringDesignSource
+from cora.shared.steering import (
+    BoTorchBrain,
+    InMemoryBrain,
+    SteeringDesignSource,
+)
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 8, 20, 9, 0, 0, tzinfo=UTC)
@@ -346,6 +350,41 @@ async def test_conduct_until_advised_pins_the_resolved_config_not_the_requested_
     assert pinned.raw_samples == 256
     assert pinned.seed == 0
     assert pinned.staged_threshold == 5
+    # The typed twin of the scalars above, built by the SAME
+    # `decide_steering_design_recorded` call from the SAME resolved
+    # `DecidePortConfig`: proves `_brain_from_config` actually ran, not
+    # merely that the scalars it reads from are correct.
+    assert pinned.brain == InMemoryBrain()
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_pins_a_brain_matching_the_resolved_substrate() -> None:
+    """`brain`'s per-substrate SHAPE, not just its presence.
+
+    The prior test fixes `substrate` at its default (`in_memory`, an
+    empty brain); this drives a substrate whose brain actually carries
+    values, so a mutation that always emits `InMemoryBrain()` regardless
+    of `config.substrate` would pass that test and fail this one.
+    """
+    procedure_id = uuid4()
+    store = InMemoryEventStore()
+    await _run_steered_conduct(
+        store,
+        procedure_id,
+        decide=DecidePortConfig(
+            substrate="botorch",
+            min_observations=4,
+            num_restarts=6,
+            raw_samples=128,
+            seed=3,
+        ),
+    )
+
+    stored, _version = await store.load(stream_type="Procedure", stream_id=procedure_id)
+    pinned = next(from_stored(e) for e in stored if e.event_type == "SteeringDesignRecorded")
+    assert isinstance(pinned, SteeringDesignRecorded)
+
+    assert pinned.brain == BoTorchBrain(min_observations=4, num_restarts=6, raw_samples=128, seed=3)
 
 
 @pytest.mark.unit

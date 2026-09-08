@@ -29,6 +29,7 @@ from cora.operation.ports.decide_port import (
     SteeringSpace,
     SteeringVerdict,
 )
+from cora.shared.steering import DecidingBrainRef, SteeringSubstrate
 
 
 def _explore() -> SteeringObjective:
@@ -56,6 +57,7 @@ async def test_sobol_first_point_skips_origin() -> None:
     advice = await port.advise_next(_evidence(space, ()))
     assert advice.verdict is SteeringVerdict.MEASURE
     assert advice.next_point is not None
+    assert advice.deciding_brain == DecidingBrainRef(substrate=SteeringSubstrate.SOBOL)
     # The seeder skips the degenerate all-zeros origin (raw index 0): position 0
     # maps to raw draw 1, so the first 1-D seed is 0.5 (then 0.75, 0.25, ...).
     assert advice.next_point.coordinates["energy"] == 0.5

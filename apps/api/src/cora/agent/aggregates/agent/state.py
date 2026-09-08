@@ -340,6 +340,25 @@ class InvalidAgentBrainError(ValueError):
         super().__init__("Agent must name exactly one of brain or model_ref")
 
 
+class InvalidAgentPromptTemplateError(ValueError):
+    """A Rule-brained `define_agent` command also named a `prompt_template_id`.
+
+    `prompt_template_id` sits beside `brain` on the Agent rather than inside
+    `BrainRef`'s LANGUAGE_MODEL arm (a field-placement question tracked in
+    [[project-per-kind-field-belongs-in-its-arm]] and left there deliberately:
+    moving it would mint a second permanent legacy-fold reader for one
+    optional field, so the guard goes at the door instead). A Rule brain runs
+    no prompt; naming one here would record a design input the run never
+    reads, which is worse than recording nothing.
+    """
+
+    def __init__(self, brain_kind: str) -> None:
+        super().__init__(
+            f"Agent brain is {brain_kind} and runs no prompt; prompt_template_id must be unset"
+        )
+        self.brain_kind = brain_kind
+
+
 class AgentAlreadyExistsError(Exception):
     """Attempted to define an agent whose stream already has events.
 
@@ -911,7 +930,18 @@ class BrainKind(StrEnum):
     against yet, and adding a member here that no gate checks would ship a
     silently ungated brain. Widening this enum forces the `assert_never` in the
     approval dispatch to fail type-checking, so the gate cannot be forgotten.
-    See [[project-brain-modeling-design]].
+
+    Decided 2026-09-08 to leave it at two rather than add `OPTIMIZER`: no
+    Agent's brain today IS a search algorithm; an agent with a Rule (or
+    LanguageModel) brain merely CALLS one through `DecidePort`, which is a
+    different claim. The trigger to revisit is that specific gap closing, not
+    the taxonomy looking incomplete. When it does, the substrates behind
+    `DecidePort` split on whether they consult results before choosing the
+    next point (`botorch`, closed-loop) or emit a fixed sequence regardless
+    (`sobol`, open-loop), so admitting only `OPTIMIZER` would misdescribe the
+    open-loop half as having optimized. Plan on two new members together, not
+    one. See [[project-brain-modeling-design]] and
+    [[project-brain-family-coverage-plan]].
     """
 
     LANGUAGE_MODEL = "LanguageModel"

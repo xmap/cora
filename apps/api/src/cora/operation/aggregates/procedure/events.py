@@ -79,12 +79,18 @@ from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookSchema
 from cora.shared.steering import (
+    DecidingBrainRef,
+    SteeringBrain,
     SteeringDesignSource,
     SteeringObjective,
     SteeringSpace,
     SteeringSubstrate,
+    deserialize_brain,
+    deserialize_deciding_brain_ref,
     deserialize_objective,
     deserialize_space,
+    serialize_brain,
+    serialize_deciding_brain_ref,
     serialize_objective,
     serialize_space,
 )
@@ -556,10 +562,37 @@ class ProcedureIterationEnded:
     False continue, None no-verdict), kept distinct from `converged` so a
     steering pass leaves `converged` None and the convergence streak never
     bites. `reasoning` / `confidence` / `confidence_source` / `alternatives`
-    / `model_ref` are the advice provenance for the in-conductor audit ledger
-    (from `advice_to_audit_fields`, carrying the SAME names the mapper emits).
+    are the advice provenance for the in-conductor audit ledger (from
+    `advice_to_audit_fields`, carrying the SAME names the mapper emits).
     `confidence_source` is the typed `DecisionConfidenceSource`, matching the
     Decision record so the two audit homes stay type-faithful on replay.
+
+    `deciding_brain` and `model_ref` both name WHICH brain decided this pass,
+    and they are one fact rendered twice, not two fields: the decider derives
+    the string from the typed value (`str(DecidingBrainRef)`), and the command
+    carries only the typed one, so they cannot drift. Both are recorded
+    because they publish differently. `model_ref` is free text, so the export
+    generator classifies it `drop:text` and a tier-1 row carries nothing at
+    all about the brain; `deciding_brain.substrate` is a `SteeringSubstrate`
+    enum and survives as `keep:enum`. Without the typed field an exported
+    steered run says how confident the brain was and how long it took while
+    withholding whether it was a deterministic grid walker or a language
+    model, which is the distinction `decider_replayability` turns on. The
+    llm arm's `provider` / `model` are free text and still drop, so what the
+    export gains is the SUBSTRATE, not the model identity; the same gap
+    [[project-brain-family-coverage]] records for `SteeringDesignRecorded`.
+
+    `deciding_brain` names the DECIDING LEAF, never a composite: `staged`
+    returns its child's advice unchanged, so an iteration in the seeding
+    phase records `sobol` and one past handoff records `botorch`. That is a
+    fact the segment's `SteeringDesignRecorded` cannot supply, which is why
+    the iteration records a brain of its own rather than deferring to the
+    design pin.
+
+    `model_ref` is retained rather than replaced: streams written before this
+    field existed carry only it, the `procedure_iterations` projection reads
+    it into a column, and `list_procedure_iterations` serves it over REST and
+    MCP. Retiring it is an API-version question, not a fold one.
 
     `advised_next_point` is the coordinate the brain advised for the NEXT pass
     (the `SteeringPoint.coordinates` map, axis-name -> value), present on a
@@ -596,6 +629,7 @@ class ProcedureIterationEnded:
     confidence: float | None = None
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
+    deciding_brain: DecidingBrainRef | None = None
     model_ref: str | None = None
     advised_next_point: Mapping[str, Any] | None = None
     advice_latency_ms: float | None = None
@@ -691,6 +725,53 @@ class SteeringDesignRecorded:
     supplied the design, None for an operator-issued wire request.
     `design_source` records where the design originated (`Request` today).
 
+    `brain` carries the SAME determining values as the six scalars above,
+    typed per substrate (`SteeringBrain` from `cora.shared.steering`, one
+    variant per `SteeringSubstrate` member) instead of flattened onto every
+    field regardless of relevance: a `grid_walk` segment's `brain` is a
+    `GridWalkBrain` with only `points_per_axis`, not a row that also
+    carries a `seed` and `staged_threshold` that determined nothing about
+    it. `None` for a stream written before this field existed; every new
+    pin populates a real value. See
+    [[project-per-kind-field-belongs-in-its-arm]] and
+    [[project-brain-family-coverage]].
+
+    THE SIX SCALARS ARE KEPT, and for exactly one reason: a stream written
+    before `brain` existed folds it to None, so the scalars are the only
+    answer such a row has, permanently. Nothing else argues for them. In
+    particular tach does NOT: `SteeringBrain` lives in `cora.shared`, which
+    this module already imports, so the aggregate could carry the typed
+    value alone if history allowed. Two recordings of one value is a
+    drift risk rather than a belt-and-braces win, so it is pinned by
+    `test_the_typed_brain_agrees_with_its_flat_scalar_twin`.
+
+    The duplicate-pin guard in
+    `_conduct_preparation.decide_steering_design_recorded` compares the full
+    serialized payload, so `brain` participates like any other key, with one
+    consequence worth stating: a pin predating the field has no `brain` key
+    and can never compare equal to a candidate that has one, so the first
+    conduct of a pre-existing steered Procedure appends one extra pin under
+    an unchanged design. That is the guard's intended fail-toward-recording
+    direction (the same one it takes when a STORED payload carries a key
+    this build cannot read) and it happens once, not per conduct.
+
+    EXPORT CAVEAT, because this field's whole purpose is a claim about the
+    published record. `brain`'s numeric fields survive tier-1 redaction;
+    an `llm` brain's `provider` / `model` / `snapshot_pin` are free text
+    and are withheld by the same rule that withholds `objective_capture_name`
+    and every axis name. So an LLM-steered segment publishes `brain` as
+    `{}`, which is ALSO the honest serialization of `InMemoryBrain` and
+    `SobolBrain`: in the exported record the two are distinguishable only
+    by the `substrate` beside them. The internal `events` row is complete;
+    the published row is not, for that one substrate. Recording this field
+    therefore does NOT by itself close the inferential gap
+    [[project-brain-family-coverage]] opens for `llm`, and must not be
+    reported as having done so. Closing it needs the three fields' ranges
+    genuinely closed first (a `Literal` provider, bounded model text), which
+    is its own reviewed diff, not a `ClosedValueObject` marker bolted on:
+    that marker's criterion is that EVERY field be closed by construction,
+    and `ModelRef` documents `provider` as a free string today.
+
     No `axis_count` field: a derived duplicate of `len(space.axes)` that
     could disagree with the axes, deliberately not carried.
 
@@ -716,6 +797,7 @@ class SteeringDesignRecorded:
     spend_agent_id: UUID | None
     design_source: SteeringDesignSource
     occurred_at: datetime
+    brain: SteeringBrain | None = None
 
 
 # Discriminated union of every event the Procedure aggregate emits.
@@ -947,6 +1029,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             confidence=confidence,
             confidence_source=confidence_source,
             alternatives=alternatives,
+            deciding_brain=deciding_brain,
             model_ref=model_ref,
             advised_next_point=advised_next_point,
             advice_latency_ms=advice_latency_ms,
@@ -964,6 +1047,11 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                     confidence_source.value if confidence_source is not None else None
                 ),
                 "alternatives": list(alternatives),
+                "deciding_brain": (
+                    serialize_deciding_brain_ref(deciding_brain)
+                    if deciding_brain is not None
+                    else None
+                ),
                 "model_ref": model_ref,
                 "advised_next_point": (
                     dict(advised_next_point) if advised_next_point is not None else None
@@ -1034,6 +1122,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             spend_agent_id=spend_agent_id,
             design_source=design_source,
             occurred_at=occurred_at,
+            brain=brain,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -1052,9 +1141,53 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "spend_agent_id": str(spend_agent_id) if spend_agent_id is not None else None,
                 "design_source": design_source.value,
                 "occurred_at": occurred_at.isoformat(),
+                "brain": serialize_brain(brain) if brain is not None else None,
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
+
+
+def _steering_brain_from(payload: dict[str, Any]) -> SteeringBrain | None:
+    """Fold the typed per-substrate brain, or None for a pre-`brain` stream.
+
+    `.get`, not `["brain"]`: a stream written before this field existed has
+    no such key, and folds to None rather than a guessed value. The six flat
+    scalars are already the faithful legacy answer for every substrate they
+    can describe, and inventing a `brain` for the one they cannot (`llm`,
+    whose model was not even threaded through the factory when those rows
+    were written) would fabricate provenance the row never recorded.
+
+    Re-reads `substrate` from the payload rather than taking the coerced
+    value as a parameter, so the helper is self-contained the way its two
+    siblings below are. That coerces the enum twice per fold, which is
+    deliberate: hoisting it to a local shared with the event constructor
+    would move it outside the `deserialize_or_raise` callable, and a
+    malformed substrate would then escape as a bare `ValueError` instead of
+    the wrapped `Malformed SteeringDesignRecorded` every other field gets.
+    """
+    raw = payload.get("brain")
+    if raw is None:
+        return None
+    return deserialize_brain(SteeringSubstrate(payload["substrate"]), raw)
+
+
+def _deciding_brain_from(payload: dict[str, Any]) -> DecidingBrainRef | None:
+    """Fold the brain that decided an iteration, or None if it predates the field.
+
+    `.get`, not `["deciding_brain"]`, for the same reason as the sibling
+    above. It does NOT reconstruct one from the legacy `model_ref` the row
+    does carry, even though that string determines the brain and
+    `decider_replayability` reads it. Parsing it here would put a heuristic
+    (a colon means `provider:model`) on the fold path of every historical
+    iteration, where an unrecognised ref could only raise, making a readable
+    stream unreadable. A consumer that wants the legacy answer keeps calling
+    `replayability_of(model_ref)`, which is built to classify the string and
+    to fail loudly OUTSIDE the fold.
+    """
+    raw = payload.get("deciding_brain")
+    if raw is None:
+        return None
+    return deserialize_deciding_brain_ref(raw)
 
 
 def _beam_requirement_from(payload: dict[str, Any]) -> BeamRequirement:
@@ -1282,6 +1415,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                         else None
                     ),
                     alternatives=tuple(payload.get("alternatives", ())),
+                    deciding_brain=_deciding_brain_from(payload),
                     model_ref=payload.get("model_ref"),
                     advised_next_point=payload.get("advised_next_point"),
                     advice_latency_ms=payload.get("advice_latency_ms"),
@@ -1346,6 +1480,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     ),
                     design_source=SteeringDesignSource(payload["design_source"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    brain=_steering_brain_from(payload),
                 ),
                 extra=(ValueError,),
             )
