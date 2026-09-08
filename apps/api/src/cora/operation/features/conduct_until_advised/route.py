@@ -2,7 +2,7 @@
 
 `POST /procedures/{procedure_id}/conduct-until-advised` accepts a JSON body
 carrying the steering objective, the search space, the objective captures-slot
-name, the brain-selection config, and an optional informational budget. Returns
+name, the brain-selection config, and an optional budget the loop enforces. Returns
 200 OK with a `ConductUntilAdvisedResponse` summarising the outcome.
 
 ## Recipe-driven: no `steps` in the body
@@ -85,7 +85,10 @@ class ConductUntilAdvisedRequest(BaseModel):
     )
     budget: SteeringBudgetRequest | None = Field(
         default=None,
-        description="Optional informational budget surfaced to the brain (not enforced here).",
+        description=(
+            "Optional per-call budget: surfaced to the brain, and enforced by "
+            "the loop between passes."
+        ),
     )
 
     model_config = {"extra": "forbid"}

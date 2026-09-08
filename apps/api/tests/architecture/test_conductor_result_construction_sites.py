@@ -144,6 +144,26 @@ _EXPECTED_OMISSIONS: dict[tuple[str, int], frozenset[str]] = {
             "substrate_writes",
         }
     ),
+    # _run_decide_loop(): the SteeringBudget guard's own synthetic placeholder,
+    # used only when the budget is exhausted before any pass in THIS call has
+    # completed (last_result is still None: the iterations_remaining=0 case,
+    # or any budget that trips on the very first loop-top check of a fresh
+    # call). Same shape and same reason as conduct_until_advised_from's
+    # ordinal 2: nothing has run yet, so an empty ledger is correct, not
+    # dropped. When last_result IS available, the guard threads it instead
+    # (this branch is not taken; see the None-safe ternary at the call site).
+    ("_run_decide_loop", 1): frozenset(
+        {
+            "actuation_kind",
+            "artifacts",
+            "closing_failures",
+            "failure",
+            "held",
+            "measurements",
+            "outputs",
+            "substrate_writes",
+        }
+    ),
 }
 
 

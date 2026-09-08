@@ -4,10 +4,11 @@ The DECIDE-axis sibling of `ConductUntilConverged`. Like it, this writes to no
 aggregate stream directly: it hands control to `Conductor.conduct_until_advised`,
 which drives the full measure-then-advise loop over the Procedure FSM
 (`start_procedure` -> { `start_iteration` -> walk one pass -> `advise_next` ->
-`end_iteration` } * -> `complete_procedure` when the brain advises Stop, or
-`abort_procedure` on a pass fault / brain fault / the absolute ceiling). The
-handler returns a `ConductUntilAdvisedResult` summarising the run; failures are
-encoded in that result, not raised, so one client code-path covers every outcome.
+`end_iteration` } * -> `complete_procedure` when the brain advises Stop OR the
+declared `budget` runs out, or `abort_procedure` on a pass fault / brain fault
+/ the absolute ceiling). The handler returns a `ConductUntilAdvisedResult`
+summarising the run; failures are encoded in that result, not raised, so one
+client code-path covers every outcome.
 
 Recipe-driven by construction: the per-pass block carries a `SteeringRef`
 setpoint (the loop-seeded axis), which only a Recipe can express (the literal
@@ -23,8 +24,9 @@ handler always re-expands the Procedure's pinned recipe, the same path
   - `objective_capture_name` names the captures slot the per-pass deposit fills
     (the objective scalar the brain reads).
   - `decide` selects the in-CORA brain (`DecidePortConfig`: in_memory | grid_walk).
-  - `budget` is informational for the brain (not enforced in the loop at this
-    slice); None means open-ended.
+  - `budget` is handed to the brain as advice input AND enforced by the loop
+    itself between passes (per-call, not cumulative across a resume; see
+    `SteeringBudget`'s docstring); None means open-ended.
 """
 
 from dataclasses import dataclass
@@ -74,8 +76,11 @@ class ConductUntilAdvisedResult:
     + optional failure + actuation_kind + measurements) so the wire response
     stays decoupled from the in-process Conductor type.
 
-    `succeeded` is True only when the brain advised Stop and the Procedure
-    completed. A pass fault, a brain fault (a folded `Decide*Error`), and the
+    `succeeded` is True when the Procedure completed, whether the brain
+    itself advised Stop or the declared `budget` ran out first (both are
+    `complete_procedure`; a spent budget is recorded on the Procedure stream
+    as `ProcedureCompleted.termination_reason`, not surfaced on this wire
+    result). A pass fault, a brain fault (a folded `Decide*Error`), and the
     absolute iteration ceiling all surface `succeeded=False` with a `failure`
     carrying the cause. `measurements` carries the final pass's produced
     `Measurement`s so the caller can record the steered result to a Calibration

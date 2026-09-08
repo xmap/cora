@@ -337,10 +337,12 @@ class _SlowRaisingDecidePort:
 async def test_conduct_until_advised_records_how_long_the_brain_took() -> None:
     """The iteration ledger carries the brain's think time, in milliseconds.
 
-    Wall clock is the only budget dimension no gate watches: a non-LLM brain
+    Wall clock is the budget dimension no SPEND gate watches: a non-LLM brain
     spends neither money nor tokens, so the spend guards are blind to it while
-    it burns beam time. Recording is the prerequisite for capping; nothing is
-    capped here.
+    it burns beam time. This per-call reading was the prerequisite for the
+    loop-level wall-clock budget in `test_conductor_steering_budget.py`,
+    which enforces it; this test only pins that the reading itself is
+    correct.
 
     The fake monotonic clock is advanced by the brain itself, so the assertion
     is on a real measured interval rather than on a constant.

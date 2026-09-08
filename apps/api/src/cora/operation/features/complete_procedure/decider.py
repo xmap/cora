@@ -42,6 +42,7 @@ def decide(
         ProcedureCompleted(
             procedure_id=state.id,
             actuation_kind=command.actuation_kind,
+            termination_reason=command.termination_reason,
             occurred_at=now,
         )
     ]

@@ -140,13 +140,42 @@ class SteeringObservation:
 @dataclass(frozen=True)
 class SteeringBudget:
     """How much the loop has left, for the brain to weigh and the caller to
-    backstop.
+    enforce.
 
     Both fields optional because a campaign may be bounded by count, by
     time, by neither (open-ended), or by the brain's own convergence. The
     stop ceiling lives with the loop (the caller's guard), not inside the
     decider, mirroring how `conduct_until_converged` carries its patience
-    cap rather than letting the criterion own it.
+    cap rather than letting the criterion own it. `Conductor._run_decide_loop`
+    is that guard: both fields are read twice, once as advice input inside
+    `SteeringEvidence` and once by the loop as a stop condition, checked at
+    the top of every pass before `start_iteration` (`_budget_exhausted`).
+
+    Both fields are PER-CALL, "this many more passes / this much more time
+    IN THIS CALL", not a cumulative total. A resume restates the budget
+    explicitly (`conduct_until_advised_from` passes the caller's new value
+    straight through; it is recorded rather than compared against the prior
+    pin, matching that resume's existing posture on the rest of the design),
+    so a cumulative accounting would only be enforceable by refusing an
+    increase across resumes, which the resume handler deliberately does not
+    do. Two consequences worth knowing before relying on this:
+
+      - The loop checks only BETWEEN passes. A single long acquisition
+        (or a hung brain call) can run well past `wall_clock_seconds_remaining`
+        before the next check point; this is "do not start another pass after
+        this much time", not a deadline. Interrupting mid-pass would need
+        cancellation plumbed through `execute`, which is a different and
+        riskier slice given that a pass can be mid-actuation.
+      - `iterations_remaining` is backstopped across every resume by the
+        absolute iteration ceiling (`_ABSOLUTE_MAX_ITERATIONS`), since that
+        ceiling counts the FSM total rather than a per-call remainder.
+        `wall_clock_seconds_remaining` has no such backstop: a caller who
+        resumes repeatedly with a fresh time budget each time is bounded
+        only by the pass-count ceiling, not by elapsed wall time. Closing
+        that gap, if ever needed, is a constant ceiling over an elapsed-
+        seconds fold on the stream, not a caller-supplied cumulative number
+        (a cumulative number supplied by the same caller it is meant to
+        bind is not a bound).
     """
 
     iterations_remaining: int | None = None

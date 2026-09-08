@@ -4469,7 +4469,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional informational budget surfaced to the brain (not enforced here)."
+            "description": "Optional per-call budget: surfaced to the brain, and enforced by the loop between passes."
           },
           "decide": {
             "$ref": "#/components/schemas/DecideConfigRequest",
@@ -4562,7 +4562,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional informational budget surfaced to the brain (not enforced here)."
+            "description": "Optional per-call budget: surfaced to the brain, and enforced by the loop between passes."
           },
           "decide": {
             "$ref": "#/components/schemas/DecideConfigRequest",
@@ -16184,7 +16184,7 @@
       },
       "SteeringBudgetRequest": {
         "additionalProperties": false,
-        "description": "JSON wire shape for a `SteeringBudget` (informational for the brain).",
+        "description": "JSON wire shape for a `SteeringBudget`: both advice input for the brain\nand a per-call stop condition the loop itself enforces between passes.",
         "properties": {
           "iterations_remaining": {
             "anyOf": [

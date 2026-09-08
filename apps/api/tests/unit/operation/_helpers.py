@@ -252,6 +252,7 @@ class Transcript:
         default_factory=list[dict[str, object]]
     )
     resume_boundaries: list[int] = field(default_factory=list[int])
+    complete_termination_reasons: list[object] = field(default_factory=list[object])
 
 
 def _make_handlers(transcript: Transcript) -> dict[str, object]:
@@ -260,6 +261,7 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
 
     async def complete_procedure(command: CompleteProcedure, **_: object) -> None:
         transcript.events.append("complete_procedure")
+        transcript.complete_termination_reasons.append(command.termination_reason)
 
     async def abort_procedure(command: AbortProcedure, **_: object) -> None:
         transcript.events.append("abort_procedure")

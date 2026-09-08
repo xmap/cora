@@ -368,6 +368,37 @@ class ProcedureStatus(StrEnum):
         )
 
 
+class ProcedureTerminationReason(StrEnum):
+    """Why a Completed Procedure ended, beyond "the loop reached its end
+    condition normally".
+
+    Most completes have nothing to add: a flat conduct or a converged
+    steering loop completed because it was supposed to, and this stays
+    None. It exists for the one case a plain `Completed` status cannot
+    distinguish from that: a steered loop whose declared `SteeringBudget`
+    ran out before the brain ever advised Stop. The Procedure still
+    completed, per [[project_decide_layer_stage1_design]]'s corpus lock
+    (no surveyed framework -- scipy, Optuna, Ax, Ray Tune, bluesky --
+    gives budget exhaustion a dedicated terminal status; it is a normal
+    non-error end, and the converged-vs-budget distinction is universally
+    a separate reason channel, never a new status). This is that channel.
+
+    A closed set rather than a free-text reason so it survives record
+    export as `keep:enum:ProcedureTerminationReason` (a bare `str` would
+    regenerate to `drop:text` and vanish from published records), and so
+    "how many campaigns ran out of passes versus ran out of time" stays a
+    query rather than a grep.
+
+    Two members because the two dimensions are independently attributable:
+    `_budget_exhausted` in the Operation BC's conductor checks iterations
+    before wall clock, so BOTH ran out on the same turn records the
+    countable one.
+    """
+
+    BUDGET_ITERATIONS_EXHAUSTED = "BudgetIterationsExhausted"
+    BUDGET_WALL_CLOCK_EXHAUSTED = "BudgetWallClockExhausted"
+
+
 class InvalidProcedureNameError(ValueError):
     """The supplied procedure name is empty, whitespace-only, or too long."""
 
