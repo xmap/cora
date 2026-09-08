@@ -27,7 +27,7 @@ remove.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, assert_never, cast
 from uuid import UUID
 
 from cora.infrastructure.event_envelope import to_new_event
@@ -68,6 +68,13 @@ from cora.recipe.aggregates.plan import (
 from cora.recipe.aggregates.recipe import load_recipe_at_version
 from cora.run.aggregates.run import RunNotFoundError, load_run
 from cora.shared.steering import (
+    BoTorchBrain,
+    GridWalkBrain,
+    InMemoryBrain,
+    LlmBrain,
+    SobolBrain,
+    StagedBrain,
+    SteeringBrain,
     SteeringDesignSource,
     SteeringObjective,
     SteeringSpace,
@@ -163,6 +170,65 @@ def find_latest_steering_design_record(
     return find_last_event(stored_events, "SteeringDesignRecorded")
 
 
+def _brain_from_config(config: DecidePortConfig) -> SteeringBrain:
+    """Read the segment's determining values off `DecidePortConfig` into the
+    typed `SteeringBrain` this module pins onto the event alongside the six
+    flat scalars.
+
+    A pure projection, not a new source of truth: `config` already carries
+    every value below (the same object `decide_steering_design_recorded`
+    flattens into `points_per_axis` through `staged_threshold`), so this
+    only re-shapes them into the per-substrate variant that carries just
+    the ones that determine THIS substrate's behaviour. `config.llm` is
+    asserted non-None on the `llm` arm rather than re-checked:
+    `DecidePortConfig.__post_init__` already guarantees it (materialises a
+    default at construction, refuses to accept one for any OTHER
+    substrate), so a config that reaches this function with
+    `substrate == "llm"` and `llm is None` would mean that guard itself
+    broke, not that this function found a legitimately absent value.
+
+    `staged`'s handoff brain is built from the SAME four fields the bare
+    `botorch` arm reads, matching `build_decide_port`'s own
+    `_build_botorch` helper, which both the `botorch` and `staged` factory
+    arms call.
+    """
+    match config.substrate:
+        case "in_memory":
+            return InMemoryBrain()
+        case "grid_walk":
+            return GridWalkBrain(points_per_axis=config.points_per_axis)
+        case "sobol":
+            return SobolBrain()
+        case "botorch":
+            return BoTorchBrain(
+                min_observations=config.min_observations,
+                num_restarts=config.num_restarts,
+                raw_samples=config.raw_samples,
+                seed=config.seed,
+            )
+        case "staged":
+            return StagedBrain(
+                threshold=config.staged_threshold,
+                handoff_brain=BoTorchBrain(
+                    min_observations=config.min_observations,
+                    num_restarts=config.num_restarts,
+                    raw_samples=config.raw_samples,
+                    seed=config.seed,
+                ),
+            )
+        case "llm":
+            assert config.llm is not None, (
+                "DecidePortConfig.__post_init__ guarantees `llm` is set whenever substrate is 'llm'"
+            )
+            return LlmBrain(
+                provider=config.llm.model_ref.provider,
+                model=config.llm.model_ref.model,
+                snapshot_pin=config.llm.model_ref.snapshot_pin,
+            )
+        case _:  # pragma: no cover - exhaustive over DecideSubstrate's closed Literal
+            assert_never(config.substrate)
+
+
 def decide_steering_design_recorded(
     state: Procedure | None,
     stored_events: Sequence[StoredEvent],
@@ -227,6 +293,7 @@ def decide_steering_design_recorded(
         spend_agent_id=design.decide.spend_agent_id,
         design_source=SteeringDesignSource.REQUEST,
         occurred_at=now,
+        brain=_brain_from_config(design.decide),
     )
     latest = find_latest_steering_design_record(stored_events)
     if latest is not None and _designs_match(latest.payload, to_payload(event)):

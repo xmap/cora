@@ -21,12 +21,13 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.infrastructure.ports.llm import ModelRef
 from cora.operation._conduct_preparation import (
     SteeringDesign,
     decide_steering_design_recorded,
     verify_steering_design_continuity,
 )
-from cora.operation.adapters.decide_port_config import DecidePortConfig
+from cora.operation.adapters.decide_port_config import DecidePortConfig, LlmDecidePortConfig
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureHeld,
@@ -39,7 +40,14 @@ from cora.operation.aggregates.procedure import (
 from cora.operation.errors import SteeringDesignMismatchError
 from cora.operation.ports.decide_port import SteeringBudget
 from cora.shared.steering import (
+    BoTorchBrain,
+    GridWalkBrain,
+    InMemoryBrain,
+    LlmBrain,
+    SobolBrain,
+    StagedBrain,
     SteeringAxis,
+    SteeringBrain,
     SteeringDesignSource,
     SteeringObjective,
     SteeringObjectiveKind,
@@ -102,7 +110,22 @@ def _design(**overrides: Any) -> SteeringDesign:
         ),
         "objective_capture_name": "rotation_center",
         "space": _space(),
-        "decide": DecidePortConfig(substrate="botorch", spend_agent_id=_AGENT_ID, seed=7),
+        # Every numeric tunable DISTINCT on purpose. They used to share the
+        # dataclass default of 5, which made `points_per_axis`,
+        # `min_observations` and `staged_threshold` mutually swappable with
+        # no test noticing -- confirmed by mutation during the gate review
+        # for this field: reading `staged_threshold` where the flattening
+        # means `points_per_axis` passed the entire unit suite.
+        "decide": DecidePortConfig(
+            substrate="botorch",
+            spend_agent_id=_AGENT_ID,
+            points_per_axis=3,
+            min_observations=4,
+            num_restarts=11,
+            raw_samples=257,
+            seed=7,
+            staged_threshold=6,
+        ),
         "budget": SteeringBudget(iterations_remaining=12, wall_clock_seconds_remaining=600.0),
     }
     fields.update(overrides)
@@ -174,12 +197,140 @@ def test_decide_flattens_the_budget_and_the_brain_config_into_scalars() -> None:
 
     assert event.budget_iterations_remaining == 12
     assert event.budget_wall_clock_seconds_remaining == 600.0
-    assert event.points_per_axis == 5
-    assert event.min_observations == 5
-    assert event.num_restarts == 10
-    assert event.raw_samples == 256
+    assert event.points_per_axis == 3
+    assert event.min_observations == 4
+    assert event.num_restarts == 11
+    assert event.raw_samples == 257
     assert event.seed == 7
-    assert event.staged_threshold == 5
+    assert event.staged_threshold == 6
+    # The typed twin of the scalars above: same DecidePortConfig, same
+    # `_brain_from_config` call `decide_steering_design_recorded` makes,
+    # asserted separately so a divergence between the two shows up as a
+    # brain-vs-scalar disagreement rather than being lost in one big
+    # equality on the event.
+    assert event.brain == BoTorchBrain(min_observations=4, num_restarts=11, raw_samples=257, seed=7)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("substrate", "scalar_field", "brain_field"),
+    [
+        ("grid_walk", "points_per_axis", "points_per_axis"),
+        ("botorch", "min_observations", "min_observations"),
+        ("botorch", "num_restarts", "num_restarts"),
+        ("botorch", "raw_samples", "raw_samples"),
+        ("botorch", "seed", "seed"),
+        ("staged", "staged_threshold", "threshold"),
+    ],
+)
+def test_the_typed_brain_agrees_with_its_flat_scalar_twin(
+    substrate: str, scalar_field: str, brain_field: str
+) -> None:
+    """The two recordings of one value must not drift apart.
+
+    `SteeringDesignRecorded` deliberately carries each determining value
+    TWICE: once flattened (`points_per_axis` ... `staged_threshold`, kept
+    so a reader of the pre-`brain` shape still gets a complete answer) and
+    once typed per substrate on `brain`. Two paths to one value is exactly
+    the shape that rots: an edit to the flattening that misses
+    `_brain_from_config`, or the reverse, leaves a pin that contradicts
+    itself and no equality on either half would notice.
+
+    Asserted field by field against the SAME event rather than by
+    comparing the two constructions, so both sides come from the one
+    `decide_steering_design_recorded` call a caller actually makes.
+    """
+    config = replace(_design().decide, substrate=substrate)  # type: ignore[arg-type]
+    event = decide_steering_design_recorded(
+        _defined(), [], _design(decide=config), eligible_status=_DEFINED, now=_NOW
+    )[0]
+
+    assert event.brain is not None
+    assert getattr(event.brain, brain_field) == getattr(event, scalar_field)
+
+
+@pytest.mark.unit
+def test_the_staged_handoff_brain_agrees_with_its_flat_scalar_twins() -> None:
+    """The nested arm has the same two-paths risk one level down.
+
+    `StagedBrain.handoff_brain` re-reads the four BoTorch scalars, so it
+    can drift from them independently of the top-level `threshold`.
+    """
+    config = replace(_design().decide, substrate="staged")
+    event = decide_steering_design_recorded(
+        _defined(), [], _design(decide=config), eligible_status=_DEFINED, now=_NOW
+    )[0]
+
+    assert isinstance(event.brain, StagedBrain)
+    assert event.brain.handoff_brain.min_observations == event.min_observations
+    assert event.brain.handoff_brain.num_restarts == event.num_restarts
+    assert event.brain.handoff_brain.raw_samples == event.raw_samples
+    assert event.brain.handoff_brain.seed == event.seed
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        (DecidePortConfig(substrate="in_memory"), InMemoryBrain()),
+        (
+            DecidePortConfig(substrate="grid_walk", points_per_axis=9),
+            GridWalkBrain(points_per_axis=9),
+        ),
+        (DecidePortConfig(substrate="sobol"), SobolBrain()),
+        (
+            DecidePortConfig(
+                substrate="botorch", min_observations=4, num_restarts=6, raw_samples=128, seed=2
+            ),
+            BoTorchBrain(min_observations=4, num_restarts=6, raw_samples=128, seed=2),
+        ),
+        (
+            DecidePortConfig(
+                substrate="staged",
+                staged_threshold=9,
+                min_observations=4,
+                num_restarts=6,
+                raw_samples=128,
+                seed=2,
+            ),
+            StagedBrain(
+                threshold=9,
+                handoff_brain=BoTorchBrain(
+                    min_observations=4, num_restarts=6, raw_samples=128, seed=2
+                ),
+            ),
+        ),
+        (
+            DecidePortConfig(
+                substrate="llm",
+                llm=LlmDecidePortConfig(
+                    model_ref=ModelRef(
+                        provider="anthropic", model="claude-opus-4-1", snapshot_pin="pinned"
+                    )
+                ),
+            ),
+            LlmBrain(provider="anthropic", model="claude-opus-4-1", snapshot_pin="pinned"),
+        ),
+    ],
+)
+def test_decide_records_the_brain_matching_every_substrate(
+    config: DecidePortConfig, expected: SteeringBrain
+) -> None:
+    """One `DecidePortConfig` -> `SteeringBrain` mapping per substrate,
+    through the REAL `decide_steering_design_recorded` call.
+
+    `test_decide_flattens_the_budget_and_the_brain_config_into_scalars`
+    only exercises `botorch`, the design's own default. This is what
+    actually proves `_brain_from_config` reads the CORRECT substrate's
+    values rather than always returning one fixed variant regardless of
+    `config.substrate` -- including `llm`, whose `snapshot_pin` no other
+    test in this module's pipeline covers at all.
+    """
+    event = decide_steering_design_recorded(
+        _defined(), [], _design(decide=config), eligible_status=_DEFINED, now=_NOW
+    )[0]
+
+    assert event.brain == expected
 
 
 @pytest.mark.unit
@@ -366,6 +517,58 @@ def test_decide_re_pins_when_the_stored_pin_carries_a_key_this_code_cannot_read(
 
     assert decide_steering_design_recorded(
         _defined(), [widened], design, eligible_status=_DEFINED, now=_NOW
+    )
+
+
+@pytest.mark.unit
+def test_decide_re_pins_once_against_a_legacy_pin_that_predates_the_brain_field() -> None:
+    """The mirror of the widened-schema case: the CANDIDATE is the wider one.
+
+    A pin written before `brain` existed has no such key, every pin written
+    since carries one, so `_designs_match` cannot call them identical even
+    when the design is unchanged. That is the same fail-toward-recording
+    direction the widened case takes, reached from the other side, and it
+    means the first conduct of an existing steered Procedure appends one
+    extra pin. Harmless (the FSM events delimit segments, and a reader
+    attributes a pass to the most recent pin at or before it) but real, and
+    worth pinning so nobody "fixes" the guard into suppressing it, which
+    would suppress a genuine correction on any pre-`brain` stream too.
+    """
+    design = _design()
+    pinned = _pinned(design)
+    legacy = replace(
+        pinned[0],
+        payload={k: v for k, v in pinned[0].payload.items() if k != "brain"},
+    )
+
+    assert "brain" not in legacy.payload
+
+    assert decide_steering_design_recorded(
+        _defined(), [legacy], design, eligible_status=_DEFINED, now=_NOW
+    )
+
+
+@pytest.mark.unit
+def test_decide_suppresses_a_re_pin_once_the_legacy_stream_has_been_re_pinned() -> None:
+    """The extra pin above happens ONCE, not on every subsequent conduct.
+
+    Without this, "re-pins against a legacy row" would be indistinguishable
+    from "re-pins forever", and the guard would be adding a row per conduct
+    on any Procedure old enough to predate the field.
+    """
+    design = _design()
+    pinned = _pinned(design)
+    legacy = replace(
+        pinned[0],
+        payload={k: v for k, v in pinned[0].payload.items() if k != "brain"},
+    )
+    re_pinned = _pinned(design, version=2)
+
+    assert (
+        decide_steering_design_recorded(
+            _defined(), [legacy, *re_pinned], design, eligible_status=_DEFINED, now=_NOW
+        )
+        == []
     )
 
 

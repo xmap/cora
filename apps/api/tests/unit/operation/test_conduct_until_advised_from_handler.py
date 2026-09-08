@@ -100,7 +100,7 @@ from cora.operation.ports.decide_port import (
 )
 from cora.operation.ports.measurement import Measurement
 from cora.recipe.aggregates.recipe.body import CaptureRef
-from cora.shared.steering import SteeringDesignSource, SteeringSubstrate
+from cora.shared.steering import InMemoryBrain, SteeringDesignSource, SteeringSubstrate
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 7, 2, 12, 0, 0, tzinfo=UTC)
@@ -287,6 +287,7 @@ async def _seed_held_steered(
                 spend_agent_id=None,
                 design_source=SteeringDesignSource.REQUEST,
                 occurred_at=_PRIOR,
+                brain=InMemoryBrain(),
             )
         )
     events.append(ProcedureStarted(procedure_id=procedure_id, occurred_at=_PRIOR))

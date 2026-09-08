@@ -79,12 +79,15 @@ from cora.shared.canonical_json import canonical_json_bytes
 from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookSchema
 from cora.shared.steering import (
+    SteeringBrain,
     SteeringDesignSource,
     SteeringObjective,
     SteeringSpace,
     SteeringSubstrate,
+    deserialize_brain,
     deserialize_objective,
     deserialize_space,
+    serialize_brain,
     serialize_objective,
     serialize_space,
 )
@@ -691,6 +694,53 @@ class SteeringDesignRecorded:
     supplied the design, None for an operator-issued wire request.
     `design_source` records where the design originated (`Request` today).
 
+    `brain` carries the SAME determining values as the six scalars above,
+    typed per substrate (`SteeringBrain` from `cora.shared.steering`, one
+    variant per `SteeringSubstrate` member) instead of flattened onto every
+    field regardless of relevance: a `grid_walk` segment's `brain` is a
+    `GridWalkBrain` with only `points_per_axis`, not a row that also
+    carries a `seed` and `staged_threshold` that determined nothing about
+    it. `None` for a stream written before this field existed; every new
+    pin populates a real value. See
+    [[project-per-kind-field-belongs-in-its-arm]] and
+    [[project-brain-family-coverage]].
+
+    THE SIX SCALARS ARE KEPT, and for exactly one reason: a stream written
+    before `brain` existed folds it to None, so the scalars are the only
+    answer such a row has, permanently. Nothing else argues for them. In
+    particular tach does NOT: `SteeringBrain` lives in `cora.shared`, which
+    this module already imports, so the aggregate could carry the typed
+    value alone if history allowed. Two recordings of one value is a
+    drift risk rather than a belt-and-braces win, so it is pinned by
+    `test_the_typed_brain_agrees_with_its_flat_scalar_twin`.
+
+    The duplicate-pin guard in
+    `_conduct_preparation.decide_steering_design_recorded` compares the full
+    serialized payload, so `brain` participates like any other key, with one
+    consequence worth stating: a pin predating the field has no `brain` key
+    and can never compare equal to a candidate that has one, so the first
+    conduct of a pre-existing steered Procedure appends one extra pin under
+    an unchanged design. That is the guard's intended fail-toward-recording
+    direction (the same one it takes when a STORED payload carries a key
+    this build cannot read) and it happens once, not per conduct.
+
+    EXPORT CAVEAT, because this field's whole purpose is a claim about the
+    published record. `brain`'s numeric fields survive tier-1 redaction;
+    an `llm` brain's `provider` / `model` / `snapshot_pin` are free text
+    and are withheld by the same rule that withholds `objective_capture_name`
+    and every axis name. So an LLM-steered segment publishes `brain` as
+    `{}`, which is ALSO the honest serialization of `InMemoryBrain` and
+    `SobolBrain`: in the exported record the two are distinguishable only
+    by the `substrate` beside them. The internal `events` row is complete;
+    the published row is not, for that one substrate. Recording this field
+    therefore does NOT by itself close the inferential gap
+    [[project-brain-family-coverage]] opens for `llm`, and must not be
+    reported as having done so. Closing it needs the three fields' ranges
+    genuinely closed first (a `Literal` provider, bounded model text), which
+    is its own reviewed diff, not a `ClosedValueObject` marker bolted on:
+    that marker's criterion is that EVERY field be closed by construction,
+    and `ModelRef` documents `provider` as a free string today.
+
     No `axis_count` field: a derived duplicate of `len(space.axes)` that
     could disagree with the axes, deliberately not carried.
 
@@ -716,6 +766,7 @@ class SteeringDesignRecorded:
     spend_agent_id: UUID | None
     design_source: SteeringDesignSource
     occurred_at: datetime
+    brain: SteeringBrain | None = None
 
 
 # Discriminated union of every event the Procedure aggregate emits.
@@ -1034,6 +1085,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             spend_agent_id=spend_agent_id,
             design_source=design_source,
             occurred_at=occurred_at,
+            brain=brain,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -1052,9 +1104,34 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "spend_agent_id": str(spend_agent_id) if spend_agent_id is not None else None,
                 "design_source": design_source.value,
                 "occurred_at": occurred_at.isoformat(),
+                "brain": serialize_brain(brain) if brain is not None else None,
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
+
+
+def _steering_brain_from(payload: dict[str, Any]) -> SteeringBrain | None:
+    """Fold the typed per-substrate brain, or None for a pre-`brain` stream.
+
+    `.get`, not `["brain"]`: a stream written before this field existed has
+    no such key, and folds to None rather than a guessed value. The six flat
+    scalars are already the faithful legacy answer for every substrate they
+    can describe, and inventing a `brain` for the one they cannot (`llm`,
+    whose model was not even threaded through the factory when those rows
+    were written) would fabricate provenance the row never recorded.
+
+    Re-reads `substrate` from the payload rather than taking the coerced
+    value as a parameter, so the helper is self-contained the way its two
+    siblings below are. That coerces the enum twice per fold, which is
+    deliberate: hoisting it to a local shared with the event constructor
+    would move it outside the `deserialize_or_raise` callable, and a
+    malformed substrate would then escape as a bare `ValueError` instead of
+    the wrapped `Malformed SteeringDesignRecorded` every other field gets.
+    """
+    raw = payload.get("brain")
+    if raw is None:
+        return None
+    return deserialize_brain(SteeringSubstrate(payload["substrate"]), raw)
 
 
 def _beam_requirement_from(payload: dict[str, Any]) -> BeamRequirement:
@@ -1346,6 +1423,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     ),
                     design_source=SteeringDesignSource(payload["design_source"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    brain=_steering_brain_from(payload),
                 ),
                 extra=(ValueError,),
             )

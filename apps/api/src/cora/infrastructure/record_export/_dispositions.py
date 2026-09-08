@@ -1761,6 +1761,23 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "started_by": "token:uuid",
     },
     "SteeringDesignRecorded": {
+        "brain": {
+            "handoff_brain": {
+                "min_observations": "keep:number",
+                "num_restarts": "keep:number",
+                "raw_samples": "keep:number",
+                "seed": "keep:number",
+            },
+            "min_observations": "keep:number",
+            "model": "drop:text",
+            "num_restarts": "keep:number",
+            "points_per_axis": "keep:number",
+            "provider": "drop:text",
+            "raw_samples": "keep:number",
+            "seed": "keep:number",
+            "snapshot_pin": "drop:text",
+            "threshold": "keep:number",
+        },
         "budget_iterations_remaining": "keep:number",
         "budget_wall_clock_seconds_remaining": "keep:number",
         "design_source": "keep:enum:SteeringDesignSource",
