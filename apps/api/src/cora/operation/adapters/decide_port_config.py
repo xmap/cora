@@ -92,7 +92,7 @@ Literal.
 
 
 @dataclass(frozen=True)
-class LlmBrainConfig:
+class LlmDecidePortConfig:
     """The `llm` substrate's own configuration: which model steers.
 
     Carried in its own arm rather than as one more field on
@@ -126,7 +126,7 @@ class DecidePortConfig:
 
     Those tunables are flat for historical reasons and a substrate records
     the ones that had no effect on it. `llm` is deliberately NOT flattened
-    the same way: its config is an arm, `LlmBrainConfig`, so a field that is
+    the same way: its config is an arm, `LlmDecidePortConfig`, so a field that is
     meaningful for one substrate does not become a field on all six.
     """
 
@@ -142,7 +142,7 @@ class DecidePortConfig:
     raw_samples: int = 256
     seed: int = 0
     staged_threshold: int = 5
-    llm: LlmBrainConfig | None = None
+    llm: LlmDecidePortConfig | None = None
     """The llm substrate's own config, set iff `substrate` is `llm`.
 
     Materialised with its defaults at construction rather than left None,
@@ -155,7 +155,7 @@ class DecidePortConfig:
     def __post_init__(self) -> None:
         if self.substrate == "llm":
             if self.llm is None:
-                object.__setattr__(self, "llm", LlmBrainConfig())
+                object.__setattr__(self, "llm", LlmDecidePortConfig())
         elif self.llm is not None:
             raise ValueError(
                 f"llm config supplied for the {self.substrate!r} substrate; "
@@ -208,7 +208,7 @@ def build_decide_port(
                 "the 'llm' decide substrate requires an llm port; "
                 "pass build_decide_port(config, llm=deps.llm)"
             )
-        brain = resolved.llm if resolved.llm is not None else LlmBrainConfig()
+        brain = resolved.llm if resolved.llm is not None else LlmDecidePortConfig()
         return LlmDecidePort(
             llm=llm,
             model_ref=brain.model_ref,
@@ -235,7 +235,7 @@ def _build_botorch(config: DecidePortConfig) -> BoTorchDecidePort:
 __all__ = [
     "DecidePortConfig",
     "DecideSubstrate",
-    "LlmBrainConfig",
+    "LlmDecidePortConfig",
     "WireDecideSubstrate",
     "build_decide_port",
 ]

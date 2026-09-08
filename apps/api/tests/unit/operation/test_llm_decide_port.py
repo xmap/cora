@@ -32,7 +32,7 @@ from cora.infrastructure.ports.llm import (
 from cora.operation.adapters._llm_decide_prompt import DEFAULT_LLM_DECIDE_MODEL
 from cora.operation.adapters.decide_port_config import (
     DecidePortConfig,
-    LlmBrainConfig,
+    LlmDecidePortConfig,
     build_decide_port,
 )
 from cora.operation.adapters.llm_decide_port import LlmDecidePort
@@ -290,7 +290,7 @@ async def test_build_decide_port_serves_the_model_the_config_names() -> None:
     llm = FakeLLM([FakeLLMResponse(parsed={"verdict": "Stop", "rationale": "ok"})])
     calls: list[SteeringLlmCall] = []
     port = build_decide_port(
-        DecidePortConfig(substrate="llm", llm=LlmBrainConfig(model_ref=named)),
+        DecidePortConfig(substrate="llm", llm=LlmDecidePortConfig(model_ref=named)),
         llm=llm,
         usage_sink=calls.append,
     )
@@ -320,7 +320,7 @@ def test_llm_config_is_refused_for_any_other_substrate(substrate: str) -> None:
     with pytest.raises(ValueError, match="meaningful only for 'llm'"):
         DecidePortConfig(
             substrate=substrate,  # type: ignore[arg-type]
-            llm=LlmBrainConfig(model_ref=DEFAULT_LLM_DECIDE_MODEL),
+            llm=LlmDecidePortConfig(model_ref=DEFAULT_LLM_DECIDE_MODEL),
         )
 
 
