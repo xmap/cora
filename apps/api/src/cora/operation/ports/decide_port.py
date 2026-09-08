@@ -176,6 +176,10 @@ class SteeringBudget:
         seconds fold on the stream, not a caller-supplied cumulative number
         (a cumulative number supplied by the same caller it is meant to
         bind is not a bound).
+
+    Deliberately has no spend dimension, and none is planned. See
+    `DecideSpendRefusedError`'s docstring for why a spend refusal is not
+    a third field here: it is not the same shape as either field above.
     """
 
     iterations_remaining: int | None = None
@@ -230,6 +234,29 @@ class DecideSpendRefusedError(DecideNotAvailableError):
     `DecideNotAvailableError` so the conduct loop's existing fold turns
     the refusal into a deferred steering decision with this class name
     on the record; no call was made and no tokens were bought.
+
+    ABORTS, deliberately, unlike a `SteeringBudget` exhaustion, which
+    completes. Considered and rejected making the two match when
+    `SteeringBudget` was given real teeth: the two conditions are not the
+    same shape. `SteeringBudget` is a per-call allowance the caller
+    declared FOR THIS RUN, exactly countable in advance (the loop knows
+    precisely when pass N+1 would be disallowed) -- running it out is the
+    loop doing exactly what it was told. A spend refusal has neither
+    property. It is unpredictable: `SpendGuard.refusal_reason` is a "may I
+    spend this now" request, not a "how much is left" query, so the loop
+    cannot see a refusal coming, only discover it by asking. And it is not
+    scoped to this run at all: the caps behind it (`AgentBudget`'s
+    calendar-windowed caps, the Allocation's facility-wide ceiling) are
+    standing, shared constraints that also gate every other LLM-backed
+    agent and every other spend at the instrument, agent- and
+    operator-attributed alike. A steered run can be refused by spend that
+    has nothing to do with it, which is not "the run finished what it was
+    asked", it is a third party cutting the run off mid-flight -- the same
+    bucket as a crashed or malformed-advice brain, which is why this stays
+    in `_DECIDE_ERRORS`'s abort family rather than moving to the budget
+    family. Subclassing `DecideNotAvailableError` already encodes this
+    correctly: the inherited message literally reads "Decider not
+    available", not "decider finished".
     """
 
 
