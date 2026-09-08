@@ -86,7 +86,7 @@ Lifecycle timestamps (`defined_at`, `versioned_at`, `deprecated_at`) live on the
 
 `ModelRef.snapshot_pin` enables reproducibility-by-construction: an Anthropic snapshot string, an OpenAI model fingerprint, or any provider-specific pin that names the exact weights used. Different `model_ref` requires defining a new Agent with a new `id`; the model identity is not a mutable field.
 
-Deterministic (rule-based) agents carry a sentinel `model_ref` (`provider="deterministic"`, `model="agent:<Kind>:v1"`) and no `prompt_template_id`: the field satisfies the aggregate's required-config contract but is never used to build a model client. RunSupervisor, CautionPromoter, and ClearanceExpirer all use this shape.
+Deterministic (rule-based) agents carry a sentinel `model_ref` (`provider="deterministic"`, `model="agent:<Kind>:v1"`) and no `prompt_template_id`: the field satisfies the aggregate's required-config contract but is never used to build a model client. RunSupervisor, CautionPromoter, and ClearanceExpirer all use this shape. `define_agent` enforces the `prompt_template_id` half: a command naming a Rule-kind `brain` alongside a non-null `prompt_template_id` is refused (`InvalidAgentPromptTemplateError`), since a Rule brain runs no prompt for the value to reach.
 
 ## FSM
 
