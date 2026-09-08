@@ -67,8 +67,11 @@ LLM_DECIDE_PROMPT_TEMPLATE_ID = UUID("01900000-0000-7000-8000-0000cccc0001")
 
 # Default model for the LLM steering brain. Sonnet (not Haiku) because
 # proposing the next acquisition from a growing observation history is a
-# reasoning task, not a summarisation task; a deployment may override via
-# the adapter's `model_ref` argument.
+# reasoning task, not a summarisation task. A deployment overrides it by
+# naming a model on `DecidePortConfig.llm`, which is what the factory
+# passes to the adapter's `model_ref`. The adapter argument existed before
+# that config arm did and nothing ever passed it, so this constant was the
+# only model the brain could run and no caller could read which one.
 DEFAULT_LLM_DECIDE_MODEL = ModelRef(
     provider="anthropic",
     model="claude-sonnet-4-5",

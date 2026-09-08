@@ -27,9 +27,12 @@ from cora.infrastructure.ports.llm import (
     LLMServerError,
     LLMTimeoutError,
     LLMUsage,
+    ModelRef,
 )
+from cora.operation.adapters._llm_decide_prompt import DEFAULT_LLM_DECIDE_MODEL
 from cora.operation.adapters.decide_port_config import (
     DecidePortConfig,
+    LlmBrainConfig,
     build_decide_port,
 )
 from cora.operation.adapters.llm_decide_port import LlmDecidePort
@@ -268,6 +271,62 @@ async def test_build_decide_port_threads_usage_sink_to_the_llm_arm() -> None:
     await port.advise_next(_evidence(_obs(1.0, 10.0)))
 
     assert len(calls) == 1
+
+
+@pytest.mark.unit
+async def test_build_decide_port_serves_the_model_the_config_names() -> None:
+    """The configured model reaches the call, rather than the adapter default.
+
+    The defect this pins is not a wrong model, it is an unreadable one:
+    `build_decide_port` never passed `model_ref`, so the brain always ran on
+    `DEFAULT_LLM_DECIDE_MODEL` and the config could not say which model had
+    steered. Asserting against the recorded `SteeringLlmCall` rather than
+    against the port's attribute is deliberate: the attribute proves the
+    value was stored, only the ledger row proves it was USED.
+    """
+    named = ModelRef(provider="anthropic", model="claude-opus-4-1")
+    assert named != DEFAULT_LLM_DECIDE_MODEL, "the fixture must differ from the fallback"
+
+    llm = FakeLLM([FakeLLMResponse(parsed={"verdict": "Stop", "rationale": "ok"})])
+    calls: list[SteeringLlmCall] = []
+    port = build_decide_port(
+        DecidePortConfig(substrate="llm", llm=LlmBrainConfig(model_ref=named)),
+        llm=llm,
+        usage_sink=calls.append,
+    )
+
+    await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert [c.request_model for c in calls] == [named.model]
+
+
+@pytest.mark.unit
+async def test_llm_config_defaults_are_readable_without_running_the_brain() -> None:
+    """A consumer can read which model will steer before any call is made.
+
+    This is what the design pin needs and could not have: the arm is
+    materialised at construction, so the answer does not live in an
+    adapter fallback that only resolves at build time.
+    """
+    config = DecidePortConfig(substrate="llm")
+
+    assert config.llm is not None
+    assert config.llm.model_ref == DEFAULT_LLM_DECIDE_MODEL
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("substrate", ["in_memory", "grid_walk", "sobol", "botorch", "staged"])
+def test_llm_config_is_refused_for_any_other_substrate(substrate: str) -> None:
+    with pytest.raises(ValueError, match="meaningful only for 'llm'"):
+        DecidePortConfig(
+            substrate=substrate,  # type: ignore[arg-type]
+            llm=LlmBrainConfig(model_ref=DEFAULT_LLM_DECIDE_MODEL),
+        )
+
+
+@pytest.mark.unit
+def test_a_non_llm_substrate_leaves_the_arm_empty() -> None:
+    assert DecidePortConfig(substrate="grid_walk").llm is None
 
 
 async def test_unknown_verdict_is_malformed() -> None:
