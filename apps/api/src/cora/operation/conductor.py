@@ -2662,7 +2662,13 @@ class Conductor:
         reason = the brain's message) then aborts, surfacing the brain's
         `error_class` on a `decide`-source `ConductorFailure`, per the port's
         "fold a raised exception into a recorded steering decision rather than
-        crashing the loop". A non-`Decide*Error` propagates.
+        crashing the loop". A non-`Decide*Error` propagates. This family
+        includes `DecideSpendRefusedError`, deliberately: a spend refusal
+        sits with a crashed or malformed-advice brain, not with the budget
+        paragraph below, because it is an unpredictable interruption by a
+        standing, shared cap rather than the loop finishing a per-call
+        allowance it was told about in advance. See that error's own
+        docstring for the full reasoning.
 
         `budget` is threaded into the `SteeringEvidence` the brain weighs AND
         enforced by the loop itself, checked at the top of every pass, before
