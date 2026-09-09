@@ -282,7 +282,7 @@
 | src/cora/api/\_experiment\_coordinator.py                                                |      106 |        2 |       32 |        3 |     96.4% |416-\>420, 470-\>480, 492-493 |
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       22 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/api/\_procedure\_watcher.py                                                     |       78 |        0 |       22 |        0 |    100.0% |           |
+| src/cora/api/\_procedure\_watcher.py                                                     |       81 |        0 |       22 |        0 |    100.0% |           |
 | src/cora/api/\_readiness.py                                                              |       39 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/api/\_run\_initiator.py                                                         |      151 |       14 |       30 |        5 |     88.4% |157-158, 187-188, 233, 253, 300, 305-306, 327-\>316, 391-392, 399-406 |
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
@@ -1512,7 +1512,7 @@
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/infrastructure/capture\_scan\_ingestor\_binding.py                              |       77 |        0 |       20 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |      403 |       11 |       76 |        6 |     96.5% |1010, 1853-1857, 1940-1944, 1952-1956, 1965-1969, 2116-2121 |
+| src/cora/infrastructure/config.py                                                        |      411 |       11 |       78 |        6 |     96.5% |1017, 1860-1864, 1947-1951, 1959-1963, 1972-1976, 2136-2141 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |      133 |        1 |       20 |        2 |     98.0% |1263, 1456-\>1452 |
 | src/cora/infrastructure/edge\_runtime.py                                                 |       16 |        0 |        0 |        0 |    100.0% |           |
@@ -2733,7 +2733,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **63358** | **1403** | **9780** |  **442** | **97.3%** |           |
+| **TOTAL**                                                                                | **63369** | **1403** | **9782** |  **442** | **97.3%** |           |
 
 
 ## Setup coverage badge
