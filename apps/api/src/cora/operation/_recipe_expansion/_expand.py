@@ -79,6 +79,31 @@ def _input_uri_to_wire(uri: str | OutputRef) -> Any:
     return uri
 
 
+def _parameter_value_to_wire(value: Any) -> Any:
+    """Serialize ONE ComputeStep `parameters` value to the hash wire form.
+
+    Mirrors `_input_uri_to_wire`'s element-wise shape, for the same reason:
+    `canonical_json_bytes` has no `default=`, so a raw `CaptureRef` /
+    `SteeringRef` value anywhere in the mapping would crash the encoder. A
+    `CaptureRef` becomes `{"__capture__": name}`, a `SteeringRef` becomes
+    `{"__steering__": name}`, identically to `_step_to_wire`'s `SetpointStep`
+    arm; any other value (a literal) passes through unchanged. Encode-only."""
+    if isinstance(value, CaptureRef):
+        return {_CAPTURE_WIRE_KEY: value.capture_name}
+    if isinstance(value, SteeringRef):
+        return {_STEERING_WIRE_KEY: value.steering_axis_name}
+    return value
+
+
+def _parameters_to_wire(parameters: Mapping[str, Any]) -> dict[str, Any]:
+    """Serialize a ComputeStep `parameters` mapping to the hash wire form.
+
+    Per-key application of `_parameter_value_to_wire`. A `parameters` dict
+    with no ref values hashes byte-identical to a plain `dict(parameters)`
+    copy, so no existing pinned `steps_hash` is invalidated."""
+    return {key: _parameter_value_to_wire(val) for key, val in parameters.items()}
+
+
 def _criterion_from_wire(
     payload: Mapping[str, Any],
 ) -> EqualsCriterion | WithinToleranceCriterion:
@@ -117,12 +142,16 @@ def _expand_step(step: RecipeStep, bindings: Mapping[str, Any]) -> Step:
     if isinstance(step, RecipeCaptureStep):
         return CaptureStep(address=step.address, capture_name=step.capture_name)
     if isinstance(step, RecipeComputeStep):
-        # All fields are LITERAL (no BindingRef on a compute step yet), so they
-        # pass through verbatim with no resolve_value pass; `capture_name`
-        # (slice 6c) + `output_ref_name` (compute-branch chaining) are literal
-        # template fields carried through unresolved, and an `OutputRef` element
-        # of `input_uris` rides through UNRESOLVED (the Conductor resolves it at
-        # execute time). Binding a compute parameter is the deferred widening.
+        # `command` + `output_uri` are LITERAL (no BindingRef on either). Each
+        # `parameters` value may be a literal, a `CaptureRef`, or a `SteeringRef`;
+        # none of the three needs a resolve_value pass here (`BindingRef` is the
+        # only sentinel `resolve_value` substitutes, and it stays unsupported in
+        # `parameters`), so the mapping passes through verbatim and a CaptureRef/
+        # SteeringRef rides UNRESOLVED into the runtime ComputeStep, exactly like
+        # an `OutputRef` element of `input_uris`; the Conductor resolves it at
+        # execute time. `capture_name` (slice 6c) + `output_ref_name`
+        # (compute-branch chaining) are likewise literal template fields carried
+        # through unresolved.
         return ComputeStep(
             command=step.command,
             input_uris=step.input_uris,
@@ -200,7 +229,7 @@ def _step_to_wire(step: Step) -> dict[str, Any]:
             "command": list(step.command),
             "input_uris": [_input_uri_to_wire(u) for u in step.input_uris],
             "output_uri": step.output_uri,
-            "parameters": dict(step.parameters),
+            "parameters": _parameters_to_wire(step.parameters),
             "capture_name": step.capture_name,
             "output_ref_name": step.output_ref_name,
         }
