@@ -568,9 +568,8 @@ def _render_index(
 
     blocks.append("## More")
     blocks.append(
-        "- [Techniques](techniques.md): what the beamline is for.\n"
-        "- [Governance](governance.md): who acts, and the trust shape that gates them.\n"
-        "- [Open questions](questions.md): the world-facts CORA needs staff to confirm."
+        "- [Notes](notes.md): techniques, governance, the CORA model index, and "
+        "open modelling questions."
     )
     return "\n\n".join(blocks) + "\n"
 
