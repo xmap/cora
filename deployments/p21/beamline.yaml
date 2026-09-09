@@ -15,7 +15,7 @@
 # most devices are area-grouped generic motor banks (oh_u*, eh3_u*, lab*) whose per-
 # axis roles are not labelled, so the Asset grouping leans on the host / bank prefixes
 # and is carried confirm (GROUP-1). Every value is carried confirm until P21 staff
-# verify it. The extraction is in research/petra-iii/.
+# verify it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family, and no new technique vocabulary. P21 is a thin
 # high-energy materials beamline; it reuses LinearStage / Slit and the pending

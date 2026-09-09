@@ -88,9 +88,3 @@ talks/*/*.pdf
 # of src/ + tests/ under apps/api/mutants/). Never committed.
 apps/api/mutants/
 apps/api/mutmut-stats.json
-
-# Research notes and reverse-engineering working tree are tracked (surveys,
-# per-beamline facts, candidate descriptors). Only the regenerable shallow-clone
-# cache the extractor writes is ignored.
-research/*/.cache/
-research/.cache/

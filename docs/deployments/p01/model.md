@@ -17,7 +17,7 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 P01 is a new Site's first beamline, and two things genuinely new at the modelling level. It is **CORA's first PETRA III beamline** and a further **Tango / Sardana control floor** (after MAX IV and ALBA). Its science is hard X-ray dynamics: nuclear resonant scattering in EH1, diffraction in EH2, and RIXS in EH3, across 2.5-80 keV.
 
-- **The control plane (`CTRL-1`).** PETRA III runs Tango with Sardana as the scan layer. P01 is the first deployment whose device handles were read from a DESY OnlineXML registry, the Tango analog of the ESRF BLISS Beacon config and the APS Guarneri `devices.yml`. The OnlineXML extractor that produced the candidate is `scripts/reverse_engineer/` (the `--source onlinexml` path).
+- **The control plane (`CTRL-1`).** PETRA III runs Tango with Sardana as the scan layer. P01 is the first deployment whose device handles were read from a DESY OnlineXML registry, the Tango analog of the ESRF BLISS Beacon config and the APS Guarneri `devices.yml`. The OnlineXML extractor that produced the candidate is `reverse_engineer/` in the (private) `xmap/research` repo (the `--source onlinexml` path).
 - **The technique branch (`TECH-1`).** NRS and RIXS are new to CORA's catalog but reuse the IXS / RIXS slugs already carried pending across the fleet, so no Method is coined now.
 
 ## No new families (the optics / motion spine reuses the fleet precedent)

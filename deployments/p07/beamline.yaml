@@ -13,7 +13,7 @@
 # control handles are real, read from that registry; vendor part numbers, crystal
 # cuts, the magnet field, energy calibration, and physical positions are not in it and
 # are open questions. Every value is carried confirm until P07 staff verify it. The
-# extraction is in research/petra-iii/.
+# extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P07 reuses existing Families end to end, including
 # the graduated catalog Magnet Family (of which P07's 17 T magnet is a further

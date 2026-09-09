@@ -12,7 +12,7 @@
 # nanofocus registries). Device logical names and Tango control handles are real, read
 # from that registry; vendor part numbers, focal sizes, energy calibration, and
 # physical positions are not in it and are open questions. Every value is carried
-# confirm until P03 staff verify it. The extraction is in research/petra-iii/.
+# confirm until P03 staff verify it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P03 reuses existing Families end to end, but it is
 # the fleet's first SAXS / WAXS beamline and brings a two-endstation layout (microfocus

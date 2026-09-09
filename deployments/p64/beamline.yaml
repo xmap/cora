@@ -11,7 +11,7 @@
 # control handles are real, read from that registry; vendor part numbers, crystal
 # cuts, the detector element count, energy calibration, and physical positions are not
 # in it and are open questions. Every value is carried confirm until P64 staff verify
-# it. The extraction is in research/petra-iii/.
+# it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P64 reuses existing Families end to end. It is the
 # fleet's high-rate fluorescence EXAFS beamline; its defining feature is the large

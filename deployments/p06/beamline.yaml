@@ -11,7 +11,7 @@
 # control handles are real, read from that registry; vendor part numbers, focal
 # sizes, energy ranges, and physical positions are not in it and are open questions.
 # Every value is carried confirm until P06 staff verify it. The extraction is in
-# research/petra-iii/.
+# xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P06 binds existing Families end to end, but it is
 # the fleet's most complete scanning-probe instrument: a micro-probe endstation (MC01)

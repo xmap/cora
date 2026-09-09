@@ -15,7 +15,7 @@
 # generically-named motor bank (eh_mot* on the hasep23oh host) whose per-axis roles are
 # not labelled, so the Asset grouping leans on the bank prefix and is carried confirm
 # (GROUP-1). Every value is carried confirm until P23 staff verify it. The extraction is
-# in research/petra-iii/.
+# in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family, and no new technique vocabulary. P23 is a thin
 # in-situ diffraction beamline; it reuses LinearStage and the pending diffraction slug

@@ -11,7 +11,7 @@
 # logical names and Tango control handles are real, read from that registry; vendor
 # part numbers, coherence lengths, energy calibration, and physical positions are not
 # in it and are open questions. Every value is carried confirm until P10 staff verify
-# it. The extraction is in research/petra-iii/.
+# it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P10 reuses existing Families end to end, and it
 # is the fleet's second XPCS beamline after the APS 8-ID exercise (which graduated the
