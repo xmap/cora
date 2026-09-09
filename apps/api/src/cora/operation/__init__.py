@@ -5,9 +5,12 @@ Owns episodic operational work in CORA (ISA-106 lens):
   - `Procedure` aggregate: one execution of an episodic operational
     task — bakeout, characterization, optical alignment, beam-mode
     change, recovery procedure, ID maintenance, KB switching. Each
-    Procedure has sequenced steps; each step has a Setpoint / Action
-    / Check triplet (CORA's rename of ISA-106's canonical
-    Command/Perform/Verify to avoid catastrophic CQRS collision).
+    Procedure has sequenced steps; the Setpoint / Action / Check core
+    is CORA's rename of ISA-106's canonical Command/Perform/Verify to
+    avoid catastrophic CQRS collision, and Capture (a runtime value
+    read) plus Compute (a ComputePort job submission) extend it for
+    the conduct-path runtimes. `STEP_KIND_VALUES` is the single source
+    of truth for the current set.
 
 Track B BC (ISA-106 lens). Independent of Track A (Recipe / Subject
 / Data). Distinct from ISA-88 batch operations which the Run BC
@@ -21,8 +24,8 @@ rationale.
 
 Slices: `register_procedure` (genesis -> Defined), `start_procedure`
 / `complete_procedure` / `abort_procedure` / `truncate_procedure`
-(FSM transitions), `append_activities` (per-step logbook with
-Setpoint/Action/Check rows mirroring Run BC's Observation channel),
+(FSM transitions), `append_activities` (per-step logbook, one row
+per step kind, mirroring Run BC's Observation channel),
 `get_procedure` (fold-on-read), `list_procedures` (projection-backed).
 
 ## Step vs Activity altitude split
@@ -31,18 +34,21 @@ Two `Step`-shaped concepts live in this BC at different altitudes,
 deliberately:
 
   - **Runtime `Step` union** (`conductor.py`): the discriminated
-    union `SetpointStep | ActionStep | CheckStep` — the IN-FLIGHT
-    spec the Conductor walks during a Procedure execution. Each
-    variant is what the conductor IS TOLD TO DO at one step.
+    union of per-kind step variants — the IN-FLIGHT spec the
+    Conductor walks during a Procedure execution. Each variant is
+    what the conductor IS TOLD TO DO at one step. The arm set is
+    pinned against `STEP_KIND_VALUES` by
+    `test_conductor_step_kinds_match_procedure`; read the union in
+    `conductor.py` rather than an enumeration here, which goes stale
+    every time an arm lands.
   - **Persisted `Activity` entry** (`aggregates/procedure/entries.py`):
     one row per executed step, capturing WHAT HAPPENED (the step
-    that ran, with its result). Path C polymorphic table with
-    `step_kind` discriminator carrying the runtime variant's name
-    (`setpoint` / `action` / `check`).
+    that ran, with its result). Path C polymorphic table with a
+    `step_kind` discriminator carrying the runtime variant's name.
 
 The relationship: each runtime `Step` execution writes one
-`Activity` entry through the `ActivityStore` port. Conductor's
-`SetpointStep | ActionStep | CheckStep` are the SPEC; the
+`Activity` entry through the `ActivityStore` port. The Conductor's
+`Step` arms are the SPEC; the
 `entries_operation_procedure_activities` rows are the LOG.
 
 The 2026-06-09 logbook-entry rename (project_logbook_entry_storage
