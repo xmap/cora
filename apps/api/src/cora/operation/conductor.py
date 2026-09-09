@@ -447,6 +447,55 @@ def _input_uri_from_wire(value: Any) -> "str | OutputRef":
     return cast("str", value)
 
 
+def _parameter_value_to_wire(value: Any) -> Any:
+    """Serialize ONE ComputeStep `parameters` value to the pinned conduct payload form.
+
+    Mirrors `_input_uri_to_wire`'s element-wise shape for the same reason: a
+    raw `CaptureRef` / `SteeringRef` anywhere in the mapping would crash the
+    JSON / hash encoder. A `CaptureRef` becomes `{"__capture__": name}`, a
+    `SteeringRef` becomes `{"__steering__": name}`, identical in shape to a
+    `SetpointStep.value` ref and to `_recipe_expansion._expand`'s hash
+    encoder (the two must stay byte-identical or a resume could mis-decode a
+    pinned step); any other value (a literal) passes through unchanged."""
+    if isinstance(value, CaptureRef):
+        return {_CAPTURE_REF_KEY: value.capture_name}
+    if isinstance(value, SteeringRef):
+        return {_STEERING_REF_KEY: value.steering_axis_name}
+    return value
+
+
+def _parameter_value_from_wire(value: Any) -> Any:
+    """Deserialize ONE wire ComputeStep `parameters` value; reconstruct a ref.
+
+    Inverse of `_parameter_value_to_wire`: a `{"__capture__": name}` dict
+    becomes a `CaptureRef`, a `{"__steering__": name}` dict becomes a
+    `SteeringRef`, any other value (a literal) passes through."""
+    if isinstance(value, dict):
+        typed = cast("dict[str, Any]", value)
+        if set(typed) == {_CAPTURE_REF_KEY}:
+            return CaptureRef(capture_name=str(typed[_CAPTURE_REF_KEY]))
+        if set(typed) == {_STEERING_REF_KEY}:
+            return SteeringRef(steering_axis_name=str(typed[_STEERING_REF_KEY]))
+    return cast("Any", value)
+
+
+def _parameters_to_wire(parameters: Mapping[str, Any]) -> dict[str, Any]:
+    """Serialize a ComputeStep `parameters` mapping to the pinned conduct payload form.
+
+    Per-key application of `_parameter_value_to_wire`. A `parameters` dict
+    with no ref values serializes byte-identical to a plain `dict(parameters)`
+    copy, so no existing recorded payload or `ResolvedStepsRecorded` entry
+    changes shape."""
+    return {key: _parameter_value_to_wire(val) for key, val in parameters.items()}
+
+
+def _parameters_from_wire(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Deserialize a wire ComputeStep `parameters` mapping; reconstruct any refs.
+
+    Inverse of `_parameters_to_wire`, applied per-key via `_parameter_value_from_wire`."""
+    return {key: _parameter_value_from_wire(val) for key, val in payload.items()}
+
+
 """Closed-set step-kind discriminators from [[project_operation_design]].
 The source of truth for the value set is `STEP_KIND_VALUES` on the
 Procedure aggregate (re-imported above); the architecture fitness
@@ -708,6 +757,17 @@ class ComputeStep:
     deposited loud-fails (`UnresolvedOutputRef`) with NO in-flight marker and
     nothing submitted, parity with a `SetpointStep` `CaptureRef`.
 
+    `parameters` values may individually be a literal, a `CaptureRef`, or a
+    `SteeringRef`: the compute-branch sibling of `SetpointStep.value`. Each
+    rides through expansion + the determinism hash as an opaque sentinel; the
+    Conductor resolves every ref-valued key at execute time (BEFORE building
+    the JobSpec, same ordering as the `input_uris` resolve) against the
+    per-conduct `captures` dict, so a measured value or a brain's advised
+    coordinate can become a compute job's parameter rather than only a motor
+    position. An unresolved `CaptureRef` or unseeded `SteeringRef` loud-fails
+    with NO in-flight marker and nothing submitted, parity with the
+    `input_uris` `OutputRef` case.
+
     `output_ref_name` names the `outputs` slot the produced `ArtifactRef`
     deposits into (the FILE arm), the artifact-bus chaining twin of
     `capture_name`. When set, after the file arm fetches the `ArtifactRef` and
@@ -731,7 +791,7 @@ class ComputeStep:
     command: tuple[str, ...]
     input_uris: tuple[str | OutputRef, ...] = ()
     output_uri: str | None = None
-    parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
+    parameters: Mapping[str, Any | CaptureRef | SteeringRef] = field(default_factory=dict[str, Any])
     capture_name: str | None = None
     output_ref_name: str | None = None
 
@@ -4899,7 +4959,7 @@ def step_to_payload(step: Step) -> dict[str, Any]:
             "command": list(step.command),
             "input_uris": [_input_uri_to_wire(u) for u in step.input_uris],
             "output_uri": step.output_uri,
-            "parameters": dict(step.parameters),
+            "parameters": _parameters_to_wire(step.parameters),
             "capture_name": step.capture_name,
             "output_ref_name": step.output_ref_name,
         }
@@ -4961,7 +5021,7 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
             command=tuple(payload["command"]),
             input_uris=tuple(_input_uri_from_wire(u) for u in payload.get("input_uris", ())),
             output_uri=payload.get("output_uri"),
-            parameters=dict(payload.get("parameters", {})),
+            parameters=_parameters_from_wire(payload.get("parameters", {})),
             capture_name=payload.get("capture_name"),
             output_ref_name=payload.get("output_ref_name"),
         )

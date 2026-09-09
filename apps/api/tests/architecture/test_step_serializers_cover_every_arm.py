@@ -35,7 +35,7 @@ from cora.operation.conductor import (
     step_to_payload,
     steps_from_payload,
 )
-from cora.recipe.aggregates.recipe.body import OutputRef
+from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, SteeringRef
 
 # One representative instance per Step arm. The mapping is keyed by the arm
 # class so a new union arm with no instance here trips the coverage assertion
@@ -74,6 +74,22 @@ _COMPUTE_STEP_NO_CAPTURE = ComputeStep(
     parameters={"algorithm": "vo"},
     capture_name=None,
     output_ref_name=None,
+)
+
+# A ComputeStep whose `parameters` mixes a literal with a CaptureRef and a
+# SteeringRef value. Kept SEPARATE from `_INSTANCES` for the same reason as
+# `_COMPUTE_STEP_NO_CAPTURE`: it targets one specific field's ref-bearing
+# shape rather than doubling as the arm's baseline representative. A raw
+# CaptureRef/SteeringRef anywhere in `parameters` would crash
+# `canonical_json_bytes` (no `default=`) if a serializer copied the mapping
+# verbatim instead of per-value encoding it.
+_COMPUTE_STEP_WITH_PARAMETER_REFS = ComputeStep(
+    command=("tomopy", "recon"),
+    parameters={
+        "algorithm": "sirt",
+        "rotation_center": CaptureRef(capture_name="offset"),
+        "seed": SteeringRef(steering_axis_name="focus"),
+    },
 )
 
 _CHECK_WIRE_KIND = "check"
@@ -235,3 +251,31 @@ def test_compute_step_output_ref_round_trips_both_serializers() -> None:
         # determinism hash splits an output_ref_name-set step from a None one)
         (wire,) = steps_to_wire((instance,))
         assert wire["output_ref_name"] == instance.output_ref_name
+
+
+@pytest.mark.architecture
+def test_compute_step_parameter_refs_round_trip_both_serializers() -> None:
+    """A CaptureRef/SteeringRef nested in `parameters` survives both serializers.
+
+    Mirrors `test_compute_step_output_ref_round_trips_both_serializers`: a raw
+    CaptureRef/SteeringRef anywhere in `parameters` would crash
+    `canonical_json_bytes` (no `default=`) if a serializer copied the mapping
+    verbatim instead of per-value encoding it.
+    """
+    instance = _COMPUTE_STEP_WITH_PARAMETER_REFS
+
+    # payload serializer round-trip (value-identical, incl. the ref objects,
+    # not flattened to their sentinel dicts)
+    (rebuilt,) = steps_from_payload([step_to_payload(instance)])
+    assert rebuilt == instance, (
+        "ComputeStep parameters did not round-trip through step_to_payload/_step_from_payload."
+    )
+
+    # hash/wire serializer encodes each ref as its sentinel shape, identical
+    # to the SetpointStep.value sentinel form
+    (wire,) = steps_to_wire((instance,))
+    assert wire["parameters"] == {
+        "algorithm": "sirt",
+        "rotation_center": {"__capture__": "offset"},
+        "seed": {"__steering__": "focus"},
+    }
