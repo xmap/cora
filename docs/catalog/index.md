@@ -46,3 +46,5 @@ Some apparent new families are settings axes, not family axes. A high-framerate 
 ## Source of truth
 
 Roles and the closed affordance / executor-shape vocabularies are code-defined and validated against the code by drift-guard tests. Families, Capabilities, Methods, and Models are authored in `catalog.yaml`, which supersedes the scenario fixtures as the consolidated source. Until the seeder inversion lands, the code seeds remain authoritative for what CORA actually registers; `catalog.yaml` is the docs projection, kept honest by the round-trip and roles drift-guard tests.
+
+A graduation note (a Family or Role reaching the rule-of-three, "graduated across Diamond i22, i03, i11") cites the real beamlines that justified it, but does not reproduce their device data here: only CORA's one live deployment, 2-BM, has a descriptor in this repo. The beamlines a graduation note names are modeled from public source, checkable on demand, in the private `xmap/research` (draft surveys and candidates) and `xmap/descriptors` (self-validated, promoted) repos.

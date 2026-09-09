@@ -13,6 +13,10 @@
 #     equality (the graduated device-class roster), same as roles.
 #   - capabilities, methods, models have no global code seed; this file is
 #     their consolidated source, guarded by the round-trip test.
+#   - a note's cited beamlines (e.g. "graduated across Diamond i22, i03, i11")
+#     are not reproduced here; only 2-BM has a descriptor in this repo. Their
+#     device data is checkable on demand in the private xmap/research (draft)
+#     and xmap/descriptors (promoted) repos.
 #
 # An affordance is a Family property: it declares what the device CAN DO at the
 # physics layer. A Role declares required_affordances (the contract), and a
