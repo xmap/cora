@@ -1,15 +1,26 @@
 """Render a beamline descriptor into a docs page.
 
 `render_all(descriptor)` returns a {src_uri: markdown} dict (mirroring the
-contract scripts/scenarios_pages.render_all used) with a single generated page,
-deployments/2-bm/beamline.md: the Source page, a walk along the source-stage
-devices (front-end optics to the sample), one section per subsystem with a device
-table per group. The cross-cutting controllers and supplies are their own pages
-(equipment/controls.md, operations.md); the descriptor still carries them for the
-tests and the future seeder.
+contract scripts/scenarios_pages.render_all used) with a single generated page:
+2-BM's Source-stage walk (front-end optics to the sample), one section per
+subsystem with a device table per group. 2-BM hand-authors everything else
+(index, sample, detector, controls, operations, ...); this is the one page
+generated from the descriptor, so it cannot silently drift from what the
+source-stage devices actually are.
 
-The mkdocs on_files hook in scripts/mkdocs_hooks.py injects these as virtual
-files at build time; nothing is written to disk.
+This module used to also generate a beamline's whole reader set (index,
+inventory, the sample/detector/controls beam-walk) for "model-tier" beamlines:
+CORA's further modeled-but-not-deployed beamlines, reverse-engineered from
+public source. That corpus moved to the private xmap/descriptors repo, and the
+generator went with the reasoning that moved it: cora's own domain model "only
+contains what at least one real deployment forced into it" (docs/deployments/
+index.md), and the same now holds for this generator. 2-BM is the only
+descriptor cora carries, and it is not model-tier, so that code had no real
+input left to run against. Recoverable from git history if a second real
+deployment ever needs it.
+
+The mkdocs on_files hook in scripts/mkdocs_hooks.py injects this as a virtual
+file at build time; nothing is written to disk.
 """
 
 from __future__ import annotations
@@ -71,24 +82,13 @@ def render_all(
     slug: str = "2-bm",
     catalog_families: frozenset[str] = frozenset(),
     catalog_models: frozenset[str] = frozenset(),
-    facility_label: str | None = None,
-    control_plane: str | None = None,
-    model_tier: bool = False,
 ) -> dict[str, str]:
-    """Render a beamline's generated docs pages.
+    """Render the beamline's one generated page: its Source-stage walk.
 
-    Every beamline gets the Source-stage walk (`beamline.md`). A model-tier
-    beamline (a reverse-engineered / design scaffold, not one of the richly
-    hand-authored pilots) additionally gets its whole reader set generated from
-    the descriptor: the front-door `index.md`, the `inventory.md` reference, and
-    the Sample / Detector / Controls beam-walk pages. The pilots pass
-    model_tier=False and keep their hand-authored set; only their Source walk is
-    generated, as before.
-
-    A model-tier beamline with `page_layout: stages` (the SRX pilot) uses a
-    flattened set instead: Inventory is dissolved into flat `source.md`,
-    `sample.md`, `detector.md`, and `controls.md` siblings (no `equipment/`
-    folder, no `inventory.md`), with `index.md` linking them directly.
+    `page_layout: stages` (2-BM's layout) generates a flat `source.md` sibling
+    of the hand-authored pages; `page_layout: walk` generates `beamline.md`
+    instead, with the walk-layout framing in its intro (no current descriptor
+    uses it, but nothing here assumes stages is the only valid choice).
     """
     global _KNOWN_FAMILIES, _KNOWN_MODELS
     _KNOWN_FAMILIES = catalog_families
@@ -97,50 +97,22 @@ def render_all(
     layout = descriptor.beamline.page_layout
 
     if layout == "stages":
-        # Stages layout: the generated Source page sits flat at source.md. A
-        # model-tier beamline's whole reader set is generated (index + the flat
-        # stage pages); a pilot hand-authors index / sample / detector / controls
-        # and their rich operational pages, so only its Source page generates.
-        pages = {
+        return {
             f"deployments/{slug}/source.md": _render_page(
                 descriptor,
                 slug=slug,
                 blob_url=blob_url,
                 link_inventory=False,
-                include_enclosures=not model_tier,
                 flat=True,
-                show_source_ref=not model_tier,
+                show_source_ref=True,
             ),
         }
-        if model_tier:
-            pages[f"deployments/{slug}/index.md"] = _render_index(
-                descriptor,
-                slug=slug,
-                facility_label=facility_label,
-                control_plane=control_plane,
-                page_layout=layout,
-            )
-            pages.update(
-                _render_beamwalk(
-                    descriptor, slug=slug, control_plane=control_plane, prefix="", depth="../../"
-                )
-            )
-        return pages
 
-    pages = {
+    return {
         f"deployments/{slug}/beamline.md": _render_page(
-            descriptor, slug=slug, blob_url=blob_url, show_source_ref=not model_tier
+            descriptor, slug=slug, blob_url=blob_url, show_source_ref=True
         )
     }
-    if model_tier:
-        pages[f"deployments/{slug}/index.md"] = _render_index(
-            descriptor, slug=slug, facility_label=facility_label, control_plane=control_plane
-        )
-        pages[f"deployments/{slug}/inventory.md"] = _render_inventory(
-            descriptor, slug=slug, blob_url=blob_url
-        )
-        pages.update(_render_beamwalk(descriptor, slug=slug, control_plane=control_plane))
-    return pages
 
 
 def _esc(text: str) -> str:
@@ -418,254 +390,3 @@ def _render_page(
         blocks.append(_render_group(name, group))
 
     return "\n\n".join(blocks) + "\n"
-
-
-# ---------------------------------------------------------------------------
-# Model-tier reader pages, generated from the descriptor.
-#
-# A model beamline's whole reader set is generated so it cannot drift or carry
-# engineering-internal bookkeeping (rule-of-three, loose-family graduation,
-# tracking tags). The set is beamline-natural: a front door, then the beam walk
-# (source to detector) plus controls. The default "walk" layout keeps the full
-# asset tree as a separate Inventory reference; the "stages" layout dissolves
-# Inventory into the flat source/sample/detector/controls stage pages.
-# ---------------------------------------------------------------------------
-
-_STAGE_FILE = {"sample": "sample.md", "detection": "detector.md"}
-_STAGE_TITLE = {"sample": "Sample", "detection": "Detector"}
-
-
-def _confirm_clause(descriptor: BeamlineDescriptor) -> str:
-    beamline = descriptor.beamline
-    if beamline.evidence == "live":
-        return ""
-    if beamline.evidence == "controls_config":
-        return (
-            " The device handles are read from the facility's public controls configuration and "
-            "verified against it; vendor parts, energies, and physical positions are not in it and "
-            "are carried `confirm` until beamline staff verify them."
-        )
-    if beamline.evidence == "design_report":
-        return (
-            " The values are read from the beamline's design report and carried `confirm` until "
-            "staff verify them against the built instrument."
-        )
-    return (
-        " The device families are inferred from public facility pages and papers; no control "
-        "handles or vendor models are public, so every value is carried `confirm` until staff "
-        "verify it."
-    )
-
-
-def _render_index(
-    descriptor: BeamlineDescriptor,
-    *,
-    slug: str,
-    facility_label: str | None,
-    control_plane: str | None,
-    page_layout: str = "walk",
-) -> str:
-    beamline = descriptor.beamline
-    extra = beamline.model_extra or {}
-    name = beamline.name or slug
-    summary = beamline.summary or ""
-    blocks: list[str] = [f"# {name}"]
-    if summary:
-        cov = " A deliberately partial first cut." if beamline.coverage == "partial" else ""
-        blocks.append(f"*{summary}.{cov}*")
-
-    # Facts table: identity + seam, all from the descriptor.
-    facility_cell = beamline.facility or ""
-    if facility_label:
-        facility_cell = f"[{facility_label}](../{beamline.facility}/index.md)"
-        if control_plane:
-            facility_cell += f" ({control_plane})"
-    facts: list[list[str]] = [["Facility", facility_cell]]
-    if beamline.sector:
-        facts.append(["Sector", str(beamline.sector)])
-    src = str(beamline.source) if beamline.source else ""
-    if src:
-        facts.append(["Source", src])
-    facts.append(
-        ["Modelled", f"{_MATURITY[beamline.maturity]}, {_COVERAGE[beamline.coverage]} coverage"]
-    )
-    blocks.append(_table(["Property", "Value"], facts))
-
-    # The provenance caveat (how trustworthy the facts are, keyed on evidence
-    # tier) folds into the generated-from banner rather than a near-identical
-    # "What CORA models" section; the enclosures it used to name are in the
-    # table below.
-    banner = (
-        f"This page is generated from the descriptor at "
-        f"[`deployments/{slug}/beamline.yaml`]({_BLOB_BASE}/deployments/{slug}/beamline.yaml). "
-        "Edit the descriptor, not this page."
-    )
-    caveat = _confirm_clause(descriptor).strip()
-    ref = beamline.source_ref
-    if ref is not None:
-        # Name the specific public source the facts were read from, alongside the
-        # evidence-tier caveat.
-        caveat = (caveat + " ").lstrip() + f"Source: [{ref.label}]({ref.url})."
-    if caveat:
-        banner += "\n\n" + caveat
-    blocks.append(_admonition(banner, kind="info", title="Generated from the descriptor"))
-
-    stages = {g.stage for _n, g in descriptor.groups}
-    flat = page_layout == "stages"
-
-    # Enclosures are a beamline-wide spatial fact (every stage sits in a hutch),
-    # so the stages layout carries the table on the index rather than the Source
-    # page. The walk layout keeps it on the Source page (see _render_page).
-    if flat:
-        blocks.extend(_enclosures_blocks(descriptor))
-
-    if flat:
-        # Stages layout: the stages are first-class sibling pages, so present
-        # them as a section list (in beam order, controls last) rather than a
-        # one-line walk sentence. No Inventory (the stage pages are the tree).
-        # The optional one-line shape leads the section when authored.
-        lead = beamline.shape.strip() if beamline.shape else "The devices along the beam, area by area."
-        section = ["## The beamline", lead]
-        bullets = ["- [Source](source.md): the beam, produced and conditioned before the sample."]
-        if "sample" in stages:
-            bullets.append("- [Sample](sample.md): the sample environment and its positioning.")
-        if "detection" in stages:
-            bullets.append("- [Detector](detector.md): what records the beam after the sample.")
-        bullets.append("- [Controls](controls.md): the control plane CORA's edge conducts over.")
-        section.append("\n".join(bullets))
-        blocks.append("\n\n".join(section))
-    else:
-        # Walk layout: the beam walk as a one-line spine, linking the equipment/
-        # pages and pointing at the Inventory reference for the full device tree.
-        walk_links = ["[Source](beamline.md)"]
-        if "sample" in stages:
-            walk_links.append("[Sample](equipment/sample.md)")
-        if "detection" in stages:
-            walk_links.append("[Detector](equipment/detector.md)")
-        walk_links.append("[Controls](equipment/controls.md)")
-        walk_sentence = (
-            "The instrument, area by area along the beam: "
-            + " to ".join(walk_links[:-1])
-            + f", driven by {walk_links[-1]}."
-            + " The full device tree, with families and control handles, is the "
-            "[Inventory](inventory.md)."
-        )
-        blocks.append("## Walk the beam\n\n" + walk_sentence)
-
-    # Every non-pilot beamline's model page closes by pointing here to explain
-    # why it has no runbook and no live experiment view. The section was lost
-    # when these index pages became generated, orphaning that link on 56 pages.
-    if beamline.maturity != "pilot":
-        blocks.append("## Not yet documented")
-        blocks.append(
-            "This beamline has no Operations runbook and no live Experiment view, "
-            "because CORA does not drive it yet. Both pages describe what an operator "
-            "does with a running system, so writing them for a beamline CORA only "
-            "models would be invention rather than documentation. The pilot at "
-            "[2-BM](../2-bm/index.md) carries both, and shows the shape they take "
-            "once a deployment goes live."
-        )
-
-    blocks.append("## More")
-    blocks.append(
-        "- [Notes](notes.md): techniques, governance, the CORA model index, and "
-        "open modelling questions."
-    )
-    return "\n\n".join(blocks) + "\n"
-
-
-_MATURITY = {"pilot": "operational pilot", "design": "in design", "model": "reverse-engineered"}
-_COVERAGE = {"full": "full", "partial": "partial"}
-
-
-def _render_inventory(descriptor: BeamlineDescriptor, *, slug: str, blob_url: str) -> str:
-    _set_catalog_depth("../../")  # deployments/<slug>/inventory.md
-    beamline = descriptor.beamline
-    name = beamline.name or slug
-    blocks: list[str] = ["# Inventory"]
-    blocks.append(
-        f"*The CORA Asset model for the operational core of {name}: every device by beam-path "
-        "stage, its Family and control handle, and what still needs confirming.*"
-    )
-    blocks.append(
-        _admonition(
-            f"Generated from [`deployments/{slug}/beamline.yaml`]({blob_url}). "
-            "Edit the descriptor, not this page.",
-            kind="info",
-            title="Generated from the descriptor",
-        )
-    )
-    if descriptor.enclosures:
-        rows = [
-            [
-                f"`{e.name}`",
-                e.role or "",
-                f"`{e.facility_code}`" if e.facility_code else "",
-                _permit_signal_cell(e.permit_signal),
-            ]
-            for e in descriptor.enclosures
-        ]
-        blocks.append("## Enclosures")
-        blocks.append(_table(["Enclosure", "Role", "Facility", "Permit signal"], rows))
-
-    # All device groups, in beam-path order, each as its device table.
-    for stage in ("source", "sample", "detection"):
-        for gname, group in descriptor.groups:
-            if group.stage == stage:
-                blocks.append(_render_group(gname, group))
-    if descriptor.controls is not None:
-        controls_devices = [
-            *descriptor.controls.motion_controllers,
-            *descriptor.controls.triggering,
-        ]
-        if controls_devices:
-            blocks.append("## Controls")
-            if descriptor.controls.intro:
-                blocks.append(descriptor.controls.intro.strip())
-            blocks.append(_device_table(controls_devices))
-    return "\n\n".join(blocks) + "\n"
-
-
-def _render_beamwalk(
-    descriptor: BeamlineDescriptor,
-    *,
-    slug: str,
-    control_plane: str | None,
-    prefix: str = "equipment/",
-    depth: str = "../../../",
-) -> dict[str, str]:
-    # `prefix`/`depth` place the stage pages: the default "equipment/" +
-    # "../../../" is the walk layout; the stages layout passes "" + "../../" so
-    # the pages are flat siblings of index.md.
-    pages: dict[str, str] = {}
-    _set_catalog_depth(depth)
-    # Sample + Detector: one page per stage, its groups rendered.
-    for stage, filename in _STAGE_FILE.items():
-        groups = [(n, g) for n, g in descriptor.groups if g.stage == stage]
-        if not groups:
-            continue
-        blocks = [f"# {_STAGE_TITLE[stage]}"]
-        # A single group whose name is just the stage would render a `##` heading
-        # duplicating the page title; render its body inline instead.
-        if len(groups) == 1 and _humanize(groups[0][0]) == _STAGE_TITLE[stage]:
-            blocks.append(_render_group_body(groups[0][1]))
-        else:
-            for gname, group in groups:
-                blocks.append(_render_group(gname, group))
-        pages[f"deployments/{slug}/{prefix}{filename}"] = "\n\n".join(blocks) + "\n"
-
-    # Controls: the cross-cutting drive electronics + the seam sentence.
-    controls = descriptor.controls
-    cblocks = ["# Controls"]
-    seam = "The control plane the beamline runs on, and the seam CORA's edge conducts over."
-    if control_plane:
-        seam += f" Control plane: {control_plane}."
-    cblocks.append(seam)
-    if controls is not None:
-        if controls.intro:
-            cblocks.append(controls.intro.strip())
-        devices = [*controls.motion_controllers, *controls.triggering]
-        if devices:
-            cblocks.append(_device_table(devices))
-    pages[f"deployments/{slug}/{prefix}controls.md"] = "\n\n".join(cblocks) + "\n"
-    return pages
