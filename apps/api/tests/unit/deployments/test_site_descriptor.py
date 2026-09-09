@@ -331,11 +331,10 @@ def test_practice_method_links_only_known() -> None:
 # guards in test_beamline_descriptor.py:
 #   - a non-pending practice method must resolve in the catalog;
 #   - a pending method must be a deliberate, reasoned registry entry.
-# The >=2-deployment promotion SIGNAL (the family-promotion analog) is not added
-# yet: methods are staged per-site, so a method's beamline spread is not
-# structurally measurable today (it lives only in the practice-name prefix), and
-# no pending method spans two sites. _PENDING_METHODS is the registry a future
-# signal would read once practices carry a typed beamline.
+#
+# _PENDING_METHODS used to span all 14 Sites cora carried; the other 13 moved
+# to xmap/descriptors along with the beamlines whose practices cited them, so
+# only aps/site.yaml's own pending methods remain here.
 # ---------------------------------------------------------------------------
 
 _PENDING_METHODS = {
@@ -344,31 +343,15 @@ _PENDING_METHODS = {
     "first_light": "19-BM commissioning method; design phase",
     "ioc_restart": "2-BM maintenance recovery; portable Method not yet authored",
     "mirror_recoat_return": "2-BM mirror recoat-and-return; Method not yet authored",
-    "scanning_fluorescence_microscopy": "2-ID + XFM scanning XRF; 2 consumers (METHOD-1)",
-    "diffraction": "single-crystal diffraction (4-ID/8-ID/CSX/i19); not yet earned (TECH-1)",
+    "scanning_fluorescence_microscopy": "2-ID scanning XRF; Method not yet earned (METHOD-1)",
+    "diffraction": "single-crystal diffraction (4-ID/8-ID); not yet earned (TECH-1)",
     "magnetic_scattering": "4-ID magnetic scattering; not yet in pilot scope (TECH-1)",
     "resonant_scattering": "4-ID resonant scattering; not yet in pilot scope (TECH-1)",
     "xmcd": "4-ID magnetic circular dichroism; not yet in pilot scope (TECH-1)",
-    "xmld": "i06 magnetic linear dichroism on the APPLE-II; not yet in pilot scope (TECH-1)",
-    "photoemission_microscopy": "i06 PEEM electron-imaging microscopy; not yet earned (PEEM-1)",
-    "reflectivity": "i10 + CMS reflectivity (soft + hard X-ray); rule-of-three watch (TECH-1)",
     "coherent_surface_scattering": "9-ID CSSI surface scattering; not yet in pilot scope (TECH-1)",
-    "inelastic_x_ray_scattering": "IXS hard X-ray inelastic scattering; not in scope (TECH-1)",
-    "grid_scan": "i03 + FMX + AMX MX fast grid scan; 3 consumers (TECH-1)",
-    "mx_data_collection": "i03 + FMX + AMX MX rotation collection; 3 consumers (TECH-1)",
-    "sample_exchange": "i03 + FMX + AMX robotic sample exchange; 3 consumers (ROBOT-1)",
-    "solution_scattering": "lix bio-SAXS / SEC-SAXS; new Method not yet earned (TECH-1)",
-    "x_ray_footprinting": "xfp dose-delivery footprinting; offline MS readout; new Method (TECH-1)",
-    "small_angle_scattering": "i22 + 8-ID SAXS; portable Method not yet earned",
-    "wide_angle_scattering": "i22 + 9-ID WAXS; portable Method not yet earned",
+    "small_angle_scattering": "8-ID SAXS on the XPCS detectors; portable Method not yet earned",
+    "wide_angle_scattering": "9-ID GIWAXS; portable Method not yet earned",
     "ultra_small_angle_scattering": "12-ID Bonse-Hart USAXS; not yet earned (USAXS-1)",
-    "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
-    "energy_dispersive_exafs": "i20-1 EDE; dispersive devices not yet in source (POLY-1 / STRIP-1)",
-    "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
-    "xas_spectroscopy": "MFX + ISS emission-spectrometer XAS / XES; 2 consumers (TECH-1)",
-    "helical_tomography": "SYRMEP helical large-specimen CT; not yet earned (TECH-1)",
-    "white_beam_tomography": "SYRMEP white / pink-beam fast tomography; not yet in scope (TECH-1)",
-    "phase_retrieval": "SYRMEP TIE-HOM / Paganin phase retrieval; compute Method (COMPUTE-1)",
 }
 
 

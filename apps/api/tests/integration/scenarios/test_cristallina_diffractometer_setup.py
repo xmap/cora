@@ -8,7 +8,7 @@ bc_touches: Equipment
 Materializes Cristallina's DM1 diffractometer as a THIRD independent binding of
 the Assembly(Diffractometer) blueprint (after 8-ID and Bernina), end-to-end
 against Postgres, from the assets Cristallina's deployment descriptor actually
-carries (`deployments/cristallina/beamline.yaml`, DIFF-1).
+carries (`cristallina/beamline.yaml` in the private xmap/descriptors repo, DIFF-1).
 
 Cristallina instantiates two diffractometer platforms in slic (DM1 + DM2), but
 only DM1 is materializable from the descriptor:
@@ -78,7 +78,7 @@ _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # The three DM1 constituent Assets (scenario-supplied ids), mirroring the named
-# devices in deployments/cristallina/beamline.yaml. DM2 is not materialized
+# devices in cristallina/beamline.yaml (now in xmap/descriptors). DM2 is not materialized
 # (goniometer-only, DISABLED-1, no reciprocal-space Asset; see module docstring).
 _ASSET_DM1_GONIOMETER_ID = UUID("01900000-0000-7000-8000-000000ca0a11")
 _ASSET_DM1_DETECTOR_ARM_ID = UUID("01900000-0000-7000-8000-000000ca0a21")

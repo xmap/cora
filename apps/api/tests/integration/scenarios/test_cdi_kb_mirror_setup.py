@@ -8,7 +8,7 @@ bc_touches: Equipment
 Materializes CDI's Kirkpatrick-Baez nanofocusing mirror pair as the FIRST binding
 of the catalog KirkpatrickBaez Assembly (which shipped with zero Fixtures),
 end-to-end against Postgres, from the assets CDI's deployment descriptor carries
-(`deployments/cdi/beamline.yaml`, KB-1).
+(`cdi/beamline.yaml` in the private xmap/descriptors repo, KB-1).
 
 CDI's descriptor collapses the pair into ONE `KBMirror` Mirror Asset, but its note
 names both physical mirrors with their real PVs: a vertical VKB at `Mir:KBv` and a
@@ -70,7 +70,7 @@ _CDI_UNIT_ID = UUID("01900000-0000-7000-8000-000000cd0a01")
 _CAP_MIRROR_ID = family_stream_id(FamilyName("Mirror"))
 
 # The two KB mirror Assets (scenario-supplied ids), split from the collapsed
-# `KBMirror` device in deployments/cdi/beamline.yaml per its note (Mir:KBv +
+# `KBMirror` device in cdi/beamline.yaml (now in xmap/descriptors) per its note (Mir:KBv +
 # Mir:KBh) and the catalog KirkpatrickBaez split-on-materialize sanction.
 _ASSET_VKB_ID = UUID("01900000-0000-7000-8000-000000cd0a11")
 _ASSET_HKB_ID = UUID("01900000-0000-7000-8000-000000cd0a21")

@@ -115,19 +115,6 @@ nav:
         - LLM debrief comparison: deployments/2-bm/llm_debrief.md
         - Model: deployments/2-bm/model.md
         - Open questions: deployments/2-bm/questions.md
-    - MAX IV: deployments/maxiv/index.md
-    - Diamond: deployments/diamond/index.md
-    - NSLS-II: deployments/nsls2/index.md
-    - SLAC: deployments/slac/index.md
-    - Australian Synchrotron: deployments/as/index.md
-    - ESRF: deployments/esrf/index.md
-    - PSI: deployments/psi/index.md
-    - Sirius: deployments/sirius/index.md
-    - Elettra: deployments/elettra/index.md
-    - ALBA: deployments/alba/index.md
-    - NSRRC: deployments/nsrrc/index.md
-    - PETRA III: deployments/petra-iii/index.md
-    - ALS: deployments/als/index.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
@@ -230,9 +217,6 @@ strict: false
 
 validation:
   nav:
-    # Most deployment pages (all but the 2-BM pilot) are reachable from their
-    # Site's roster and their own index.md "More" links, not force-listed in
-    # nav, so a built-but-unlisted page is expected here, not a mistake.
-    omitted_files: ignore
+    omitted_files: warn
   links:
     anchors: warn

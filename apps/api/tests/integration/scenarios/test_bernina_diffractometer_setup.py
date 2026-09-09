@@ -10,7 +10,7 @@ binding of the Assembly(Diffractometer) blueprint (after 8-ID, #340 lineage),
 end-to-end against Postgres. The blueprint was earned across 4-ID + 8-ID and
 graduated to the catalog; this scenario proves it composes at a non-APS facility
 from the assets Bernina's deployment descriptor actually carries
-(`deployments/bernina/beamline.yaml`, DIFF-1), rather than re-modelling the
+(`bernina/beamline.yaml` in the private xmap/descriptors repo, DIFF-1), rather than re-modelling the
 sample circles per platform.
 
 Bernina runs two independent diffractometer platforms (eco gps + eco xrd), so
@@ -83,7 +83,7 @@ _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # The five diffractometer constituent Assets (scenario-supplied ids), mirroring
-# the named devices in deployments/bernina/beamline.yaml. GPS carries a goniometer
+# the named devices in bernina/beamline.yaml (now in xmap/descriptors). GPS carries a goniometer
 # + reciprocal-space (no modelled detector arm); XRD carries all three.
 _ASSET_GPS_GONIOMETER_ID = UUID("01900000-0000-7000-8000-000000be0a11")
 _ASSET_GPS_RECIPROCAL_SPACE_ID = UUID("01900000-0000-7000-8000-000000be0a21")

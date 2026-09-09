@@ -8,7 +8,7 @@ bc_touches: Equipment
 Materializes ESRF ID32's four-circle sample diffractometer (BLISS DiffE4CH, E4CH
 geometry) as a binding of the catalog Diffractometer Assembly, end-to-end against
 Postgres, from the assets ID32's deployment descriptor carries
-(`deployments/id32/beamline.yaml`, DIFF-1).
+(`id32/beamline.yaml` in the private xmap/descriptors repo, DIFF-1).
 
 This extends the blueprint beyond the hard X-ray six-circle it was earned on
 (4-ID + 8-ID) and the SwissFEL platforms (Bernina + Cristallina) to an ESRF soft
@@ -73,7 +73,7 @@ _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # The two constituent Assets (scenario-supplied ids), mirroring the named devices
-# in deployments/id32/beamline.yaml.
+# in id32/beamline.yaml (now in xmap/descriptors).
 _ASSET_GONIOMETER_ID = UUID("01900000-0000-7000-8000-000000320a11")
 _ASSET_RECIPROCAL_SPACE_ID = UUID("01900000-0000-7000-8000-000000320a21")
 

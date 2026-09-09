@@ -8,7 +8,7 @@ bc_touches: Equipment
 Materializes Diamond i19's Newport kappa four-circle diffractometer (phi / omega /
 kappa sample circles + the 2THETA detector arm + det_z) as a binding of the catalog
 Diffractometer Assembly, end-to-end against Postgres, from the assets i19's
-deployment descriptor carries (`deployments/i19/beamline.yaml`, DIFF-1).
+deployment descriptor carries (`i19/beamline.yaml` in the private xmap/descriptors repo, DIFF-1).
 
 This is a fifth independent binding of the one blueprint (after 4-ID + 8-ID +
 Bernina + Cristallina), a hard X-ray kappa-geometry small-molecule instrument:
@@ -75,7 +75,7 @@ _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # The two constituent Assets (scenario-supplied ids), mirroring the named devices
-# in deployments/i19/beamline.yaml.
+# in i19/beamline.yaml (now in xmap/descriptors).
 _ASSET_GONIOMETER_ID = UUID("01900000-0000-7000-8000-000000190a11")
 _ASSET_RECIPROCAL_SPACE_ID = UUID("01900000-0000-7000-8000-000000190a21")
 
