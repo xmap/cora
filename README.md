@@ -1627,7 +1627,7 @@
 | src/cora/operation/\_pseudoaxis/\_evaluator.py                                           |       20 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_pseudoaxis/\_expander.py                                            |       26 |        3 |        2 |        1 |     85.7% |120, 123-124 |
 | src/cora/operation/\_recipe\_expansion/\_\_init\_\_.py                                   |        4 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/\_recipe\_expansion/\_expand.py                                       |       57 |        5 |       30 |        2 |     89.7% |96-101, 164 |
+| src/cora/operation/\_recipe\_expansion/\_expand.py                                       |       65 |        5 |       34 |        2 |     90.9% |121-126, 193 |
 | src/cora/operation/\_recipe\_expansion/\_replay.py                                       |       27 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/operation/\_recipe\_expansion/\_resolved\_steps\_replay.py                      |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_steering\_resume.py                                                 |       14 |        0 |        0 |        0 |    100.0% |           |
@@ -1671,7 +1671,7 @@
 | src/cora/operation/aggregates/procedure/evolver.py                                       |       55 |        0 |       30 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/read.py                                          |       14 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/state.py                                         |      299 |        0 |       16 |        0 |    100.0% |           |
-| src/cora/operation/conductor.py                                                          |      942 |       17 |      232 |        3 |     98.3% |1868, 1904, 1951, 2125-2128, 2361, 2737-2740, 2969, 3175, 3216, 3331, 3391, 4004-\>4006 |
+| src/cora/operation/conductor.py                                                          |      977 |       17 |      254 |        4 |     98.3% |481-\>483, 1932, 1968, 2015, 2189-2192, 2425, 2801-2804, 3033, 3239, 3280, 3395, 3455, 4068-\>4070 |
 | src/cora/operation/errors.py                                                             |       86 |       14 |        0 |        0 |     83.7% |280-281, 329-334, 400-408, 428-434 |
 | src/cora/operation/features/\_\_init\_\_.py                                              |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/abort\_procedure/\_\_init\_\_.py                             |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -1851,7 +1851,7 @@
 | src/cora/recipe/aggregates/practice/read.py                                              |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/practice/state.py                                             |       43 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/recipe/\_\_init\_\_.py                                        |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/recipe/aggregates/recipe/body.py                                                |      138 |        4 |       50 |        3 |     95.2% |324, 334-336, 365-\>367 |
+| src/cora/recipe/aggregates/recipe/body.py                                                |      138 |        4 |       50 |        3 |     95.2% |332, 342-344, 373-\>375 |
 | src/cora/recipe/aggregates/recipe/events.py                                              |       43 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/recipe/evolver.py                                             |       21 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/recipe/aggregates/recipe/read.py                                                |       33 |        5 |       10 |        0 |     83.7% |   126-130 |
@@ -2733,7 +2733,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **63315** | **1403** | **9754** |  **441** | **97.3%** |           |
+| **TOTAL**                                                                                | **63358** | **1403** | **9780** |  **442** | **97.3%** |           |
 
 
 ## Setup coverage badge
