@@ -12,7 +12,7 @@
 # control handles are real, read from that registry; vendor part numbers, crystal
 # cuts, the detector roster, energy calibration, and physical positions are not in it
 # and are open questions. Every value is carried confirm until P65 staff verify it.
-# The extraction is in research/petra-iii/.
+# The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P65 is a thin applied-XAS station: a CDCM energy
 # axis, a small experiment sample bank, an experiment slit / table, and the undulator,

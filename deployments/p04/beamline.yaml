@@ -12,7 +12,7 @@
 # registries). Device logical names and Tango control handles are real, read from
 # that registry; vendor part numbers, grating line densities, energy calibration,
 # and physical positions are not in it and are open questions. Every value is carried
-# confirm until P04 staff verify it. The extraction is in research/petra-iii/.
+# confirm until P04 staff verify it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: the soft X-ray optics regime. P04's monochromator binds the catalog
 # GratingMonochromator Family (a plane-grating monochromator, NOT the crystal

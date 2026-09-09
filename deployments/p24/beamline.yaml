@@ -14,7 +14,7 @@
 # questions. The P24 registry exposes generically-named motor banks (oh_mot*, mot*)
 # whose per-axis roles are not labelled, so the Asset grouping leans on the bank
 # prefixes and is carried confirm (GROUP-1). Every value is carried confirm until P24
-# staff verify it. The extraction is in research/petra-iii/.
+# staff verify it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family, and no new technique vocabulary. P24 is a chemical
 # crystallography beamline; the diffractometer / sample positioning reuses LinearStage

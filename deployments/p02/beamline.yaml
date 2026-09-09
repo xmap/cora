@@ -12,7 +12,7 @@
 # control handles are real, read from that registry; vendor part numbers, crystal
 # cuts, the pressure-cell detail, energy calibration, and physical positions are not
 # in it and are open questions. Every value is carried confirm until P02 staff verify
-# it. The extraction is in research/petra-iii/.
+# it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P02 reuses existing Families end to end. It is
 # the fleet's high-energy powder-diffraction / total-scattering beamline and its first

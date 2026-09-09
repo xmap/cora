@@ -16,7 +16,7 @@
 # The P61 registry is thin: it exposes one large generically-named motor bank (eh_mot*
 # on the hasnp61eh2 host) whose per-axis roles are not labelled, so the Asset grouping
 # leans on the bank prefix and is carried confirm (GROUP-1). Every value is carried
-# confirm until P61 staff verify it. The extraction is in research/petra-iii/.
+# confirm until P61 staff verify it. The extraction is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family, and no new technique vocabulary. P61 is a thin
 # high-energy white-beam beamline; the experiment positioning reuses LinearStage, and

@@ -12,7 +12,7 @@
 # control handles are real, read from that registry; vendor part numbers, crystal
 # cuts, energy calibration, and physical positions are not in it and are open
 # questions. Every value is carried confirm until P08 staff verify it. The extraction
-# is in research/petra-iii/.
+# is in the xmap/research repo (private), under petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P08 reuses existing Families end to end. Its
 # six-circle Kohzu diffractometer binds the catalog Goniometer Family (not the composed
