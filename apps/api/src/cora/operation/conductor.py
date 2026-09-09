@@ -310,9 +310,13 @@ without an exception) is the further halt path, handled inline in
 `_run_compute`."""
 
 _ERROR_UNRESOLVED_CAPTURE = "UnresolvedCaptureRef"
-"""error_class for a SetpointStep CaptureRef whose name was never captured
-in this conduct (e.g. resumed past the capturing step). Loud-fail label,
-not an exception type: the failure is recorded + returned, not raised."""
+"""error_class for a CaptureRef (or a SteeringRef seeded by the decide loop)
+whose name was never captured/seeded in this conduct (e.g. resumed past the
+capturing step). Loud-fail label, not an exception type: the failure is
+recorded + returned, not raised. Shared by SetpointStep.value AND, since the
+compute-parameter widening, any ComputeStep.parameters value: one label per
+ref kind, not per step kind, matching the disambiguation living in `message`
++ `target` rather than in `error_class`."""
 
 _ERROR_DUPLICATE_CAPTURE = "DuplicateCapture"
 """error_class for a CaptureStep re-capturing an already-filled name within
@@ -4308,7 +4312,7 @@ class Conductor:
                             "command": list(step.command),
                             "input_refs": [_input_uri_to_wire(u) for u in step.input_uris],
                             "output_uri": step.output_uri,
-                            "parameters": dict(step.parameters),
+                            "parameters": _parameters_to_wire(step.parameters),
                         },
                         result=_RESULT_FAILED,
                         error_class=_ERROR_UNRESOLVED_OUTPUT,
@@ -4325,18 +4329,92 @@ class Conductor:
             else:
                 resolved_input_uris.append(element)
         resolved_uris = tuple(resolved_input_uris)
+        # Resolve every CaptureRef / SteeringRef parameter value against the
+        # per-conduct `captures` dict BEFORE any effect (parity with the
+        # OutputRef resolve just above, and with _run_setpoint's single-value
+        # version): an unresolved/unseeded name loud-fails with a recorded
+        # entry, NO in-flight marker, nothing submitted. `resolved_parameters`
+        # is what the JobSpec + ComputePort see; the pre-resolution refs are
+        # recorded separately under `parameter_refs` for provenance, mirroring
+        # `input_refs` above.
+        resolved_parameters: dict[str, Any] = {}
+        for key, param_value in step.parameters.items():
+            if isinstance(param_value, CaptureRef):
+                if param_value.capture_name not in captures:
+                    msg = (
+                        f"compute step parameter {key!r} references capture "
+                        f"{param_value.capture_name!r} not captured before this step"
+                    )
+                    await self._record(
+                        envelope=envelope,
+                        index=index,
+                        step_kind=_STEP_KIND_COMPUTE,
+                        body={
+                            "command": list(step.command),
+                            "input_uris": list(resolved_uris),
+                            "output_uri": step.output_uri,
+                            "parameters": _parameters_to_wire(step.parameters),
+                        },
+                        result=_RESULT_FAILED,
+                        error_class=_ERROR_UNRESOLVED_CAPTURE,
+                        message=msg,
+                    )
+                    return ConductorFailure(
+                        step_index=index,
+                        source_kind=_STEP_KIND_COMPUTE,
+                        target=" ".join(step.command),
+                        error_class=_ERROR_UNRESOLVED_CAPTURE,
+                        message=msg,
+                    )
+                resolved_parameters[key] = captures[param_value.capture_name]
+            elif isinstance(param_value, SteeringRef):
+                if param_value.steering_axis_name not in captures:
+                    msg = (
+                        f"compute step parameter {key!r} references steering axis "
+                        f"{param_value.steering_axis_name!r} not seeded before this step"
+                    )
+                    await self._record(
+                        envelope=envelope,
+                        index=index,
+                        step_kind=_STEP_KIND_COMPUTE,
+                        body={
+                            "command": list(step.command),
+                            "input_uris": list(resolved_uris),
+                            "output_uri": step.output_uri,
+                            "parameters": _parameters_to_wire(step.parameters),
+                        },
+                        result=_RESULT_FAILED,
+                        error_class=_ERROR_UNRESOLVED_CAPTURE,
+                        message=msg,
+                    )
+                    return ConductorFailure(
+                        step_index=index,
+                        source_kind=_STEP_KIND_COMPUTE,
+                        target=" ".join(step.command),
+                        error_class=_ERROR_UNRESOLVED_CAPTURE,
+                        message=msg,
+                    )
+                resolved_parameters[key] = captures[param_value.steering_axis_name]
+            else:
+                resolved_parameters[key] = param_value
         job_spec = JobSpec(
             command=step.command,
             input_uris=resolved_uris,
             output_uri=step.output_uri,
-            parameters=step.parameters,
+            parameters=resolved_parameters,
         )
         payload_body: dict[str, Any] = {
             "command": list(step.command),
             "input_uris": list(resolved_uris),
             "output_uri": step.output_uri,
-            "parameters": dict(step.parameters),
+            "parameters": resolved_parameters,
         }
+        # Provenance: record the pre-resolution parameter refs (sentinel dicts
+        # for any CaptureRef/SteeringRef value) beside the resolved parameters
+        # only when the step carried one, mirroring `input_refs` above and
+        # _run_setpoint recording value + capture_ref/steering_ref.
+        if any(isinstance(v, CaptureRef | SteeringRef) for v in step.parameters.values()):
+            payload_body["parameter_refs"] = _parameters_to_wire(step.parameters)
         # Provenance: record the pre-resolution refs (sentinel dicts for any
         # OutputRef element) beside the resolved URIs only when the step carried
         # a ref, mirroring _run_setpoint recording value + capture_ref.
