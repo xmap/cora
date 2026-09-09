@@ -12,25 +12,37 @@ activity-recency fold. See [[project-procedure-watcher-design]].
 ## What v1 does
 
 Each tick it lists in-conduct procedures (`Running` and `Held`), selects those
-that have sat past the operator-config staleness window without progressing, and
-records one `Decision(context=ProcedureProgress, choice=Stall)` per stall
-EPISODE. It is FLAG-ONLY: it issues NO command (it cannot un-stick a conduct; it
-surfaces the stall so a human acts before an experiment hangs unnoticed
-mid-procedure). Procedure is a distinct aggregate from Run, so this liveness gap
-is one `_run_supervisor` does not cover.
+that have sat past their status's operator-config staleness window without
+progressing, and records one `Decision(context=ProcedureProgress, choice=Stall)`
+per stall EPISODE. It is FLAG-ONLY: it issues NO command (it cannot un-stick a
+conduct; it surfaces the stall so a human acts before an experiment hangs
+unnoticed mid-procedure). Procedure is a distinct aggregate from Run, so this
+liveness gap is one `_run_supervisor` does not cover.
 
 ## Staleness clock and the active-conduct false-positive guard
 
 `stalled_seconds = now - last_progress_at`.
 
+`Running` and `Held` are clocked against SEPARATE operator-config windows
+(`procedure_watcher_stale_after_seconds` and
+`procedure_watcher_held_stale_after_seconds`), because the two statuses mean
+different things: a `Running` procedure sitting idle for an hour is a plausible
+stall, but a `Held` procedure sitting for an hour is routinely a deliberate
+operator pause (a bakeout, waiting on beam, waiting on a collaborator) that can
+legitimately run for days. One shared window would either false-flag an
+ordinary overnight hold or blind the watcher to a genuinely stuck `Running`
+conduct; this mirrors `_campaign_watcher`'s week-long default for its own
+`Held` window.
+
 For `Held` the conduct is paused and accepts no activity, so
 `last_status_changed_at` (the time it was held, on the list projection) is the
-correct clock. For `Running`, `proj_operation_procedure_summary` advances
-`last_status_changed_at` only on real lifecycle transitions and NO-OPs it for
-`ProcedureActivitiesLogbookOpened` / `ProcedureIterationStarted` (activity is
-orthogonal to lifecycle); so keying on it alone would FALSE-FLAG a procedure
-that is actively logging steps. Therefore a `Running` candidate that already
-looks stale by its status timestamp gets ONE per-candidate
+correct clock, and there is no second-chance fold to take: a held conduct
+cannot log activity, structurally. For `Running`, `proj_operation_procedure_summary`
+advances `last_status_changed_at` only on real lifecycle transitions and
+NO-OPs it for `ProcedureActivitiesLogbookOpened` / `ProcedureIterationStarted`
+(activity is orthogonal to lifecycle); so keying on it alone would FALSE-FLAG a
+procedure that is actively logging steps. Therefore a `Running` candidate that
+already looks stale by its status timestamp gets ONE per-candidate
 `read_procedure_activity_recency` to fold in the latest activity `recorded_at`
 before it is flagged. Bounding that read to already-looks-stale `Running`
 candidates keeps the per-tick cost low. This mirrors `_clearance_watcher`
@@ -93,11 +105,12 @@ _COMMAND_NAME = "ProcedureWatcherTick"
 _PAGE_LIMIT = 100
 _CHOICE_STALL = "Stall"
 _STATUS_RUNNING = "Running"
+_STATUS_HELD = "Held"
 
 # The two in-conduct lifecycle states the watcher surveys. Defined (registered,
 # not started) and the terminal states (Completed / Aborted / Truncated) are out
 # of scope: only an active or paused conduct can hang mid-flight.
-_WATCHED_STATUSES: tuple[ProcedureStatusFilter, ...] = ("Running", "Held")
+_WATCHED_STATUSES: tuple[ProcedureStatusFilter, ...] = (_STATUS_RUNNING, _STATUS_HELD)
 
 # Stable namespace for deriving the deterministic Decision id from the procedure
 # id + the stall-episode timestamp (0c0c block, distinct from the seed envelope
@@ -188,7 +201,8 @@ async def _watch_tick(
         return
 
     now = deps.clock.now()
-    stale_after = deps.settings.procedure_watcher_stale_after_seconds
+    stale_after_running = deps.settings.procedure_watcher_stale_after_seconds
+    stale_after_held = deps.settings.procedure_watcher_held_stale_after_seconds
     try:
         items = await _drain_watched_procedures(list_procedures, deps)
     except UnauthorizedError as err:
@@ -209,9 +223,10 @@ async def _watch_tick(
         if base is None:
             # No status-change timestamp recorded: cannot evaluate; defer.
             continue
+        stale_after = stale_after_held if item.status == _STATUS_HELD else stale_after_running
         if not is_stalled(base, now, stale_after):
-            # Fresh by status timestamp. For Running a later activity only makes
-            # it fresher, so skipping here cannot hide a stall.
+            # Fresh by its status's own window. For Running a later activity only
+            # makes it fresher, so skipping here cannot hide a stall.
             continue
         last_progress_at = base
         if item.status == _STATUS_RUNNING:

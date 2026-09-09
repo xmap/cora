@@ -3,8 +3,10 @@
 Covers the pure staleness rule (is_stalled) on both sides of the inclusive
 boundary, plus a fakes-driven tick that exercises the drain -> flag Decision
 loop for both watched statuses, the Running activity-recency fold (the
-anti-false-flag guard), the Held no-fold path, the defensive status guard, the
-Actor.active revocation gate, idempotency, and the disabled no-op.
+anti-false-flag guard), the Held no-fold path, the separate Running/Held
+staleness windows (a long legitimate Held pause must not flag under the
+default week-long window), the defensive status guard, the Actor.active
+revocation gate, idempotency, and the disabled no-op.
 """
 
 # white-box test of the runtime internals (private functions / constants)
@@ -42,10 +44,12 @@ from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 22, 12, 0, 0, tzinfo=UTC)
 _STALE_AFTER = 3600.0  # 1 hour
+_HELD_STALE_AFTER = 604800.0  # 1 week, matches the config default for Held
 _OLD = _NOW - timedelta(hours=2)  # clearly stale at a 1-hour window
 _RECENT = _NOW - timedelta(minutes=1)  # fresh
 _STILL_STALE = _NOW - timedelta(minutes=90)  # newer than _OLD but still > window
 _BOUNDARY = _NOW - timedelta(seconds=int(_STALE_AFTER))
+_OVERNIGHT_HELD = _NOW - timedelta(hours=12)  # legitimate pause, still short of a week
 
 
 # ---------- pure rule: is_stalled ----------
@@ -76,10 +80,16 @@ def test_not_stalled_just_under_boundary() -> None:
 # ---------- tick: full loop with fakes ----------
 
 
-def _kernel(*, enabled: bool = False, stale_after: float = _STALE_AFTER) -> Kernel:
+def _kernel(
+    *,
+    enabled: bool = False,
+    stale_after: float = _STALE_AFTER,
+    held_stale_after: float = _HELD_STALE_AFTER,
+) -> Kernel:
     settings = Settings(  # type: ignore[call-arg]
         procedure_watcher_enabled=enabled,
         procedure_watcher_stale_after_seconds=stale_after,
+        procedure_watcher_held_stale_after_seconds=held_stale_after,
     )
     return make_inmemory_kernel(
         settings=settings,
@@ -153,10 +163,12 @@ async def test_tick_flags_stale_running_with_no_activity() -> None:
 @pytest.mark.unit
 async def test_tick_flags_stale_held_without_folding_activity() -> None:
     """A Held conduct accepts no activity, so it is clocked on its status
-    timestamp directly; a (defensively seeded) recent activity is ignored."""
+    timestamp directly; a (defensively seeded) recent activity is ignored.
+    Held's own window is shortened to _STALE_AFTER here (the config default is
+    a week) so that `_OLD` reads as stale for this assertion."""
     from cora.api._procedure_watcher import _watch_tick
 
-    kernel = _kernel()
+    kernel = _kernel(held_stale_after=_STALE_AFTER)
     await seed_procedure_watcher_agent(kernel)
     pid = uuid4()
     list_procedures = _make_list_procedures(
@@ -168,6 +180,31 @@ async def test_tick_flags_stale_held_without_folding_activity() -> None:
     await _watch_tick(deps=kernel, list_procedures=list_procedures, activity_lookup=lookup)
 
     assert await load_decision(kernel.event_store, _derive_decision_id(pid, _OLD)) is not None
+
+
+@pytest.mark.unit
+async def test_tick_does_not_flag_held_overnight_pause() -> None:
+    """Regression test: Held used to share Running's 1-hour window, so any
+    deliberate operator pause longer than an hour (a bakeout, waiting on beam,
+    waiting on a collaborator) raised a false Stall. Under the real default
+    (a week), a 12-hour hold is not stalled."""
+    from cora.api._procedure_watcher import _watch_tick
+
+    kernel = _kernel()  # held_stale_after defaults to the real week-long window
+    await seed_procedure_watcher_agent(kernel)
+    pid = uuid4()
+    list_procedures = _make_list_procedures(
+        [_item(pid, status="Held", last_status_changed_at=_OVERNIGHT_HELD)]
+    )
+
+    await _watch_tick(
+        deps=kernel,
+        list_procedures=list_procedures,
+        activity_lookup=InMemoryProcedureActivityLookup(),
+    )
+
+    decision_id = _derive_decision_id(pid, _OVERNIGHT_HELD)
+    assert await load_decision(kernel.event_store, decision_id) is None
 
 
 @pytest.mark.unit
@@ -463,13 +500,21 @@ def test_procedure_watcher_stale_after_rejects_non_positive() -> None:
 
 
 @pytest.mark.unit
+def test_procedure_watcher_held_stale_after_rejects_non_positive() -> None:
+    with pytest.raises(ValueError, match="procedure_watcher_held_stale_after_seconds"):
+        Settings(procedure_watcher_held_stale_after_seconds=0.0)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
 def test_procedure_watcher_settings_accept_valid() -> None:
     settings = Settings(  # type: ignore[call-arg]
         procedure_watcher_tick_seconds=120.0,
         procedure_watcher_stale_after_seconds=7200.0,
+        procedure_watcher_held_stale_after_seconds=1209600.0,
     )
     assert settings.procedure_watcher_tick_seconds == 120.0
     assert settings.procedure_watcher_stale_after_seconds == 7200.0
+    assert settings.procedure_watcher_held_stale_after_seconds == 1209600.0
 
 
 @pytest.mark.unit
