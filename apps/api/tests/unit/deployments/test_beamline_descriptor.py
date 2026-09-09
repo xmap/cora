@@ -210,112 +210,22 @@ def _render_all_pages(slug: str) -> dict[str, str]:
         slug=slug,
         catalog_families=frozenset(f.name for f in catalog.families),
         catalog_models=frozenset(m.name for m in catalog.models),
-        model_tier=descriptor.beamline.deployment_tier == "model",
     )
 
 
-_SYNTHETIC_STAGES_MODEL = (
-    "beamline:\n"
-    "  name: Synthetic\n"
-    "  maturity: model\n"
-    "  evidence: controls_config\n"
-    "  coverage: full\n"
-    "  page_layout: stages\n"
-    "  shape: A synthetic stages-layout model beamline, for pinning the generator.\n"
-    "source:\n"
-    "  stage: source\n"
-    "  devices:\n"
-    "    - {name: SynMotor, family: LinearStage, pv: 'syn:m1'}\n"
-    "sample:\n"
-    "  stage: sample\n"
-    "  devices: []\n"
-    "detector:\n"
-    "  stage: detection\n"
-    "  devices: []\n"
-)
-
-
-def test_stages_layout_dissolves_inventory_into_flat_stage_pages(tmp_path: Path) -> None:
-    # A model-tier beamline with page_layout: stages dissolves Inventory into
-    # flat source/sample/detector/controls siblings, with no equipment/ folder
-    # and no beamline.md or inventory.md. Pinned with a synthetic descriptor
-    # (the real fleet exercising this layout now lives in xmap/descriptors).
-    path = tmp_path / "beamline.yaml"
-    path.write_text(_SYNTHETIC_STAGES_MODEL, encoding="utf-8")
-    descriptor = bd.load(path)
-    pages = bp.render_all(descriptor, slug="syn", model_tier=True)
-    assert "deployments/syn/source.md" in pages
-    assert "deployments/syn/sample.md" in pages
-    assert "deployments/syn/detector.md" in pages
-    assert "deployments/syn/controls.md" in pages
-    assert "deployments/syn/beamline.md" not in pages
-    assert "deployments/syn/inventory.md" not in pages
-    assert not any(p.startswith("deployments/syn/equipment/") for p in pages)
-    # the flat source page is the source stage itself, with no Inventory pointer
-    # and none of the walk-layout framing (no "walk", no composed-fixture pages,
-    # and no dangling Operations reference, which is not a page in this layout)
-    source = pages["deployments/syn/source.md"]
-    assert source.startswith("# Source")
-    assert "inventory.md" not in source
-    assert "walk" not in source.lower()
-    assert "composed-fixture" not in source
-    assert "Operations" not in source
-    assert "[Controls](controls.md)" in source
-    # Enclosures are a beamline-wide fact: the table moves up to the index and
-    # off the Source page in the stages layout.
-    assert "## Enclosures" not in source
-    # the index presents the stages as first-class sibling pages, not a "Walk the
-    # beam" spine, and no longer points at Inventory
-    index = pages["deployments/syn/index.md"]
-    assert "[Source](source.md)" in index
-    assert "Walk the beam" not in index
-    assert "## The beamline" in index
-    assert "inventory.md" not in index
-    assert "equipment/" not in index
-
-
 def test_pilot_stages_layout_generates_only_flat_source() -> None:
-    # A pilot on the stages layout generates ONLY its Source page (flat source.md);
-    # its index, sample, detector, controls, and operational pages are hand-authored.
+    # 2-BM (the only deployment cora carries) generates ONLY its Source page
+    # (flat source.md); its index, sample, detector, controls, and operational
+    # pages are hand-authored.
     pages = _render_all_pages("2-bm")
     assert set(pages) == {"deployments/2-bm/source.md"}, sorted(pages)
     assert pages["deployments/2-bm/source.md"].startswith("# Source")
 
 
-_SYNTHETIC_SOURCE_REF_MODEL = (
-    "beamline:\n"
-    "  name: Synthetic\n"
-    "  maturity: model\n"
-    "  evidence: controls_config\n"
-    "  coverage: full\n"
-    "  page_layout: stages\n"
-    "  shape: A synthetic stages-layout model beamline with a source_ref.\n"
-    "  source_ref:\n"
-    '    label: "org/repo"\n'
-    '    url: "https://example.test/org/repo"\n'
-    "source:\n"
-    "  stage: source\n"
-    "  devices: []\n"
-)
-
-
-def test_source_ref_renders_as_provenance_link_on_index_not_source(tmp_path: Path) -> None:
-    # A model-tier beamline with a source_ref surfaces it in the index's
-    # generated-from banner as a link, so a reader can trace the facts to the
-    # public source they came from, and does NOT duplicate it on the Source
-    # page (that placement is reserved for a pilot, see the test below).
-    path = tmp_path / "beamline.yaml"
-    path.write_text(_SYNTHETIC_SOURCE_REF_MODEL, encoding="utf-8")
-    descriptor = bd.load(path)
-    pages = bp.render_all(descriptor, slug="syn", model_tier=True)
-    assert "[org/repo](https://example.test/org/repo)" in pages["deployments/syn/index.md"]
-    assert "Source: [" not in pages["deployments/syn/source.md"]
-
-
 def test_pilot_source_ref_surfaces_on_source_page(tmp_path: Path) -> None:
-    # A pilot has no generated index, so its Source page is the only place a
-    # source_ref can land. No real pilot currently carries a source_ref (2-BM
-    # is live), so render a synthetic pilot to pin the path.
+    # The Source page is where a source_ref lands, if a descriptor carries one.
+    # No real descriptor currently does (2-BM is live), so render a synthetic
+    # one to pin the path.
     descriptor_yaml = (
         "beamline:\n"
         "  name: T\n"
@@ -334,7 +244,7 @@ def test_pilot_source_ref_surfaces_on_source_page(tmp_path: Path) -> None:
     path = tmp_path / "beamline.yaml"
     path.write_text(descriptor_yaml, encoding="utf-8")
     descriptor = bd.load(path)
-    pages = bp.render_all(descriptor, slug="t", model_tier=False)
+    pages = bp.render_all(descriptor, slug="t")
     assert "[org/repo](https://example.test/org/repo)" in pages["deployments/t/source.md"]
 
 
@@ -346,36 +256,6 @@ def test_live_pilot_has_no_source_ref() -> None:
     assert descriptor.beamline.source_ref is None
     source_page = _render_all_pages("2-bm")["deployments/2-bm/source.md"]
     assert "Source: [" not in source_page
-
-
-def test_walk_layout_keeps_beamline_and_inventory_pages(tmp_path: Path) -> None:
-    # The walk layout (page_layout omitted -> "walk") still emits beamline.md,
-    # inventory.md, and the equipment/ stage pages with a "Walk the beam" spine.
-    # 2-BM (the only real deployment left) uses the stages layout, so this pins
-    # the walk path with a synthetic model-tier descriptor.
-    descriptor_yaml = (
-        "beamline:\n"
-        "  name: W\n"
-        "  maturity: model\n"
-        "  evidence: controls_config\n"
-        "  coverage: full\n"
-        "source:\n  stage: source\n  devices: []\n"
-        "sample:\n  stage: sample\n  devices: []\n"
-        "detector:\n  stage: detection\n  devices: []\n"
-    )
-    path = tmp_path / "beamline.yaml"
-    path.write_text(descriptor_yaml, encoding="utf-8")
-    descriptor = bd.load(path)
-    pages = bp.render_all(descriptor, slug="w", model_tier=True)
-    assert "deployments/w/beamline.md" in pages
-    assert "deployments/w/inventory.md" in pages
-    assert "deployments/w/equipment/sample.md" in pages
-    assert "deployments/w/equipment/detector.md" in pages
-    assert "deployments/w/equipment/controls.md" in pages
-    # the walk layout keeps the "Walk the beam" spine and its Inventory pointer
-    index = pages["deployments/w/index.md"]
-    assert "## Walk the beam" in index
-    assert "[Inventory](inventory.md)" in index
 
 
 def test_markers_promoted_from_comments_to_fields() -> None:
@@ -562,7 +442,6 @@ def _generated_beamline_pages(deployment: str) -> str:
         slug=deployment,
         catalog_families=frozenset(f.name for f in catalog.families),
         catalog_models=frozenset(m.name for m in catalog.models),
-        model_tier=descriptor.beamline.deployment_tier == "model",
     )
     return "\n".join(pages.values())
 
