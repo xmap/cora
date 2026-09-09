@@ -214,10 +214,18 @@ class RecipeComputeStep:
     The recipe-template twin of the Conductor's `ComputeStep`. `output_uri`
     selects the result arm, mirroring the Conductor: SET means the FILE arm
     (the job writes an artifact; the conduct surfaces an `ArtifactRef`), None
-    means the VALUE arm (the conduct surfaces a `Measurement`). The `command`
-    argv + `parameters` are LITERAL (no `BindingRef` on a compute step yet);
-    binding a compute parameter is a deferred widening (the first deployment
-    that needs an operator-tunable compute parameter fires it).
+    means the VALUE arm (the conduct surfaces a `Measurement`). `command` is
+    LITERAL (no `BindingRef` on the argv).
+
+    `parameters` values may individually be a literal, a `CaptureRef`, or a
+    `SteeringRef`: the compute-branch sibling of `RecipeSetpointStep.value`.
+    A `CaptureRef` value rides through expansion unresolved and the Conductor
+    resolves it at execute time against a value an earlier step captured; a
+    `SteeringRef` value is the same except the value is loop-seeded by the
+    decide loop, letting a brain tune a compute parameter directly rather
+    than only a motor position. `BindingRef` is NOT supported in `parameters`
+    (operator-tunable, define-time compute-parameter binding is a separate,
+    still-deferred widening; the first deployment that needs it fires it).
 
     `input_uris` elements are each a literal URI (an authored well-known path
     an acquisition action body wrote) OR an `OutputRef` naming an EARLIER
@@ -247,7 +255,7 @@ class RecipeComputeStep:
     command: tuple[str, ...]
     input_uris: tuple[str | OutputRef, ...] = ()
     output_uri: str | None = None
-    parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
+    parameters: Mapping[str, Any | CaptureRef | SteeringRef] = field(default_factory=dict[str, Any])
     capture_name: str | None = None
     output_ref_name: str | None = None
 
@@ -393,7 +401,7 @@ def _step_to_wire(step: RecipeStep) -> dict[str, Any]:
             "command": list(step.command),
             "input_uris": [_input_uri_to_wire(u) for u in step.input_uris],
             "output_uri": step.output_uri,
-            "parameters": dict(step.parameters),
+            "parameters": {key: _value_to_wire(val) for key, val in step.parameters.items()},
             "capture_name": step.capture_name,
             "output_ref_name": step.output_ref_name,
         }
@@ -432,7 +440,9 @@ def _step_from_wire(payload: dict[str, Any]) -> RecipeStep:
                 command=tuple(payload["command"]),
                 input_uris=tuple(_input_uri_from_wire(u) for u in payload.get("input_uris", ())),
                 output_uri=payload.get("output_uri"),
-                parameters=dict(payload.get("parameters", {})),
+                parameters={
+                    key: _value_from_wire(val) for key, val in payload.get("parameters", {}).items()
+                },
                 capture_name=payload.get("capture_name"),
                 output_ref_name=payload.get("output_ref_name"),
             )
@@ -560,19 +570,34 @@ def validate_capture_refs(steps: tuple[RecipeStep, ...]) -> None:
     `RecipeComputeStep` whose `capture_name` is not None (slice 6c: a compute
     step deposits its produced value into a slot). A name declared twice by
     EITHER kind raises `DuplicateRecipeCaptureError` (cross-kind duplicates
-    included). A `CaptureRef` in a later `RecipeSetpointStep` value must
-    reference an already-declared name (forward / missing ->
-    `UnboundRecipeCaptureError`).
+    included). A `CaptureRef` in a later `RecipeSetpointStep` value, or in
+    any `RecipeComputeStep.parameters` value, must reference an
+    already-declared name (forward / missing -> `UnboundRecipeCaptureError`).
+    `SteeringRef` values are exempt (see its own docstring): only `CaptureRef`
+    is checked.
+
+    The consume check and the declare step are INDEPENDENT per step,
+    consume running first: a `RecipeComputeStep` both consumes
+    (`parameters` values) and may declare (`capture_name`) in the same step,
+    and folding both into one `if`/`elif` would let a step's own declaration
+    branch swallow its own consume check, silently skipping the reference
+    check whenever `capture_name` is also set. Running consume unconditionally
+    before declare mirrors `validate_output_refs`'s explicit "consume check
+    runs BEFORE this step's own declaration" ordering, which also rejects a
+    step referencing its own not-yet-produced output.
     """
     declared: set[str] = set()
     for step in steps:
+        if isinstance(step, RecipeSetpointStep):
+            _check_capture_ref(step.value, declared)
+        elif isinstance(step, RecipeComputeStep):
+            for value in step.parameters.values():
+                _check_capture_ref(value, declared)
         declared_name = _declared_capture_name(step)
         if declared_name is not None:
             if declared_name in declared:
                 raise DuplicateRecipeCaptureError(declared_name)
             declared.add(declared_name)
-        elif isinstance(step, RecipeSetpointStep):
-            _check_capture_ref(step.value, declared)
 
 
 class UnboundRecipeOutputError(Exception):

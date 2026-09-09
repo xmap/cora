@@ -270,6 +270,65 @@ def test_validate_capture_refs_compute_none_capture_name_declares_nothing() -> N
 
 
 @pytest.mark.unit
+def test_validate_capture_refs_compute_step_parameter_accepts_earlier_declared_name() -> None:
+    """A CaptureRef nested inside a compute step's parameters resolves like a setpoint value."""
+    steps = (
+        RecipeCaptureStep(address="dev:sample:x", capture_name="offset"),
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            parameters={"rotation_center": CaptureRef("offset")},
+        ),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_rejects_forward_ref_in_compute_parameter() -> None:
+    """A CaptureRef in parameters before the declaring step is a forward ref."""
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            parameters={"rotation_center": CaptureRef("offset")},
+        ),
+        RecipeCaptureStep(address="dev:sample:x", capture_name="offset"),
+    )
+    with pytest.raises(UnboundRecipeCaptureError, match="offset"):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_exempts_steering_ref_in_compute_parameter() -> None:
+    """A SteeringRef in parameters is exempt: the decide loop is the producer, not a step."""
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            parameters={"seed": SteeringRef("focus")},
+        ),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_checks_compute_parameters_even_when_step_also_declares() -> None:
+    """A compute step that both declares capture_name and consumes a forward ref must still fail.
+
+    Regression pin: folding the consume check into the declare branch's
+    if/elif would let this step's own `capture_name` declaration swallow its
+    own parameters check, silently passing a step that references a name
+    nothing declared yet.
+    """
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            parameters={"rotation_center": CaptureRef("offset")},
+            capture_name="quality",
+        ),
+    )
+    with pytest.raises(UnboundRecipeCaptureError, match="offset"):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
 def test_validate_output_refs_accepts_clean_linear_chain() -> None:
     """Chain pr -> norm(pr) -> recon(norm): every OutputRef references an earlier declarer."""
     steps = (
@@ -389,6 +448,34 @@ def test_to_dict_from_dict_roundtrip_preserves_compute_step_capture_name() -> No
 @pytest.mark.unit
 def test_to_dict_from_dict_roundtrip_preserves_compute_step_none_capture_name() -> None:
     steps = (RecipeComputeStep(command=("tomopy", "find_center"), capture_name=None),)
+    assert steps_from_dict(steps_to_dict(steps)) == steps
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_compute_step_parameter_capture_ref() -> None:
+    """A CaptureRef nested in parameters must survive the Recipe event-payload round trip.
+
+    Before this fix parameters were copied verbatim (`dict(step.parameters)`),
+    so a CaptureRef would round-trip back as a bare {"__capture__": name} dict
+    instead of a CaptureRef object: silent corruption, not a loud failure.
+    """
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            parameters={"algorithm": "sirt", "rotation_center": CaptureRef("offset")},
+        ),
+    )
+    assert steps_from_dict(steps_to_dict(steps)) == steps
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_compute_step_parameter_steering_ref() -> None:
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            parameters={"seed": SteeringRef("focus")},
+        ),
+    )
     assert steps_from_dict(steps_to_dict(steps)) == steps
 
 
