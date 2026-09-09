@@ -7,7 +7,8 @@ bc_touches: Equipment
 
 Materializes Diamond i06's diffraction-dichroism diffractometer as a binding of
 the catalog Diffractometer Assembly, end-to-end against Postgres, from the assets
-i06's deployment descriptor carries (`deployments/i06/beamline.yaml`, DIFF-1).
+i06's deployment descriptor carries (`i06/beamline.yaml` in the private
+xmap/descriptors repo, DIFF-1).
 
 This extends the blueprint beyond the hard X-ray six-circle it was earned on
 (4-ID + 8-ID) and the SwissFEL platforms (Bernina + Cristallina) to a soft X-ray
@@ -73,7 +74,7 @@ _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
 _CAP_PSEUDO_AXIS_ID = family_stream_id(FamilyName("PseudoAxis"))
 
 # The two constituent Assets (scenario-supplied ids), mirroring the named devices
-# in deployments/i06/beamline.yaml.
+# in i06/beamline.yaml (now in xmap/descriptors).
 _ASSET_GONIOMETER_ID = UUID("01900000-0000-7000-8000-000000060a11")
 _ASSET_RECIPROCAL_SPACE_ID = UUID("01900000-0000-7000-8000-000000060a21")
 

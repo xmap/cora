@@ -6,22 +6,25 @@ installed devices cover the Method's `needed_families` contract, the same
 set-cover the spine enforces at `define_plan` bind time. The derivation kernel
 is `scripts/practice_derivation.py`.
 
-Two guarantees:
+Two guarantees, scoped to what cora still carries (2-BM at APS; the further 93
+beamlines this guard used to run across moved to the private xmap/descriptors
+repo):
 
-  - fleet-wide computability: the derivation runs for every deployment and
-    never yields a Method the catalog does not define (the roster is a subset
-    of the catalog's Methods, so a renderer or the spine can trust it).
-  - bridge integrity: every REAL (non-pending) Practice hand-authored in a
-    `site.yaml` names a Method that at least one of that Site's hosted
-    beamlines can actually derive (its families cover the Method). A curated
-    Practice asserting hardware no hosted beamline models is drift: either the
-    beamline's device model is missing hardware, or the Practice is aspirational
-    and belongs under `pending:`. Pending Practices are exempt (they ARE the
-    acknowledged IOUs).
+  - computability: the derivation runs for every deployment cora has and never
+    yields a Method the catalog does not define (the roster is a subset of the
+    catalog's Methods, so a renderer or the spine can trust it).
+  - bridge integrity: every REAL (non-pending) Practice hand-authored in
+    `aps/site.yaml` names a Method that 2-BM's device model can actually
+    derive (its families cover the Method). A curated Practice asserting
+    hardware 2-BM does not model is drift: either 2-BM's device model is
+    missing hardware, or the Practice is aspirational and belongs under
+    `pending:`. Pending Practices are exempt (they ARE the acknowledged IOUs).
+    Two practices that were genuinely backed by 8-ID's and 9-ID's own
+    (now-departed) descriptors, not 2-BM's, were removed from aps/site.yaml
+    rather than left asserting hardware this repo no longer models.
 
 The bridge check is the point of Lock 2: it makes the operations layer answer
-to the whole fleet's device model instead of accreting only where someone
-hand-authored a site page.
+to the real device model instead of accreting unchecked.
 """
 
 from __future__ import annotations
@@ -84,8 +87,8 @@ def _facility_of(slug: str) -> str | None:
 def test_derivation_covers_every_deployment() -> None:
     rosters = _rosters()
     # Guards against discovery drift: a moved path would make the checks below
-    # pass vacuously. The fleet is known to be non-trivial.
-    assert len(rosters) >= 80, f"expected the full fleet, derived only {len(rosters)} rosters"
+    # pass vacuously. 2-BM is the one deployment cora carries today.
+    assert len(rosters) >= 1, f"expected at least 2-BM, derived {len(rosters)} rosters"
 
 
 def test_derived_rosters_are_catalog_methods() -> None:

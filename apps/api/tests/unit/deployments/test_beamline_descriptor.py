@@ -7,6 +7,16 @@ new/confirm markers survived as real fields, and that a malformed descriptor
 fails loudly. It is a pure parser test (no I/O beyond reading the file), hence
 the unit tier.
 
+2-BM is the one deployment cora carries: the further 93 beamlines this file
+used to stress-test the catalog vocabulary against (orphan-model, loose-family,
+and Site-ordinal drift guards) moved to the private xmap/descriptors repo, and
+that stress-test value left with them. A guard against drift in data cora no
+longer owns or edits was not guarding anything real; see
+project_beamline_seeder_design's reasoning for why the analogous full-fleet
+seeder was never built for the same reason. The tests below either exercise
+2-BM directly or a synthetic fixture, so they stay meaningful with one real
+deployment in the repo.
+
 The scripts/ modules are loaded via importlib (the dynamic-import bridge used by
 tests/integration/scenarios/conftest.py), since scripts/ is not on the
 type-checker's path.
@@ -38,9 +48,9 @@ _CATALOG = _REPO_ROOT / "catalog" / "catalog.yaml"
 
 
 def _beamline_descriptors() -> list[Path]:
-    # Every deployment's beamline descriptor. The catalog cross-checks run per
-    # descriptor so a second beamline cannot drift its model/family bindings
-    # unguarded; the 2-BM-only _DESCRIPTOR is kept for 2-BM-specific content.
+    # Every deployment cora carries (2-BM today). Kept as a glob rather than a
+    # hardcoded [_DESCRIPTOR] so a future beamline added back to cora is
+    # auto-enrolled in the catalog cross-checks below without editing this file.
     return sorted(_DEPLOYMENTS.glob("*/beamline.yaml"))
 
 
@@ -204,22 +214,47 @@ def _render_all_pages(slug: str) -> dict[str, str]:
     )
 
 
-def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
-    # SRX opts into page_layout: stages: Inventory is dissolved into flat
-    # source/sample/detector/controls siblings, with no equipment/ folder and no
-    # beamline.md or inventory.md.
-    pages = _render_all_pages("srx")
-    assert "deployments/srx/source.md" in pages
-    assert "deployments/srx/sample.md" in pages
-    assert "deployments/srx/detector.md" in pages
-    assert "deployments/srx/controls.md" in pages
-    assert "deployments/srx/beamline.md" not in pages
-    assert "deployments/srx/inventory.md" not in pages
-    assert not any(path.startswith("deployments/srx/equipment/") for path in pages)
+_SYNTHETIC_STAGES_MODEL = (
+    "beamline:\n"
+    "  name: Synthetic\n"
+    "  maturity: model\n"
+    "  evidence: controls_config\n"
+    "  coverage: full\n"
+    "  page_layout: stages\n"
+    "  shape: A synthetic stages-layout model beamline, for pinning the generator.\n"
+    "source:\n"
+    "  stage: source\n"
+    "  devices:\n"
+    "    - {name: SynMotor, family: LinearStage, pv: 'syn:m1'}\n"
+    "sample:\n"
+    "  stage: sample\n"
+    "  devices: []\n"
+    "detector:\n"
+    "  stage: detection\n"
+    "  devices: []\n"
+)
+
+
+def test_stages_layout_dissolves_inventory_into_flat_stage_pages(tmp_path: Path) -> None:
+    # A model-tier beamline with page_layout: stages dissolves Inventory into
+    # flat source/sample/detector/controls siblings, with no equipment/ folder
+    # and no beamline.md or inventory.md. Pinned with a synthetic descriptor
+    # (the real fleet exercising this layout now lives in xmap/descriptors).
+    path = tmp_path / "beamline.yaml"
+    path.write_text(_SYNTHETIC_STAGES_MODEL, encoding="utf-8")
+    descriptor = bd.load(path)
+    pages = bp.render_all(descriptor, slug="syn", model_tier=True)
+    assert "deployments/syn/source.md" in pages
+    assert "deployments/syn/sample.md" in pages
+    assert "deployments/syn/detector.md" in pages
+    assert "deployments/syn/controls.md" in pages
+    assert "deployments/syn/beamline.md" not in pages
+    assert "deployments/syn/inventory.md" not in pages
+    assert not any(p.startswith("deployments/syn/equipment/") for p in pages)
     # the flat source page is the source stage itself, with no Inventory pointer
     # and none of the walk-layout framing (no "walk", no composed-fixture pages,
     # and no dangling Operations reference, which is not a page in this layout)
-    source = pages["deployments/srx/source.md"]
+    source = pages["deployments/syn/source.md"]
     assert source.startswith("# Source")
     assert "inventory.md" not in source
     assert "walk" not in source.lower()
@@ -230,74 +265,57 @@ def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
     # off the Source page in the stages layout.
     assert "## Enclosures" not in source
     # the index presents the stages as first-class sibling pages, not a "Walk the
-    # beam" spine, carries the Enclosures table, and no longer points at Inventory
-    index = pages["deployments/srx/index.md"]
+    # beam" spine, and no longer points at Inventory
+    index = pages["deployments/syn/index.md"]
     assert "[Source](source.md)" in index
     assert "Walk the beam" not in index
     assert "## The beamline" in index
-    assert "## Enclosures" in index
-    assert "`5-ID-A`" in index
     assert "inventory.md" not in index
     assert "equipment/" not in index
-
-
-def _model_stages_slugs() -> list[str]:
-    # Model-tier beamlines on the stages layout: these generate their whole
-    # reader set (index + flat stage pages) from the descriptor. Pilots also use
-    # the stages layout but hand-author index / sample / detector, so they are
-    # excluded from the generated-content guarantees below.
-    slugs: list[str] = []
-    for path in sorted(_DEPLOYMENTS.glob("*/beamline.yaml")):
-        b = bd.load(path).beamline
-        if b.page_layout == "stages" and b.deployment_tier == "model":
-            slugs.append(path.parent.name)
-    return slugs
-
-
-@pytest.mark.parametrize("slug", _model_stages_slugs())
-def test_stages_layout_preserves_shape_and_all_devices(slug: str) -> None:
-    # Every model-tier stages beamline must carry a one-line defining-shape
-    # sentence (the one bespoke line generation cannot reconstruct) as the lead
-    # of its generated index's beamline section, and every modelled device must
-    # still appear across the flat stage pages, so a migration cannot drop content.
-    descriptor = bd.load(_DEPLOYMENTS / slug / "beamline.yaml")
-    assert descriptor.beamline.shape, f"{slug}: stages layout without a shape line"
-    pages = _render_all_pages(slug)
-    index = pages[f"deployments/{slug}/index.md"]
-    assert descriptor.beamline.shape.strip() in index, f"{slug}: shape line missing from index"
-    joined = "\n".join(pages.values())
-    for _name, group in descriptor.groups:
-        for device in group.devices:
-            if device.name and not device.new:
-                assert f"`{device.name}`" in joined, f"{slug}: {device.name} lost from pages"
 
 
 def test_pilot_stages_layout_generates_only_flat_source() -> None:
     # A pilot on the stages layout generates ONLY its Source page (flat source.md);
     # its index, sample, detector, controls, and operational pages are hand-authored.
-    # 2-BM is the sole operational pilot (FXI is reverse-engineered, so model-tier).
     pages = _render_all_pages("2-bm")
     assert set(pages) == {"deployments/2-bm/source.md"}, sorted(pages)
     assert pages["deployments/2-bm/source.md"].startswith("# Source")
 
 
-def test_source_ref_renders_as_provenance_link_in_banner() -> None:
-    # A beamline with a source_ref surfaces it in the generated-from banner as a
-    # link, so a reader can trace the facts to the public source they came from.
-    descriptor = bd.load(_DEPLOYMENTS / "hxn" / "beamline.yaml")
-    ref = descriptor.beamline.source_ref
-    assert ref is not None, "hxn should carry a source_ref"
-    banner_page = _render_all_pages("hxn")["deployments/hxn/index.md"]
-    assert f"[{ref.label}]({ref.url})" in banner_page
+_SYNTHETIC_SOURCE_REF_MODEL = (
+    "beamline:\n"
+    "  name: Synthetic\n"
+    "  maturity: model\n"
+    "  evidence: controls_config\n"
+    "  coverage: full\n"
+    "  page_layout: stages\n"
+    "  shape: A synthetic stages-layout model beamline with a source_ref.\n"
+    "  source_ref:\n"
+    '    label: "org/repo"\n'
+    '    url: "https://example.test/org/repo"\n'
+    "source:\n"
+    "  stage: source\n"
+    "  devices: []\n"
+)
 
 
-def test_pilot_source_ref_surfaces_on_source_page_not_duplicated_on_model_tier(
-    tmp_path: Path,
-) -> None:
+def test_source_ref_renders_as_provenance_link_on_index_not_source(tmp_path: Path) -> None:
+    # A model-tier beamline with a source_ref surfaces it in the index's
+    # generated-from banner as a link, so a reader can trace the facts to the
+    # public source they came from, and does NOT duplicate it on the Source
+    # page (that placement is reserved for a pilot, see the test below).
+    path = tmp_path / "beamline.yaml"
+    path.write_text(_SYNTHETIC_SOURCE_REF_MODEL, encoding="utf-8")
+    descriptor = bd.load(path)
+    pages = bp.render_all(descriptor, slug="syn", model_tier=True)
+    assert "[org/repo](https://example.test/org/repo)" in pages["deployments/syn/index.md"]
+    assert "Source: [" not in pages["deployments/syn/source.md"]
+
+
+def test_pilot_source_ref_surfaces_on_source_page(tmp_path: Path) -> None:
     # A pilot has no generated index, so its Source page is the only place a
-    # source_ref can land; a model-tier beamline shows it on the index and must
-    # NOT duplicate it on the source page. No real pilot currently carries a
-    # source_ref (2-BM is live), so render a synthetic pilot to pin the path.
+    # source_ref can land. No real pilot currently carries a source_ref (2-BM
+    # is live), so render a synthetic pilot to pin the path.
     descriptor_yaml = (
         "beamline:\n"
         "  name: T\n"
@@ -318,8 +336,6 @@ def test_pilot_source_ref_surfaces_on_source_page_not_duplicated_on_model_tier(
     descriptor = bd.load(path)
     pages = bp.render_all(descriptor, slug="t", model_tier=False)
     assert "[org/repo](https://example.test/org/repo)" in pages["deployments/t/source.md"]
-    # a model-tier beamline keeps its source page free of the pointer (on the index)
-    assert "Source: [" not in _render_all_pages("hxn")["deployments/hxn/source.md"]
 
 
 def test_live_pilot_has_no_source_ref() -> None:
@@ -335,9 +351,8 @@ def test_live_pilot_has_no_source_ref() -> None:
 def test_walk_layout_keeps_beamline_and_inventory_pages(tmp_path: Path) -> None:
     # The walk layout (page_layout omitted -> "walk") still emits beamline.md,
     # inventory.md, and the equipment/ stage pages with a "Walk the beam" spine.
-    # The whole real fleet has migrated to the stages layout (only the 2-BM pilot
-    # keeps a non-stages generated set), so this pins the walk path with a
-    # synthetic model-tier descriptor rather than a real beamline.
+    # 2-BM (the only real deployment left) uses the stages layout, so this pins
+    # the walk path with a synthetic model-tier descriptor.
     descriptor_yaml = (
         "beamline:\n"
         "  name: W\n"
@@ -440,18 +455,6 @@ def test_device_family_is_declared_by_its_bound_model(descriptor_path: Path) -> 
     )
 
 
-# Catalog models bound by no deployment device today. Each is a rename-trap
-# landing pad, so a NEW orphan must be bound, removed, or added here with a
-# reason. The two non-kit entries are catalog models whose 2-BM devices are not
-# yet model-bound (a descriptor follow-up, distinct from the kit alternatives).
-_ALLOWED_ORPHAN_MODELS = {
-    "aerotech_abrs150mp": "rotary swap-kit alternative; installed rotary is ABRS-250MP",
-    "aerotech_abs2000": "rotary swap-kit alternative; installed rotary is ABRS-250MP",
-    "mitutoyo_plan_apo": "objective product-line model; Objective_* devices not yet model-bound",
-    "crytur_luag": "scintillator model; Scintillator device not yet model-bound",
-}
-
-
 def _count_binding_keys(node: Any) -> dict[str, int]:
     # Count mappings carrying a non-null model:/family: anywhere in the raw YAML.
     # Compared against the typed walk to catch a binding hidden under an untyped
@@ -490,121 +493,6 @@ def _catalog_marker_models(md_path: Path) -> list[str]:
     return names
 
 
-def test_no_unexpected_orphan_catalog_models() -> None:
-    catalog = cd.load(_CATALOG)
-    bound = {
-        device.model
-        for path in _beamline_descriptors()
-        for device in _walk_devices(bd.load(path))
-        if device.model
-    }
-    orphans = {m.name for m in catalog.models} - bound
-    unexpected = orphans - set(_ALLOWED_ORPHAN_MODELS)
-    assert not unexpected, (
-        "catalog models bound by no deployment device (rename-trap landing pads); "
-        f"bind, remove, or allowlist with a reason: {sorted(unexpected)}"
-    )
-    stale_allowlist = set(_ALLOWED_ORPHAN_MODELS) - orphans
-    assert not stale_allowlist, (
-        f"bound or removed; drop from _ALLOWED_ORPHAN_MODELS: {sorted(stale_allowlist)}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# Family integrity and federation-alignment guards.
-#
-# A device family with NO bound model is otherwise checked against nothing
-# (test_device_family_is_declared_by_its_bound_model fires only when a model is
-# bound), so a typo'd or synonym family would pass silently. These guards make
-# every loose family (a family string not in the catalog) a deliberate, reasoned
-# registry entry, surface promotion candidates as the fleet grows, and keep the
-# beamline -> site facility pointer resolvable. They mirror the two-sided
-# orphan-model guard above (assert no unexpected AND no stale allowlist entry).
-# ---------------------------------------------------------------------------
-
-PROMOTION_THRESHOLD = 2
-
-# Loose families: a device family string that is not (yet) a catalog Family.
-# Each is either a Supply observation that never becomes an Asset Family, a
-# passive beam-path element deferred under that tier, a component of another
-# Asset (not a standalone Asset Family), or a real candidate staged behind an
-# open question (the bucket leads each reason). A NEW loose family must
-# land here with a reason: that forces a synonym or typo to surface in review
-# without forcing premature promotion into the catalog.
-_ALLOWED_LOOSE_FAMILIES = {
-    "Beam": "supply: Supply(PhotonBeam) source observation; never an Asset Family",
-    "Vacuum": "supply: Supply(Vacuum) observation; never an Asset Family",
-    "StorageRing": "supply: machine-level observe-only ring state (MACHINE-1); not an Asset Family",
-    "HeatAbsorber": "passive-deferred: passive beam-path tier (TomoWISE front-end absorber)",
-    "SafetyStack": "passive-deferred: passive safety composite (2-BM P6-50)",
-    "Shielding": "passive-deferred: passive PSS-grade shielding (19-BM guillotines, ENC-1)",
-    "SlipRing": "component: rotation-stage feedthrough, a Positioner component not an Asset",
-    "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
-    "Diagnostic": "staged: arrival-time / photon-spectrum Sensor; fold-vs-promote open (DIAG-1)",
-    "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
-    "MultilayerLaueLens": "staged: novel 1D crossed-pair nano-focus optic, HXN-only (OPTIC-3)",
-    "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
-    "Photodiode": "staged: PIN photodiode, Sensor Role; Family-vs-Sensor open (RAD-1)",
-    "Baffle": "staged: passive baffle inside the 2-BM SafetyStack; review name/role",
-    "Rheometer": "staged: rheometer shear-cell (8-ID); rule-of-three open (SAMPLE-1)",
-    "FlightPath": "staged: evacuated XPCS flight path (8-ID); rule-of-three open (XPCS-2)",
-    "EnergyAnalyzer": "staged: IXS diced crystal energy analyzer; n=1 (ANALYZER-1)",
-}
-
-# The subset of loose families that is conceptually a Supply observation (a
-# facility resource or machine state), not an Asset, so it never counts toward
-# catalog promotion.
-_SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
-
-# Loose families that have reached the promotion threshold and whose
-# promote-or-hold decision has been recorded. A non-supply loose family that
-# crosses PROMOTION_THRESHOLD deployments fails the build until it is either
-# graduated into the catalog or recorded here with a one-line decision: the
-# signal is mechanical, the decision stays human.
-_PROMOTION_REVIEWED = {
-    "Diagnostic": "hold: arrival-time / photon-spectrum Sensor fold-vs-promote still open (DIAG-1)",
-    "SlipRing": "hold: rotation-stage feedthrough; a Positioner component, not a standalone Asset",
-}
-
-# Catalog families bound by no deployment device. Symmetric to the orphan-model
-# guard: an un-earned family contradicts "the model only contains what a real
-# deployment forced." Empty today (GenericProbe is bound by FXI flux monitors).
-_ALLOWED_ORPHAN_FAMILIES: dict[str, str] = {}
-
-
-def _classify(observed: set[str], allowed: set[str]) -> tuple[list[str], list[str]]:
-    # (unexpected, stale): observed-not-allowed, allowed-not-observed. The shared
-    # core of the two-sided allowlist guards, unit-tested on synthetic input below
-    # so a future refactor cannot quietly weaken them.
-    return sorted(observed - allowed), sorted(allowed - observed)
-
-
-def _catalog_family_names() -> set[str]:
-    return {f.name for f in cd.load(_CATALOG).families}
-
-
-def _used_families() -> set[str]:
-    return {
-        device.family
-        for path in _beamline_descriptors()
-        for device in _walk_devices(bd.load(path))
-        if device.family
-    }
-
-
-def _loose_family_deployments() -> dict[str, set[str]]:
-    # family (not in the catalog) -> the deployments that bind it.
-    catalog_families = _catalog_family_names()
-    spread: dict[str, set[str]] = {}
-    for path in _beamline_descriptors():
-        deployment = path.parent.name
-        for device in _walk_devices(bd.load(path)):
-            family = device.family
-            if family and family not in catalog_families:
-                spread.setdefault(family, set()).add(deployment)
-    return spread
-
-
 def _site_descriptors() -> list[Path]:
     return sorted(_DEPLOYMENTS.glob("*/site.yaml"))
 
@@ -613,56 +501,11 @@ def _site_facility_codes() -> set[str]:
     return {sd.load(path).facility.code for path in _site_descriptors()}
 
 
-def test_no_unexpected_loose_families() -> None:
-    loose = _used_families() - _catalog_family_names()
-    unexpected, stale = _classify(loose, set(_ALLOWED_LOOSE_FAMILIES))
-    assert not unexpected, (
-        "device families not in the catalog and not allowlisted (a typo, a synonym, or a "
-        "genuinely new device class); add to catalog.families or to _ALLOWED_LOOSE_FAMILIES "
-        f"with a reason: {unexpected}"
-    )
-    assert not stale, (
-        f"promoted into the catalog or no longer used; drop from _ALLOWED_LOOSE_FAMILIES: {stale}"
-    )
-
-
-def test_loose_families_past_promotion_threshold_are_reviewed() -> None:
-    spread = _loose_family_deployments()
-    candidates = {
-        family
-        for family, deployments in spread.items()
-        if len(deployments) >= PROMOTION_THRESHOLD and family not in _SUPPLY_LOOSE_FAMILIES
-    }
-    unreviewed = sorted(
-        f"{family} {sorted(spread[family])}"
-        for family in candidates
-        if family not in _PROMOTION_REVIEWED
-    )
-    assert not unreviewed, (
-        f"loose families at >= {PROMOTION_THRESHOLD} deployments with no recorded decision; "
-        "graduate them into catalog.families or record a promote-or-hold note in "
-        f"_PROMOTION_REVIEWED: {unreviewed}"
-    )
-    stale = sorted(set(_PROMOTION_REVIEWED) - candidates)
-    assert not stale, (
-        "no longer a sub-threshold candidate (promoted, removed, or now a Supply family); "
-        f"drop from _PROMOTION_REVIEWED: {stale}"
-    )
-
-
-def test_no_unexpected_orphan_catalog_families() -> None:
-    orphans = _catalog_family_names() - _used_families()
-    unexpected, stale = _classify(orphans, set(_ALLOWED_ORPHAN_FAMILIES))
-    assert not unexpected, (
-        "catalog families bound by no deployment device (un-earned abstractions); "
-        f"bind, remove, or allowlist with a reason: {unexpected}"
-    )
-    assert not stale, f"now bound or removed; drop from _ALLOWED_ORPHAN_FAMILIES: {stale}"
-
-
 def test_site_facility_codes_cover_known_sites() -> None:
     # Anchor so the resolution check below cannot pass vacuously on an empty set.
-    assert {"aps", "diamond", "maxiv", "nsls2", "slac", "esrf"} <= _site_facility_codes()
+    # aps is the one Site cora carries; the further 13 moved with their
+    # beamlines to xmap/descriptors.
+    assert {"aps"} <= _site_facility_codes()
 
 
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
@@ -684,30 +527,18 @@ def test_beamline_and_enclosure_facility_codes_resolve(descriptor_path: Path) ->
     )
 
 
-def test_allowlist_guard_logic_detects_unexpected_and_stale() -> None:
-    # The two-sided guards reduce to _classify; prove it on synthetic input.
-    # "Scintilator" is the canonical typo of the catalog family Scintillator.
-    unexpected, stale = _classify({"Scintilator", "Beam"}, {"Beam"})
-    assert unexpected == ["Scintilator"]
-    assert stale == []
-    unexpected, stale = _classify(set(), {"GoneFamily"})
-    assert unexpected == []
-    assert stale == ["GoneFamily"]
-
-
 # ---------------------------------------------------------------------------
 # Descriptor <-> deployment-docs drift guard.
 #
-# Each deployment's docs/deployments/<id>/ pages carry a hand-authored, curated
-# inventory (editorial columns, live condition, and, for the operational pilot,
-# derived PseudoAxis Assets that exist only in scenario setup), so they are NOT
-# generated from the descriptor. This guard keeps only the factual subset honest:
-# every device the descriptor MODELS (not marked new:, i.e. a real CORA Asset or
-# a live verified device) must be mentioned by name somewhere in its deployment
-# docs, so renaming or removing a device in the descriptor cannot leave a stale
-# doc, and a documented Asset cannot quietly lose its descriptor source. Devices
-# marked new: are not yet modelled and are legitimately absent, so a pure
-# design-phase scaffold (all-new) is not pinned until its devices materialize.
+# 2-BM's docs/deployments/2-bm/ pages carry a hand-authored, curated inventory
+# (editorial columns, live condition, and derived PseudoAxis Assets that exist
+# only in scenario setup), so they are NOT generated from the descriptor. This
+# guard keeps only the factual subset honest: every device the descriptor
+# MODELS (not marked new:, i.e. a real CORA Asset or a live verified device)
+# must be mentioned by name somewhere in its deployment docs, so renaming or
+# removing a device in the descriptor cannot leave a stale doc, and a
+# documented Asset cannot quietly lose its descriptor source. Devices marked
+# new: are not yet modelled and are legitimately absent.
 # ---------------------------------------------------------------------------
 
 _DOCS_DEPLOYMENTS = _REPO_ROOT / "docs" / "deployments"
@@ -810,13 +641,9 @@ def test_doc_catalog_markers_reference_real_catalog_models() -> None:
 #
 # Every beamline declares three orthogonal badge axes (see beamline_descriptor
 # for the vocabularies). These guards keep the vocabulary closed (an enum-mirror
-# per axis, matching the DrawingSystem mirror above) and the combinations logical
-# (the two invariants that must hold for the axes to mean what they claim): there
-# is exactly one live pilot, and live evidence and the pilot maturity are the same
-# beamline. Evidence and coverage are otherwise free of maturity, by design: a
-# roadmap beamline can be modelled from a design report or from narrative facts,
-# and an off-roadmap model can be a partial cut, so no further cross-axis law is
-# asserted (that would encode a coincidence of today's corpus as a rule).
+# per axis, matching the DrawingSystem mirror above) and the combinations logical:
+# there is exactly one live pilot, and live evidence and the pilot maturity are
+# the same beamline.
 # ---------------------------------------------------------------------------
 
 _BADGE_MATURITIES = frozenset({"pilot", "design", "model"})
@@ -850,27 +677,13 @@ def test_badge_axes_are_logically_consistent() -> None:
     )
 
 
-def test_badge_axes_are_not_vacuous() -> None:
-    # Pin a floor so the per-descriptor check cannot pass on an empty glob, and so
-    # a bulk misclassification that flattens an axis to one value is caught: the
-    # fleet spans multiple evidence tiers and carries at least one partial cut.
-    beamlines = [bd.load(p).beamline for p in _beamline_descriptors()]
-    assert len(beamlines) >= 50
-    assert len({b.evidence for b in beamlines}) >= 3
-    assert any(b.coverage == "partial" for b in beamlines)
-
-
 # ---------------------------------------------------------------------------
 # Deployments index drift guard.
 #
-# docs/deployments/index.md is the hand-authored hub: it groups every beamline
-# by Site and carries the three badge cells per row. Hand-authored means it can
-# go stale (81 deployments exist, an earlier index listed only 67) and its badge
-# cells can disagree with the descriptor. These guards make the index self-police
-# without a generator: every deployment appears as a row, and each row's three
-# badge cells equal the beamline's descriptor. They mirror the doc-drift guard
-# test_modeled_devices_are_documented above (the descriptor is the source of
-# truth, the docs must not drift from it).
+# docs/deployments/index.md is the hand-authored hub: it lists every deployment
+# cora carries with its three badge cells. These guards make the index
+# self-police without a generator: every deployment appears as a row, and each
+# row's three badge cells equal the beamline's descriptor.
 # ---------------------------------------------------------------------------
 
 _INDEX = _DOCS_DEPLOYMENTS / "index.md"
@@ -932,10 +745,9 @@ def test_index_badge_cells_match_descriptor() -> None:
 # Beamline summary: single source for the "What it is" one-liner.
 #
 # The one-line description of a beamline is authored once, in its descriptor's
-# `summary`, and rendered in two places: the "What it is" cell on the landing
-# page and the beamline's row in its Site facility-page roster. This guard makes
-# the descriptor the single source: every beamline declares a summary, and the
-# landing-page cell equals it, so the two surfaces cannot drift.
+# `summary`, and rendered on the landing page's "What it is" cell. This guard
+# makes the descriptor the single source: every beamline declares a summary,
+# and the landing-page cell equals it, so the two cannot drift.
 # ---------------------------------------------------------------------------
 
 
@@ -972,109 +784,6 @@ def test_index_what_it_is_matches_descriptor_summary() -> None:
     assert not mismatched, (
         "landing-page 'What it is' cells disagree with the descriptor summary "
         "(the descriptor is the single source):\n" + "\n".join(mismatched)
-    )
-
-
-# ---------------------------------------------------------------------------
-# Site-ordinal drift guard.
-#
-# Deployment prose repeatedly claims "CORA's Nth Site" for the facility a
-# beamline sits on. Because each page was written when the fleet was a different
-# size, these ordinals drifted: four separate facilities once all claimed
-# "eighth Site". The canonical order is the sequence in which CORA took each Site
-# on, pinned here as the single source of truth. This guard scans every
-# deployment's docs and descriptor for an "CORA's <ordinal> Site" claim and
-# fails if the ordinal word does not match the facility's canonical position, so
-# a future beamline cannot reintroduce a stale count. Only Site-level ordinals
-# are mechanized (they have one right answer); technique / per-facility-sequence
-# ordinals are phrased without a hard count on purpose.
-# ---------------------------------------------------------------------------
-
-# Canonical Site order: the sequence CORA took each facility on. Position i (1-based)
-# is the ordinal every "CORA's Nth Site" claim about that facility must use.
-_CANONICAL_SITE_ORDER = (
-    "aps",
-    "maxiv",
-    "diamond",
-    "nsls2",
-    "slac",
-    "as",
-    "esrf",
-    "sirius",
-    "alba",
-    "als",
-    "elettra",
-    "nsrrc",
-    "petra-iii",
-    "psi",
-)
-
-_ORDINAL_WORDS = {
-    1: {"first"},
-    2: {"second"},
-    3: {"third"},
-    4: {"fourth"},
-    5: {"fifth"},
-    6: {"sixth"},
-    7: {"seventh"},
-    8: {"eighth"},
-    9: {"ninth", "9th"},
-    10: {"tenth"},
-    11: {"eleventh", "11th"},
-    12: {"twelfth"},
-    13: {"thirteenth"},
-    14: {"fourteenth"},
-}
-
-# "CORA's <ordinal> Site", "the <ordinal> Site CORA models", "is the <ordinal> Site",
-# "<Facility> is the <ordinal> Site", "<Facility>, the <ordinal> Site", and the
-# "Nth)" short form used in a few page bullets (e.g. "ALBA, the 9th)").
-_SITE_ORDINAL_RE = re.compile(
-    r"(?:the|is the|its|CORA's)\s+"
-    r"(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
-    r"eleventh|twelfth|thirteenth|fourteenth|9th|11th)\s+Site",
-    re.IGNORECASE,
-)
-
-
-def _facility_ordinal(facility_code: str) -> int:
-    return _CANONICAL_SITE_ORDER.index(facility_code) + 1
-
-
-def test_canonical_site_order_covers_every_facility() -> None:
-    # Anchor: the pinned order must list exactly the facilities that have a
-    # site.yaml, so a new Site cannot be added without placing it in the order.
-    assert set(_CANONICAL_SITE_ORDER) == _site_facility_codes()
-
-
-def test_site_ordinal_claims_match_canonical_order() -> None:
-    # For every deployment, its facility fixes the one correct Site ordinal; any
-    # "CORA's Nth Site" claim in its docs or descriptor must use that word.
-    wrong: list[str] = []
-    for descriptor_path in _beamline_descriptors():
-        deployment = descriptor_path.parent.name
-        facility = bd.load(descriptor_path).beamline.facility
-        if facility is None or facility not in _CANONICAL_SITE_ORDER:
-            continue
-        expected_n = _facility_ordinal(facility)
-        expected_words = _ORDINAL_WORDS[expected_n]
-        site_yaml = _DEPLOYMENTS / facility / "site.yaml"
-        sources = [
-            descriptor_path,
-            site_yaml,
-            *sorted((_DOCS_DEPLOYMENTS / deployment).rglob("*.md")),
-        ]
-        for source in sources:
-            if not source.exists():
-                continue
-            for claim in _SITE_ORDINAL_RE.findall(source.read_text(encoding="utf-8")):
-                if claim.lower() not in expected_words:
-                    wrong.append(
-                        f"{source.relative_to(_REPO_ROOT)}: claims '{claim} Site' but "
-                        f"{facility} is CORA's #{expected_n} Site"
-                    )
-    assert not wrong, (
-        "stale Site ordinals (canonical order in _CANONICAL_SITE_ORDER):\n" + "\n".join(wrong)
     )
 
 

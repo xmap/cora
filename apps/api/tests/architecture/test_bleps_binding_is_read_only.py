@@ -118,9 +118,14 @@ def test_the_descriptor_scan_reads_files() -> None:
     This is the check that was missing when `_descriptor_files()` pointed
     at a directory that does not exist. Asserting on the roster alone said
     nothing about whether anything was ever opened.
+
+    deployments/ carries just 2-bm/beamline.yaml and aps/site.yaml today
+    (the further 93 descriptors moved to the private xmap/descriptors repo,
+    a presentation and vocabulary-testing move unrelated to this safety
+    posture check, which must keep scanning whatever cora actually carries).
     """
     found = _descriptor_files()
-    assert len(found) > 50, f"expected the deployments tree, found {len(found)} files"
+    assert len(found) >= 2, f"expected at least 2-bm + aps, found {len(found)} files"
     assert any(p.parent.name == "2-bm" for p in found)
 
 

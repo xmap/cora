@@ -7,7 +7,8 @@ bc_touches: Equipment
 
 Materializes IOS's Kirkpatrick-Baez focusing mirror pair as a binding of the
 catalog KirkpatrickBaez Assembly, end-to-end against Postgres, from the assets
-IOS's deployment descriptor carries (`deployments/ios/beamline.yaml`, OPT-1).
+IOS's deployment descriptor carries (`ios/beamline.yaml` in the private
+xmap/descriptors repo, OPT-1).
 
 Unlike CDI (which collapses its KB pair into one Asset that the Fixture splits),
 IOS's descriptor already models the two mirrors as distinct Mirror Assets, so the
@@ -62,7 +63,7 @@ _IOS_UNIT_ID = UUID("01900000-0000-7000-8000-000000e50a01")
 _CAP_MIRROR_ID = family_stream_id(FamilyName("Mirror"))
 
 # The two KB mirror Assets (scenario-supplied ids), mirroring the distinct named
-# devices in deployments/ios/beamline.yaml.
+# devices in ios/beamline.yaml (now in xmap/descriptors).
 _ASSET_VKB_ID = UUID("01900000-0000-7000-8000-000000e50a11")
 _ASSET_HKB_ID = UUID("01900000-0000-7000-8000-000000e50a21")
 
