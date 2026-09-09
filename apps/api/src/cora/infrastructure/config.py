@@ -525,13 +525,20 @@ class Settings(BaseSettings):
     # `procedure_watcher_enabled` gates the ProcedureWatcher background runtime
     # (8th seeded agent, deterministic flag-only). Default off: deployments opt in
     # explicitly. `procedure_watcher_tick_seconds` is the sweep cadence (>= 0.1s).
-    # `procedure_watcher_stale_after_seconds` is how long an in-conduct procedure
-    # (Running / Held) may sit without progressing before it is flagged; live
-    # conduct is far shorter-lived than a clearance or calibration, so the default
-    # is an hour (off by default; an operator sets the real window on enable).
+    # `procedure_watcher_stale_after_seconds` is how long a Running procedure may
+    # sit without progressing before it is flagged; live conduct is far
+    # shorter-lived than a clearance or calibration, so the default is an hour
+    # (off by default; an operator sets the real window on enable).
+    # `procedure_watcher_held_stale_after_seconds` is the separate window for a
+    # Held procedure: a hold is commonly a deliberate operator pause (a bakeout,
+    # waiting on beam, waiting on a collaborator) that legitimately runs far
+    # longer than an hour, and a Held conduct logs no activity to fold in as a
+    # second chance, so it needs its own, much longer default; matches
+    # `campaign_watcher_stale_after_seconds`'s Held precedent, a week.
     procedure_watcher_enabled: bool = False
     procedure_watcher_tick_seconds: float = 300.0
     procedure_watcher_stale_after_seconds: float = 3600.0
+    procedure_watcher_held_stale_after_seconds: float = 604800.0
 
     # `campaign_watcher_enabled` gates the CampaignWatcher background runtime
     # (9th seeded agent, deterministic flag-only). Default off: deployments opt in
@@ -2051,6 +2058,19 @@ class Settings(BaseSettings):
             msg = (
                 f"procedure_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every in-conduct procedure"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("procedure_watcher_held_stale_after_seconds")
+    @classmethod
+    def _validate_procedure_watcher_held_stale_after_seconds(cls, value: float) -> float:
+        """Must be positive: a non-positive window would flag every Held
+        procedure."""
+        if value <= 0:
+            msg = (
+                f"procedure_watcher_held_stale_after_seconds must be > 0, got {value}; "
+                "a non-positive window would flag every Held procedure"
             )
             raise ValueError(msg)
         return value
