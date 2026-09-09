@@ -1,26 +1,27 @@
-"""Fitness guard: a beamline's techniques.md cannot call an AUTHORED Method pending.
+"""Fitness guard: a beamline's Techniques section cannot call an AUTHORED Method pending.
 
-The per-beamline `docs/deployments/<id>/techniques.md` pages are hand-authored
-intent prose (unlike the generated `beamline.md`). When a technique was cited as
-"a new Method, pending (TECH-1)" and that Method is later authored into the
-catalog (the operations-layer re-derivation Lock 1), the page rots: it describes
-a future that already arrived.
+The per-beamline `docs/deployments/<id>/notes.md` pages are hand-authored intent
+prose (unlike the generated `beamline.md`), and each carries a `## Techniques`
+section. When a technique was cited as "a new Method, pending (TECH-1)" and that
+Method is later authored into the catalog (the operations-layer re-derivation
+Lock 1), the section rots: it describes a future that already arrived.
 
-This guard catches that specific drift. A techniques.md table row is STALE when
-it both:
+This guard catches that specific drift. A Techniques-section table row is STALE
+when it both:
   - cites a backtick method slug that now exists in `catalog/catalog.yaml`, and
   - frames that row as not-yet-real (pending / "new Method" / "not yet in
     catalog" / a bare TECH-tag).
 
 A stale row must be either fixed (drop the pending framing now that the Method
 exists) or listed in `_KNOWN_STALE` below. `_KNOWN_STALE` is an enumerated
-backlog: the rows already stale when Lock 1 landed, deliberately left for the
-in-flight beamline-page redesign to clear (that work regenerates these pages, so
-hand-editing them now would churn / collide). The guard's value is catching NEW
-drift: a newly-authored Method whose citing page still says pending fails the
-build unless explicitly parked here.
+backlog: the rows already stale when Lock 1 landed, deliberately left for a
+future content pass to clear (the four hand-authored pages per beamline were
+merged into one `notes.md` afterward, a structural move only; it did not touch
+row content, so the backlog carries over unchanged). The guard's value is
+catching NEW drift: a newly-authored Method whose citing row still says pending
+fails the build unless explicitly parked here.
 
-Keyed by (beamline, method_slug). Removing an entry once its page is fixed is
+Keyed by (beamline, method_slug). Removing an entry once its row is fixed is
 required: a _KNOWN_STALE entry that is no longer stale fails the no-dead-entry
 check, so the backlog cannot rot silent.
 """
@@ -51,10 +52,11 @@ _PENDING_PHRASE = re.compile(
     re.IGNORECASE,
 )
 _SLUG = re.compile(r"`([a-z][a-z0-9_]+)`")
+_SECTION = re.compile(r"^## (.+)$", re.MULTILINE)
 
 # Rows already stale when Lock 1 landed (2026-07-02): the page cites a now-authored
-# Method but still frames it pending. Backlog for the beamline-page redesign to
-# clear; each removal is verified by the no-dead-entry check below.
+# Method but still frames it pending. Backlog for a future content pass to clear;
+# each removal is verified by the no-dead-entry check below.
 _KNOWN_STALE: set[tuple[str, str]] = {
     ("13-id", "powder_diffraction"),
     ("cdi", "ptychography"),
@@ -92,13 +94,31 @@ def _catalog_methods() -> set[str]:
     return {m.name for m in catalog_descriptor.load(_CATALOG).methods}
 
 
+def _techniques_section(notes_text: str) -> str:
+    """The `## Techniques` section body, up to the next `## ` heading or EOF.
+
+    notes.md carries Techniques, Governance, Model, and Open questions as
+    sibling sections; Open questions has its own pipe-table rows that must not
+    leak into this scan (a "pending" confirmation there is not a stale Method
+    citation).
+    """
+    headings = list(_SECTION.finditer(notes_text))
+    for i, m in enumerate(headings):
+        if m.group(1).strip() != "Techniques":
+            continue
+        end = headings[i + 1].start() if i + 1 < len(headings) else len(notes_text)
+        return notes_text[m.end() : end]
+    return ""
+
+
 def _stale_rows() -> set[tuple[str, str]]:
-    """Every (beamline, authored-method-slug) whose techniques.md row is stale."""
+    """Every (beamline, authored-method-slug) whose Techniques row is stale."""
     methods = _catalog_methods()
     stale: set[tuple[str, str]] = set()
-    for techniques_md in sorted(_DEPLOYMENTS_DOCS.glob("*/techniques.md")):
-        beamline = techniques_md.parent.name
-        for line in techniques_md.read_text(encoding="utf-8").splitlines():
+    for notes_md in sorted(_DEPLOYMENTS_DOCS.glob("*/notes.md")):
+        beamline = notes_md.parent.name
+        section = _techniques_section(notes_md.read_text(encoding="utf-8"))
+        for line in section.splitlines():
             if not line.startswith("| ") or not _PENDING_PHRASE.search(line):
                 continue
             for slug in _SLUG.findall(line):
@@ -108,14 +128,18 @@ def _stale_rows() -> set[tuple[str, str]]:
 
 
 def test_techniques_pages_discovered() -> None:
-    pages = list(_DEPLOYMENTS_DOCS.glob("*/techniques.md"))
-    assert len(pages) >= 80, f"expected the full fleet of techniques.md, found {len(pages)}"
+    pages = [
+        p
+        for p in _DEPLOYMENTS_DOCS.glob("*/notes.md")
+        if _techniques_section(p.read_text(encoding="utf-8"))
+    ]
+    assert len(pages) >= 80, f"expected the full fleet of Techniques sections, found {len(pages)}"
 
 
 def test_no_new_stale_technique_rows() -> None:
     new_stale = sorted(_stale_rows() - _KNOWN_STALE)
     assert not new_stale, (
-        "techniques.md row(s) call a Method 'pending' / 'new' / 'not in catalog' that now "
+        "notes.md Techniques row(s) call a Method 'pending' / 'new' / 'not in catalog' that now "
         "EXISTS in catalog/catalog.yaml. Drop the pending framing now the Method is authored, "
         "or add to _KNOWN_STALE with intent:\n"
         + "\n".join(f"  {bl}: `{slug}`" for bl, slug in new_stale)

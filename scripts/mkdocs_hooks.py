@@ -230,44 +230,7 @@ def on_page_markdown(
             descriptor=_beamline_descriptor_for(src_uri),
             src_uri=src_uri,
         )
-    # Every Open questions page asks beamline staff to confirm facts, and until
-    # now only 2-BM told them how to answer or what the priority words mean. The
-    # footer is appended here rather than written into 83 hand-authored files,
-    # and before the link rewrite so its links resolve like any other.
-    if (
-        src_uri.startswith("deployments/")
-        and src_uri.endswith("/questions.md")
-        and "## How to reply" not in markdown
-    ):
-        markdown = markdown.rstrip() + _QUESTIONS_FOOTER
-
     return _rewrite_in_page(src_uri, markdown)
-
-
-# No anchors in here: it lands on 83 pages, so one bad fragment would become 83.
-_QUESTIONS_FOOTER = """
-
-## Answering one of these
-
-Every row above is a question about the real beamline, and any of them can be
-answered by someone who knows the hardware. You do not need to edit this page
-or know where it lives.
-
-Open a short issue at
-[github.com/xmap/cora/issues](https://github.com/xmap/cora/issues), quote the
-item ID, and write the answer in plain text. One answer is as welcome as
-several. If you do not use GitHub, send the same thing to whoever shared this
-page with you. If a row turns out to be a controls, network, or engineering
-question, pass it to the right person or tell us who that is.
-
-The priorities mean: `Blocks-build`, your answer changes the structure of the
-description, so CORA cannot finalise it until you reply; `Blocks-go-live`, a
-guess is fine for the description, but the real value is needed before CORA
-controls or observes the hardware; `Nice-to-have`, extra detail for the record.
-
-Once an item is confirmed we record the value and delete the row, so this page
-always shows only what is still open.
-"""
 
 
 def on_files(files: Any, *, config: Any) -> Any:
