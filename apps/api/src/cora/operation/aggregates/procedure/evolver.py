@@ -61,16 +61,21 @@ for the new transition arms.
 """
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import assert_never
+from uuid import UUID
 
 from cora.infrastructure.evolver import require_state
 from cora.operation.aggregates.procedure.events import (
+    LEGACY_CAUSE,
+    LEGACY_CLAIM_ID,
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
     ProcedureDiagnosticLogbookOpened,
     ProcedureEvent,
     ProcedureHeld,
+    ProcedureHoldClaimReleased,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
     ProcedureOutcomeLogbookOpened,
@@ -88,6 +93,39 @@ from cora.operation.aggregates.procedure.state import (
     ProcedureStatus,
     merge_actuation_kinds,
 )
+
+
+def _with_claim(
+    claims: tuple[tuple[UUID, str], ...],
+    claim_id: UUID | None,
+    cause: str | None,
+) -> tuple[tuple[UUID, str], ...]:
+    """Add one hold claim, idempotent on an already-active claim id.
+
+    A `ProcedureHeld` written before holds were cause-scoped carries no
+    `claim_id`; it folds to the single `LEGACY_CLAIM_ID` claim so repeated
+    legacy holds collapse to one rather than accumulating, which is what makes
+    a legacy stream replay to its original one-bit meaning.
+    """
+    key = claim_id if claim_id is not None else LEGACY_CLAIM_ID
+    if any(existing == key for existing, _ in claims):
+        return claims
+    return (*claims, (key, cause if cause is not None else LEGACY_CAUSE))
+
+
+def _without_claim(
+    claims: tuple[tuple[UUID, str], ...],
+    claim_id: UUID | None,
+) -> tuple[tuple[UUID, str], ...]:
+    """Drop one hold claim; `None` clears every claim (legacy bare resume).
+
+    Dropping a claim that is not active is a no-op rather than an error: the
+    evolver folds whatever the stream says and leaves rejection to the deciders,
+    which is what keeps replay total over any historical stream.
+    """
+    if claim_id is None:
+        return ()
+    return tuple((cid, cause) for cid, cause in claims if cid != claim_id)
 
 
 def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
@@ -117,6 +155,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=None,
                 capability_id=capability_id,
                 recipe_id=recipe_id,
+                hold_claims=(),
                 current_iteration_index=None,
                 iteration_count=0,
                 consecutive_unconverged_iterations=0,
@@ -137,6 +176,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=prior.hold_claims,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -160,6 +200,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=(),
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -184,6 +225,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=(),
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -208,6 +250,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=(),
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -217,7 +260,11 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
             )
-        case ProcedureHeld(actuation_kind=held_actuation_kind):
+        case ProcedureHeld(
+            actuation_kind=held_actuation_kind,
+            claim_id=held_claim_id,
+            cause=held_cause,
+        ):
             # Operator-pause transition (Running -> Held). Status-only change;
             # every non-status field carries verbatim from prior (especially
             # the iteration denorms). Mirrors RunHeld. EXCEPT actuation_kind:
@@ -240,6 +287,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=_with_claim(prior.hold_claims, held_claim_id, held_cause),
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -249,7 +297,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 beam_requirement=prior.beam_requirement,
                 actuation_kind=merge_actuation_kinds(prior.actuation_kind, held_actuation_kind),
             )
-        case ProcedureResumed():
+        case ProcedureResumed(released_claim_id=released_claim_id):
             # Resume transition (Held -> Running). Status-only change; every
             # non-status field carries verbatim from prior. The
             # re_establishment_boundary rides the event for the Conductor's
@@ -267,6 +315,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=_without_claim(prior.hold_claims, released_claim_id),
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -275,6 +324,17 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 ),
                 beam_requirement=prior.beam_requirement,
                 actuation_kind=prior.actuation_kind,
+            )
+        case ProcedureHoldClaimReleased(claim_id=released_claim_id):
+            # Audit-only: one concern discharged its claim while others still
+            # hold, so the Procedure STAYS Held. `replace` rather than a
+            # hand-listed constructor precisely because this arm changes one
+            # field: re-listing seventeen is how a field gets silently
+            # dropped, which is the bug class this whole slice exists to fix.
+            prior = require_state(state, "ProcedureHoldClaimReleased")
+            return replace(
+                prior,
+                hold_claims=_without_claim(prior.hold_claims, released_claim_id),
             )
         case ProcedureActivitiesLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -294,6 +354,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=prior.hold_claims,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -321,6 +382,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=prior.hold_claims,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -348,6 +410,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=prior.hold_claims,
                 current_iteration_index=prior.current_iteration_index,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -397,6 +460,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=prior.hold_claims,
                 current_iteration_index=iteration_index,
                 iteration_count=prior.iteration_count + 1,
                 consecutive_unconverged_iterations=prior.consecutive_unconverged_iterations,
@@ -427,6 +491,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
                 outcome_logbook_id=prior.outcome_logbook_id,
                 capability_id=prior.capability_id,
                 recipe_id=prior.recipe_id,
+                hold_claims=prior.hold_claims,
                 current_iteration_index=None,
                 iteration_count=prior.iteration_count,
                 consecutive_unconverged_iterations=consecutive_unconverged,

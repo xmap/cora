@@ -142,6 +142,10 @@ async def test_handler_appends_procedure_resumed_event() -> None:
         "re_establishment_boundary": 2,
         "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
+        # No claim released yet: the decider starts choosing between a resume
+        # and an audit-only release in a later slice. A bare resume clears
+        # every claim, which is the pre-claim behaviour this replays.
+        "released_claim_id": None,
     }
 
 

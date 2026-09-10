@@ -1432,10 +1432,18 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "ProcedureHeld": {
         "actuation_kind": "drop:text",
+        "cause": "drop:text",
+        "claim_id": "token:uuid",
         "decided_by_decision_id": "token:uuid",
         "occurred_at": "keep:time",
         "procedure_id": "token:uuid",
         "reason": "drop:text",
+    },
+    "ProcedureHoldClaimReleased": {
+        "cause": "drop:text",
+        "claim_id": "token:uuid",
+        "occurred_at": "keep:time",
+        "procedure_id": "token:uuid",
     },
     "ProcedureIterationEnded": {
         "advice_latency_ms": "keep:number",
@@ -1486,6 +1494,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "occurred_at": "keep:time",
         "procedure_id": "token:uuid",
         "re_establishment_boundary": "keep:number",
+        "released_claim_id": "token:uuid",
     },
     "ProcedureStarted": {
         "beam_requirement": "keep:enum:BeamRequirement",

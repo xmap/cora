@@ -1557,6 +1557,18 @@ class Procedure:
     a denorm for audit-by-Capability read paths without requiring a
     Recipe join. Both fields are set by `register_procedure_from_recipe`
     to the same logical binding."""
+    hold_claims: tuple[tuple[UUID, str], ...] = ()
+    """Which concerns are currently holding this Procedure, oldest first.
+
+    `status` alone answers "is this Held"; it cannot answer "by whom, and is
+    anyone else still holding it". That was adequate while a hold had a single
+    author and became a fault once independent concerns could each park the
+    same conduct: a second holder could not record its intent, and the first
+    holder's resume then restarted the conduct with the second's cause
+    unenforced. Terminal arms clear it, since a finished Procedure holds
+    nothing. Defaults to empty so pre-claim streams fold cleanly. Mirrors
+    `Run.hold_claims`."""
+
     current_iteration_index: int | None = field(default=None)
     """The convergence-loop iteration currently open, or None.
 

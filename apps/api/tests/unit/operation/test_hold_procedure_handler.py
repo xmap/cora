@@ -63,6 +63,10 @@ async def test_handler_appends_procedure_held_event_with_trimmed_reason() -> Non
         "occurred_at": _NOW.isoformat(),
         # Operator hold (no conduct observer) leaves actuation_kind None.
         "actuation_kind": None,
+        # No cause supplied yet: the writers start passing one in a later
+        # slice, and until then a hold folds to the legacy single claim.
+        "claim_id": None,
+        "cause": None,
     }
 
 
