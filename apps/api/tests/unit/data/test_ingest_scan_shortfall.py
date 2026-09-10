@@ -148,7 +148,9 @@ def _deps(store: InMemoryEventStore) -> Kernel:
     )
 
 
-async def _seed_run(store: InMemoryEventStore, *, ended: bool) -> None:
+async def _seed_run(
+    store: InMemoryEventStore, *, ended: bool, naive_terminal: bool = False
+) -> None:
     started = RunStarted(
         run_id=_RUN_ID,
         name="Shortfall Run",
@@ -175,11 +177,39 @@ async def _seed_run(store: InMemoryEventStore, *, ended: bool) -> None:
     )
     if not ended:
         return
+    if naive_terminal:
+        # A malformed stream, built the only way it can arise:
+        # `to_payload` isoformats without an offset, and
+        # `datetime.fromisoformat` reads that back naive.
+        await _append_naive_terminal(store)
+        return
     finished = RunCompleted(
         run_id=_RUN_ID,
         occurred_at=_RUN_ENDED_AT,
         observed_at=_RUN_ENDED_AT,
     )
+    await store.append(
+        stream_type="Run",
+        stream_id=_RUN_ID,
+        expected_version=1,
+        events=[
+            to_new_event(
+                event_type=run_event_type_name(finished),
+                payload=run_to_payload(finished),
+                occurred_at=_RUN_ENDED_AT,
+                event_id=uuid4(),
+                command_name="CompleteRun",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+
+
+async def _append_naive_terminal(store: InMemoryEventStore) -> None:
+    naive = _RUN_ENDED_AT.replace(tzinfo=None)
+    finished = RunCompleted(run_id=_RUN_ID, occurred_at=naive, observed_at=None)
     await store.append(
         stream_type="Run",
         stream_id=_RUN_ID,
@@ -468,3 +498,19 @@ async def test_ingest_shortfall_payload_carries_no_part_of_the_observed_path() -
     assert "1015116" not in rendered
     assert "scan_042" not in rendered
     assert _OBSERVED_PATH not in rendered
+
+
+async def test_ingest_with_a_naive_run_terminal_records_nothing() -> None:
+    """A terminal without an offset means the Run stream is malformed,
+    not that the file is final, so the judgement is refused. Failing
+    closed is the easy half; the branch also LOGS, because a silent
+    refusal here is indistinguishable from an open Run and the
+    difference is a corrupt stream nobody would go looking for."""
+    store = InMemoryEventStore()
+    vault = InMemoryCapturePathStore()
+    await _seed_run(store, ended=True, naive_terminal=True)
+    capture_path_id = await _vault(vault)
+
+    await _run_incomplete_ingest(store, locator=_indirect_locator(), capture_path_store=vault)
+
+    assert await _shortfall_events(store, capture_path_id) == []
