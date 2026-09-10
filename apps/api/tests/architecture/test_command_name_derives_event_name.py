@@ -155,6 +155,19 @@ _SANCTIONED_DEVIATIONS: dict[str, str] = {
     # states the act of recording it. Symmetric with StartRun -> RunStarted,
     # the driven genesis's own sanctioned pair.
     "run/record_witnessed_run": "witnessed genesis; states the fact, not the recording verb",
+    # A discovery artifact rather than a naming judgement. `ingest_scan`
+    # is a composition slice: its three genesis events reach the store
+    # as `(event_type, payload, occurred_at)` plans built by
+    # `decide_ingest`, so this file's scan finds no event CLASS
+    # constructed in the handler and the slice was invisible here. The
+    # handler now constructs exactly one event class directly, its
+    # second outcome, and that lone construction makes the slice look
+    # single-event to the scan. `ShortfallRecorded` is not the event
+    # `IngestScan` is named after and could not be: the command names
+    # the act attempted, this event names what was found instead.
+    # Renaming either side would be renaming to satisfy a scan that has
+    # mis-classified the slice.
+    "data/ingest_scan": "composition slice; discovered event is its second outcome",
 }
 
 _KNOWN_DRIFT: dict[str, str] = {

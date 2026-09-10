@@ -56,6 +56,7 @@ KNOWN_STREAM_TYPES: frozenset[str] = frozenset(
         "Role",
         "Run",
         "Seal",
+        "Shortfall",
         "Subject",
         "Supply",
         "Surface",

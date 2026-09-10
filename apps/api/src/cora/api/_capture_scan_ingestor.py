@@ -39,13 +39,20 @@ newer run forever, since `ORDER BY created_at ASC LIMIT 1` always
 re-selects the same oldest row. `tick()` instead excludes each
 candidate it gives up on THIS tick and tries the next-oldest, up to
 `_MAX_CANDIDATES_PER_TICK` attempts, stopping at the first real success
-(or the first systemic failure -- see below). A persistently-failing
-candidate is still retried every tick, forever, by design: the failure
-is logged loudly each time rather than parked in a dead-letter table
-this slice does not build, so fixing the root cause (adding the
-binding, or supplying `captured_at` by hand through the ordinary POST
-route) is what actually clears it. It just no longer starves its
-siblings while it waits.
+(or the first systemic failure -- see below). Most persistently-failing
+candidates are retried every tick, forever, by design: the failure is
+logged loudly each time rather than parked in a dead-letter table this
+slice does not build, so fixing the root cause (adding the binding, or
+supplying `captured_at` by hand through the ordinary POST route) is
+what actually clears it. It just no longer starves its siblings while
+it waits. The one case that is NOT retried forever is a structurally
+incomplete file whose Run has already ended: `ingest_scan` records
+that as a Shortfall (see its own module docstring's "The second
+outcome"), and once that fact lands, `_CANDIDATE_SQL` excludes the
+candidate permanently, because retrying would only re-confirm a
+verdict that is already final. Every other stuck reason (`no_binding`,
+`camera_unconfirmed`, a structurally incomplete file whose Run has NOT
+yet ended, etc.) keeps the forever-retried behaviour described above.
 
 ## Never blocks, never raises past the tick
 
@@ -193,6 +200,17 @@ WHERE prs.capture_code IS NOT NULL
   AND NOT EXISTS (
       SELECT 1 FROM proj_data_dataset_summary dds
       WHERE dds.producing_run_id = rcp.run_id
+  )
+  -- A recorded Shortfall is a terminal verdict on this OBSERVATION
+  -- (it can never become a Dataset), unlike the other stuck reasons
+  -- below: retrying would only re-confirm the same fact forever, so
+  -- this retires the candidate permanently instead of leaving it to
+  -- spin. Keyed on capture_path_id, not run_id, matching the
+  -- `exclude` key's own per-location rationale (see
+  -- `ScanIngestCandidateLookup`'s docstring).
+  AND NOT EXISTS (
+      SELECT 1 FROM proj_data_shortfall_summary dss
+      WHERE dss.capture_path_id = rcp.capture_path_id
   )
 ORDER BY rcp.created_at ASC
 LIMIT 1

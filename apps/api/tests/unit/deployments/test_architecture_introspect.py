@@ -75,13 +75,13 @@ def test_introspection_aggregates_match_filesystem() -> None:
     assert generated == _filesystem_aggregates()
 
 
-def test_counts_are_eighteen_bcs_and_forty_three_aggregates() -> None:
+def test_counts_are_eighteen_bcs_and_forty_four_aggregates() -> None:
     # Anti-drift pins for the model.md headline; bump deliberately on a BC/aggregate add.
-    # 18 BCs / 43 aggregates: the budget BC landed with Allocation (the
-    # beamline's spending envelope, the budget BC).
+    # 18 BCs / 44 aggregates: the Data BC gained Shortfall (a capture that
+    # can never become a Dataset), with no new BC.
     model = ai.introspect(_CORA)
     assert model.bc_count == 18
-    assert model.aggregate_count == 43
+    assert model.aggregate_count == 44
 
 
 def test_enclosure_bc_and_equipment_role_are_present() -> None:
@@ -144,7 +144,7 @@ def test_bc_table_group_map_covers_every_bc() -> None:
 
 def test_count_renderer() -> None:
     assert ap.render_count(_MODEL, {"kind": "bc", "spell": "true", "cap": "true"}) == "Eighteen"
-    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-three"
+    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-four"
     assert ap.render_count(_MODEL, {"kind": "bc"}) == "18"
     assert ap.render_count(_MODEL, {"kind": "event", "bc": "decision"}) == "4"
     assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "61"

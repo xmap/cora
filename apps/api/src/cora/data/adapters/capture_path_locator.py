@@ -93,6 +93,7 @@ scoped rather than relying on this module to enforce that boundary.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 from urllib.parse import quote, unquote, urlparse
@@ -101,6 +102,42 @@ from uuid import UUID
 if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
     from cora.run.aggregates.run import CapturePath
+
+
+@dataclass(frozen=True)
+class CapturePathReference:
+    """The non-personal identity of a resolved `run_capture_path` row.
+
+    Deliberately NOT the `CapturePath` row itself. That row carries
+    `observed_path`, personal data, and this value travels out to
+    `ingest_scan`'s handler, which must never hold one: handing over
+    the whole row would put a path within reach of every log line and
+    every event payload downstream, protected by nothing but care.
+    These four fields are the ones a caller can carry onto an immutable
+    record, and `capture_path_locator`'s own docstring is where the
+    argument for `host` / `root` being safe already lives.
+    """
+
+    capture_path_id: UUID
+    run_id: UUID
+    host: str
+    root: str
+
+
+@dataclass(frozen=True)
+class ResolvedLocator:
+    """What an `IngestScan` locator resolved to.
+
+    `reference` is `None` for a pass-through locator (an ordinary
+    `file://` URI a human supplied), because there is no vault row
+    behind one. It is present exactly when the locator was an indirect
+    `cora-capture-path://` reference, which is also precisely the
+    condition under which the reader's error text must be withheld from
+    the caller, so it doubles as the redaction signal.
+    """
+
+    uri: str
+    reference: CapturePathReference | None
 
 
 class CapturePathLookup(Protocol):
@@ -209,14 +246,16 @@ async def resolve_capture_path_locator(
     locator: str,
     *,
     capture_path_store: CapturePathLookup,
-) -> str | None:
+) -> ResolvedLocator | None:
     """Resolve `locator` to the real `file://` URI the scan reader /
-    checksum computer can act on.
+    checksum computer can act on, plus the vault row it came from.
 
     Pass-through for every scheme other than `cora-capture-path`: the manual
     `ingest_scan` POST route and MCP tool keep sending real `file://`
     URIs directly, unaffected by this module, per the scope decision
-    that only the automated sweep mints indirect locators.
+    that only the automated sweep mints indirect locators. A
+    pass-through resolves to `ResolvedLocator(uri=locator,
+    reference=None)`: there is no row behind a caller-supplied path.
 
     Returns `None` -- never a reason string -- on every failure mode
     (malformed locator; no vault row at all; a row that exists but not
@@ -227,10 +266,16 @@ async def resolve_capture_path_locator(
     once a forget-style slice calls `CapturePathStore`'s (currently
     unused) `DELETE` grant, so refusing quietly here is already the
     right behavior for that future, not a placeholder for it.
+
+    The `reference` is carried out so a caller can key a durable record
+    on the OBSERVATION this locator named, without a second store read
+    and without ever holding the path. `ingest_scan` uses it to key a
+    `Shortfall`; see that aggregate's `_stream_id` for why the
+    surrogate rather than the path is the only safe seed.
     """
     parsed = urlparse(locator)
     if parsed.scheme != CAPTURE_PATH_SCHEME:
-        return locator
+        return ResolvedLocator(uri=locator, reference=None)
 
     segments = [segment for segment in parsed.path.split("/") if segment]
     if len(segments) < 2:
@@ -257,12 +302,30 @@ async def resolve_capture_path_locator(
     if Path(row.observed_path).name != unquote(filename_segment):
         return None
 
-    return "file://" + quote(row.observed_path)
+    return ResolvedLocator(
+        uri="file://" + quote(row.observed_path),
+        # `host` / `root` are the parsed lookup key rather than
+        # `row.host` / `row.root`, which `get` documents as an EXACT
+        # match on that same pair: reading them back off the row would
+        # look like a second source and is the key echoed back. Using
+        # the parse keeps that honest, and keeps them `str` rather than
+        # the row's `str | None`, which is nullable for rows written
+        # before the vault tracked location and could never have
+        # matched a concrete key anyway.
+        reference=CapturePathReference(
+            capture_path_id=row.capture_path_id,
+            run_id=row.run_id,
+            host=host,
+            root=root,
+        ),
+    )
 
 
 __all__ = [
     "CAPTURE_PATH_SCHEME",
     "CapturePathLookup",
+    "CapturePathReference",
+    "ResolvedLocator",
     "active_scan_transport",
     "mint_capture_path_locator",
     "resolve_capture_path_locator",

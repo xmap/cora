@@ -111,6 +111,21 @@ _INTRINSIC_ALLOWLIST: dict[str, str] = {
         "CORA-side recording act folds as the proper `recorded_at` / "
         "`recorded_by` pair on the same dataclass"
     ),
+    "data.Shortfall.file_modified_at": (
+        "filesystem mtime, same shape as data.Acquisition.captured_at: the "
+        "entity that last wrote the file is the external tool's file-writer, "
+        "not a CORA Actor, so there is no `file_modified_by` fact-act partner. "
+        "The CORA-side recording act folds as the proper `recorded_at` / "
+        "`recorded_by` pair on the same dataclass"
+    ),
+    "data.Shortfall.run_ended_at": (
+        "cited from ANOTHER aggregate's stream, not an act on this one: it is "
+        "the producing Run's terminal `occurred_at`, and the actor who ended "
+        "that Run folds onto the Run's own terminal event. Carried here so the "
+        "finality judgement stays checkable from this payload alone; a "
+        "`run_ended_by` here would duplicate an attribution that already has "
+        "an owner and could drift from it"
+    ),
     "data.Edition.Creator.actor_id": (
         "publication-author identity-ref (credited creator on the citable Edition); "
         "ordered tuple semantics, NOT a fact-act fold"

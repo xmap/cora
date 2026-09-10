@@ -132,6 +132,16 @@ _GENESIS_VERB_DEVIATIONS: dict[tuple[str, str], str] = {
         "state it produces and erase the award semantic the whole "
         "allocation arc is built on."
     ),
+    ("data", "shortfall"): (
+        "ShortfallRecorded is a terminal-at-genesis recorded-fact-chain "
+        "(one stream per capture_path_id; a single ShortfallRecorded "
+        "event). The fact is that an observed capture can never become a "
+        "Dataset, stated once as of the producing Run's terminal; the "
+        "verb records that finality judgement rather than registering a "
+        "long-lived instance. Renaming to ShortfallRegistered would "
+        "misframe a fact as an entity. Mirrors the acquisition / "
+        "attestation recorded-fact-chain precedent in this same BC."
+    ),
 }
 
 

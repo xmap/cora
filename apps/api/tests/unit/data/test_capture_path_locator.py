@@ -14,6 +14,7 @@ the exact real path, matching `_file_uri.py`'s expected `file://` form.
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import UTC, datetime
 from urllib.parse import quote
 from uuid import UUID
@@ -109,7 +110,8 @@ async def test_mint_and_resolve_round_trip_a_filename_with_spaces() -> None:
 
     resolved = await resolve_capture_path_locator(locator, capture_path_store=store)
 
-    assert resolved == "file://" + quote(observed_path)
+    assert resolved is not None
+    assert resolved.uri == "file://" + quote(observed_path)
 
 
 async def test_resolve_passes_through_a_non_vault_scheme_unchanged() -> None:
@@ -121,7 +123,23 @@ async def test_resolve_passes_through_a_non_vault_scheme_unchanged() -> None:
 
     resolved = await resolve_capture_path_locator(real_locator, capture_path_store=store)
 
-    assert resolved == real_locator
+    assert resolved is not None
+    assert resolved.uri == real_locator
+
+
+async def test_resolve_pass_through_locator_carries_no_reference() -> None:
+    """A caller-supplied `file://` URI has no vault row behind it, so
+    `reference` must be `None` rather than a value object built from
+    nothing. `ingest_scan` uses `reference is not None` to decide
+    whether to record a Shortfall, so a pass-through must never look
+    like a resolved vault row."""
+    store = await _seeded_store()
+    real_locator = "file:///local/cora-scans/test_005.h5"
+
+    resolved = await resolve_capture_path_locator(real_locator, capture_path_store=store)
+
+    assert resolved is not None
+    assert resolved.reference is None
 
 
 async def test_resolve_recovers_the_real_path_as_a_file_uri() -> None:
@@ -133,7 +151,52 @@ async def test_resolve_recovers_the_real_path_as_a_file_uri() -> None:
 
     resolved = await resolve_capture_path_locator(locator, capture_path_store=store)
 
-    assert resolved == "file://" + _OBSERVED_PATH
+    assert resolved is not None
+    assert resolved.uri == "file://" + _OBSERVED_PATH
+
+
+async def test_resolve_indirect_locator_carries_a_reference_matching_the_vault_row() -> None:
+    """`reference` is what `ingest_scan` keys a Shortfall on without a
+    second store read, so its four fields must agree with the actual
+    vault row, not merely be present."""
+    store = await _seeded_store()
+    locator = mint_capture_path_locator(
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
+    )
+    assert locator is not None
+
+    resolved = await resolve_capture_path_locator(locator, capture_path_store=store)
+
+    assert resolved is not None
+    assert resolved.reference is not None
+    row = await store.get(_RUN_ID, host=_HOST, root=_ROOT)
+    assert row is not None
+    assert resolved.reference.capture_path_id == row.capture_path_id
+    assert resolved.reference.run_id == row.run_id
+    assert resolved.reference.host == _HOST
+    assert resolved.reference.root == _ROOT
+
+
+async def test_resolve_reference_never_carries_the_observed_path() -> None:
+    """`CapturePathReference` travels out to `ingest_scan`'s handler and
+    onto an immutable Shortfall event; none of its fields may equal or
+    contain the personal-data-bearing observed path, not even the
+    identity fields that merely LOOK like they could echo a fragment of
+    it."""
+    store = await _seeded_store()
+    locator = mint_capture_path_locator(
+        observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host="tomdet", root="/local1/2BM"
+    )
+    assert locator is not None
+
+    resolved = await resolve_capture_path_locator(locator, capture_path_store=store)
+
+    assert resolved is not None
+    assert resolved.reference is not None
+    for field in dataclasses.fields(resolved.reference):
+        value = str(getattr(resolved.reference, field.name))
+        assert value != _OBSERVED_PATH
+        assert _PERSONAL_PATH_FRAGMENT not in value
 
 
 async def test_resolve_refuses_when_the_vault_row_is_absent() -> None:
@@ -236,14 +299,15 @@ async def test_two_locations_for_one_run_each_resolve_to_their_own_path() -> Non
     assert archive_locator is not None
     assert acquisition_locator != archive_locator
 
-    assert (
-        await resolve_capture_path_locator(acquisition_locator, capture_path_store=store)
-        == "file://" + _OBSERVED_PATH
+    acquisition_resolved = await resolve_capture_path_locator(
+        acquisition_locator, capture_path_store=store
     )
-    assert (
-        await resolve_capture_path_locator(archive_locator, capture_path_store=store)
-        == "file://" + archive_path
-    )
+    archive_resolved = await resolve_capture_path_locator(archive_locator, capture_path_store=store)
+
+    assert acquisition_resolved is not None
+    assert acquisition_resolved.uri == "file://" + _OBSERVED_PATH
+    assert archive_resolved is not None
+    assert archive_resolved.uri == "file://" + archive_path
 
 
 async def test_resolve_refuses_a_location_the_run_was_never_observed_on() -> None:
@@ -286,10 +350,11 @@ async def test_resolve_refuses_a_locator_naming_a_different_host() -> None:
         observed_path=_OBSERVED_PATH, run_id=_RUN_ID, host=_HOST, root=_ROOT
     )
     assert right_host_locator is not None
-    assert (
-        await resolve_capture_path_locator(right_host_locator, capture_path_store=store)
-        == "file://" + _OBSERVED_PATH
+    right_host_resolved = await resolve_capture_path_locator(
+        right_host_locator, capture_path_store=store
     )
+    assert right_host_resolved is not None
+    assert right_host_resolved.uri == "file://" + _OBSERVED_PATH
 
 
 async def test_resolve_refuses_a_legacy_row_whose_location_was_never_recorded() -> None:
