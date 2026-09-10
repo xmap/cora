@@ -29,12 +29,14 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_OPERATOR,
     Procedure,
     ProcedureCannotHoldError,
     ProcedureHeld,
     ProcedureName,
     ProcedureNotFoundError,
     ProcedureStatus,
+    derive_claim_id,
 )
 from cora.operation.features import hold_procedure
 from cora.operation.features.hold_procedure import HoldProcedure
@@ -46,7 +48,10 @@ if TYPE_CHECKING:
 
 _REASON = printable_ascii_text(min_size=1, max_size=500)
 
-_HOLDABLE_SOURCES = (ProcedureStatus.RUNNING,)
+# `Held` is holdable because a second CONCERN may hold an already-held
+# conduct; the same concern re-holding is refused by the per-claim guard,
+# which `test_hold_procedure_decider` covers directly.
+_HOLDABLE_SOURCES = (ProcedureStatus.RUNNING, ProcedureStatus.HELD)
 _DISALLOWED_SOURCES = tuple(s for s in ProcedureStatus if s not in frozenset(_HOLDABLE_SOURCES))
 
 
@@ -91,13 +96,22 @@ def test_hold_from_permitted_source_emits_single_event(
     reason: str,
     now: datetime,
 ) -> None:
-    """Running emits one ProcedureHeld with the threaded reason."""
+    """A holdable source emits one ProcedureHeld with the threaded reason,
+    carrying the claim this concern holds it under."""
     events = hold_procedure.decide(
         state=_procedure(procedure_id=procedure_id, status=source),
         command=HoldProcedure(procedure_id=procedure_id, reason=reason),
         now=now,
     )
-    assert events == [ProcedureHeld(procedure_id=procedure_id, reason=reason, occurred_at=now)]
+    assert events == [
+        ProcedureHeld(
+            procedure_id=procedure_id,
+            reason=reason,
+            occurred_at=now,
+            claim_id=derive_claim_id(procedure_id, HOLD_CAUSE_OPERATOR),
+            cause=HOLD_CAUSE_OPERATOR,
+        )
+    ]
 
 
 @pytest.mark.unit

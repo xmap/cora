@@ -130,6 +130,9 @@ def test_decide_accepts_zero_boundary() -> None:
         command=ResumeProcedure(procedure_id=proc.id, re_establishment_boundary=0),
         now=_NOW,
     )
+    # The decider now returns a union: a resume, or an audit-only release
+    # when other concerns still hold. This path is the resume.
+    assert isinstance(events[0], ProcedureResumed)
     assert events[0].re_establishment_boundary == 0
 
 

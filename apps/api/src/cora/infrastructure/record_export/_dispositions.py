@@ -1442,6 +1442,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     "ProcedureHoldClaimReleased": {
         "cause": "drop:text",
         "claim_id": "token:uuid",
+        "decided_by_decision_id": "token:uuid",
         "occurred_at": "keep:time",
         "procedure_id": "token:uuid",
     },

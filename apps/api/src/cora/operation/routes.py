@@ -59,6 +59,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureCannotTruncateError,
     ProcedureCapabilityExecutorMismatchError,
     ProcedureEnclosureCoverageMismatchError,
+    ProcedureHoldClaimsRemainError,
     ProcedureIterationLimitReachedError,
     ProcedureNotFoundError,
     ProcedurePlanAssetDecommissionedError,
@@ -296,10 +297,14 @@ def register_operation_routes(app: FastAPI) -> None:
         ProcedureCannotCompleteError,
         ProcedureCannotAbortError,
         ProcedureCannotTruncateError,
-        # resumable-conduct pause/resume guards (Running->Held->Running):
-        # holding a non-Running procedure, or resuming a non-Held one.
+        # resumable-conduct pause/resume guards (Running|Held->Held->Running):
+        # holding a Defined or terminal procedure, holding one this concern
+        # already holds, or resuming a non-Held one.
         ProcedureCannotHoldError,
         ProcedureCannotResumeError,
+        # resuming a Held procedure OTHER concerns are still holding: doing so
+        # would clear a hold the caller never placed.
+        ProcedureHoldClaimsRemainError,
         # iteration boundary guards (start/end): not-Running, no/already-open
         # iteration, and non-sequential / mismatched operator-supplied index.
         ProcedureCannotStartIterationError,

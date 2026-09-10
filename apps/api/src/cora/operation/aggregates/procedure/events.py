@@ -596,6 +596,10 @@ class ProcedureHoldClaimReleased:
     claim_id: UUID
     cause: str
     occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
+    """Optional Decision-causation link, mirroring `ProcedureHeld`: None for
+    an operator-routed release, set when an in-process runtime discharges a
+    claim it placed."""
 
 
 @dataclass(frozen=True)
@@ -1063,12 +1067,16 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             claim_id=claim_id,
             cause=cause,
             occurred_at=occurred_at,
+            decided_by_decision_id=decided_by_decision_id,
         ):
             return {
                 "procedure_id": str(procedure_id),
                 "claim_id": str(claim_id),
                 "cause": cause,
                 "occurred_at": occurred_at.isoformat(),
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
             }
         case ProcedureActivitiesLogbookOpened(
             procedure_id=procedure_id,
@@ -1473,6 +1481,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     claim_id=UUID(payload["claim_id"]),
                     cause=payload["cause"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    decided_by_decision_id=_optional_uuid(payload.get("decided_by_decision_id")),
                 ),
             )
         case "ProcedureActivitiesLogbookOpened":

@@ -53,6 +53,7 @@ from cora.operation.aggregates.procedure.events import (
     to_payload,
 )
 from cora.operation.aggregates.procedure.evolver import evolve, fold
+from cora.operation.aggregates.procedure.hold_claims import derive_claim_id
 from cora.operation.aggregates.procedure.read import (
     load_procedure,
     load_procedure_with_events,
@@ -94,6 +95,7 @@ from cora.operation.aggregates.procedure.state import (
     ProcedureCannotTruncateError,
     ProcedureCapabilityExecutorMismatchError,
     ProcedureEnclosureCoverageMismatchError,
+    ProcedureHoldClaimsRemainError,
     ProcedureHoldReason,
     ProcedureIterationLimitReachedError,
     ProcedureName,
@@ -181,6 +183,7 @@ __all__ = [
     "ProcedureEvent",
     "ProcedureHeld",
     "ProcedureHoldClaimReleased",
+    "ProcedureHoldClaimsRemainError",
     "ProcedureHoldReason",
     "ProcedureIterationEnded",
     "ProcedureIterationLimitReachedError",
@@ -213,6 +216,7 @@ __all__ = [
     "ResolvedStepsRecorded",
     "SteeringDesignRecorded",
     "StepKind",
+    "derive_claim_id",
     "event_type_name",
     "evolve",
     "fold",

@@ -15,6 +15,9 @@ standalone Procedure (no parent Run). See
 [[project_resumable_conduct_design]].
 
 Invariants:
+  - command.cause must be in HOLD_CAUSES -> ValueError
+  - The caller must hold an active claim, else other concerns block
+    -> ProcedureHoldClaimsRemainError(blocking_causes=...)
   - State must not be None  -> ProcedureNotFoundError
   - command.re_establishment_boundary must be >= 0
     -> InvalidProcedureReEstablishmentBoundaryError
@@ -25,14 +28,21 @@ Invariants:
 """
 
 from datetime import datetime
+from uuid import UUID
 
 from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_OPERATOR,
+    HOLD_CAUSES,
+    LEGACY_CLAIM_ID,
     InvalidProcedureReEstablishmentBoundaryError,
     Procedure,
     ProcedureCannotResumeError,
+    ProcedureHoldClaimReleased,
+    ProcedureHoldClaimsRemainError,
     ProcedureNotFoundError,
     ProcedureResumed,
     ProcedureStatus,
+    derive_claim_id,
 )
 from cora.operation.features.resume_procedure.command import ResumeProcedure
 
@@ -45,7 +55,7 @@ def decide(
     *,
     parent_run_held: bool = False,
     now: datetime,
-) -> list[ProcedureResumed]:
+) -> list[ProcedureResumed | ProcedureHoldClaimReleased]:
     """Decide the events produced by resuming a held Procedure.
 
     `parent_run_held` is the handler-derived fact that this Procedure's
@@ -62,11 +72,61 @@ def decide(
         raise ProcedureCannotResumeError(
             state.id, current_status=state.status, parent_run_held=True
         )
-    return [
-        ProcedureResumed(
-            procedure_id=state.id,
-            re_establishment_boundary=command.re_establishment_boundary,
-            decided_by_decision_id=command.decided_by_decision_id,
-            occurred_at=now,
+    if command.cause not in HOLD_CAUSES:
+        raise ValueError(
+            f"Unknown hold cause {command.cause!r}; expected one of {sorted(HOLD_CAUSES)}"
         )
-    ]
+
+    def _resumed(
+        released_claim_id: UUID | None,
+    ) -> list[ProcedureResumed | ProcedureHoldClaimReleased]:
+        return [
+            ProcedureResumed(
+                procedure_id=state.id,
+                re_establishment_boundary=command.re_establishment_boundary,
+                decided_by_decision_id=command.decided_by_decision_id,
+                occurred_at=now,
+                released_claim_id=released_claim_id,
+            )
+        ]
+
+    claim_id = derive_claim_id(state.id, command.cause)
+    active = tuple(active_id for active_id, _ in state.hold_claims)
+    if not active:
+        # Held with no active claim. Unreachable from a well-formed stream (a
+        # ProcedureHeld always yields at least the legacy claim), but if it
+        # happens the safety property already holds (no concern is holding
+        # this), so resume rather than wedge the conduct shut.
+        return _resumed(None)
+    # A hold placed BEFORE holds carried claims has no recorded owner, so no
+    # derived id matches it and it would otherwise be unresumable: every
+    # Procedure held at the moment this shipped. The operator is the authority
+    # that could always clear such a hold, so an operator resume owns the
+    # legacy claim in addition to its own.
+    owned = {claim_id}
+    if command.cause == HOLD_CAUSE_OPERATOR:
+        owned.add(LEGACY_CLAIM_ID)
+    held_by_caller = tuple(cid for cid in active if cid in owned)
+    if not held_by_caller:
+        # Held, but not by us. Refuse, and name who is holding so the caller
+        # learns which concern to address rather than only that it was refused.
+        raise ProcedureHoldClaimsRemainError(
+            state.id,
+            blocking_causes=tuple(cause for _, cause in state.hold_claims),
+        )
+    if set(active) <= {LEGACY_CLAIM_ID}:
+        # A legacy one-bit hold: clearing it means clearing the hold outright,
+        # which is exactly what a bare ProcedureResumed does at the fold.
+        return _resumed(None)
+    if len(active) > 1:
+        # Others still hold it: discharge our claim without moving the status.
+        return [
+            ProcedureHoldClaimReleased(
+                procedure_id=state.id,
+                claim_id=held_by_caller[0],
+                cause=command.cause,
+                decided_by_decision_id=command.decided_by_decision_id,
+                occurred_at=now,
+            )
+        ]
+    return _resumed(held_by_caller[0])
