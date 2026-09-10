@@ -48,6 +48,15 @@ class ProcedureSummaryItem:
     last_status_reason: str | None
     interrupted_at: datetime | None
     iteration_count: int
+    hold_causes: list[str]
+    """Which concerns are holding this Procedure, oldest first; empty unless Held.
+
+    `status` says a conduct is paused, never by whom, and the two holds that
+    reach a Procedure want opposite responses: an operator pause is deliberate
+    and can legitimately run for days, while a conduct the Conductor parked on
+    a fault will not move until a person comes. Classified by
+    `ATTENTION_HOLD_CAUSES`, which is deliberately NOT applied here: the causes
+    ride the row so the rule stays in one place."""
 
 
 @dataclass(frozen=True)
@@ -74,7 +83,8 @@ class Handler(Protocol):
 _SELECT_COLUMNS = (
     "procedure_id, name, kind, target_asset_ids, parent_run_id, status, "
     "activity_logbook_id, registered_at, "
-    "last_status_changed_at, last_status_reason, interrupted_at, iteration_count"
+    "last_status_changed_at, last_status_reason, interrupted_at, iteration_count, "
+    "hold_causes"
 )
 
 
@@ -94,6 +104,7 @@ def _row_to_item(row: Any) -> ProcedureSummaryItem:
         ),
         interrupted_at=row["interrupted_at"],
         iteration_count=int(row["iteration_count"]),
+        hold_causes=[str(cause) for cause in (row["hold_causes"] or ())],
     )
 
 

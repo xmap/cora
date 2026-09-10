@@ -51,6 +51,7 @@ from cora.operation.aggregates.procedure.events import (
     SteeringDesignRecorded,
     event_type_name,
     from_stored,
+    is_deliberate_pause,
     to_payload,
 )
 from cora.operation.aggregates.procedure.evolver import evolve, fold
@@ -223,6 +224,7 @@ __all__ = [
     "evolve",
     "fold",
     "from_stored",
+    "is_deliberate_pause",
     "load_procedure",
     "load_procedure_with_events",
     "merge_actuation_kinds",

@@ -64,7 +64,7 @@ encodes the state change. Same precedent as `RunStarted` /
 """
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, assert_never
@@ -490,6 +490,31 @@ is declared rather than assumed: `test_every_hold_cause_is_classified` fails
 until a newly added cause is put on one side or the other, which is the point
 at which "may an operator clear this" has to be answered rather than inherited.
 """
+
+
+def is_deliberate_pause(hold_causes: Iterable[str]) -> bool:
+    """Did a person choose to pause this, as opposed to something getting stuck?
+
+    True only when at least one cause is recorded and every one of them is
+    `operator`. Two things follow from stating it that way rather than as "no
+    attention cause is present".
+
+    An empty set is NOT a deliberate pause. A Held Procedure recording nothing
+    that holds it is one nothing can vouch for, including the `LEGACY_CAUSE`
+    holds placed before causes existed, and reading "no evidence" as "a person
+    meant this" is how a stuck conduct would go unnoticed.
+
+    Nor is a cause that is neither `operator` nor an attention claim, which is
+    what a future authority claim on a Procedure would be. Such a hold is not
+    someone taking a break either, so it does not inherit a deliberate pause's
+    latitude by being unclassified.
+
+    Its caller is the ProcedureWatcher, which grants a much longer staleness
+    window to a pause than to a conduct nobody is coming back to.
+    """
+    causes = tuple(hold_causes)
+    return bool(causes) and all(cause == HOLD_CAUSE_OPERATOR for cause in causes)
+
 
 LEGACY_CLAIM_ID = UUID("01900000-0000-7000-8000-00000001dead")
 """The single claim a pre-claim `ProcedureHeld` folds to, so a legacy stream
@@ -1683,5 +1708,6 @@ __all__ = [
     "SteeringDesignRecorded",
     "event_type_name",
     "from_stored",
+    "is_deliberate_pause",
     "to_payload",
 ]

@@ -452,6 +452,14 @@ depends_on = [
     "cora.equipment.aggregates",
     "cora.federation",
     "cora.operation",
+    # ProcedureWatcher asks the Operation BC whether a Held procedure's recorded
+    # hold causes amount to a deliberate operator pause (is_deliberate_pause),
+    # which decides the staleness window it clocks that procedure against. The
+    # rule lives beside the causes it classifies rather than being restated at
+    # the composition root. Blessed cross-BC aggregate read, same pattern as
+    # cora.access.aggregates, which this same runtime already uses for
+    # Actor.active.
+    "cora.operation.aggregates",
     "cora.recipe",
     # Two composition-root consumers read recipe aggregates: the RunSupervisor
     # gated-resume re-check (load Plan/Practice/Method, see cora.equipment.aggregates

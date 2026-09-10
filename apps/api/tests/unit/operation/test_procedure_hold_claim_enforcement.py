@@ -29,6 +29,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureStatus,
     derive_claim_id,
     evolve,
+    is_deliberate_pause,
 )
 from cora.operation.features import hold_procedure, resume_procedure
 from cora.operation.features.hold_procedure import HoldProcedure
@@ -190,6 +191,23 @@ def test_the_operator_claim_rides_the_resume_and_the_rest_get_their_own_event() 
         state = evolve(state, event)
     assert state.status is ProcedureStatus.RUNNING
     assert state.hold_claims == ()
+
+
+def test_only_an_all_operator_hold_is_a_deliberate_pause() -> None:
+    """Stated as positive evidence, so the two cases that would otherwise
+    inherit a pause's latitude do not.
+
+    An empty set is a Held Procedure recording nothing that holds it, which is
+    the shape a pre-claim stream and a corrupt row both take. A cause that is
+    neither `operator` nor an attention claim is what a future authority claim
+    would be, and that is not someone taking a break either.
+    """
+    assert is_deliberate_pause([HOLD_CAUSE_OPERATOR])
+    assert not is_deliberate_pause([])
+    assert not is_deliberate_pause([LEGACY_CAUSE])
+    assert not is_deliberate_pause([HOLD_CAUSE_STEP_FAULT])
+    assert not is_deliberate_pause([HOLD_CAUSE_OPERATOR, HOLD_CAUSE_DRIVER_STAND_DOWN])
+    assert not is_deliberate_pause([HOLD_CAUSE_OPERATOR, "some-future-authority-claim"])
 
 
 def test_every_hold_cause_is_classified() -> None:

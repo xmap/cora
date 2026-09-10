@@ -104,6 +104,7 @@ def _item(
     *,
     status: str = "Running",
     last_status_changed_at: datetime | None,
+    hold_causes: list[str] | None = None,
 ) -> ProcedureSummaryItem:
     return ProcedureSummaryItem(
         procedure_id=procedure_id,
@@ -118,6 +119,7 @@ def _item(
         last_status_reason=None,
         interrupted_at=None,
         iteration_count=0,
+        hold_causes=hold_causes if hold_causes is not None else [],
     )
 
 
@@ -172,7 +174,7 @@ async def test_tick_flags_stale_held_without_folding_activity() -> None:
     await seed_procedure_watcher_agent(kernel)
     pid = uuid4()
     list_procedures = _make_list_procedures(
-        [_item(pid, status="Held", last_status_changed_at=_OLD)]
+        [_item(pid, status="Held", last_status_changed_at=_OLD, hold_causes=["operator"])]
     )
     lookup = InMemoryProcedureActivityLookup()
     lookup.register(procedure_id=pid, recorded_at=_RECENT)  # must NOT rescue a Held
@@ -187,14 +189,21 @@ async def test_tick_does_not_flag_held_overnight_pause() -> None:
     """Regression test: Held used to share Running's 1-hour window, so any
     deliberate operator pause longer than an hour (a bakeout, waiting on beam,
     waiting on a collaborator) raised a false Stall. Under the real default
-    (a week), a 12-hour hold is not stalled."""
+    (a week), a 12-hour OPERATOR hold is not stalled."""
     from cora.api._procedure_watcher import _watch_tick
 
     kernel = _kernel()  # held_stale_after defaults to the real week-long window
     await seed_procedure_watcher_agent(kernel)
     pid = uuid4()
     list_procedures = _make_list_procedures(
-        [_item(pid, status="Held", last_status_changed_at=_OVERNIGHT_HELD)]
+        [
+            _item(
+                pid,
+                status="Held",
+                last_status_changed_at=_OVERNIGHT_HELD,
+                hold_causes=["operator"],
+            )
+        ]
     )
 
     await _watch_tick(
@@ -205,6 +214,106 @@ async def test_tick_does_not_flag_held_overnight_pause() -> None:
 
     decision_id = _derive_decision_id(pid, _OVERNIGHT_HELD)
     assert await load_decision(kernel.event_store, decision_id) is None
+
+
+@pytest.mark.unit
+async def test_tick_flags_a_machine_parked_conduct_long_before_the_held_window() -> None:
+    """The point of the slice. The same 12 hours that is an ordinary pause for
+    an operator is a conduct nobody has come back to: the Conductor cannot
+    un-stick a faulted step, so waiting out a week-long window would hide
+    exactly the case worth surfacing."""
+    from cora.api._procedure_watcher import _watch_tick
+
+    kernel = _kernel()  # the real week-long Held window
+    await seed_procedure_watcher_agent(kernel)
+    pid = uuid4()
+    list_procedures = _make_list_procedures(
+        [
+            _item(
+                pid,
+                status="Held",
+                last_status_changed_at=_OVERNIGHT_HELD,
+                hold_causes=["step-fault"],
+            )
+        ]
+    )
+
+    await _watch_tick(
+        deps=kernel,
+        list_procedures=list_procedures,
+        activity_lookup=InMemoryProcedureActivityLookup(),
+    )
+
+    decision = await load_decision(kernel.event_store, _derive_decision_id(pid, _OVERNIGHT_HELD))
+    assert decision is not None
+    # The causes ride the Decision: a reader can see WHY the short window
+    # applied rather than having to re-derive it.
+    assert decision.reasoning is not None
+    assert "step-fault" in decision.reasoning
+
+
+@pytest.mark.unit
+async def test_tick_flags_a_pause_an_operator_shares_with_a_fault() -> None:
+    """A person pausing a conduct does not vouch for a fault that arrived
+    alongside it. One non-operator cause is enough to lose the long window."""
+    from cora.api._procedure_watcher import _watch_tick
+
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+    pid = uuid4()
+    list_procedures = _make_list_procedures(
+        [
+            _item(
+                pid,
+                status="Held",
+                last_status_changed_at=_OVERNIGHT_HELD,
+                hold_causes=["operator", "step-fault"],
+            )
+        ]
+    )
+
+    await _watch_tick(
+        deps=kernel,
+        list_procedures=list_procedures,
+        activity_lookup=InMemoryProcedureActivityLookup(),
+    )
+
+    assert await load_decision(kernel.event_store, _derive_decision_id(pid, _OVERNIGHT_HELD))
+
+
+@pytest.mark.unit
+async def test_tick_flags_a_held_procedure_recording_no_cause_at_all() -> None:
+    """No evidence is not evidence of a deliberate pause. A Held row holding
+    nothing is one this watcher cannot vouch for, including the
+    `legacy-unscoped` holds placed before causes were recorded, so it takes the
+    short window and costs one advisory a person can ignore."""
+    from cora.api._procedure_watcher import _watch_tick
+
+    kernel = _kernel()
+    await seed_procedure_watcher_agent(kernel)
+    unrecorded, legacy = uuid4(), uuid4()
+    list_procedures = _make_list_procedures(
+        [
+            _item(unrecorded, status="Held", last_status_changed_at=_OVERNIGHT_HELD),
+            _item(
+                legacy,
+                status="Held",
+                last_status_changed_at=_OVERNIGHT_HELD,
+                hold_causes=["legacy-unscoped"],
+            ),
+        ]
+    )
+
+    await _watch_tick(
+        deps=kernel,
+        list_procedures=list_procedures,
+        activity_lookup=InMemoryProcedureActivityLookup(),
+    )
+
+    for pid in (unrecorded, legacy):
+        assert await load_decision(kernel.event_store, _derive_decision_id(pid, _OVERNIGHT_HELD)), (
+            pid
+        )
 
 
 @pytest.mark.unit
@@ -330,10 +439,20 @@ async def test_record_decision_is_idempotent_on_repeated_episode() -> None:
     kernel = _kernel()
     pid = uuid4()
     await _record_decision(
-        kernel, procedure_id=pid, status="Running", last_progress_at=_OLD, now=_NOW
+        kernel,
+        procedure_id=pid,
+        status="Running",
+        hold_causes=(),
+        last_progress_at=_OLD,
+        now=_NOW,
     )
     await _record_decision(
-        kernel, procedure_id=pid, status="Running", last_progress_at=_OLD, now=_NOW
+        kernel,
+        procedure_id=pid,
+        status="Running",
+        hold_causes=(),
+        last_progress_at=_OLD,
+        now=_NOW,
     )
     assert await load_decision(kernel.event_store, _derive_decision_id(pid, _OLD)) is not None
 
