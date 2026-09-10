@@ -2,8 +2,10 @@
 
 `IN_PROCESS_GRANTS` is inert data: nothing in the running app reads it
 (only the architecture fitness test and `tools/gen_policy_grants.py`
-do), so these tests are a light sanity check on the table's own shape
-rather than a behavioral test of anything it drives.
+do), so most of these are a light sanity check on the table's own shape
+rather than a behavioral test of anything it drives. The exception is
+`test_no_agent_is_granted_resume_procedure`, which guards a safety
+property the table can silently break.
 """
 
 from uuid import UUID
@@ -33,6 +35,35 @@ def test_no_two_principal_ids_collide() -> None:
     resolve to the same UUID."""
     principal_ids = list(IN_PROCESS_GRANTS.keys())
     assert len(principal_ids) == len(set(principal_ids))
+
+
+@pytest.mark.unit
+def test_no_agent_is_granted_resume_procedure() -> None:
+    """A machine resumer would inherit an operator's reach without asking.
+
+    `ResumeProcedure.cause` defaults to `operator`, and an operator's resume
+    clears every ATTENTION claim on a Procedure: the whole point, since nothing
+    else discharges a fault-parked conduct. Nothing checks the caller's
+    species, so `operator` means only "the caller named no other concern". An
+    agent added here would default into it and gain the authority to restart a
+    conduct a Conductor parked, or to clear a person's deliberate pause, with
+    no one having decided that.
+
+    That the widening is safe today rests on this table and not on the claim
+    algebra, which is why the table is where the guard belongs.
+
+    If an agent genuinely needs to resume, the fix is not to delete this test.
+    Give the concern its own cause in `HOLD_CAUSES`, decide whether it belongs
+    in `ATTENTION_HOLD_CAUSES`, and set it explicitly at the call site the way
+    `_run_supervisor` sets `HOLD_CAUSE_SUPERVISOR` on a Run. Then update this
+    test to require that agent sets a cause rather than to forbid the grant.
+    """
+    holders = [
+        principal_id
+        for principal_id, command_names in IN_PROCESS_GRANTS.items()
+        if "ResumeProcedure" in command_names
+    ]
+    assert holders == []
 
 
 @pytest.mark.unit

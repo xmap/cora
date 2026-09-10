@@ -132,6 +132,8 @@ from cora.infrastructure.ports.principal_liveness_lookup import (
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation._control_dispatch_context import with_dispatch_correlation_id
 from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_DRIVER_STAND_DOWN,
+    HOLD_CAUSE_STEP_FAULT,
     ProcedureIterationLimitReachedError,
     ProcedureNotFoundError,
     ProcedureTerminationReason,
@@ -2044,6 +2046,12 @@ class Conductor:
                         # Carry the observed-so-far kind so a later conduct_from
                         # folds the pre-hold provenance with the replay tail.
                         actuation_kind=actuation_kind,
+                        # A hold of this concern's OWN, not an operator pause:
+                        # without it the default cause would file this under the
+                        # operator's claim, so an operator pausing the same
+                        # conduct would find its hold refused as a duplicate and
+                        # the fault would go unrecorded.
+                        cause=HOLD_CAUSE_STEP_FAULT,
                     ),
                     **envelope_kwargs,
                 )
@@ -2613,7 +2621,12 @@ class Conductor:
         held_ok = False
         with contextlib.suppress(Exception):
             await self._hold_procedure(  # type: ignore[misc]
-                HoldProcedure(procedure_id=procedure_id, reason=reason, actuation_kind=folded_kind),
+                HoldProcedure(
+                    procedure_id=procedure_id,
+                    reason=reason,
+                    actuation_kind=folded_kind,
+                    cause=HOLD_CAUSE_DRIVER_STAND_DOWN,
+                ),
                 **envelope_kwargs,
             )
             held_ok = True

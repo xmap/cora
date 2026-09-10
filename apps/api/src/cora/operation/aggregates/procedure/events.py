@@ -446,13 +446,15 @@ HOLD_CAUSE_OPERATOR = "operator"
 
 HOLD_CAUSE_STEP_FAULT = "step-fault"
 """The Conductor parked the conduct because a step failed recoverably
-(`conduct_or_hold`). Released by whatever re-establishes the step."""
+(`conduct_or_hold`). An attention claim: nothing in CORA re-establishes a
+faulted step, so an operator discharges it by resuming."""
 
 HOLD_CAUSE_DRIVER_STAND_DOWN = "driver-stand-down"
 """The Conductor parked a steered loop because its steering driver went
 non-ACTIVE (`_hold_driver_stood_down`). A DIFFERENT concern from a step
-fault: it is discharged by the driver being reinstated, not by the
-equipment recovering, so the two must be able to hold at the same time."""
+fault: it is answered by the driver being reinstated, not by the equipment
+recovering, so the two must be able to hold at the same time. Also an
+attention claim."""
 
 HOLD_CAUSES: frozenset[str] = frozenset(
     {
@@ -464,6 +466,30 @@ HOLD_CAUSES: frozenset[str] = frozenset(
 """The closed set of concerns that may hold a Procedure. Coarse on purpose:
 a cause names WHICH concern is holding, not why in prose. The prose stays on
 `ProcedureHeld.reason`. Mirrors `HOLD_CAUSES` on Run."""
+
+ATTENTION_HOLD_CAUSES: frozenset[str] = frozenset(
+    {
+        HOLD_CAUSE_STEP_FAULT,
+        HOLD_CAUSE_DRIVER_STAND_DOWN,
+    }
+)
+"""The causes whose claim asks for an operator rather than asserting authority.
+
+A hold claim is one of two things, and which one decides who may discharge it.
+An AUTHORITY claim is held on behalf of a rule the holder enforces: Run's
+ratification and kill-switch claims are authority claims, and letting anyone
+else clear them would be the bypass they exist to prevent. An ATTENTION claim
+is the opposite. The Conductor parks a conduct it cannot itself un-stick and
+records why; nothing in CORA will ever discharge that claim, so an operator's
+resume does, and the claim's job was to say what they are resuming past.
+
+Every non-operator Procedure cause is an attention claim today, which is what
+makes an operator's resume able to clear a fault-parked conduct in one act.
+That is a property of these particular causes and NOT of Procedures, so the set
+is declared rather than assumed: `test_every_hold_cause_is_classified` fails
+until a newly added cause is put on one side or the other, which is the point
+at which "may an operator clear this" has to be answered rather than inherited.
+"""
 
 LEGACY_CLAIM_ID = UUID("01900000-0000-7000-8000-00000001dead")
 """The single claim a pre-claim `ProcedureHeld` folds to, so a legacy stream
@@ -562,19 +588,28 @@ class ProcedureResumed:
     occurred_at: datetime
     decided_by_decision_id: UUID | None = None
     released_claim_id: UUID | None = None
-    """The claim this resume discharges. Legal ONLY when it is the last
-    active claim, which is what makes RUNNING mean "no concern is holding
-    this" rather than "whoever spoke last is done". None on a legacy
-    stream, where a bare resume clears every claim and so replays the old
-    one-bit behaviour exactly."""
+    """The resumer's OWN claim, discharged by this resume.
+
+    A `ProcedureResumed` is legal only once no claim would remain active, which
+    is what makes RUNNING mean "no concern is holding this" rather than
+    "whoever spoke last is done". Any OTHER claim the resumer was entitled to
+    clear (an attention claim, per `ATTENTION_HOLD_CAUSES`) is discharged by
+    its own `ProcedureHoldClaimReleased` first, so a resume that answers three
+    concerns records three discharges rather than collapsing them into this one
+    field.
+
+    None when the resumer held no claim of its own, and on a legacy stream,
+    where a bare resume clears every claim and so replays the old one-bit
+    behaviour exactly."""
 
 
 @dataclass(frozen=True)
 class ProcedureHoldClaimReleased:
-    """One hold claim was discharged while other claims remain active.
+    """One hold claim was discharged.
 
-    Audit-only: the evolver returns prior state with the claim removed and
-    the status untouched, so the Procedure stays `Held`.
+    Status-neutral: the evolver returns prior state with the claim removed and
+    the status untouched. Whether the Procedure goes on to run again is the
+    business of a `ProcedureResumed` in the same append, not of this event.
 
     This is the event that makes the hold algebra compositional. Without it
     a concern has exactly two ways to stop holding, both wrong when it is
@@ -584,6 +619,9 @@ class ProcedureHoldClaimReleased:
 
       - own claim is the ONLY active one -> `ProcedureResumed(released_claim_id)`
       - other claims remain              -> `ProcedureHoldClaimReleased(claim_id)`
+      - an operator clears attention claims alongside its own
+                                         -> one of these per extra claim,
+                                            then the `ProcedureResumed`
 
     `claim_id` must name an active claim; releasing an unknown or
     already-released claim is a no-op at the fold and is rejected by the
@@ -1619,6 +1657,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
 
 
 __all__ = [
+    "ATTENTION_HOLD_CAUSES",
     "HOLD_CAUSES",
     "HOLD_CAUSE_DRIVER_STAND_DOWN",
     "HOLD_CAUSE_OPERATOR",

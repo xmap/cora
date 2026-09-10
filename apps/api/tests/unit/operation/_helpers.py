@@ -252,6 +252,7 @@ class Transcript:
         default_factory=list[dict[str, object]]
     )
     resume_boundaries: list[int] = field(default_factory=list[int])
+    hold_causes: list[str] = field(default_factory=list[str])
     complete_termination_reasons: list[object] = field(default_factory=list[object])
 
 
@@ -300,6 +301,7 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
 
     async def hold_procedure(command: HoldProcedure, **_: object) -> None:
         transcript.events.append(f"hold_procedure[{command.reason}]")
+        transcript.hold_causes.append(command.cause)
 
     return {
         "hold_procedure": hold_procedure,

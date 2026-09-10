@@ -232,6 +232,11 @@ async def test_conduct_or_hold_parks_at_held_then_conduct_from_replays_the_tail(
         "ProcedureStarted",
         "ProcedureActivitiesLogbookOpened",
         "ProcedureHeld",
+        # The conduct parks under its own `step-fault` claim, so the operator's
+        # resume discharges that claim by name before the status moves. Two
+        # events, because "the fault was cleared" and "the conduct runs again"
+        # became separate facts once more than one concern could hold it.
+        "ProcedureHoldClaimReleased",
         "ProcedureResumed",
         "ProcedureCompleted",
     ]
@@ -317,6 +322,11 @@ async def test_conduct_from_aborts_when_the_replayed_check_still_fails(
         "ProcedureStarted",
         "ProcedureActivitiesLogbookOpened",
         "ProcedureHeld",
+        # The conduct parks under its own `step-fault` claim, so the operator's
+        # resume discharges that claim by name before the status moves. Two
+        # events, because "the fault was cleared" and "the conduct runs again"
+        # became separate facts once more than one concern could hold it.
+        "ProcedureHoldClaimReleased",
         "ProcedureResumed",
         "ProcedureAborted",
     ]

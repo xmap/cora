@@ -25,6 +25,7 @@ from cora.operation.aggregates.procedure.entries import (
     PostgresOutcomeStore,
 )
 from cora.operation.aggregates.procedure.events import (
+    ATTENTION_HOLD_CAUSES,
     HOLD_CAUSE_DRIVER_STAND_DOWN,
     HOLD_CAUSE_OPERATOR,
     HOLD_CAUSE_STEP_FAULT,
@@ -122,6 +123,7 @@ from cora.operation.aggregates.procedure.state import (
 )
 
 __all__ = [
+    "ATTENTION_HOLD_CAUSES",
     "DIAGNOSTIC_LOGBOOK_SCHEMA",
     "HOLD_CAUSES",
     "HOLD_CAUSE_DRIVER_STAND_DOWN",
