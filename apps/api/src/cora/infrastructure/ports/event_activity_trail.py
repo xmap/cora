@@ -11,17 +11,18 @@ of the rule-of-three this codebase applies to new cross-cutting primitives.
 
 Ships `event_id`, `stream_type`, `stream_id`, `event_type`, `occurred_at`,
 `recorded_at`, `correlation_id`, `causation_id` and `cause_occurred_at` only.
-NEVER `payload`. `test_run_events_carry_no_pii.py` (and its Access-BC sibling) are
-the only two fitness tests that guard event field names against personal
-data, and they cover exactly two of the twenty-five stream types this port's
-data spans; shipping raw payloads across every BC would carry that guarantee
-somewhere it does not hold. A lane needs to know THAT something happened and
-WHAT KIND, never the values inside it.
+NEVER `payload`. `test_events_carry_no_pii.py` guards event field names
+against personal data across every tracked aggregate `events.py`, but the
+guard is a field-name deny-list, not a semantic content check: an unlisted
+future field name would still slip through on a file the guard already
+covers. Shipping raw payloads across every BC would carry that gap here too.
+A lane needs to know THAT something happened and WHAT KIND, never the
+values inside it.
 
 The three relationship columns do not weaken that. They are opaque
 identifiers and one timestamp drawn from the envelope, never from
-`payload`, so no BC's field names ride out on them and the guarantee the two
-fitness tests actually make is unchanged. They answer "which events belong to
+`payload`, so no BC's field names ride out on them and the guarantee the
+fitness test actually makes is unchanged. They answer "which events belong to
 one operator action" and "which event caused this one", both of which are
 structure, not content. Anything requiring a VALUE from inside an event still
 has to come from a domain-specific read, not from here.
