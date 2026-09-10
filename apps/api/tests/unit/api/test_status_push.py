@@ -92,6 +92,7 @@ from cora.safety.features.list_clearances import (
     ListClearances,
 )
 from cora.subject.features.list_subjects import ListSubjects, SubjectListPage, SubjectSummaryItem
+from cora.supply.features.list_supplies import ListSupplies, SupplyListPage, SupplySummaryItem
 
 _NOW = datetime(2026, 6, 22, 12, 0, 0, tzinfo=UTC)
 
@@ -109,6 +110,7 @@ def test_build_snapshot_shape() -> None:
         procedures=[],
         clearances=[],
         enclosures=[],
+        supplies=[],
         decisions=[],
         agents={"ready": 2, "total": 2, "not_ready": [], "held": [], "absent": []},
         sequence=3,
@@ -128,6 +130,7 @@ def test_build_snapshot_shape() -> None:
         "procedures": [],
         "clearances": [],
         "enclosures": [],
+        "supplies": [],
         "decisions": [],
         "agents": {"ready": 2, "total": 2, "not_ready": [], "held": [], "absent": []},
     }
@@ -440,6 +443,20 @@ def _make_list_enclosures(items: list[EnclosureSummaryItem]):
     return list_enclosures
 
 
+def _make_list_supplies(items: list[SupplySummaryItem]):
+    async def list_supplies(
+        query: ListSupplies,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> SupplyListPage:
+        matching = [i for i in items if query.status is None or i.status == query.status]
+        return SupplyListPage(items=matching, next_cursor=None)
+
+    return list_supplies
+
+
 def _make_list_decisions(items: list[DecisionSummaryItem]):
     async def list_decisions(
         query: ListDecisions,
@@ -509,6 +526,7 @@ def _default_handlers(**overrides: Any) -> dict[str, Any]:
         "list_clearances": _make_list_clearances([]),
         "list_plans": _make_list_plans([]),
         "list_enclosures": _make_list_enclosures([]),
+        "list_supplies": _make_list_supplies([]),
         "list_decisions": _make_list_decisions([]),
         "get_run_history": _make_get_run_history(),
         "get_enclosure_history": _make_get_enclosure_history(),
@@ -2398,6 +2416,68 @@ async def test_lifespan_pushes_active_enclosures_only() -> None:
         snapshot = json.loads(raw)
         assert len(snapshot["enclosures"]) == 1
         assert snapshot["enclosures"][0]["name"] == "2-BM-B"
+
+
+def _supply(name: str, status: str, reason: str | None = None) -> SupplySummaryItem:
+    return SupplySummaryItem(
+        supply_id=uuid4(),
+        kind="CoolingWater",
+        name=name,
+        facility_code="cora",
+        containing_asset_id=None,
+        status=status,
+        registered_at=_NOW,
+        last_status_changed_at=_NOW if reason else None,
+        last_status_reason=reason,
+        last_trigger="Monitor" if reason else None,
+    )
+
+
+@pytest.mark.unit
+async def test_lifespan_pushes_unhealthy_supplies_and_drops_only_decommissioned() -> None:
+    """The supplies drain deliberately does NOT narrow to the healthy
+    rows, unlike every other drain here.
+
+    A Supply is worth showing precisely when it is in a bad state, so
+    `Unavailable` (tripped), `Recovering` (waiting on an operator) and
+    `Unknown` (nothing has ever observed it) must all survive to the
+    wire. Narrowing this drain the way the enclosure one narrows to
+    Active would empty the panel on exactly the days it earns its place,
+    and that regression would otherwise look like a passing suite.
+    Only `Decommissioned`, which is terminal, is dropped.
+    """
+    received: asyncio.Queue[str] = asyncio.Queue()
+
+    async def handler(ws: ServerConnection) -> None:
+        async for message in ws:
+            await received.put(message if isinstance(message, str) else message.decode())
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        url = f"ws://127.0.0.1:{port}/ingest"
+        kernel = _kernel(
+            status_push_enabled=True, status_push_url=url, status_push_tick_seconds=0.1
+        )
+        supplies = [
+            _supply("cooling water", "Unavailable", "BLEPS trip: Flow4"),
+            _supply("vacuum", "Recovering", "trips clear; awaiting operator"),
+            _supply("durable-tier", "Unknown"),
+            _supply("staging", "Available", "seeded"),
+            _supply("retired dewar", "Decommissioned"),
+        ]
+        async with status_push_lifespan(
+            kernel,
+            **_default_handlers(list_supplies=_make_list_supplies(supplies)),
+        ):
+            raw = await asyncio.wait_for(received.get(), timeout=5)
+
+        snapshot = json.loads(raw)
+        by_name = {s["name"]: s for s in snapshot["supplies"]}
+        assert set(by_name) == {"cooling water", "vacuum", "durable-tier", "staging"}
+        assert by_name["cooling water"]["status"] == "Unavailable"
+        assert by_name["cooling water"]["last_status_reason"] == "BLEPS trip: Flow4"
+        assert by_name["cooling water"]["last_trigger"] == "Monitor"
+        assert by_name["durable-tier"]["last_status_changed_at"] is None
 
 
 @pytest.mark.unit

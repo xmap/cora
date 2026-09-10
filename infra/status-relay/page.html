@@ -701,6 +701,15 @@
     CautionRetired: 1,
     CautionDraftConflicted: 1,
     DecisionDebriefRequested: 1,
+    SupplyMarkedUnavailable: 2,
+    SupplyDegraded: 1,
+    // Notable, not routine, though it is the good-news direction: Recovering
+    // means the signal cleared but a person still has to accept the supply
+    // back, so it is an unfinished action rather than a resolution. Drawn
+    // quietly it sits unnoticed, which is exactly what happened at 2-BM when
+    // one rested there for a fortnight.
+    SupplyMarkedRecovering: 1,
+    SupplyDeregistered: 1,
   };
 
   // How much of the buffer is on screen at once, and therefore also how far a
@@ -895,6 +904,22 @@
       return [d.name, d.status];
     });
   }
+  // Every Supply the snapshot carries, healthy ones included. A panel that
+  // listed only the failed ones could not distinguish "all well" from "not
+  // looking", and for a resource a run depends on those are opposite answers.
+  // `Unknown` is spelled out rather than smoothed: nothing has ever observed
+  // that supply, which is not the same as finding it fine.
+  function supplyLines(snap) {
+    return ((snap && snap.supplies) || []).map(function (s) {
+      var detail = s.status === "Unknown" ? "never observed" : s.status;
+      if (s.last_status_reason) detail += ", " + s.last_status_reason;
+      if (s.last_status_changed_at) {
+        var t = clockOf(s.last_status_changed_at);
+        if (t) detail += " (" + t + ")";
+      }
+      return [s.name, detail];
+    });
+  }
   function decisionLines(snap) {
     return ((snap && snap.decisions) || []).map(function (d) {
       return [
@@ -952,7 +977,12 @@
   // carries whether the agent fleet can act at all, and that answer matters
   // most on exactly the days no agent has emitted anything, which is when a
   // presence-gated lane would be missing.
-  var ALWAYS_ON = ["datasets", "decisions", "cautions", "other", "actors"];
+  // `supplies` is here for that same reason. A Supply transition is rare, so
+  // a presence-gated supplies lane is absent on almost every day, including
+  // every day the interlock is quiet and a viewer wants to see that CORA is
+  // still watching it. Absent and calm must not render identically for a
+  // resource a run refuses to start without.
+  var ALWAYS_ON = ["datasets", "decisions", "cautions", "other", "actors", "supplies"];
   // Domains that get instance TRACKS above their flat lane. Only for these
   // can a flat lane mean "the ones with no row of their own"; for the rest it
   // is the domain's only home, and calling it elsewhere would be a lie.
@@ -1205,10 +1235,10 @@
             head: DOMAIN_LABEL[key],
             // The instances behind the marks, where the snapshot names them
             // and the set is bounded. Datasets are capped by the open-run
-            // count and decisions by the producer's own ring, so neither can
-            // run away; no other domain ships instances at all, and inventing
-            // a list for one that does not would be worse than the marks
-            // alone.
+            // count, decisions by the producer's own ring, and supplies by
+            // how many a deployment registers at all, so none can run away;
+            // no other domain ships instances, and inventing a list for one
+            // that does not would be worse than the marks alone.
             list:
               key === "datasets"
                 ? datasetLines(snap)
@@ -1216,7 +1246,9 @@
                   ? decisionLines(snap)
                   : key === "actors"
                     ? agentLines(snap)
-                    : null,
+                    : key === "supplies"
+                      ? supplyLines(snap)
+                      : null,
             note: tracked
               ? "Events whose instance has no row of its own above: it ended before " +
                 "this window opened, or it fell past the " + MAX_TRACK_ROWS + "-row cap. " +

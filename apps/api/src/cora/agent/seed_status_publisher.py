@@ -15,17 +15,15 @@ the per-agent constants below; the shared scaffolding lives in
     (`prompt_template_id=None`) and a Rule brain
     (`BrainRef.for_rule("StatusPublisher:v1")`). Never used to build an LLM: the runtime
     is a read-and-relay loop, not an LLM subscriber.
-  - Authorization: `_status_push.py` reads across nine BCs to assemble the
+  - Authorization: `_status_push.py` reads across ten BCs to assemble the
     snapshot it relays: `ListPlans` (Recipe), `ListRuns` and
     `GetRunHistory` (Run), `ListSubjects` (Subject), `ListCampaigns`
     (Campaign), `ListDatasets` (Data), `ListProcedures` (Operation),
     `ListClearances` (Safety), `ListEnclosures` and `GetEnclosureHistory`
-    (Enclosure), and `ListDecisions` (Decision). This identity only seeds
-    the Agent record; `_status_push.py` still issues every one of those
-    reads as `SYSTEM_PRINCIPAL_ID` and does not yet act as this agent.
-    Switching it over, and granting this principal the eleven commands
-    above under a real `TrustAuthorize` Policy, is separate follow-up
-    work, not part of this seed.
+    (Enclosure), `ListSupplies` (Supply), and `ListDecisions` (Decision).
+    Every one of those reads is issued as this principal. Granting it the
+    twelve commands above under a real `TrustAuthorize` Policy is
+    separate follow-up work, not part of this seed.
 """
 
 from __future__ import annotations

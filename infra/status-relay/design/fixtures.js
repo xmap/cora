@@ -29,14 +29,19 @@
     Clearances: [["ClearanceReviewStepAppended", 3], ["ClearanceApproved", 2],
            ["ClearanceExpired", 1], ["ClearanceRejected", 1]],
     Cautions: [["CautionRegistered", 2], ["CautionRetired", 1]],
+    // Deliberately the sparsest mix here. A Supply transitions a handful of
+    // times a run cycle, and the lane is drawn even when it holds nothing,
+    // so the harness has to show what a near-empty always-on lane looks like.
+    Supplies: [["SupplyMarkedUnavailable", 1], ["SupplyMarkedRecovering", 1]],
     Enclosures: [["EnclosurePermitObserved", 8], ["EnclosureDecommissioned", 1]],
     Decisions: [["DecisionRegistered", 40], ["DecisionRated", 8], ["DecisionLogbookOpened", 3],
            ["DecisionDebriefRequested", 1]],
     Other: [["ActorRegistered", 3], ["CalibrationRecorded", 4], ["AllocationGranted", 2]],
   };
   var LANE_WEIGHT = { Runs: 47, Decisions: 44, Procedures: 2.4, Datasets: 2.2, Subjects: 1.2,
-                      Enclosures: 1.1, Campaigns: 0.8, Clearances: 0.6, Other: 0.5, Cautions: 0.2 };
-  var LANE_ORDER = ["Runs", "Procedures", "Subjects", "Campaigns", "Datasets",
+                      Enclosures: 1.1, Campaigns: 0.8, Clearances: 0.6, Other: 0.5, Cautions: 0.2,
+                      Supplies: 0.1 };
+  var LANE_ORDER = ["Runs", "Procedures", "Subjects", "Supplies", "Campaigns", "Datasets",
                     "Clearances", "Cautions", "Enclosures", "Decisions", "Other"];
 
   // Mirrors page.html's own EVENT_TIER. Duplicated deliberately: the harness
@@ -48,6 +53,8 @@
     ClearanceRejected: 2, DatasetDiscarded: 2, EnclosureDecommissioned: 2,
     RunStopped: 1, RunTruncated: 1, RunResumed: 1, CampaignHeld: 1,
     SubjectDiscarded: 1, DatasetDemoted: 1, CautionRetired: 1, DecisionDebriefRequested: 1,
+    SupplyMarkedUnavailable: 2, SupplyDegraded: 1, SupplyMarkedRecovering: 1,
+    SupplyDeregistered: 1,
   };
 
   function mulberry32(a) {

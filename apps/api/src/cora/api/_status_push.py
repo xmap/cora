@@ -42,6 +42,11 @@ Each tick reads and pushes:
     something required to start a run currently in force)
   - Active Enclosures (permit status: the most direct "is it safe right
     now" answer CORA records)
+  - every Supply a run can draw on, with the status CORA holds and the
+    reason it last moved. Deliberately NOT narrowed to the healthy ones:
+    `Unavailable` after an interlock trip, `Recovering` while it waits
+    for an operator, and never-observed `Unknown` are precisely the
+    states worth showing (see `_drain_supplies`)
   - the most recent Decisions since this process started, tail-followed
     (see `_DecisionTail`) rather than paged from the beginning, since
     Decisions have no "open" status to filter on and the table is
@@ -209,6 +214,8 @@ from cora.safety.errors import UnauthorizedError as _SafetyUnauthorizedError
 from cora.safety.features.list_clearances import ListClearances
 from cora.subject.errors import UnauthorizedError as _SubjectUnauthorizedError
 from cora.subject.features.list_subjects import ListSubjects
+from cora.supply.errors import UnauthorizedError as _SupplyUnauthorizedError
+from cora.supply.features.list_supplies import ListSupplies
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -240,6 +247,7 @@ if TYPE_CHECKING:
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.safety.features.list_clearances.handler import Handler as ListClearancesHandler
     from cora.subject.features.list_subjects.handler import Handler as ListSubjectsHandler
+    from cora.supply.features.list_supplies.handler import Handler as ListSuppliesHandler
 
 _log = get_logger(__name__)
 
@@ -258,6 +266,7 @@ _OPEN_SUBJECT_STATUSES = ("Received", "Mounted", "Measured", "Removed")
 _OPEN_CAMPAIGN_STATUSES: list[CampaignStatusFilter] = ["Planned", "Active", "Held"]
 _ACTIVE_CLEARANCE_STATUS = "Active"
 _ACTIVE_ENCLOSURE_LIFECYCLE = "Active"
+_DECOMMISSIONED_SUPPLY_STATUS = "Decommissioned"
 _DECISION_RING_SIZE = 20
 _PROGRESS_TRAIL_POINTS = 30
 """Cap on how many trail points ride the wire per (run, role), independent
@@ -333,6 +342,7 @@ _UNAUTHORIZED_ERRORS = (
     _SafetyUnauthorizedError,
     _EnclosureUnauthorizedError,
     _OperationUnauthorizedError,
+    _SupplyUnauthorizedError,
 )
 
 
@@ -694,6 +704,45 @@ async def _drain_active_enclosures(
         )
         raw_enclosure_ids.append(item.enclosure_id)
     return rows, raw_enclosure_ids
+
+
+async def _drain_supplies(list_supplies: ListSuppliesHandler, deps: Kernel) -> list[dict[str, Any]]:
+    """Every Supply a run can draw on, with the status CORA currently
+    holds and the reason it last moved.
+
+    Unlike every other drain here, this one does NOT narrow to the open
+    or active rows. A Supply's whole value to a viewer is the state it is
+    resting in, and the states worth seeing are exactly the bad ones:
+    `Unavailable` after a BLEPS trip, `Recovering` while it waits for an
+    operator to accept it back, `Unknown` for one nothing has ever
+    observed. Filtering to "active" would leave the panel empty on the
+    days it matters most.
+
+    `Decommissioned` is dropped in Python rather than by the query
+    because `ListSupplies.status` takes a single value, so "everything
+    except one terminal state" is not expressible as a filter.
+    """
+    items = await _drain_all(
+        lambda cursor: list_supplies(
+            ListSupplies(cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=STATUS_PUBLISHER_AGENT_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=SYSTEM_IN_PROCESS_SURFACE_ID,
+        )
+    )
+    return [
+        {
+            "supply_id": render_value(item.supply_id),
+            "name": item.name,
+            "kind": item.kind,
+            "status": item.status,
+            "last_status_reason": item.last_status_reason,
+            "last_status_changed_at": render_value(item.last_status_changed_at),
+            "last_trigger": item.last_trigger,
+        }
+        for item in items
+        if item.status != _DECOMMISSIONED_SUPPLY_STATUS
+    ]
 
 
 class _FleetReadinessTail:
@@ -1269,6 +1318,7 @@ def build_snapshot(
     procedures: list[dict[str, Any]],
     clearances: list[dict[str, Any]],
     enclosures: list[dict[str, Any]],
+    supplies: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
     agents: dict[str, Any],
     sequence: int,
@@ -1290,6 +1340,7 @@ def build_snapshot(
         "procedures": procedures,
         "clearances": clearances,
         "enclosures": enclosures,
+        "supplies": supplies,
         "decisions": decisions,
         "agents": agents,
     }
@@ -1532,6 +1583,7 @@ async def _build_payload_fields(
     list_clearances: ListClearancesHandler,
     list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
+    list_supplies: ListSuppliesHandler,
     decision_tail: _DecisionTail,
     fleet_tail: _FleetReadinessTail,
     list_decisions: ListDecisionsHandler,
@@ -1579,6 +1631,7 @@ async def _build_payload_fields(
         "procedures": await _drain_procedures_for_runs(list_procedures, deps, run_ids=raw_run_ids),
         "clearances": await _drain_active_clearances(list_clearances, deps),
         "enclosures": enclosures,
+        "supplies": await _drain_supplies(list_supplies, deps),
         "decisions": await decision_tail.poll(list_decisions, deps),
         "agents": await fleet_tail.poll(deps),
     }
@@ -1619,6 +1672,7 @@ async def _push_loop(
     list_clearances: ListClearancesHandler,
     list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
+    list_supplies: ListSuppliesHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
     get_enclosure_history: GetEnclosureHistoryHandler,
@@ -1694,6 +1748,7 @@ async def _push_loop(
                             list_clearances=list_clearances,
                             list_plans=list_plans,
                             list_enclosures=list_enclosures,
+                            list_supplies=list_supplies,
                             decision_tail=decision_tail,
                             fleet_tail=fleet_tail,
                             list_decisions=list_decisions,
@@ -1772,6 +1827,7 @@ async def status_push_lifespan(
     list_clearances: ListClearancesHandler,
     list_plans: ListPlansHandler,
     list_enclosures: ListEnclosuresHandler,
+    list_supplies: ListSuppliesHandler,
     list_decisions: ListDecisionsHandler,
     get_run_history: GetRunHistoryHandler,
     get_enclosure_history: GetEnclosureHistoryHandler,
@@ -1837,6 +1893,7 @@ async def status_push_lifespan(
             list_clearances=list_clearances,
             list_plans=list_plans,
             list_enclosures=list_enclosures,
+            list_supplies=list_supplies,
             list_decisions=list_decisions,
             get_run_history=get_run_history,
             get_enclosure_history=get_enclosure_history,
