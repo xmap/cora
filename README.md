@@ -583,7 +583,7 @@
 | src/cora/data/aggregates/edition/evolver.py                                              |       39 |        2 |       14 |        1 |     94.3% |     49-50 |
 | src/cora/data/aggregates/edition/read.py                                                 |       11 |        3 |        0 |        0 |     72.7% |     22-24 |
 | src/cora/data/aggregates/edition/state.py                                                |      200 |        2 |       22 |        0 |     99.1% |   520-524 |
-| src/cora/data/errors.py                                                                  |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/data/errors.py                                                                  |       23 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/\_\_init\_\_.py                                                   |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/add\_dataset\_to\_edition/\_\_init\_\_.py                         |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/add\_dataset\_to\_edition/command.py                              |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -618,7 +618,7 @@
 | src/cora/data/features/get\_dataset/tool.py                                              |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/data/features/ingest\_scan/\_\_init\_\_.py                                      |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/ingest\_scan/command.py                                           |        7 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/features/ingest\_scan/handler.py                                           |      118 |        7 |       46 |        9 |     89.0% |236, 279, 282, 285-289, 451-\>453, 453-\>455, 459-\>461, 461-\>465, 471 |
+| src/cora/data/features/ingest\_scan/handler.py                                           |      118 |        7 |       46 |        9 |     89.0% |238, 285, 288, 291-295, 459-\>461, 461-\>463, 467-\>469, 469-\>473, 479 |
 | src/cora/data/features/ingest\_scan/route.py                                             |       24 |        1 |        0 |        0 |     95.8% |       163 |
 | src/cora/data/features/ingest\_scan/tool.py                                              |       20 |        1 |        0 |        0 |     95.0% |       102 |
 | src/cora/data/features/list\_datasets/\_\_init\_\_.py                                    |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -2733,7 +2733,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **63375** | **1403** | **9782** |  **442** | **97.3%** |           |
+| **TOTAL**                                                                                | **63393** | **1403** | **9782** |  **442** | **97.3%** |           |
 
 
 ## Setup coverage badge
