@@ -1557,6 +1557,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_clearances=app.state.safety.list_clearances,
                         list_plans=app.state.recipe.list_plans,
                         list_enclosures=app.state.enclosure.list_enclosures,
+                        list_supplies=app.state.supply.list_supplies,
                         list_decisions=app.state.decision.list_decisions,
                         get_run_history=app.state.run.get_run_history,
                         get_enclosure_history=app.state.enclosure.get_enclosure_history,
