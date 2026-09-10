@@ -46,7 +46,7 @@ from cora.data.aggregates.dataset import (
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
-from cora.data.errors import InvalidScanFileError, UnauthorizedError
+from cora.data.errors import InvalidScanFileError, ScanFileInvalidReason, UnauthorizedError
 from cora.infrastructure.capture_scan_ingestor_binding import (
     CaptureScanIngestorBinding,
     CaptureScanIngestorLocation,
@@ -422,7 +422,10 @@ async def test_authorization_recovering_after_a_denial_logs_the_recovery() -> No
     "raises",
     [
         DatasetAlreadyIngestedError(uuid4(), "deadbeef"),
-        InvalidScanFileError("scan file is structurally incomplete"),
+        InvalidScanFileError(
+            "scan file is structurally incomplete",
+            reason=ScanFileInvalidReason.STRUCTURALLY_INCOMPLETE,
+        ),
         ProducingRunNotFoundError(_RUN_ID),
         AcquisitionAssetNotFoundError(_ASSET_ID),
         DistributionSupplyNotFoundError(_SUPPLY_ID),
@@ -463,13 +466,16 @@ async def test_tick_propagates_cancellation_instead_of_swallowing_it() -> None:
 @pytest.mark.unit
 async def test_a_failed_ingest_never_logs_the_observed_path() -> None:
     """`observed_path` is personal data and this log sink cannot be
-    erased; every failure mode's log line must carry `run_id` /
-    `capture_code` only, never the path or an exception message that
-    embeds it (`InvalidScanFileError`'s text does, via `repr()`)."""
+    erased; every failure mode's log line must never carry the path or
+    an exception message that embeds it (`InvalidScanFileError`'s text
+    does, via `repr()`), even though `invalid_scan_file` now also
+    carries `reason`, the closed `ScanFileInvalidReason` enum that by
+    construction can never hold a path fragment."""
     lookup = _ListCandidateLookup([_candidate()])
     ingest_scan = _FakeIngestScan(
         raises=InvalidScanFileError(
-            f"scan file is not readable: /local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5"
+            f"scan file is not readable: /local1/2BM/2026-08-{_PERSONAL_PATH_FRAGMENT}/scan_005.h5",
+            reason=ScanFileInvalidReason.UNREADABLE,
         )
     )
     ingestor = CaptureScanIngestor(
@@ -482,6 +488,34 @@ async def test_a_failed_ingest_never_logs_the_observed_path() -> None:
     for entry in logs:
         for value in entry.values():
             assert _PERSONAL_PATH_FRAGMENT not in str(value)
+
+
+@pytest.mark.unit
+async def test_invalid_scan_file_log_carries_the_reason_enum_not_the_message() -> None:
+    """Proves the property this change exists for: an operator reading
+    the warning must be able to tell WHY ingest refused without opening
+    the file by hand. `reason` is the enum value; the message text
+    stays deliberately absent (see the sibling never-logs-the-path
+    test)."""
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan(
+        raises=InvalidScanFileError(
+            "scan file is structurally incomplete: the rotation-angle dataset is absent",
+            reason=ScanFileInvalidReason.STRUCTURALLY_INCOMPLETE,
+        )
+    )
+    ingestor = CaptureScanIngestor(
+        deps=_deps(), candidate_lookup=lookup, ingest_scan=ingest_scan, bindings=_bindings()
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await ingestor.tick()
+
+    entries = [e for e in logs if e["event"] == "capture_scan_ingestor.invalid_scan_file"]
+    assert len(entries) == 1
+    assert entries[0]["reason"] == ScanFileInvalidReason.STRUCTURALLY_INCOMPLETE.value
+    for value in entries[0].values():
+        assert "rotation-angle" not in str(value)
 
 
 @pytest.mark.unit

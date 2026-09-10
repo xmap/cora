@@ -67,7 +67,7 @@ from cora.data.aggregates.dataset import (
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
-from cora.data.errors import InvalidScanFileError, UnauthorizedError
+from cora.data.errors import InvalidScanFileError, ScanFileInvalidReason, UnauthorizedError
 from cora.data.features.ingest_scan.command import IngestScan
 from cora.data.ports.checksum_computer import ChecksumComputer
 from cora.data.ports.checksum_verifier import Unreachable
@@ -209,7 +209,8 @@ def bind(
         if resolved_locator is None:
             raise InvalidScanFileError(
                 "scan file locator could not be resolved: the referenced "
-                "run's capture path is missing or no longer matches."
+                "run's capture path is missing or no longer matches.",
+                reason=ScanFileInvalidReason.LOCATOR_UNRESOLVED,
             )
         # Whether resolution actually substituted a DIFFERENT string:
         # `described.reason` / `computed.error_detail` below come from
@@ -230,19 +231,22 @@ def bind(
             raise InvalidScanFileError(
                 "scan file is not readable"
                 + _redacted_suffix(described.reason, redact=locator_was_resolved)
-                + ". If the file is still transferring, retry once it has arrived."
+                + ". If the file is still transferring, retry once it has arrived.",
+                reason=ScanFileInvalidReason.UNREADABLE,
             )
         if isinstance(described, Unrecognized):
             raise InvalidScanFileError(
                 "not a recognizable scan file"
-                + _redacted_suffix(described.reason, redact=locator_was_resolved)
+                + _redacted_suffix(described.reason, redact=locator_was_resolved),
+                reason=ScanFileInvalidReason.UNRECOGNIZED,
             )
         if not described.structurally_complete:
             raise InvalidScanFileError(
                 "scan file is structurally incomplete: the rotation-angle "
                 "dataset is absent, meaning post-processing has not "
                 "completed (not yet run, failed, or zero projections). "
-                "Ingest the file once its writer has finished with it."
+                "Ingest the file once its writer has finished with it.",
+                reason=ScanFileInvalidReason.STRUCTURALLY_INCOMPLETE,
             )
 
         captured_at, captured_at_source = _resolve_captured_at(command, described)
@@ -255,13 +259,15 @@ def bind(
         if isinstance(computed, Unreachable):
             raise InvalidScanFileError(
                 "could not digest scan file"
-                + _redacted_suffix(computed.error_detail, redact=locator_was_resolved)
+                + _redacted_suffix(computed.error_detail, redact=locator_was_resolved),
+                reason=ScanFileInvalidReason.DIGEST_UNREACHABLE,
             )
         if (computed.byte_size, computed.mtime_ns) != (described.byte_size, described.mtime_ns):
             raise InvalidScanFileError(
                 "scan file changed while being read (size or mtime moved "
                 "between the structural read and the digest pass). It is "
-                "still being written or transferred; retry once it is final."
+                "still being written or transferred; retry once it is final.",
+                reason=ScanFileInvalidReason.CHANGED_WHILE_READING,
             )
 
         # 3. Natural-key duplicate check: the digest, not the uri, since
@@ -414,7 +420,8 @@ def _resolve_captured_at(command: IngestScan, described: Description) -> tuple[A
                 f"captured_at was supplied but the file carries its own "
                 f"parseable timestamp ({described.captured_at_raw}, from "
                 f"{described.captured_at_source}). Drop the supplied value; "
-                f"the file's own timestamp always wins."
+                f"the file's own timestamp always wins.",
+                reason=ScanFileInvalidReason.CAPTURED_AT_AMBIGUOUS,
             )
         return described.captured_at, described.captured_at_source
     if command.captured_at is not None:
@@ -427,7 +434,8 @@ def _resolve_captured_at(command: IngestScan, described: Description) -> tuple[A
     raise InvalidScanFileError(
         f"the file's acquisition timestamp is {detail}. Supply captured_at "
         f"with the operator-asserted capture time (logbook, folder date) to "
-        f"ingest this file; CORA never fabricates one."
+        f"ingest this file; CORA never fabricates one.",
+        reason=ScanFileInvalidReason.CAPTURED_AT_MISSING,
     )
 
 
@@ -470,7 +478,8 @@ def _filename_of(locator: str) -> str:
     if not name:
         raise InvalidScanFileError(
             "the locator carries no filename to name the Dataset after; "
-            "point it at the scan file itself, not a directory."
+            "point it at the scan file itself, not a directory.",
+            reason=ScanFileInvalidReason.LOCATOR_MISSING_FILENAME,
         )
     return name
 
