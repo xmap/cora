@@ -20,7 +20,7 @@ from cora.data.aggregates.acquisition import (
 )
 from cora.data.aggregates.dataset import DatasetAlreadyIngestedError
 from cora.data.aggregates.distribution import DistributionCannotRegisterOnNonStorageSupplyError
-from cora.data.errors import InvalidScanFileError, UnauthorizedError
+from cora.data.errors import InvalidScanFileError, ScanFileInvalidReason, UnauthorizedError
 from cora.data.features import ingest_scan
 from cora.data.features.ingest_scan import IngestScan
 from cora.data.features.ingest_scan.handler import DATA_EXCHANGE_PROFILE, DatasetByChecksumLookup
@@ -377,6 +377,40 @@ async def test_ingest_incomplete_file_refusal_leaves_zero_events() -> None:
         await handler(_command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID)
 
     assert await _stream_counts(store) == (0, 0, 0)
+
+
+async def test_ingest_transient_and_permanent_refusals_yield_different_reasons() -> None:
+    """Mutation check: this is the test that fails if the unreadable and
+    the structurally-incomplete raise sites are ever collapsed onto the
+    same `ScanFileInvalidReason` member. `Unreadable` is the site
+    `ScanReader`'s own port docstring calls possibly transient (a
+    half-transferred file); a structurally incomplete file (no
+    rotation-angle dataset) is the site `DataExchangeScanReader` documents
+    as a layout verdict, not an I/O timing issue -- see
+    `ScanFileInvalidReason`'s class docstring for the citations behind
+    each classification."""
+    transient_handler = _bind(
+        _deps(InMemoryEventStore()), described=Unreadable(reason="half-copied")
+    )
+    permanent_handler = _bind(
+        _deps(InMemoryEventStore()),
+        described=_description(structurally_complete=False, projection_angles_deg=None),
+    )
+
+    with pytest.raises(InvalidScanFileError) as transient_exc:
+        await transient_handler(
+            _command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID
+        )
+    with pytest.raises(InvalidScanFileError) as permanent_exc:
+        await permanent_handler(
+            _command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID
+        )
+
+    assert transient_exc.value.reason == ScanFileInvalidReason.UNREADABLE
+    assert permanent_exc.value.reason == ScanFileInvalidReason.STRUCTURALLY_INCOMPLETE
+    assert transient_exc.value.reason != permanent_exc.value.reason
+    assert transient_exc.value.reason.is_transient
+    assert not permanent_exc.value.reason.is_transient
 
 
 async def test_ingest_reader_names_an_unrecognized_captured_at_source_refuses() -> None:

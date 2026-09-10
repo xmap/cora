@@ -101,7 +101,9 @@ has the manual POST route.
 `{UserLastName}-{ProposalNumber}`; see
 `run.aggregates.run.capture_path`'s module docstring) and this log sink
 is not the vault: it cannot be erased. Every log line here carries
-`run_id` and `capture_code` only, never the path and never an
+`run_id` and `capture_code` only (the `invalid_scan_file` line also
+carries `reason`, the closed `ScanFileInvalidReason` enum, which by
+construction can never embed a path), never the path and never an
 exception's rendered message (`InvalidScanFileError`'s text embeds the
 locator via `repr()`), mirroring `_run_translator.py`'s identical rule for
 the same value.
@@ -436,16 +438,17 @@ class CaptureScanIngestor:
                 existing_dataset_id=str(exc.existing_dataset_id),
             )
             return _Outcome.SKIP
-        except InvalidScanFileError:
+        except InvalidScanFileError as exc:
             # Never `str(exc)`: the message embeds the locator via
-            # `repr()` (see this module's own docstring). The class
-            # alone already says "structurally incomplete", "unreadable",
-            # or "no timestamp"; that's enough for an operator to act on
-            # without the path.
+            # `repr()` (see this module's own docstring). `exc.reason`
+            # is the closed, non-PII `ScanFileInvalidReason` enum, safe
+            # to log because it can never carry a path; that's enough
+            # for an operator to act on without the path.
             _log.warning(
                 "capture_scan_ingestor.invalid_scan_file",
                 capture_code=candidate.capture_code,
                 run_id=str(candidate.run_id),
+                reason=exc.reason.value,
             )
             return _Outcome.SKIP
         except (
