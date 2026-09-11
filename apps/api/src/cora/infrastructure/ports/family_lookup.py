@@ -31,9 +31,13 @@ This is a cross-aggregate port (within Equipment BC; second after
 match the Affordance StrEnum string values; consumer deciders cast
 to typed enums at their BC boundary if they want the discipline.
 
-`status` is typed `str` (not the `FamilyStatus` StrEnum) for the
-same tach reason. Consumers partition on the literal
-("Defined" / "Versioned" / "Deprecated").
+`status` is a `Literal` alias rather than bare `str` (not the
+`FamilyStatus` StrEnum): `Literal` comes from `typing`, so the alias
+pins the enum's value set without importing the enum, for the same
+tach reason. A fitness test pins the alias to the enum and fails if
+the two ever drift. Adapters produce a member's `.value`, which
+narrows to exactly the alias, so no cast is needed. Consumers
+partition on the literal ("Defined" / "Versioned" / "Deprecated").
 
 `presents_as` is typed `frozenset[UUID]` (not `frozenset[RoleId]`);
 consumers cast at their BC boundary if they need the typed
@@ -41,8 +45,10 @@ identity.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+FamilyStatusValue = Literal["Defined", "Versioned", "Deprecated"]
 
 
 @dataclass(frozen=True)
@@ -64,10 +70,10 @@ class FamilyLookupResult:
     incrementally via `add_family_presents_as` / removes via
     `remove_family_presents_as`.
 
-    `status` is the FSM stage as a plain string ("Defined" /
-    "Versioned" / "Deprecated"); consumer decides whether
-    Deprecated Families are acceptable bindings (today's posture:
-    accept; deprecation is advisory).
+    `status` is a `Literal` alias pinning `FamilyStatus`'s value set
+    ("Defined" / "Versioned" / "Deprecated"); consumer decides
+    whether Deprecated Families are acceptable bindings (today's
+    posture: accept; deprecation is advisory).
 
     `name` is the operator-readable display name; useful for
     surfacing in cross-BC error messages.
@@ -75,7 +81,7 @@ class FamilyLookupResult:
 
     id: UUID
     name: str
-    status: str
+    status: FamilyStatusValue
     affordances: frozenset[str]
     presents_as: frozenset[UUID]
 
@@ -99,4 +105,4 @@ class FamilyLookup(Protocol):
         ...
 
 
-__all__ = ["FamilyLookup", "FamilyLookupResult"]
+__all__ = ["FamilyLookup", "FamilyLookupResult", "FamilyStatusValue"]

@@ -29,6 +29,7 @@ from cora.equipment.aggregates.asset import (
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.infrastructure.ports.dataset_distribution_lookup import (
     DatasetDistributionLookupResult,
+    DistributionStatusValue,
 )
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import RunInputNotReachableError, RunInputNotVerifiedError
@@ -40,7 +41,7 @@ _NOW = datetime(2026, 6, 25, 12, 0, 0, tzinfo=UTC)
 
 
 def _distribution(
-    dataset_id: UUID, status: str, *, supply_id: UUID | None = None
+    dataset_id: UUID, status: DistributionStatusValue, *, supply_id: UUID | None = None
 ) -> DatasetDistributionLookupResult:
     return DatasetDistributionLookupResult(
         distribution_id=uuid4(),
@@ -153,7 +154,9 @@ def test_decide_passes_when_input_has_a_verified_distribution() -> None:
 
 @pytest.mark.unit
 @pytest.mark.parametrize("status", ["Registered", "Stale"])
-def test_decide_raises_when_input_has_no_verified_distribution(status: str) -> None:
+def test_decide_raises_when_input_has_no_verified_distribution(
+    status: DistributionStatusValue,
+) -> None:
     """Input with only a non-Verified Distribution -> RunInputNotVerifiedError."""
     dataset_id = uuid4()
     context, needs = _context(

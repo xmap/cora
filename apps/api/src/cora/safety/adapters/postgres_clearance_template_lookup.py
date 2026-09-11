@@ -27,15 +27,15 @@ lifecycle status are returned; the consumer decider partitions on
 
 ## Enum coercion
 
-`status` is stored as `TEXT` and typed as `str` on the port's
-`ClearanceTemplateLookupResult` (to keep
+`status` is stored as `TEXT` and typed as a `Literal` alias on the
+port's `ClearanceTemplateLookupResult` (to keep
 `cora.infrastructure.ports.clearance_template_lookup` import-free
-of Safety BC types). The adapter still constructs
+of Safety BC types). The adapter constructs
 `ClearanceTemplateStatus(row["status"])` as a validation step: a
 corrupted row whose `status` is not a known enum value surfaces
 as `ValueError` from the adapter rather than as a silent wrong
-status downstream. The validated `StrEnum` value IS-A `str`, so
-the assignment into the dataclass's `str`-typed field is exact.
+status downstream. `.value` on the validated member narrows to
+exactly the port's alias, so no cast is needed.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false

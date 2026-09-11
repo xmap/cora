@@ -41,7 +41,7 @@ from cora.data.features.register_distribution import (
     DistributionRegistrationContext,
     RegisterDistribution,
 )
-from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult, SupplyStatusValue
 from cora.shared.identity import ActorId
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -89,7 +89,7 @@ def _supply(
     supply_id: UUID,
     *,
     kind: str = "Storage",
-    status: str = "Available",
+    status: SupplyStatusValue = "Available",
 ) -> SupplyLookupResult:
     return SupplyLookupResult(
         supply_id=supply_id,

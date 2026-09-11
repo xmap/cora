@@ -18,7 +18,9 @@ from uuid import UUID
 from cora.infrastructure.ports.asset_lookup import (
     ANCESTOR_WALK_DEPTH_CAP,
     AncestorWalkDepthExceededError,
+    AssetLifecycleValue,
     AssetLookupResult,
+    AssetTierValue,
 )
 
 
@@ -37,8 +39,8 @@ class InMemoryAssetLookup:
         self,
         asset_id: UUID,
         name: str,
-        tier: str = "Unit",
-        lifecycle: str = "Active",
+        tier: AssetTierValue = "Unit",
+        lifecycle: AssetLifecycleValue = "Active",
         family_affordances: frozenset[str] | None = None,
         parent_id: UUID | None = None,
         located_in_enclosure_id: UUID | None = None,

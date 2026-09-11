@@ -25,6 +25,20 @@ go through a replicated read model, not a synchronous call to the
 upstream aggregate. `proj_recipe_capability_summary` is exactly that:
 a denormalized view maintained by Recipe's projection worker. The
 lookup adapter reads it directly via the shared asyncpg pool.
+
+## Enum coercion
+
+`status` is stored as a `TEXT` column and typed as a `Literal` alias
+on the port's `CapabilityLookupResult` (to keep
+`cora.infrastructure.ports.capability_lookup` import-free of Recipe
+BC types). The adapter constructs `CapabilityStatus(row["status"])`
+as a validation step: a corrupted row whose `status` is not a known
+enum value surfaces as `ValueError` from the adapter rather than as
+a silent wrong-status match downstream. `.value` on the validated
+member narrows to exactly the port's alias, so no cast is needed.
+The SQL filter narrows to `{Defined, Versioned}`; the alias still
+pins the full three-value enum because a query filter is adapter
+behavior, not a constraint on the field's type.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -34,6 +48,7 @@ from typing import Any
 import asyncpg
 
 from cora.infrastructure.ports.capability_lookup import CapabilityLookupResult
+from cora.recipe.aggregates.capability import CapabilityStatus
 
 _FIND_APPLICABLE_BY_AFFORDANCES_SQL = """
 SELECT capability_id, code, name, status
@@ -67,5 +82,5 @@ def _row_to_reference(row: Any) -> CapabilityLookupResult:
         capability_id=row["capability_id"],
         code=str(row["code"]),
         name=str(row["name"]),
-        status=str(row["status"]),
+        status=CapabilityStatus(row["status"]).value,
     )

@@ -20,13 +20,13 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
-from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult, ClearanceStatusValue
 from cora.infrastructure.ports.enclosure_lookup import (
     EnclosureLifecycleValue,
     EnclosureLookupResult,
     EnclosurePermitStatusValue,
 )
-from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult, SupplyStatusValue
 from cora.run.aggregates.run import (
     RunBeamAvailabilityUnknownError,
     RunClearanceCoverageMismatchError,
@@ -45,7 +45,7 @@ from cora.run.aggregates.run import safety_envelope as safety_envelope_module
 _RUN_ID = UUID("01900000-0000-7000-8000-0000000005a1")
 
 
-def _clearance(status: str) -> ClearanceLookupResult:
+def _clearance(status: ClearanceStatusValue) -> ClearanceLookupResult:
     return ClearanceLookupResult(
         clearance_id=uuid4(),
         status=status,
@@ -55,7 +55,7 @@ def _clearance(status: str) -> ClearanceLookupResult:
     )
 
 
-def _supply(status: str) -> SupplyLookupResult:
+def _supply(status: SupplyStatusValue) -> SupplyLookupResult:
     return SupplyLookupResult(
         supply_id=uuid4(),
         kind="LN2",

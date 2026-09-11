@@ -30,11 +30,16 @@ the projection is already a denormalized cross-stream view.
 
 ## No BC imports in the port
 
-`purpose` and `status` are typed as `str` (not the Federation BC's
-`CredentialPurpose` / `CredentialStatus` StrEnums) so this port stays
-inside `cora.infrastructure`'s `depends_on = []` tach contract. The
-values match the StrEnum string values; deciders partition by literal
-comparison (`purpose == "SealOnlineSigning"`, `status == "Active"`).
+`purpose` stays typed `str` (not Federation BC's `CredentialPurpose`
+StrEnum) and `status` is a `Literal` alias pinning Federation BC's
+`CredentialStatus` StrEnum value set (not the StrEnum itself), so
+this port stays inside `cora.infrastructure`'s `depends_on = []`
+tach contract: `Literal` comes from `typing`, so the alias pins the
+enum's value set without importing the enum. A fitness test pins
+the alias to the enum and fails if the two ever drift. `purpose`'s
+values match the StrEnum's string values; deciders partition by
+literal comparison (`purpose == "SealOnlineSigning"`, `status ==
+"Active"`).
 
 `facility_id` is typed `FacilityCode` (not bare `str`) per the locked
 two-tier facility identity design ([[project-structural-scope-design]]
@@ -47,10 +52,12 @@ strings; the VO is in-memory only at the port surface).
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 
 from cora.shared.facility_code import FacilityCode
+
+CredentialStatusValue = Literal["Active", "Rotating", "Revoked"]
 
 
 @dataclass(frozen=True)
@@ -62,10 +69,11 @@ class CredentialLookupResult:
     handler via `CredentialLookup.lookup` and handed to the decider in
     the seal-slice context object.
 
-    `purpose` and `status` are the StrEnum values as plain strings
-    (matches the projection's `TEXT` columns); the decider partitions
-    on `purpose == "SealOnlineSigning"` / `"SealOfflineRoot"` and
-    `status == "Active"`.
+    `purpose` is the `CredentialPurpose` StrEnum value as a plain
+    string; `status` is a `Literal` alias pinning `CredentialStatus`'s
+    value set (both match the projection's `TEXT` columns). The
+    decider partitions on `purpose == "SealOnlineSigning"` /
+    `"SealOfflineRoot"` and `status == "Active"`.
 
     `facility_id` is a `FacilityCode` value object per the two-tier
     facility-identity design; the adapter constructs the VO from the
@@ -77,7 +85,7 @@ class CredentialLookupResult:
     id: UUID
     facility_id: FacilityCode
     purpose: str
-    status: str
+    status: CredentialStatusValue
 
 
 class CredentialLookup(Protocol):

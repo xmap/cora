@@ -17,14 +17,14 @@ Universal claims across generated inputs:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 from uuid import UUID
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult, ClearanceStatusValue
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     CapturePreconditionBypassSnapshot,
@@ -49,6 +49,9 @@ if TYPE_CHECKING:
 _NAME = printable_ascii_text(min_size=1, max_size=200)
 _CAPTURE_CODE = printable_ascii_text(min_size=1, max_size=50)
 _MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-000063617001"))
+_NON_ACTIVE_CLEARANCE_STATUSES = tuple(
+    value for value in get_args(ClearanceStatusValue) if value != "Active"
+)
 _BYPASS_SNAPSHOTS = st.one_of(
     st.none(),
     st.builds(
@@ -224,7 +227,7 @@ def test_witnessed_without_referencing_clearance_always_raises_requires_clearanc
     name=_NAME,
     plan_id=st.uuids(),
     capture_code=_CAPTURE_CODE,
-    clearance_status=st.text(min_size=1, max_size=20).filter(lambda s: s != "Active"),
+    clearance_status=st.sampled_from(_NON_ACTIVE_CLEARANCE_STATUSES),
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
@@ -232,7 +235,7 @@ def test_witnessed_clearance_present_but_never_active_always_raises_coverage_mis
     name: str,
     plan_id: UUID,
     capture_code: str,
-    clearance_status: str,
+    clearance_status: ClearanceStatusValue,
     now: datetime,
     new_id: UUID,
 ) -> None:

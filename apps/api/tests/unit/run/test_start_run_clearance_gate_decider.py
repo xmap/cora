@@ -23,7 +23,7 @@ from cora.equipment.aggregates.asset import (
     AssetName,
     AssetTier,
 )
-from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult, ClearanceStatusValue
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunClearanceCoverageMismatchError,
@@ -74,7 +74,7 @@ def _context(
     return context, frozenset({cap})
 
 
-def _ref(status: str) -> ClearanceLookupResult:
+def _ref(status: ClearanceStatusValue) -> ClearanceLookupResult:
     return ClearanceLookupResult(
         clearance_id=uuid4(),
         status=status,
@@ -112,7 +112,9 @@ def test_decide_raises_requires_active_when_no_clearance_references_the_run() ->
     "status",
     ["Defined", "Submitted", "UnderReview", "Approved", "Expired", "Rejected", "Superseded"],
 )
-def test_decide_raises_coverage_mismatch_when_no_clearance_is_active(status: str) -> None:
+def test_decide_raises_coverage_mismatch_when_no_clearance_is_active(
+    status: ClearanceStatusValue,
+) -> None:
     """Clearances reference the Run but none Active -> CoverageMismatch error."""
     context, needs = _context(referencing_clearances=(_ref(status),))
     new_id = uuid4()

@@ -32,14 +32,40 @@ from typing import Final, get_args
 
 import pytest
 
+from cora.agent.aggregates.language_model import LanguageModelStatus
+from cora.data.aggregates.distribution import DistributionStatus
 from cora.enclosure.aggregates.enclosure.state import (
     EnclosureLifecycle,
     EnclosurePermitStatus,
+)
+from cora.equipment.aggregates.assembly import AssemblyStatus
+from cora.equipment.aggregates.asset import AssetLifecycle, AssetTier
+from cora.equipment.aggregates.family import FamilyStatus
+from cora.federation.aggregates.credential import CredentialStatus
+from cora.federation.aggregates.facility import FacilityStatus
+from cora.infrastructure.ports.assembly_lookup import AssemblyStatusValue
+from cora.infrastructure.ports.asset_lookup import AssetLifecycleValue, AssetTierValue
+from cora.infrastructure.ports.capability_lookup import CapabilityStatusValue
+from cora.infrastructure.ports.clearance_lookup import ClearanceStatusValue
+from cora.infrastructure.ports.clearance_template_lookup import (
+    ClearanceTemplateStatusValue,
+)
+from cora.infrastructure.ports.credential_lookup import CredentialStatusValue
+from cora.infrastructure.ports.dataset_distribution_lookup import (
+    DistributionStatusValue,
 )
 from cora.infrastructure.ports.enclosure_lookup import (
     EnclosureLifecycleValue,
     EnclosurePermitStatusValue,
 )
+from cora.infrastructure.ports.facility_lookup import FacilityStatusValue
+from cora.infrastructure.ports.family_lookup import FamilyStatusValue
+from cora.infrastructure.ports.language_model_lookup import LanguageModelStatusValue
+from cora.infrastructure.ports.supply_lookup import SupplyStatusValue
+from cora.recipe.aggregates.capability import CapabilityStatus
+from cora.safety.aggregates.clearance import ClearanceStatus
+from cora.safety.aggregates.clearance_template import ClearanceTemplateStatus
+from cora.supply.aggregates.supply import SupplyStatus
 from tests.architecture.conftest import tracked_python_files
 
 _PORTS_DIR: Final = "infrastructure/ports"
@@ -49,6 +75,18 @@ _ALIAS_SUFFIX: Final = "Value"
 REGISTRY: Final[tuple[tuple[str, object, type[StrEnum]], ...]] = (
     ("EnclosurePermitStatusValue", EnclosurePermitStatusValue, EnclosurePermitStatus),
     ("EnclosureLifecycleValue", EnclosureLifecycleValue, EnclosureLifecycle),
+    ("AssetTierValue", AssetTierValue, AssetTier),
+    ("AssetLifecycleValue", AssetLifecycleValue, AssetLifecycle),
+    ("AssemblyStatusValue", AssemblyStatusValue, AssemblyStatus),
+    ("FamilyStatusValue", FamilyStatusValue, FamilyStatus),
+    ("CapabilityStatusValue", CapabilityStatusValue, CapabilityStatus),
+    ("LanguageModelStatusValue", LanguageModelStatusValue, LanguageModelStatus),
+    ("DistributionStatusValue", DistributionStatusValue, DistributionStatus),
+    ("ClearanceStatusValue", ClearanceStatusValue, ClearanceStatus),
+    ("ClearanceTemplateStatusValue", ClearanceTemplateStatusValue, ClearanceTemplateStatus),
+    ("CredentialStatusValue", CredentialStatusValue, CredentialStatus),
+    ("FacilityStatusValue", FacilityStatusValue, FacilityStatus),
+    ("SupplyStatusValue", SupplyStatusValue, SupplyStatus),
 )
 
 

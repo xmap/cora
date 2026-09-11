@@ -42,6 +42,7 @@ from cora.infrastructure.adapters.in_memory_facility_lookup import (
     InMemoryFacilityLookup,
 )
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports.credential_lookup import CredentialStatusValue
 from cora.shared.facility_code import FacilityCode
 from tests.unit._helpers import build_deps as _build_deps_shared
 from tests.unit.federation._helpers import (
@@ -74,7 +75,7 @@ def _build_lookup(
     *,
     register_default: bool = True,
     purpose: str = CredentialPurpose.SEAL_ONLINE_SIGNING.value,
-    status: str = CredentialStatus.ACTIVE.value,
+    status: CredentialStatusValue = CredentialStatus.ACTIVE.value,
     new_online_credential_id: UUID = _NEW_ONLINE_KEY,
 ) -> InMemoryCredentialLookup:
     """Build an `InMemoryCredentialLookup` seeded for the happy path.

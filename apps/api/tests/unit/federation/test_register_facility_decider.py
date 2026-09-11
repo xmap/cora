@@ -27,6 +27,7 @@ from cora.federation.aggregates.facility import (
 from cora.federation.features import register_facility
 from cora.federation.features.register_facility import RegisterFacility
 from cora.infrastructure.ports import FacilityLookupResult
+from cora.infrastructure.ports.facility_lookup import FacilityStatusValue
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 
@@ -67,7 +68,7 @@ def _site_parent_lookup(
     facility_id: FacilityId = _PARENT_FACILITY_ID,
     code: FacilityCode = _DEFAULT_PARENT_LOOKUP_CODE,
     kind: str = FacilityKind.SITE.value,
-    status: str = FacilityStatus.ACTIVE.value,
+    status: FacilityStatusValue = FacilityStatus.ACTIVE.value,
 ) -> FacilityLookupResult:
     """Test helper: build a Site-tier parent FacilityLookupResult.
 

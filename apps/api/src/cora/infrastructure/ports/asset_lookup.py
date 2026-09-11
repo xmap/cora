@@ -38,12 +38,16 @@ covers the hierarchy + lifecycle FSM.
 
 ## No BC imports in the port
 
-`tier` and `lifecycle` are typed as `str` (not Equipment BC's
-`AssetTier` / `AssetLifecycle` StrEnums) so this port stays inside
-`cora.infrastructure`'s `depends_on = []` tach contract. The values
-match the StrEnum string values; consumer deciders partition by
-literal comparison (`tier == "Unit"`, `lifecycle == "Active"`) and
-cast to typed enums at their boundary if they need the discipline.
+`tier` and `lifecycle` are `Literal` aliases rather than bare `str`
+(not Equipment BC's `AssetTier` / `AssetLifecycle` StrEnums), so this
+port stays inside `cora.infrastructure`'s `depends_on = []` tach
+contract: `Literal` comes from `typing`, so the alias pins each
+enum's value set without importing the enum. A fitness test pins
+each alias to its owning enum and fails if the two ever drift.
+Adapters produce a member's `.value`, which narrows to exactly the
+alias, so no cast is needed. Consumer deciders partition by literal
+comparison (`tier == "Unit"`, `lifecycle == "Active"`) and cast to
+typed enums at their boundary if they need the discipline.
 
 `id` is typed `UUID` (Equipment BC's Asset.id is bare UUID, not a
 NewType, so no cross-BC NewType to thread). Consumers that care
@@ -51,8 +55,11 @@ about the typed identity wrap at their BC boundary.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+AssetTierValue = Literal["Unit", "Component", "Device"]
+AssetLifecycleValue = Literal["Commissioned", "Active", "Maintenance", "Decommissioned"]
 
 ANCESTOR_WALK_DEPTH_CAP = 50
 """Maximum `parent_id` chain depth `ancestors_of` walks before failing.
@@ -79,9 +86,10 @@ class AssetLookupResult:
     via `AssetLookup.lookup` and handed to the decider in the slice's
     context object (mirrors `FacilityLookupResult` shape).
 
-    `tier` and `lifecycle` are the StrEnum values as plain strings
-    (matches the projection's `TEXT` columns); the consumer decider
-    partitions on the literals it cares about.
+    `tier` and `lifecycle` are `Literal` aliases pinning
+    `AssetTier` / `AssetLifecycle`'s value sets (matches the
+    projection's `TEXT` columns); the consumer decider partitions on
+    the literals it cares about.
 
     `name` is the operator-readable display name (1-200 chars per
     `AssetName` VO); useful for surfacing in cross-BC error messages
@@ -124,8 +132,8 @@ class AssetLookupResult:
 
     id: UUID
     name: str
-    tier: str
-    lifecycle: str
+    tier: AssetTierValue
+    lifecycle: AssetLifecycleValue
     family_affordances: frozenset[str]
     located_in_enclosure_id: UUID | None = None
 
@@ -219,6 +227,8 @@ class AssetLookup(Protocol):
 __all__ = [
     "ANCESTOR_WALK_DEPTH_CAP",
     "AncestorWalkDepthExceededError",
+    "AssetLifecycleValue",
     "AssetLookup",
     "AssetLookupResult",
+    "AssetTierValue",
 ]

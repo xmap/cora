@@ -26,16 +26,19 @@ partitions on `status == "Active"` so it can distinguish
 
 ## Enum coercion
 
-`purpose` and `status` are stored as `TEXT` columns and are
-typed as `str` on the port's `CredentialLookupResult` (to keep
+`purpose` and `status` are stored as `TEXT` columns. `purpose` stays
+typed `str` on the port's `CredentialLookupResult` (to keep
 `cora.infrastructure.ports.credential_lookup` import-free of
-Federation BC types). The adapter still constructs
-`CredentialPurpose(row["purpose"])` / `CredentialStatus(row["status"])`
-as a validation step: a corrupted row whose `purpose` or `status`
-is not a known enum value surfaces as `ValueError` from the
-adapter rather than as a silent wrong-purpose match downstream.
-The validated `StrEnum` value is `IS-A str`, so the assignment
-into the dataclass's `str`-typed fields is exact.
+Federation BC types); the adapter constructs
+`CredentialPurpose(row["purpose"])` as a validation step, and the
+validated `StrEnum` value IS-A `str`, so the assignment into the
+`str`-typed field is exact. `status` is typed as a `Literal` alias
+pinning `CredentialStatus`'s value set; the adapter constructs
+`CredentialStatus(row["status"])` the same way, but takes `.value`
+so the result narrows to exactly the alias, no cast needed. Either
+way, a corrupted row whose `purpose` or `status` is not a known
+enum value surfaces as `ValueError` from the adapter rather than as
+a silent wrong-value match downstream.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -79,7 +82,7 @@ def _row_to_result(row: Any) -> CredentialLookupResult:
         id=row["credential_id"],
         facility_id=FacilityCode(str(row["facility_id"])),
         purpose=CredentialPurpose(row["purpose"]),
-        status=CredentialStatus(row["status"]),
+        status=CredentialStatus(row["status"]).value,
     )
 
 

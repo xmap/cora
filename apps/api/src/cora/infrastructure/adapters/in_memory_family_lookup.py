@@ -13,7 +13,7 @@ from collections.abc import Iterable, Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.family_lookup import FamilyLookupResult
+from cora.infrastructure.ports.family_lookup import FamilyLookupResult, FamilyStatusValue
 
 
 class InMemoryFamilyLookup:
@@ -30,7 +30,7 @@ class InMemoryFamilyLookup:
         self,
         family_id: UUID,
         name: str,
-        status: str = "Defined",
+        status: FamilyStatusValue = "Defined",
         affordances: Iterable[str] = (),
         presents_as: Iterable[UUID] = (),
     ) -> None:

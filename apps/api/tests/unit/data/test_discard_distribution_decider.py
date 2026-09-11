@@ -42,6 +42,7 @@ from cora.data.features.discard_distribution import DiscardDistribution
 from cora.data.features.discard_distribution.context import DiscardDistributionContext
 from cora.infrastructure.ports.dataset_distribution_lookup import (
     DatasetDistributionLookupResult,
+    DistributionStatusValue,
 )
 from cora.shared.identity import ActorId
 from cora.shared.text_bounds import REASON_MAX_LENGTH
@@ -91,7 +92,7 @@ def _sibling(
     *,
     distribution_id: UUID,
     supply_id: UUID,
-    status: str,
+    status: DistributionStatusValue,
 ) -> DatasetDistributionLookupResult:
     return DatasetDistributionLookupResult(
         distribution_id=distribution_id,
@@ -322,7 +323,7 @@ def test_decide_is_pure_same_inputs_same_outputs() -> None:
 
 
 def target_result(
-    target: Distribution, *, status: str = "Registered"
+    target: Distribution, *, status: DistributionStatusValue = "Registered"
 ) -> DatasetDistributionLookupResult:
     """The target copy's own projection row, present in the sibling set
     returned by find_by_datasets (the decider filters it out by id)."""

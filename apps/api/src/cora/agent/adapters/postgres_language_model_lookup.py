@@ -8,6 +8,21 @@ never shadow an older Approved one into refusing agent registration,
 and deprecating a mistaken duplicate restores the previous Approved
 entry. The `language_model_id DESC` tiebreak makes equal-created_at
 rows deterministic.
+
+## Enum coercion
+
+`status` is stored as a `TEXT` column and typed as a `Literal` alias
+on the port's `LanguageModelLookupResult` (to keep
+`cora.infrastructure.ports.language_model_lookup` import-free of
+Agent BC types). The adapter constructs
+`LanguageModelStatus(row["status"])` as a validation step: a
+corrupted row whose `status` is not a known enum value surfaces as
+`ValueError` from the adapter rather than as a silent wrong-status
+match downstream. `.value` on the validated member narrows to
+exactly the port's alias, so no cast is needed. The SQL filter
+narrows to `'Approved'`; the alias still pins the full five-value
+enum because a query filter is adapter behavior, not a constraint on
+the field's type.
 """
 
 from __future__ import annotations
@@ -15,6 +30,7 @@ from __future__ import annotations
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 from typing import TYPE_CHECKING
 
+from cora.agent.aggregates.language_model import LanguageModelStatus
 from cora.infrastructure.ports.language_model_lookup import LanguageModelLookupResult
 
 if TYPE_CHECKING:
@@ -47,7 +63,7 @@ class PostgresLanguageModelLookup:
             return None
         return LanguageModelLookupResult(
             language_model_id=row["language_model_id"],
-            status=row["status"],
+            status=LanguageModelStatus(row["status"]).value,
             data_tier=row["data_tier"],
             archivability=row["archivability"],
             snapshot_pin=row["snapshot_pin"],

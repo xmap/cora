@@ -5,8 +5,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.ports.asset_lookup import AssetLookupResult
-from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.infrastructure.ports.asset_lookup import (
+    AssetLifecycleValue,
+    AssetLookupResult,
+    AssetTierValue,
+)
+from cora.infrastructure.ports.facility_lookup import FacilityLookupResult, FacilityStatusValue
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
@@ -33,7 +37,7 @@ _CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-000000000a55")
 def _facility_lookup_result(
     *,
     kind: str = "Site",
-    status: str = "Active",
+    status: FacilityStatusValue = "Active",
 ) -> FacilityLookupResult:
     return FacilityLookupResult(
         id=_FACILITY_ID,
@@ -48,8 +52,8 @@ def _asset_lookup_result(
     *,
     asset_id: UUID = _CONTAINING_ASSET_ID,
     name: str = "2-BM",
-    tier: str = "Unit",
-    lifecycle: str = "Active",
+    tier: AssetTierValue = "Unit",
+    lifecycle: AssetLifecycleValue = "Active",
 ) -> AssetLookupResult:
     return AssetLookupResult(
         id=asset_id,
