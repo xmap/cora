@@ -37,15 +37,14 @@ chose to keep the lineage visible).
 ## Enum coercion
 
 `tier` and `lifecycle` are stored as `TEXT` columns and typed as
-`str` on the port's `AssetLookupResult` (to keep
+`Literal` aliases on the port's `AssetLookupResult` (to keep
 `cora.infrastructure.ports.asset_lookup` import-free of Equipment
 BC types). The adapter still constructs `AssetTier(row["tier"])`
 / `AssetLifecycle(row["lifecycle"])` as a validation step: a
 corrupted row whose `tier` or `lifecycle` is not a known enum
 value surfaces as `ValueError` from the adapter rather than as a
-silent wrong-tier match downstream. The validated `StrEnum` value
-IS-A `str`, so the assignment into the dataclass's `str`-typed
-fields is exact.
+silent wrong-tier match downstream. `.value` on the validated
+member narrows to exactly the port's alias, so no cast is needed.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -194,8 +193,8 @@ def _row_to_result(row: Any) -> AssetLookupResult:
     return AssetLookupResult(
         id=row["asset_id"],
         name=str(row["name"]),
-        tier=AssetTier(row["tier"]),
-        lifecycle=AssetLifecycle(row["lifecycle"]),
+        tier=AssetTier(row["tier"]).value,
+        lifecycle=AssetLifecycle(row["lifecycle"]).value,
         family_affordances=frozenset(str(a) for a in row["family_affordances"]),
         located_in_enclosure_id=row["located_in_enclosure_id"],
     )

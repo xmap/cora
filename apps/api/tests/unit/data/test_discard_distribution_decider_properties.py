@@ -58,6 +58,7 @@ from cora.data.features.discard_distribution import DiscardDistribution
 from cora.data.features.discard_distribution.context import DiscardDistributionContext
 from cora.infrastructure.ports.dataset_distribution_lookup import (
     DatasetDistributionLookupResult,
+    DistributionStatusValue,
 )
 from cora.shared.identity import ActorId
 from cora.shared.text_bounds import REASON_MAX_LENGTH
@@ -96,7 +97,9 @@ def _distribution(*, distribution_id: UUID, supply_id: UUID) -> Distribution:
     )
 
 
-def _sibling(*, supply_id: UUID, status: str) -> DatasetDistributionLookupResult:
+def _sibling(
+    *, supply_id: UUID, status: DistributionStatusValue
+) -> DatasetDistributionLookupResult:
     return DatasetDistributionLookupResult(
         distribution_id=uuid4(),
         dataset_id=_DATASET_ID,

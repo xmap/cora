@@ -4,6 +4,17 @@ Consumed by Layer-3 cross-aggregate consumers via the
 `Kernel.family_lookup` port. The 3B slice ships this adapter; 3D
 wires its `bind_plan_role` handler against it for the role_kind
 satisfaction-check path (Lock 17 ANY-single-family disjunction).
+
+## Enum coercion
+
+`status` is stored as a `TEXT` column and typed as a `Literal` alias
+on the port's `FamilyLookupResult` (to keep
+`cora.infrastructure.ports.family_lookup` import-free of Equipment
+BC types). The adapter constructs `FamilyStatus(row["status"])` as a
+validation step: a corrupted row whose `status` is not a known enum
+value surfaces as `ValueError` from the adapter rather than as a
+silent wrong-status match downstream. `.value` on the validated
+member narrows to exactly the port's alias, so no cast is needed.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -13,6 +24,7 @@ from uuid import UUID
 
 import asyncpg
 
+from cora.equipment.aggregates.family import FamilyStatus
 from cora.infrastructure.ports.family_lookup import FamilyLookupResult
 
 _LOOKUP_SQL = """
@@ -41,7 +53,7 @@ def _row_to_result(row: Any) -> FamilyLookupResult:
     return FamilyLookupResult(
         id=row["family_id"],
         name=str(row["name"]),
-        status=str(row["status"]),
+        status=FamilyStatus(row["status"]).value,
         affordances=frozenset(row["affordances"] or ()),
         presents_as=frozenset(row["presents_as"] or ()),
     )

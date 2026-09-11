@@ -44,7 +44,10 @@ from cora.infrastructure.adapters.in_memory_asset_lookup import (
 from cora.infrastructure.adapters.in_memory_enclosure_lookup import (
     InMemoryEnclosureLookup,
 )
-from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.enclosure_lookup import (
+    EnclosureLookupResult,
+    EnclosurePermitStatusValue,
+)
 from tests.contract._helpers import create_capability_via_api
 from tests.contract._subject_helpers import register_active_asset
 
@@ -175,7 +178,7 @@ def test_post_runs_returns_201_when_binding_enclosure_is_permitted_and_active() 
 @pytest.mark.contract
 @pytest.mark.parametrize("permit_status", ["NotPermitted", "Unknown"])
 def test_post_runs_returns_409_when_binding_enclosure_is_not_permitted(
-    permit_status: str,
+    permit_status: EnclosurePermitStatusValue,
 ) -> None:
     """A non-Permitted located-in Enclosure raises 409
     RunRequiresPermittedEnclosureError."""

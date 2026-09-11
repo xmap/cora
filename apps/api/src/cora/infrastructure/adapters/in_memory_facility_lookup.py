@@ -14,7 +14,11 @@ from collections.abc import Mapping, Sequence
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
+from cora.infrastructure.ports.facility_lookup import (
+    FacilityKindValue,
+    FacilityLookupResult,
+    FacilityStatusValue,
+)
 from cora.shared.facility_code import FacilityCode
 
 
@@ -35,8 +39,8 @@ class InMemoryFacilityLookup:
         self,
         facility_id: UUID,
         code: str | FacilityCode,
-        kind: str,
-        status: str = "Active",
+        kind: FacilityKindValue,
+        status: FacilityStatusValue = "Active",
         trust_anchor_credential_ids: frozenset[UUID] = frozenset(),
     ) -> None:
         """Test helper: install a facility summary keyed by `facility_id`.

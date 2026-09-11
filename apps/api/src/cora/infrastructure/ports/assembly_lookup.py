@@ -22,9 +22,13 @@ reading `proj_equipment_assembly_summary`. Lives in
 
 ## No BC imports in the port
 
-`status` is typed `str` (not the `AssemblyStatus` StrEnum) so this
-port stays inside `cora.infrastructure`'s `depends_on = []` tach
-contract. Values match the StrEnum string values; consumers
+`status` is a `Literal` alias rather than bare `str` (not the
+`AssemblyStatus` StrEnum), so this port stays inside
+`cora.infrastructure`'s `depends_on = []` tach contract: `Literal`
+comes from `typing`, so the alias pins the enum's value set without
+importing the enum. A fitness test pins the alias to the enum and
+fails if the two ever drift. Adapters produce a member's `.value`,
+which narrows to exactly the alias, so no cast is needed. Consumers
 partition on the literal if they want to distinguish Defined /
 Versioned / Deprecated.
 
@@ -42,8 +46,10 @@ affordance-superset check stays the Family responsibility.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+AssemblyStatusValue = Literal["Defined", "Versioned", "Deprecated"]
 
 
 @dataclass(frozen=True)
@@ -58,10 +64,10 @@ class AssemblyLookupResult:
     incrementally via `add_assembly_presents_as` / removes via
     `remove_assembly_presents_as`.
 
-    `status` is the FSM stage as a plain string ("Defined" /
-    "Versioned" / "Deprecated"); the bind_plan_role decider accepts
-    every status (mirrors the Family-path posture: deprecation is
-    advisory, not blocking).
+    `status` is a `Literal` alias pinning `AssemblyStatus`'s value
+    set ("Defined" / "Versioned" / "Deprecated"); the bind_plan_role
+    decider accepts every status (mirrors the Family-path posture:
+    deprecation is advisory, not blocking).
 
     `name` is the operator-readable display name; useful for
     surfacing in cross-BC error messages.
@@ -69,7 +75,7 @@ class AssemblyLookupResult:
 
     id: UUID
     name: str
-    status: str
+    status: AssemblyStatusValue
     presents_as: frozenset[UUID]
 
 
@@ -93,4 +99,4 @@ class AssemblyLookup(Protocol):
         ...
 
 
-__all__ = ["AssemblyLookup", "AssemblyLookupResult"]
+__all__ = ["AssemblyLookup", "AssemblyLookupResult", "AssemblyStatusValue"]

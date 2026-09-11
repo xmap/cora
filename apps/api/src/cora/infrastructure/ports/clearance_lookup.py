@@ -41,13 +41,34 @@ against ExternalBindings. The projection has no `external_refs`
 column today; adding one needs a side-table or jsonb column. Defer
 until a concrete consumer (for example, a proposal-issued
 ExternalBinding-only Clearance) trips on the gap.
+
+## No BC imports in the port
+
+`status` is a `Literal` alias rather than bare `str` (not Safety
+BC's `ClearanceStatus` StrEnum), so this port stays inside
+`cora.infrastructure`'s `depends_on = []` tach contract: `Literal`
+comes from `typing`, so the alias pins the enum's value set without
+importing the enum. A fitness test pins the alias to the enum and
+fails if the two ever drift. Adapters produce a member's `.value`,
+which narrows to exactly the alias, so no cast is needed.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+
+ClearanceStatusValue = Literal[
+    "Defined",
+    "Submitted",
+    "UnderReview",
+    "Approved",
+    "Active",
+    "Expired",
+    "Rejected",
+    "Superseded",
+]
 
 
 @dataclass(frozen=True)
@@ -59,13 +80,13 @@ class ClearanceLookupResult:
     `ClearanceLookup.find_covering` and handed to the decider
     in `RunStartContext.referencing_clearances`.
 
-    `status` is the StrEnum value as a plain string (matches the
-    projection's `TEXT` column); the decider treats it opaquely and
-    partitions on `"Active"`.
+    `status` is a `Literal` alias pinning `ClearanceStatus`'s value
+    set (matches the projection's `TEXT` column); the decider treats
+    it opaquely and partitions on `"Active"`.
     """
 
     clearance_id: UUID
-    status: str
+    status: ClearanceStatusValue
     template_id: UUID
     template_code: str
     facility_code: str

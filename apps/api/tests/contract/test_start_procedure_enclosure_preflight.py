@@ -47,6 +47,7 @@ from cora.infrastructure.adapters.in_memory_asset_lookup import (
 from cora.infrastructure.adapters.in_memory_enclosure_lookup import (
     InMemoryEnclosureLookup,
 )
+from cora.infrastructure.ports.enclosure_lookup import EnclosurePermitStatusValue
 from tests.contract._subject_helpers import register_active_asset
 
 
@@ -226,7 +227,7 @@ def test_post_start_procedure_returns_204_when_binding_enclosure_is_permitted() 
 @pytest.mark.contract
 @pytest.mark.parametrize("permit_status", ["NotPermitted", "Unknown"])
 def test_post_start_procedure_returns_409_when_binding_enclosure_is_not_permitted(
-    permit_status: str,
+    permit_status: EnclosurePermitStatusValue,
 ) -> None:
     """A non-Permitted located-in Enclosure raises 409
     ProcedureRequiresPermittedEnclosureError."""

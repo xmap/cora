@@ -39,13 +39,16 @@ cross-stream view + already covers the FSM status + version facet.
 
 ## No BC imports in the port
 
-`status` is typed `str` (not Safety BC's `ClearanceTemplateStatus`
-StrEnum) and `facility_code` is typed `str` (not Federation BC's
-`FacilityCode` value object) so this port stays inside
-`cora.infrastructure`'s `depends_on = []` tach contract. The values
-match the StrEnum / VO string values; consumer deciders partition by
-literal comparison and cast to typed enums / VOs at their boundary
-if they need the discipline.
+`status` is a `Literal` alias pinning Safety BC's
+`ClearanceTemplateStatus` StrEnum value set (not the StrEnum itself)
+and `facility_code` is typed `str` (not Federation BC's
+`FacilityCode` value object), so this port stays inside
+`cora.infrastructure`'s `depends_on = []` tach contract: `Literal`
+comes from `typing`, so the alias pins the enum's value set without
+importing the enum. A fitness test pins the alias to the enum and
+fails if the two ever drift. `facility_code` values match the VO's
+string value; consumer deciders cast to the typed VO at their
+boundary if they need the discipline.
 
 `id` is typed `UUID` (Safety BC's `ClearanceTemplate.id` is bare
 UUID, not a NewType, so no cross-BC NewType to thread). Consumers
@@ -53,8 +56,10 @@ that care about the typed identity wrap at their BC boundary.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+ClearanceTemplateStatusValue = Literal["Draft", "Active", "Deprecated", "Withdrawn"]
 
 
 @dataclass(frozen=True)
@@ -67,10 +72,10 @@ class ClearanceTemplateLookupResult:
     the decider in the slice's context object (mirrors
     `AssetLookupResult` shape).
 
-    `status` is the `ClearanceTemplateStatus` StrEnum value as a
-    plain string (matches the projection's `TEXT` column); the
-    consumer decider partitions on the literals it cares about
-    ("Draft", "Active", "Deprecated", "Withdrawn").
+    `status` is a `Literal` alias pinning `ClearanceTemplateStatus`'s
+    value set (matches the projection's `TEXT` column); the consumer
+    decider partitions on the literals it cares about ("Draft",
+    "Active", "Deprecated", "Withdrawn").
 
     `facility_code` is the `FacilityCode` value object's string
     representation (matches the projection's `TEXT` column); the
@@ -89,7 +94,7 @@ class ClearanceTemplateLookupResult:
     id: UUID
     facility_code: str
     code: str
-    status: str
+    status: ClearanceTemplateStatusValue
     version: int
 
 
@@ -115,4 +120,8 @@ class ClearanceTemplateLookup(Protocol):
         ...
 
 
-__all__ = ["ClearanceTemplateLookup", "ClearanceTemplateLookupResult"]
+__all__ = [
+    "ClearanceTemplateLookup",
+    "ClearanceTemplateLookupResult",
+    "ClearanceTemplateStatusValue",
+]

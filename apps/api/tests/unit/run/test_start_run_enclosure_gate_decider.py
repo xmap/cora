@@ -29,7 +29,11 @@ from cora.equipment.aggregates.asset import (
     AssetTier,
 )
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
-from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.enclosure_lookup import (
+    EnclosureLifecycleValue,
+    EnclosureLookupResult,
+    EnclosurePermitStatusValue,
+)
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunEnclosureCoverageMismatchError,
@@ -44,8 +48,8 @@ _NOW = datetime(2026, 6, 9, 12, 0, 0, tzinfo=UTC)
 
 def _enclosure_ref(
     *,
-    permit_status: str = "Permitted",
-    lifecycle: str = "Active",
+    permit_status: EnclosurePermitStatusValue = "Permitted",
+    lifecycle: EnclosureLifecycleValue = "Active",
 ) -> EnclosureLookupResult:
     return EnclosureLookupResult(
         enclosure_id=uuid4(),
@@ -151,7 +155,9 @@ def test_decide_passes_when_every_referencing_enclosure_is_permitted_and_active(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("permit_status", ["NotPermitted", "Unknown"])
-def test_decide_raises_requires_permitted_when_every_row_fails(permit_status: str) -> None:
+def test_decide_raises_requires_permitted_when_every_row_fails(
+    permit_status: EnclosurePermitStatusValue,
+) -> None:
     """Every referencing Enclosure fails -> RunRequiresPermittedEnclosureError.
 
     Parametrized over NotPermitted and Unknown to pin the default-strict

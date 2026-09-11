@@ -13,6 +13,19 @@ lowest-id canonical pick): this adapter returns the FULL non-Discarded set,
 not a single canonical row. Lives in `cora.data.adapters` because it reads a
 Data-owned projection; it implements the infrastructure port so the Run BC
 consumes it without importing anything Data-internal.
+
+## Enum coercion
+
+`status` is stored as a `TEXT` column and typed as a `Literal` alias on the
+port's `DatasetDistributionLookupResult` (to keep
+`cora.infrastructure.ports.dataset_distribution_lookup` import-free of Data
+BC types). The adapter constructs `DistributionStatus(row["status"])` as a
+validation step: a corrupted row whose `status` is not a known enum value
+surfaces as `ValueError` from the adapter rather than as a silent
+wrong-status match downstream. `.value` on the validated member narrows to
+exactly the port's alias, so no cast is needed. The SQL filter excludes
+Discarded rows; the alias still pins the full four-value enum because a
+query filter is adapter behavior, not a constraint on the field's type.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -22,6 +35,7 @@ from uuid import UUID
 
 import asyncpg
 
+from cora.data.aggregates.distribution import DistributionStatus
 from cora.infrastructure.ports.dataset_distribution_lookup import (
     DatasetDistributionLookupResult,
 )
@@ -55,7 +69,7 @@ class PostgresDatasetDistributionLookup:
                     distribution_id=row["distribution_id"],
                     dataset_id=row["dataset_id"],
                     supply_id=row["supply_id"],
-                    status=row["status"],
+                    status=DistributionStatus(row["status"]).value,
                 )
             )
         return {dataset_id: tuple(results) for dataset_id, results in grouped.items()}

@@ -13,7 +13,7 @@ from collections.abc import Iterable, Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.assembly_lookup import AssemblyLookupResult
+from cora.infrastructure.ports.assembly_lookup import AssemblyLookupResult, AssemblyStatusValue
 
 
 class InMemoryAssemblyLookup:
@@ -30,7 +30,7 @@ class InMemoryAssemblyLookup:
         self,
         assembly_id: UUID,
         name: str,
-        status: str = "Defined",
+        status: AssemblyStatusValue = "Defined",
         presents_as: Iterable[UUID] = (),
     ) -> None:
         """Test helper: install an Assembly summary keyed by `assembly_id`."""

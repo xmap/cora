@@ -35,6 +35,7 @@ from hypothesis import strategies as st
 
 from cora.infrastructure.ports.clearance_template_lookup import (
     ClearanceTemplateLookupResult,
+    ClearanceTemplateStatusValue,
 )
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
 from cora.safety.aggregates.clearance import (
@@ -85,7 +86,7 @@ def _template_lookup_result(
     facility_code: str = "aps",
     code: str = "ESAF",
     *,
-    status: str = "Active",
+    status: ClearanceTemplateStatusValue = "Active",
     version: int = 1,
 ) -> ClearanceTemplateLookupResult:
     """Build a stub ClearanceTemplateLookupResult for decider tests."""
@@ -205,7 +206,7 @@ def test_register_without_template_lookup_always_raises_template_not_found(
 def test_register_with_non_active_template_always_raises_not_bindable(
     title: str,
     run_id: UUID,
-    template_status: str,
+    template_status: ClearanceTemplateStatusValue,
     now: datetime,
     new_id: UUID,
 ) -> None:

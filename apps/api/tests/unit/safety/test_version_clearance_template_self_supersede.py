@@ -18,6 +18,7 @@ import pytest
 
 from cora.infrastructure.ports.clearance_template_lookup import (
     ClearanceTemplateLookupResult,
+    ClearanceTemplateStatusValue,
 )
 from cora.safety.aggregates.clearance_template import (
     ClearanceTemplate,
@@ -45,7 +46,7 @@ def _lookup_result(
     template_id: UUID,
     facility_code: str,
     version: int,
-    status: str = "Active",
+    status: ClearanceTemplateStatusValue = "Active",
     code: str = "esaf",
 ) -> ClearanceTemplateLookupResult:
     return ClearanceTemplateLookupResult(

@@ -26,7 +26,9 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports.asset_lookup import (
     ANCESTOR_WALK_DEPTH_CAP,
     AncestorWalkDepthExceededError,
+    AssetLifecycleValue,
     AssetLookupResult,
+    AssetTierValue,
 )
 from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
@@ -326,8 +328,8 @@ _DEAD_ANCESTOR_ENCLOSURE_ID = UUID("01900000-0000-7000-8000-0000000c0e02")
 
 def _result(
     asset_id: UUID,
-    lifecycle: str,
-    tier: str = "Unit",
+    lifecycle: AssetLifecycleValue,
+    tier: AssetTierValue = "Unit",
     located_in_enclosure_id: UUID | None = None,
 ) -> AssetLookupResult:
     return AssetLookupResult(

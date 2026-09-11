@@ -20,7 +20,11 @@ from collections.abc import Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.enclosure_lookup import (
+    EnclosureLifecycleValue,
+    EnclosureLookupResult,
+    EnclosurePermitStatusValue,
+)
 
 
 class InMemoryEnclosureLookup:
@@ -41,8 +45,8 @@ class InMemoryEnclosureLookup:
         self,
         enclosure_id: UUID,
         name: str,
-        permit_status: str = "Permitted",
-        lifecycle: str = "Active",
+        permit_status: EnclosurePermitStatusValue = "Permitted",
+        lifecycle: EnclosureLifecycleValue = "Active",
         permit_status_changed_at: str | None = None,
         source_kind: str | None = None,
         source_id: str | None = None,

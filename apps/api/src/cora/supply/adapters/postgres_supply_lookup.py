@@ -67,6 +67,17 @@ WHERE name = $1 AND facility_code = $2 AND kind = $3
   AND status != 'Decommissioned'
 ORDER BY registered_at, supply_id
 ```
+
+## Enum coercion
+
+`status` is stored as a `TEXT` column and typed as a `Literal` alias
+on the port's `SupplyLookupResult` (to keep
+`cora.infrastructure.ports.supply_lookup` import-free of Supply BC
+types). The adapter constructs `SupplyStatus(row["status"])` as a
+validation step: a corrupted row whose `status` is not a known enum
+value surfaces as `ValueError` from the adapter rather than as a
+silent wrong-status match downstream. `.value` on the validated
+member narrows to exactly the port's alias, so no cast is needed.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -78,6 +89,7 @@ from uuid import UUID
 import asyncpg
 
 from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
+from cora.supply.aggregates.supply import SupplyStatus
 
 _FIND_SUPPLIES_BY_KIND_SQL = """
 SELECT supply_id, kind, name, status, facility_code
@@ -150,6 +162,6 @@ def _row_to_reference(row: Any) -> SupplyLookupResult:
         supply_id=row["supply_id"],
         kind=str(row["kind"]),
         name=str(row["name"]),
-        status=str(row["status"]),
+        status=SupplyStatus(row["status"]).value,
         facility_code=str(row["facility_code"]),
     )

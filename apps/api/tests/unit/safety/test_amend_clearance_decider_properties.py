@@ -39,7 +39,10 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from cora.infrastructure.ports.clearance_template_lookup import ClearanceTemplateLookupResult
+from cora.infrastructure.ports.clearance_template_lookup import (
+    ClearanceTemplateLookupResult,
+    ClearanceTemplateStatusValue,
+)
 from cora.infrastructure.ports.facility_lookup import FacilityLookupResult
 from cora.safety.aggregates.clearance import (
     Clearance,
@@ -90,7 +93,7 @@ def _template_lookup_result(
     facility_code: str = "aps",
     code: str = "ESAF",
     *,
-    status: str = "Active",
+    status: ClearanceTemplateStatusValue = "Active",
     version: int = 1,
 ) -> ClearanceTemplateLookupResult:
     return ClearanceTemplateLookupResult(
@@ -233,7 +236,7 @@ def test_amend_missing_template_lookup_always_raises_template_not_found(
 def test_amend_non_active_template_always_raises_not_bindable(
     parent_id: UUID,
     new_id: UUID,
-    template_status: str,
+    template_status: ClearanceTemplateStatusValue,
     now: datetime,
 ) -> None:
     """A template that exists but is not Active refuses binding for the command's id."""

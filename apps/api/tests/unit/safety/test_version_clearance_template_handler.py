@@ -28,6 +28,7 @@ from cora.infrastructure.adapters.in_memory_clearance_template_lookup import (
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports.clearance_template_lookup import ClearanceTemplateStatusValue
 from cora.safety.aggregates.clearance_template import (
     ClearanceTemplateActivated,
     ClearanceTemplateCannotVersionError,
@@ -188,7 +189,7 @@ def _seed_parent_lookup(
     parent_id: UUID = _PARENT_TEMPLATE_ID,
     facility_code: str = _FACILITY_CODE,
     code: str = _PARENT_TEMPLATE_CODE,
-    status: str = "Active",
+    status: ClearanceTemplateStatusValue = "Active",
     version: int = 1,
 ) -> InMemoryClearanceTemplateLookup:
     lookup = InMemoryClearanceTemplateLookup()

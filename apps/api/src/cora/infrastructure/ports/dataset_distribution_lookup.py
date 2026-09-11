@@ -18,16 +18,25 @@ at all"). This is the `SupplyLookup` posture: the port returns rows, the decider
 partitions on `status`. It deliberately does NOT reuse the canonical-pick query,
 whose lowest-id row may be Stale while a higher-id Distribution is Verified.
 
-`status` is the `DistributionStatus` value as a plain string (matches the
-projection's TEXT column); `supply_id` is carried for the deferred reachability
-check (which Storage Supply / tier the copy rests on); `distribution_id` is
-carried for diagnostics and the eventual lineage record.
+`status` is a `Literal` alias pinning `DistributionStatus`'s value set
+(matches the projection's TEXT column); `Literal` comes from `typing`, so
+the alias pins the enum's full four-value set (`Registered`, `Verified`,
+`Stale`, `Discarded`) without importing the enum, keeping this port inside
+`cora.infrastructure`'s `depends_on = []` tach contract. The adapter's SQL
+filters out Discarded rows, but the alias still mirrors the full enum
+because a query filter is adapter behavior, not a constraint on the field's
+type. A fitness test pins the alias to the enum and fails if the two ever
+drift. `supply_id` is carried for the deferred reachability check (which
+Storage Supply / tier the copy rests on); `distribution_id` is carried for
+diagnostics and the eventual lineage record.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+DistributionStatusValue = Literal["Registered", "Verified", "Stale", "Discarded"]
 
 
 @dataclass(frozen=True)
@@ -37,7 +46,7 @@ class DatasetDistributionLookupResult:
     distribution_id: UUID
     dataset_id: UUID
     supply_id: UUID
-    status: str
+    status: DistributionStatusValue
 
 
 class DatasetDistributionLookup(Protocol):
@@ -101,6 +110,7 @@ class SeededDatasetDistributionLookup:
 __all__ = [
     "DatasetDistributionLookup",
     "DatasetDistributionLookupResult",
+    "DistributionStatusValue",
     "NoDatasetDistributionsLookup",
     "SeededDatasetDistributionLookup",
 ]

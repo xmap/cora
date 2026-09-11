@@ -26,7 +26,7 @@ from cora.equipment.aggregates.asset import (
     AssetTier,
 )
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
-from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
+from cora.infrastructure.ports.supply_lookup import SupplyLookupResult, SupplyStatusValue
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     RunRequiresAvailableSupplyError,
@@ -39,7 +39,7 @@ from cora.subject.aggregates.subject import Subject, SubjectName, SubjectStatus
 _NOW = datetime(2026, 5, 28, 12, 0, 0, tzinfo=UTC)
 
 
-def _ref(kind: str, status: str) -> SupplyLookupResult:
+def _ref(kind: str, status: SupplyStatusValue) -> SupplyLookupResult:
     return SupplyLookupResult(
         supply_id=uuid4(),
         kind=kind,
@@ -162,7 +162,9 @@ def test_decide_raises_requires_available_when_kind_absent_from_satisfaction() -
 
 @pytest.mark.unit
 @pytest.mark.parametrize("status", ["Unknown", "Degraded", "Unavailable", "Recovering"])
-def test_decide_raises_coverage_mismatch_when_no_supply_is_available(status: str) -> None:
+def test_decide_raises_coverage_mismatch_when_no_supply_is_available(
+    status: SupplyStatusValue,
+) -> None:
     """Kind exists in satisfaction but none AVAILABLE -> RunSupplyCoverageMismatchError.
 
     Parametrized over every non-AVAILABLE non-Decommissioned status to

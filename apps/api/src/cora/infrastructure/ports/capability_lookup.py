@@ -28,11 +28,26 @@ ask Recipe a question through a Protocol whose name uses Recipe's
 vocabulary, without Equipment's domain code learning the word. The
 handler maps `CapabilityLookupResult` to Equipment's local
 `CapabilityView` response type.
+
+## No BC imports in the port
+
+`status` is a `Literal` alias rather than bare `str` (not Recipe
+BC's `CapabilityStatus` StrEnum), so this port stays inside
+`cora.infrastructure`'s `depends_on = []` tach contract: `Literal`
+comes from `typing`, so the alias pins the enum's value set without
+importing the enum. A fitness test pins the alias to the enum and
+fails if the two ever drift. The alias mirrors the FULL
+`CapabilityStatus` value set (`Defined`, `Versioned`, `Deprecated`)
+even though `find_applicable_by_affordances` filters to
+`{Defined, Versioned}`: the SQL filter is adapter behavior, not a
+constraint on what the field can hold.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+CapabilityStatusValue = Literal["Defined", "Versioned", "Deprecated"]
 
 
 @dataclass(frozen=True)
@@ -43,12 +58,18 @@ class CapabilityLookupResult:
     map onto its public `CapabilityView` response shape. Adding fields
     to this dataclass is a port-version bump that touches the adapter
     plus every consumer.
+
+    `status` is a `Literal` alias pinning `CapabilityStatus`'s full
+    value set; `find_applicable_by_affordances` filters to
+    `{Defined, Versioned}` at the adapter, so every row this port
+    actually returns today carries one of those two values, but the
+    field itself can hold any status the enum has.
     """
 
     capability_id: UUID
     code: str
     name: str
-    status: str  # "Defined" | "Versioned"
+    status: CapabilityStatusValue
 
 
 class CapabilityLookup(Protocol):

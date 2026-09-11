@@ -33,15 +33,18 @@ domain semantics require).
 
 ## Enum coercion
 
-`kind` and `status` are stored as `TEXT` columns and are typed as
+`kind` and `status` are stored as `TEXT` columns. `kind` stays typed
 `str` on the port's `FacilityLookupResult` (to keep
 `cora.infrastructure.ports.facility_lookup` import-free of Federation
-BC types). The adapter still constructs `FacilityKind(row["kind"])` /
-`FacilityStatus(row["status"])` as a validation step: a corrupted
-row whose `kind` or `status` is not a known enum value surfaces as
-`ValueError` from the adapter rather than as a silent wrong-kind
-match downstream. The validated `StrEnum` value is `IS-A str`, so
-the assignment into the dataclass's `str`-typed fields is exact.
+BC types); the adapter constructs `FacilityKind(row["kind"])` as a
+validation step, and the validated `StrEnum` value IS-A `str`, so
+the assignment into the `str`-typed field is exact. `status` is
+typed as a `Literal` alias pinning `FacilityStatus`'s value set; the
+adapter constructs `FacilityStatus(row["status"])` the same way, but
+takes `.value` so the result narrows to exactly the alias, no cast
+needed. Either way, a corrupted row whose `kind` or `status` is not
+a known enum value surfaces as `ValueError` from the adapter rather
+than as a silent wrong-value match downstream.
 
 ## JSONB array decoding
 
@@ -129,8 +132,8 @@ def _row_to_result(row: Any) -> FacilityLookupResult:
     return FacilityLookupResult(
         id=row["facility_id"],
         code=FacilityCode(str(row["code"])),
-        kind=FacilityKind(row["kind"]),
-        status=FacilityStatus(row["status"]),
+        kind=FacilityKind(row["kind"]).value,
+        status=FacilityStatus(row["status"]).value,
         trust_anchor_credential_ids=_decode_trust_anchor_ids(row["trust_anchor_credential_ids"]),
     )
 

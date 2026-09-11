@@ -22,6 +22,8 @@ from cora.infrastructure.adapters.in_memory_facility_lookup import (
     InMemoryFacilityLookup,
 )
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports.asset_lookup import AssetLifecycleValue, AssetTierValue
+from cora.infrastructure.ports.facility_lookup import FacilityStatusValue
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
@@ -43,7 +45,9 @@ _FACILITY_ID = UUID("01900000-0000-7000-8000-000000000fac")
 _CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-000000000a55")
 
 
-def _seeded_facility_lookup(*, code: str = "aps", status: str = "Active") -> InMemoryFacilityLookup:
+def _seeded_facility_lookup(
+    *, code: str = "aps", status: FacilityStatusValue = "Active"
+) -> InMemoryFacilityLookup:
     lookup = InMemoryFacilityLookup()
     lookup.register(facility_id=_FACILITY_ID, code=code, kind="Site", status=status)
     return lookup
@@ -53,8 +57,8 @@ def _seeded_asset_lookup(
     *,
     asset_id: UUID = _CONTAINING_ASSET_ID,
     name: str = "2-BM",
-    tier: str = "Unit",
-    lifecycle: str = "Active",
+    tier: AssetTierValue = "Unit",
+    lifecycle: AssetLifecycleValue = "Active",
 ) -> InMemoryAssetLookup:
     lookup = InMemoryAssetLookup()
     lookup.register(asset_id=asset_id, name=name, tier=tier, lifecycle=lifecycle)

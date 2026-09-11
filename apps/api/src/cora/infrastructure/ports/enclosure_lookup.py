@@ -47,25 +47,33 @@ design (`cora.enclosure.aggregates.enclosure.state`):
     as audit (a tombstoned enclosure can still read
     `permit_status="Permitted"` from before it was retired).
 
-Both axes reach the port surface as bare `str`. The decider's
-gate check is `lifecycle == "Active" AND permit_status ==
-"Permitted"`.
+Both axes reach the port surface as a `Literal` alias pinning the
+owning StrEnum's value set. The decider's gate check is
+`lifecycle == "Active" AND permit_status == "Permitted"`, and a
+comparison against any value outside the alias is a type error at
+the call site rather than a silently unreachable branch.
 
 ## No BC imports in the port
 
-Every field on `EnclosureLookupResult` is typed as a bare `str` or
-bare `UUID` (not the Enclosure BC's `EnclosureId` /
-`EnclosurePermitStatus` / `EnclosureLifecycle` types) so this
-port stays inside `cora.infrastructure.ports`'s `depends_on = []`
-tach contract. The `permit_status` / `lifecycle` / `source_kind`
-values match the StrEnum string values; deciders partition by
-literal comparison. Enclosure BC callers cast at the boundary if
-they want the NewType discipline.
+No field on `EnclosureLookupResult` is typed with an Enclosure BC
+type (not `EnclosureId`, `EnclosurePermitStatus` or
+`EnclosureLifecycle`), so this port stays inside
+`cora.infrastructure.ports`'s `depends_on = []` tach contract.
+The two status axes are `Literal` aliases rather than bare `str`:
+`Literal` comes from `typing`, so the alias pins the enum's value
+set without importing the enum. A fitness test pins the alias to
+the enum and fails if the two ever drift. Adapters produce a
+member's `.value`, which narrows to exactly the alias, so no cast
+is needed. Enclosure BC callers still wrap at the boundary if they
+want the NewType discipline.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+EnclosurePermitStatusValue = Literal["Permitted", "NotPermitted", "Unknown"]
+EnclosureLifecycleValue = Literal["Active", "Decommissioned"]
 
 
 @dataclass(frozen=True)
@@ -106,8 +114,8 @@ class EnclosureLookupResult:
 
     enclosure_id: UUID
     name: str
-    permit_status: str
-    lifecycle: str
+    permit_status: EnclosurePermitStatusValue
+    lifecycle: EnclosureLifecycleValue
     permit_status_changed_at: str | None
     source_kind: str | None
     source_id: str | None
@@ -224,6 +232,8 @@ class AlwaysPermittedEnclosureLookup:
 
 __all__ = [
     "AlwaysPermittedEnclosureLookup",
+    "EnclosureLifecycleValue",
     "EnclosureLookup",
     "EnclosureLookupResult",
+    "EnclosurePermitStatusValue",
 ]

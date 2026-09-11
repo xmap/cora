@@ -38,8 +38,11 @@ Enclosure BC types). The adapter still constructs
 `EnclosureLifecycle(row["lifecycle"])` as a validation step: a
 corrupted row whose value is not a known enum surfaces as
 `ValueError` from the adapter rather than as a silent wrong-status
-match downstream. Both validated `StrEnum` values are `IS-A str`,
-so assignment into the dataclass's `str`-typed fields is exact.
+match downstream. The port's fields are `Literal` aliases rather
+than bare `str`, and `.value` on a validated member narrows to
+exactly that alias, so no cast is needed: the constructor rejects
+an unknown value at runtime and the type checker confirms the
+remainder statically.
 
 ## Timestamp coercion
 
@@ -140,8 +143,8 @@ def _row_to_reference(row: Any) -> EnclosureLookupResult:
     return EnclosureLookupResult(
         enclosure_id=row["enclosure_id"],
         name=str(row["name"]),
-        permit_status=EnclosurePermitStatus(row["permit_status"]),
-        lifecycle=EnclosureLifecycle(row["lifecycle"]),
+        permit_status=EnclosurePermitStatus(row["permit_status"]).value,
+        lifecycle=EnclosureLifecycle(row["lifecycle"]).value,
         permit_status_changed_at=_format_changed_at(row["last_permit_status_changed_at"]),
         source_kind=row["last_source_kind"],
         source_id=row["last_source_id"],

@@ -46,10 +46,14 @@ land here.
 """
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 from uuid import UUID
 
 from cora.shared.facility_code import FacilityCode
+
+DirectionValue = Literal["Outbound", "Inbound"]
+PermitStatusValue = Literal["Defined", "Active", "Suspended", "Revoked"]
+AbiTierValue = Literal["Testing", "Stable", "Obsolete", "Removed"]
 
 
 @dataclass(frozen=True)
@@ -72,9 +76,9 @@ class PermitLookupResult:
 
     permit_id: UUID
     peer_facility_id: FacilityCode
-    direction: str
-    status: str
-    abi_tier_floor: str
+    direction: DirectionValue
+    status: PermitStatusValue
+    abi_tier_floor: AbiTierValue
     current_version: int
 
 
@@ -102,4 +106,10 @@ class PermitLookup(Protocol):
     ) -> PermitLookupResult | None: ...
 
 
-__all__ = ["PermitLookup", "PermitLookupResult"]
+__all__ = [
+    "AbiTierValue",
+    "DirectionValue",
+    "PermitLookup",
+    "PermitLookupResult",
+    "PermitStatusValue",
+]

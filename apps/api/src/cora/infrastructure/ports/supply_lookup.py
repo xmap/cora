@@ -26,12 +26,28 @@ registered at all"). Decommissioned rows are filtered at the query
 layer per [[project_deregister_supply_design]] (tombstones should
 not count toward gate satisfaction). See
 [[project_supply_preflight_gate_design]] for the shared decision.
+
+## No BC imports in the port
+
+`status` is a `Literal` alias pinning Supply BC's `SupplyStatus`
+StrEnum value set (not the StrEnum itself), so this port stays
+inside `cora.infrastructure`'s `depends_on = []` tach contract:
+`Literal` comes from `typing`, so the alias pins the enum's value
+set without importing the enum. A fitness test pins the alias to
+the enum and fails if the two ever drift. `kind` stays bare `str`
+(Supply BC has not yet closed it to a StrEnum, per its own
+roadmap); `facility_code` stays bare `str` per the
+Facility-aggregate bare-str-on-the-wire convention.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+SupplyStatusValue = Literal[
+    "Unknown", "Available", "Degraded", "Unavailable", "Recovering", "Decommissioned"
+]
 
 
 @dataclass(frozen=True)
@@ -47,10 +63,10 @@ class SupplyLookupResult:
     `SupplyLookup.find_supplies_by_name` (by natural-key attributes) and
     handed to the consumer's decider.
 
-    `status` is the StrEnum value as a plain string (matches the
-    projection's `TEXT` column); consumers treat it opaquely and
-    partition on `"Available"` (pre-flight gate) or pass it through
-    (register_distribution status-agnostic bind).
+    `status` is a `Literal` alias pinning `SupplyStatus`'s value set
+    (matches the projection's `TEXT` column); consumers treat it
+    opaquely and partition on `"Available"` (pre-flight gate) or pass
+    it through (register_distribution status-agnostic bind).
 
     `kind` is the bare-str Supply.kind value (today; future closed-StrEnum
     move per Supply BC's own roadmap). Distribution's register decider
@@ -68,7 +84,7 @@ class SupplyLookupResult:
     supply_id: UUID
     kind: str
     name: str
-    status: str
+    status: SupplyStatusValue
     facility_code: str
 
 
@@ -108,14 +124,14 @@ class SupplyLookup(Protocol):
         use this single-id query in preference to the grouped
         find_supplies_by_kind interface.
 
-        Supplies in EVERY status are returned (Available, Degraded,
-        Unavailable, Recovering, Decommissioned); the consumer
-        decider partitions on `status` if it needs to distinguish
-        "no Supply at all" from "Supply exists but in non-Available
-        state". register_distribution intentionally accepts every
-        status because a Distribution can legitimately be registered
-        against a Decommissioned Supply for archival completeness;
-        only `kind` is gated.
+        Supplies in EVERY status are returned (Unknown, Available,
+        Degraded, Unavailable, Recovering, Decommissioned); the
+        consumer decider partitions on `status` if it needs to
+        distinguish "no Supply at all" from "Supply exists but in
+        non-Available state". register_distribution intentionally
+        accepts every status because a Distribution can legitimately
+        be registered against a Decommissioned Supply for archival
+        completeness; only `kind` is gated.
 
         Mirrors `AssetLookup.lookup` shape one-for-one for cross-port
         symmetry.

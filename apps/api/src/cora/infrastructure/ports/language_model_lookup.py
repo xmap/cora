@@ -33,19 +33,41 @@ The Postgres adapter answers with the newest APPROVED entry only; None
 means "nothing currently approved for this identity" (never cataloged,
 or every entry for it is Defined or terminal), which the gate treats as
 refusal.
+
+## No BC imports in the port
+
+`status` is a `Literal` alias rather than bare `str` (not the Agent
+BC's `LanguageModelStatus` StrEnum), so this port stays inside
+`cora.infrastructure`'s `depends_on = []` tach contract: `Literal`
+comes from `typing`, so the alias pins the enum's value set without
+importing the enum. A fitness test pins the alias to the enum and
+fails if the two ever drift. Adapters produce a member's `.value`,
+which narrows to exactly the alias, so no cast is needed.
+`data_tier` and `archivability` stay bare `str`: no consumer
+partitions on either value set yet.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+LanguageModelStatusValue = Literal[
+    "Defined", "Approved", "RetirementAnnounced", "Retired", "Deprecated"
+]
 
 
 @dataclass(frozen=True)
 class LanguageModelLookupResult:
-    """The catalog's answer for one (provider, model) identity."""
+    """The catalog's answer for one (provider, model) identity.
+
+    `status` is a `Literal` alias pinning `LanguageModelStatus`'s
+    value set; `find_by_model` only ever returns an `"Approved"` row
+    (see the port docstring's Failure direction section), but the
+    field itself can hold any status the enum has.
+    """
 
     language_model_id: UUID
-    status: str
+    status: LanguageModelStatusValue
     data_tier: str
     archivability: str
     snapshot_pin: str | None
@@ -104,4 +126,5 @@ __all__ = [
     "AlwaysApprovedLanguageModelLookup",
     "LanguageModelLookup",
     "LanguageModelLookupResult",
+    "LanguageModelStatusValue",
 ]

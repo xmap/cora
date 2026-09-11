@@ -13,7 +13,10 @@ from collections.abc import Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.clearance_template_lookup import ClearanceTemplateLookupResult
+from cora.infrastructure.ports.clearance_template_lookup import (
+    ClearanceTemplateLookupResult,
+    ClearanceTemplateStatusValue,
+)
 
 
 class InMemoryClearanceTemplateLookup:
@@ -34,7 +37,7 @@ class InMemoryClearanceTemplateLookup:
         *,
         facility_code: str = "aps",
         code: str = "default-template",
-        status: str = "Active",
+        status: ClearanceTemplateStatusValue = "Active",
         version: int = 1,
     ) -> None:
         """Test helper: install a clearance-template summary keyed by `template_id`.

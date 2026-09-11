@@ -30,6 +30,17 @@ WHERE $1 = ANY(run_binding_ids)
 NOT NULL guard skips the subject_binding_ids match when subject_id
 is None. `asset_ids` may be empty (rare but valid); the `&&`
 overlap operator handles empty arrays correctly.
+
+## Enum coercion
+
+`status` is stored as a `TEXT` column and typed as a `Literal` alias
+on the port's `ClearanceLookupResult` (to keep
+`cora.infrastructure.ports.clearance_lookup` import-free of Safety
+BC types). The adapter constructs `ClearanceStatus(row["status"])`
+as a validation step: a corrupted row whose `status` is not a known
+enum value surfaces as `ValueError` from the adapter rather than as
+a silent wrong-status match downstream. `.value` on the validated
+member narrows to exactly the port's alias, so no cast is needed.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -40,6 +51,7 @@ from uuid import UUID
 import asyncpg
 
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.safety.aggregates.clearance import ClearanceStatus
 
 _FIND_REFERENCING_RUN_SQL = """
 SELECT clearance_id, status, template_id, template_code, facility_code
@@ -79,7 +91,7 @@ class PostgresClearanceLookup:
 def _row_to_reference(row: Any) -> ClearanceLookupResult:
     return ClearanceLookupResult(
         clearance_id=row["clearance_id"],
-        status=str(row["status"]),
+        status=ClearanceStatus(row["status"]).value,
         template_id=row["template_id"],
         template_code=str(row["template_code"]),
         facility_code=str(row["facility_code"]),

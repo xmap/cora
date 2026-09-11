@@ -3,7 +3,7 @@
 # Enforces:
 #   1. Layered: shared depends on nothing; infrastructure depends only
 #      on shared; BCs depend on shared + infrastructure (+ any sibling
-#      aggregate kernels they integrate with); api depends on every BC.
+#      aggregate kernels they NAME); api depends on every BC.
 #      `cora.shared` is the pure-value-object foundation (Identifier
 #      VOs, NewType identity aliases, bounded-text validators, JSON
 #      Schema helpers); `cora.infrastructure` is composition root,
@@ -19,6 +19,33 @@
 # Cross-slice independence inside a BC and slice file contracts are
 # enforced by `tests/architecture/` (AST-based) rather than tach,
 # because per-slice module declarations would balloon this file.
+#
+# What this file does NOT say, because the distinction has misled readers
+# (including during the audit that added this paragraph):
+#
+# It constrains IMPORTS. Naming is one of several ways one BC comes to
+# depend on another, and the rest leave no import to constrain:
+#
+#   - A Protocol in `cora.infrastructure.ports`, implemented by one BC's
+#     adapter and consumed by another. `cora.operation` reads
+#     `EnclosureLookup` and cannot start a Procedure without Enclosure's
+#     permit data, yet declares no edge to `cora.enclosure`: both sides
+#     name only `cora.infrastructure`, which every module does. 20 lookup
+#     adapters inside BCs bind to a protocol declared in that shared
+#     namespace, so this is a category, not one case.
+#   - An event subscription, which names its producer with a STRING.
+#   - Anything under `tests`, which `exclude` drops entirely.
+#
+# So read this as the doors that have been cut, not as a map of what
+# depends on what. Where the two differ, the map is the larger one. Whether
+# those ports should move into their owning BC (making the map honest at
+# the cost of the isolation the shared namespace buys) is an open question
+# and not something this file currently answers either way.
+#
+# `tests/architecture/test_tach_edges_are_used.py` fails on an entry no
+# source file takes up, so a permission whose reason has gone away does not
+# quietly stay. The contract went 146 additions to 1 removal before that
+# existed.
 #
 # Run: `uv run tach check` (also wired into pre-commit and CI).
 # Visualize: `uv run tach show` opens the dependency graph.
@@ -96,19 +123,15 @@ depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
 path = "cora.enclosure.adapters"
-depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates"]
+depends_on = ["cora.infrastructure", "cora.enclosure.aggregates"]
 
 [[modules]]
 path = "cora.equipment.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
-path = "cora.equipment.ports"
-depends_on = ["cora.infrastructure", "cora.shared", "cora.equipment.aggregates"]
-
-[[modules]]
 path = "cora.equipment.adapters"
-depends_on = ["cora.infrastructure", "cora.shared", "cora.equipment.aggregates", "cora.equipment.ports"]
+depends_on = ["cora.infrastructure", "cora.equipment.aggregates"]
 
 [[modules]]
 path = "cora.federation.aggregates"
@@ -147,7 +170,7 @@ depends_on = ["cora.infrastructure", "cora.shared"]
 # with at handler-load time (cross-aggregate validation pattern).
 [[modules]]
 path = "cora.access"
-depends_on = ["cora.infrastructure", "cora.shared", "cora.access.aggregates"]
+depends_on = ["cora.infrastructure", "cora.access.aggregates"]
 
 # Data BC depends on its own aggregates plus Run + Subject aggregate
 # kernels for cross-aggregate validation at register_dataset time
@@ -190,8 +213,6 @@ depends_on = [
     "cora.infrastructure",
     "cora.shared",
     "cora.equipment.aggregates",
-    "cora.equipment.ports",
-    "cora.equipment.adapters",
 ]
 
 [[modules]]
@@ -214,7 +235,7 @@ depends_on = ["cora.infrastructure", "cora.shared", "cora.supply.aggregates"]
 # deferred per the Stage-1 Sub-Slice A open ambiguity on Asset binding).
 [[modules]]
 path = "cora.enclosure"
-depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates", "cora.enclosure.adapters"]
+depends_on = ["cora.infrastructure", "cora.shared", "cora.enclosure.aggregates"]
 
 [[modules]]
 path = "cora.trust"

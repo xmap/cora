@@ -13,7 +13,10 @@ from collections.abc import Mapping
 from threading import Lock
 from uuid import UUID
 
-from cora.infrastructure.ports.credential_lookup import CredentialLookupResult
+from cora.infrastructure.ports.credential_lookup import (
+    CredentialLookupResult,
+    CredentialStatusValue,
+)
 from cora.shared.facility_code import FacilityCode
 
 
@@ -32,7 +35,7 @@ class InMemoryCredentialLookup:
         credential_id: UUID,
         facility_id: str | FacilityCode,
         purpose: str,
-        status: str,
+        status: CredentialStatusValue,
     ) -> None:
         """Test helper: install a credential summary keyed by `credential_id`.
 

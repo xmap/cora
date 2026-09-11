@@ -20,7 +20,11 @@ from cora.equipment.aggregates.asset import (
 )
 from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
-from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.enclosure_lookup import (
+    EnclosureLifecycleValue,
+    EnclosureLookupResult,
+    EnclosurePermitStatusValue,
+)
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
     CapturePreconditionBypassSnapshot,
@@ -128,7 +132,9 @@ def _beam(
     )
 
 
-def _enclosure(permit_status: str, lifecycle: str) -> EnclosureLookupResult:
+def _enclosure(
+    permit_status: EnclosurePermitStatusValue, lifecycle: EnclosureLifecycleValue
+) -> EnclosureLookupResult:
     return EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="2-BM-B",
