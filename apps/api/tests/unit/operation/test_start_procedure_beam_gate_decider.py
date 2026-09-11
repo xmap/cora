@@ -236,7 +236,7 @@ def test_not_required_does_not_relax_the_enclosure_gate() -> None:
             EnclosureLookupResult(
                 enclosure_id=UUID("00000000-0000-0000-0000-0000000000cc"),
                 name="2-BM-B",
-                permit_status="Denied",
+                permit_status="NotPermitted",
                 lifecycle="Active",
                 permit_status_changed_at=_NOW.isoformat(),
                 source_kind="EpicsPv",

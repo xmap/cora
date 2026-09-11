@@ -21,7 +21,11 @@ import pytest
 
 from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
-from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.enclosure_lookup import (
+    EnclosureLifecycleValue,
+    EnclosureLookupResult,
+    EnclosurePermitStatusValue,
+)
 from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.run.aggregates.run import (
     RunBeamAvailabilityUnknownError,
@@ -61,7 +65,9 @@ def _supply(status: str) -> SupplyLookupResult:
     )
 
 
-def _enclosure(permit_status: str, lifecycle: str) -> EnclosureLookupResult:
+def _enclosure(
+    permit_status: EnclosurePermitStatusValue, lifecycle: EnclosureLifecycleValue
+) -> EnclosureLookupResult:
     return EnclosureLookupResult(
         enclosure_id=uuid4(),
         name="2-BM-A",

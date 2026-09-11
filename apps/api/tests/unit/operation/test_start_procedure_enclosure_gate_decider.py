@@ -23,7 +23,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
+from cora.infrastructure.ports.enclosure_lookup import (
+    EnclosureLifecycleValue,
+    EnclosureLookupResult,
+    EnclosurePermitStatusValue,
+)
 from cora.operation.aggregates.procedure import (
     Procedure,
     ProcedureEnclosureCoverageMismatchError,
@@ -39,8 +43,8 @@ _NOW = datetime(2026, 6, 9, 12, 0, 0, tzinfo=UTC)
 
 def _enclosure_ref(
     *,
-    permit_status: str = "Permitted",
-    lifecycle: str = "Active",
+    permit_status: EnclosurePermitStatusValue = "Permitted",
+    lifecycle: EnclosureLifecycleValue = "Active",
 ) -> EnclosureLookupResult:
     return EnclosureLookupResult(
         enclosure_id=uuid4(),
@@ -106,7 +110,9 @@ def test_decide_passes_when_every_referencing_enclosure_is_permitted_and_active(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("permit_status", ["NotPermitted", "Unknown"])
-def test_decide_raises_requires_permitted_when_every_row_fails(permit_status: str) -> None:
+def test_decide_raises_requires_permitted_when_every_row_fails(
+    permit_status: EnclosurePermitStatusValue,
+) -> None:
     """Every referencing row fails -> ProcedureRequiresPermittedEnclosureError."""
     only = _enclosure_ref(permit_status=permit_status)
     procedure = _procedure()
