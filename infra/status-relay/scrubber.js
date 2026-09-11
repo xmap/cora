@@ -479,31 +479,39 @@
     const layer = svg("g", { class: "cs-edges" });
     // Rings go ABOVE the marks while the edges stay below them. They are
     // drawn in the same pass but they are not the same kind of thing: an
-    // arrow's tail must pass behind the mark it leaves, and a ring is a
+    // edge's tail must pass behind the mark it leaves, and a ring is a
     // highlight ON a mark, so the two want opposite sides of it. Sharing the
     // edge layer left every ring chopped by the squares packed either side.
     const ringLayer = svg("g", { class: "cs-rings" });
 
-    // One marker per direction. Causation is a strict parent pointer in an
-    // append-only log, so the head always sits at the EFFECT and the arrow is
-    // always single: a double head would assert mutual causation, which cannot
-    // happen. Upstream and downstream answer different questions ("why did
-    // this happen" against "what did it set off") and differ in hue, never in
-    // direction.
+    // One marker, and the stub is the only thing that uses it.
+    //
+    // The chain edges carry no head. A cause is always earlier than its
+    // effect, so the time axis states the direction already, and hue,
+    // thickness and opacity all state the more useful thing: which side of
+    // the focus an edge falls on, which is the "why did this happen" against
+    // "what did it set off" split the card is built around. A head answered
+    // neither question, and because markerUnits defaults to strokeWidth it
+    // was drawn at 4.5 * 2.1 = 9.5px on the nearest hop, wider than the 5-7px
+    // mark it pointed at, fattening exactly where edges crowd hardest and
+    // undoing the thinning that lets the near story read first.
+    //
+    // The stub keeps its head because nothing else can orient it: it hangs
+    // into empty space with no second mark at the far end, so a bare dashed
+    // whisker off the left of a mark reads as an error bar or a duration. At
+    // the stub's default stroke width of 1 the head is 4.5px, mark-sized.
     const defs = svg("defs");
-    for (const [id, fill] of [["cs-arrow-up", "#f0644b"], ["cs-arrow-down", "#e6b24a"]]) {
-      const marker = svg("marker", {
-        id,
-        viewBox: "0 0 8 8",
-        refX: "6.5",
-        refY: "4",
-        markerWidth: "4.5",
-        markerHeight: "4.5",
-        orient: "auto",
-      });
-      marker.appendChild(svg("path", { d: "M0,4 L0,4 M0,0 L8,4 L0,8 z", fill }));
-      defs.appendChild(marker);
-    }
+    const stubHead = svg("marker", {
+      id: "cs-arrow-stub",
+      viewBox: "0 0 8 8",
+      refX: "6.5",
+      refY: "4",
+      markerWidth: "4.5",
+      markerHeight: "4.5",
+      orient: "auto",
+    });
+    stubHead.appendChild(svg("path", { d: "M0,4 L0,4 M0,0 L8,4 L0,8 z", fill: "#f0644b" }));
+    defs.appendChild(stubHead);
     layer.appendChild(defs);
 
     const edges = [];
@@ -523,7 +531,6 @@
       const path = svg("path", {
         d: edgePath(a, b, e.fan || 0),
         class: `cs-edge cs-edge--${e.up ? "up" : "down"}`,
-        "marker-end": `url(#cs-arrow-${e.up ? "up" : "down"})`,
       });
       // Thickness carries distance: the immediate cause is heaviest and each
       // further hop thinner, so the near story reads before the far one.
@@ -562,7 +569,7 @@
           svg("path", {
             d: `M${pt.x - 46},${pt.y} L${pt.x - 7},${pt.y}`,
             class: "cs-edge cs-edge--up cs-edge--stub",
-            "marker-end": "url(#cs-arrow-up)",
+            "marker-end": "url(#cs-arrow-stub)",
           })
         );
         const note = svg("text", {
@@ -772,7 +779,7 @@
     const axisWindow = svg("g", { "clip-path": axisClip });
     const plot = svg("g", { class: "cs-pan cs-plot" });
     const axisRow = svg("g", { class: "cs-pan cs-axis-row" });
-    // Filled later, appended first: an arrow leaving a solid mark has to pass
+    // Filled later, appended first: an edge leaving a solid mark has to pass
     // BEHIND it, or its tail sits on top of the very thing it starts from.
     const edgeLayer = svg("g", { class: "cs-edge-layer" });
     // Behind the marks for the same reason as the edges: it is a backdrop for
@@ -996,8 +1003,8 @@
 
           if (focus) {
             // Edges land on the SQUARE, not on the event's true x: the pack
-            // moved it, and an arrow pointing at empty chart beside the mark
-            // it means would be worse than one pointing slightly off-time.
+            // moved it, and an edge landing on empty chart beside the mark
+            // it means would be worse than one landing slightly off-time.
             c.items.forEach((q, i) => {
               if (!chain.has(q)) return;
               const cx = wide ? x0 + packWidth(n) / 2 : x0 + i * MARK_STEP + MARK_S / 2;
@@ -1785,19 +1792,22 @@
   // cubic whose controls extend along the dominant axis leaves and enters
   // smoothly, and the lateral offset rides on BOTH controls so the whole curve
   // bows instead of bending.
+  //
+  // Centre to centre, both ends. The path used to stop 7px short of the
+  // target so an arrowhead had clear air to sit in; with the heads gone that
+  // gap was just a line pointing NEAR a mark instead of at it, and at the
+  // distances events actually sit apart the stop-short read as a miss. The
+  // ends tuck UNDER the marks, which is free: `edgeLayer` is appended to the
+  // plot before any mark, so every mark already paints over it.
   function edgePath(a, b, fan) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const shrink = 7;
     if (Math.abs(dy) < 5) {
-      const dir = dx >= 0 ? 1 : -1;
-      const bx = b.x - dir * shrink;
       const lift = 13 + Math.abs(fan) * 0.5;
-      return `M${a.x},${a.y} C${a.x + dx * 0.28},${a.y - lift} ${bx - dx * 0.28},${b.y - lift} ${bx},${b.y}`;
+      return `M${a.x},${a.y} C${a.x + dx * 0.28},${a.y - lift} ${b.x - dx * 0.28},${b.y - lift} ${b.x},${b.y}`;
     }
-    const by = b.y - (dy > 0 ? shrink : -shrink);
-    const k = (by - a.y) * 0.45;
-    return `M${a.x},${a.y} C${a.x + fan},${a.y + k} ${b.x + fan},${by - k} ${b.x},${by}`;
+    const k = dy * 0.45;
+    return `M${a.x},${a.y} C${a.x + fan},${a.y + k} ${b.x + fan},${b.y - k} ${b.x},${b.y}`;
   }
 
   // Separate edges that share an x corridor.
@@ -1807,7 +1817,9 @@
   // occupy the same corridor and were each centred independently on it. Every
   // offset is also stepped away from zero, because an offset of exactly zero
   // draws a dead-straight vertical that collides with any other zero-offset
-  // edge and reads as a grid rule rather than an arrow.
+  // edge and reads as a grid rule rather than a link. Load-bearing now that
+  // the edges carry no head: the head was the last thing telling a vertical
+  // edge apart from a rule, so the bow is the only cue left.
   function fanEdges(edges, posOf) {
     const corridors = new Map();
     for (const e of edges) {
@@ -2173,6 +2185,7 @@
       }
       tip.innerHTML = aboutHtml(model, lane);
       tip.setAttribute("data-on", "1");
+      tip.setAttribute("data-pinned", "0");
       placeTip(clientX, clientY);
     };
 
@@ -2184,10 +2197,14 @@
       }
       if (!cluster) {
         tip.setAttribute("data-on", "0");
+        tip.setAttribute("data-pinned", "0");
         return;
       }
       tip.innerHTML = tipHtml(model, cluster, traceFor(point));
       tip.setAttribute("data-on", "1");
+      // A hover card FOLLOWS the pointer, so it must stay click-through or it
+      // would sit under the cursor and fight the mark it describes.
+      tip.setAttribute("data-pinned", "0");
       placeTip(clientX, clientY);
     };
 
@@ -2256,6 +2273,9 @@
       hover = null;
       if (!anchor) {
         tip.setAttribute("data-on", "0");
+        // Releasing a pin returns the card to click-through, so a hidden
+        // card can never keep swallowing pointer events over the chart.
+        tip.setAttribute("data-pinned", "0");
         rerender();
         return;
       }
@@ -2272,6 +2292,9 @@
       const r = seat.el.getBoundingClientRect();
       tip.innerHTML = tipHtml(model, state.selected, focusFor());
       tip.setAttribute("data-on", "1");
+      // Anchored, not following: this is the one card the reader can put a
+      // pointer INTO, which is what makes its capped chain scrollable.
+      tip.setAttribute("data-pinned", "1");
       placeTip(r.left + r.width / 2, r.top);
     };
 
