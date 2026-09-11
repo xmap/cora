@@ -22,28 +22,32 @@
   // Feed the page a synthetic producer before its own script runs.
   const SRC = "../page.html";
   const NOW = Date.now();
-  const LANES = [
-    ["Run", ["RunStarted", "RunAdjusted", "RunAborted", "RunCompleted", "RunResumed"]],
-    ["Decision", ["DecisionRegistered", "DecisionRated", "DecisionDebriefRequested"]],
-    ["Procedure", ["ProcedureStarted", "ProcedureIterationStarted", "ProcedureCompleted"]],
-    ["Caution", ["CautionRegistered"]],
-    ["Enclosure", ["EnclosurePermitObserved"]],
-    ["Dataset", ["DatasetRegistered", "DatasetPromoted"]],
-    // Zones other than Execution and Judgement were exercised by a permit
-    // ribbon and nothing else, so every lane the page can now file -- an
-    // equipment change, a clearance review, a budget draw -- went undrawn
-    // here while the fixture looked complete.
-    ["Clearance", ["ClearanceReviewed", "ClearanceExtended"]],
-    ["Mount", ["MountRegistered", "MountDismounted"]],
-    ["Supply", ["SupplyLevelObserved"]],
-    ["Visit", ["VisitStarted"]],
-    ["Allocation", ["AllocationDrawnDown"]],
-    ["Calibration", ["CalibrationRecorded"]],
-    // Deliberately not in the page's domain table: the "Unfiled" lane has to
-    // be reachable, or the one row that catches an unknown stream type is
-    // the one row nothing ever tests.
-    ["Sprocket", ["SprocketWidened"]],
-  ];
+
+  // ONE SHIFT AT 2-BM, told in order.
+  //
+  // This fixture used to pick a random stream and a random event type off it
+  // every few seconds. That produced the right SHAPES (density, causation,
+  // every lane) and nonsense CONTENT: runs that completed before they
+  // started, a mount dismounted that was never mounted, four permit
+  // observations in a row saying nothing. Fine for exercising the renderer,
+  // useless for reading, and actively misleading in a demo, because the one
+  // thing the page exists to show is whether a sequence makes sense.
+  //
+  // So the live hour is now SCRIPTED, beat by beat, against the same session
+  // the snapshot below already describes: R-4471 aligns, takes flat fields
+  // and starts a tomography; the hutch drops at 26 minutes and takes the run
+  // with it; R-4472 starts and holds on a cooling-water trip; R-4480 begins
+  // alignment. The snapshot's own numbers (started_at, iteration_count,
+  // last_status_changed_at) are what the beats are timed against, so the
+  // tables and the timeline now tell the same story instead of two.
+  //
+  // Every property the random version was built to guarantee is preserved
+  // and each is called out at its own site below: the Unfiled lane stays
+  // reachable, causation still forks rather than threads, the wide fan is
+  // still deterministic and still lands in the live window, events still
+  // exist for instances with no snapshot row, and the density still matches
+  // the measured 2-BM hour. What changed is that all of it now happens for a
+  // reason a beamline scientist would recognise.
 
   let seed = 11;
   function rnd() {
@@ -59,56 +63,30 @@
   let evSeq = 0;
   const uuid = (n) => "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
 
-  // Events have to carry the SAME instance ids the snapshot does, or every
-  // track renders as an empty bar with its events piled into a catch-all lane
+  // Events carry the SAME instance ids the snapshot does, or every track
+  // renders as an empty bar with its events piled into a catch-all lane
   // instead. A stream_id pool that matched nothing was the whole reason to
-  // check this rather than assume it.
-  // Ids AND lifetimes. An event has to belong to an instance that was alive
-  // when it happened, or marks land outside their own track's bar and the
-  // preview shows a geometry the real feed can never produce -- which is
-  // exactly the kind of plausible-looking fixture that has already sent this
-  // work down two wrong turns.
+  // check this rather than assume it. Scripting the beats makes this
+  // structural instead of a filter that has to be kept honest: a beat names
+  // the instance it is about, so it cannot land outside that instance's bar.
+  //
+  // Kinship for a dataset hangs off the EVENT, so Dataset events name ds1 /
+  // ds2 / ds3 from the snapshot. A random id per event would walk the
+  // flat-lane path and never the bound one, and the preview would look right
+  // while testing nothing.
   //
   // "r0" and "p0" have no snapshot row at all: a run that finished before the
   // window opened still has events inside it, and they must reach the
-  // "elsewhere" lane rather than vanish.
-  const LIVES = {
-    Run: [
-      ["r1", 52, 0], ["r2", 21, 0], ["r3", 9, 0], ["r0", 24 * 60, 55],
-    ],
-    Procedure: [
-      ["p1", 50, 44], ["p2", 43, 30], ["p3", 29, 0],
-      ["p4", 19, 12], ["p5", 8, 0], ["p0", 24 * 60, 58],
-    ],
-    Subject: [["s1", 55, 0], ["s2", 24, 0]],
-    Campaign: [["c1", 52, 0]],
-    Enclosure: [["enc1", 60, 0]],
-    Clearance: [["cl1", 24 * 60, 0], ["cl2", 24 * 60, 0]],
-    // Kinship for a dataset hangs off the EVENT, so a Dataset event has to
-    // carry a dataset_id the snapshot names. A random id per event would walk
-    // the flat-lane path and never the bound one, and the preview would look
-    // right while testing nothing.
-    Dataset: [["ds1", 24 * 60, 0], ["ds2", 24 * 60, 0], ["ds3", 24 * 60, 0]],
-  };
-  function streamIdFor(stream, ms) {
-    const lives = LIVES[stream];
-    if (!lives) {
-      // Judgement domains have no instance track, so their ids only ever have
-      // to tell one stream from another.
-      return uuid(100 + Math.floor(rnd() * 12));
-    }
-    const minsAgo = (NOW - ms) / 60000;
-    const alive = lives.filter((l) => minsAgo <= l[1] && minsAgo >= l[2]);
-    const pool = alive.length ? alive : lives;
-    return pool[Math.floor(rnd() * pool.length)][0];
-  }
+  // "elsewhere" lane rather than vanish. The prior shifts in the backlog are
+  // where they come from.
+  const mins = (m) => NOW - m * 60000;
 
-  function event(stream, types, ms) {
+  function event(stream, id, type, ms) {
     return {
       event_id: uuid(900000 + evSeq++),
       stream_type: stream,
-      stream_id: streamIdFor(stream, ms),
-      event_type: types[Math.floor(rnd() * types.length)],
+      stream_id: id,
+      event_type: type,
       occurred_at: new Date(ms).toISOString(),
       recorded_at: new Date(ms).toISOString(),
       // One per command, near enough: a correlation group is the handful of
@@ -121,116 +99,317 @@
     };
   }
 
-  function burst(atMs) {
-    const [stream, types] = LANES[Math.floor(rnd() * LANES.length)];
-    const n = rnd() < 0.45 ? 1 + Math.floor(rnd() * 5) : 1;
+  // A reaction: a different stream, moments later, carrying the cause's
+  // correlation id. Only a subscriber sets causation_id in production, which
+  // is exactly this shape.
+  function caused(child, cause) {
+    child.causation_id = cause.event_id;
+    child.cause_occurred_at = cause.occurred_at;
+    child.correlation_id = cause.correlation_id;
+    return child;
+  }
+
+  // The live hour, beat by beat. Each entry is [minutesAgo, stream, id,
+  // event_type, tag?, causedByTag?] and reads top to bottom as the shift
+  // actually ran. Timings are taken FROM the snapshot below (a run's
+  // started_at, a procedure's registered_at and last_status_changed_at), so
+  // the two cannot drift into telling different stories.
+  const SHIFT = [
+    // Beamtime opens: the user arrives, the hutch is searched, the ESAF is
+    // checked, the sample goes on the stage.
+    [60, "Enclosure", "enc1", "EnclosurePermitObserved"],
+    [59, "Actor", "act1", "ActorRegistered", "actor"],
+    [58.6, "Visit", "v1", "VisitArrived", "visit", "actor"],
+    [58.2, "Visit", "v1", "VisitCheckedIn", null, "visit"],
+    [58, "Visit", "v1", "VisitStarted", null, "visit"],
+    [57.4, "Clearance", "cl1", "ClearanceApproved", "cleared"],
+    [57.2, "Clearance", "cl1", "ClearanceActivated", null, "cleared"],
+    [57, "Enclosure", "enc1", "EnclosurePermitObserved", "searched"],
+    [55.8, "Subject", "s1", "SubjectRegistered", "s1reg"],
+    [55.4, "Mount", "m1", "MountAssetInstalled", null, "s1reg"],
+    [55, "Subject", "s1", "SubjectMounted", "mounted"],
+    [53.4, "Campaign", "c1", "CampaignRegistered"],
+    [53, "Campaign", "c1", "CampaignStarted"],
+    [52.6, "Allocation", "a1", "AllocationActivated"],
+
+    // R-4471 begins under the campaign, on the mounted sample.
+    [52, "Run", "r1", "RunStarted", "r1start", "mounted"],
+    [51.8, "Run", "r1", "RunAddedToCampaign", null, "r1start"],
+    [51.4, "Run", "r1", "RunObservationLogbookOpened", null, "r1start"],
+
+    // Alignment, then flat fields, then the tomography itself. This is the
+    // ordinary 2-BM ladder and the whole reason `iteration_count` exists on
+    // the procedure rows.
+    [50.4, "Procedure", "p1", "ProcedureRegistered", "p1reg"],
+    [50, "Procedure", "p1", "ProcedureStarted", null, "p1reg"],
+    [49, "Procedure", "p1", "ProcedureIterationStarted"],
+    [48.4, "Procedure", "p1", "ProcedureIterationEnded"],
+    [47, "Procedure", "p1", "ProcedureIterationStarted"],
+    [45.2, "Procedure", "p1", "ProcedureIterationEnded"],
+    [44, "Procedure", "p1", "ProcedureCompleted", "aligned"],
+    [43.4, "Procedure", "p2", "ProcedureRegistered", null, "aligned"],
+    [43, "Procedure", "p2", "ProcedureStarted", "p2start"],
+    [41, "Calibration", "cal1", "CalibrationRevisionAppended", "calrev"],
+    [40.4, "Calibration", "cal1", "CalibrationRevisionPublished", null, "calrev"],
+    [30, "Procedure", "p2", "ProcedureCompleted", "flats"],
+    [29.4, "Procedure", "p3", "ProcedureRegistered", null, "flats"],
+    [29, "Procedure", "p3", "ProcedureStarted"],
+
+    // The hutch drops mid-scan. A permit loss is the one event at this
+    // beamline that reliably takes a run with it, and the caution and both
+    // holds hang off that single observation.
+    [26, "Enclosure", "enc1", "EnclosurePermitObserved", "permitlost"],
+    [25.7, "Caution", "ct1", "CautionRegistered", null, "permitlost"],
+    [25.4, "Run", "r1", "RunHeld", null, "permitlost"],
+    [25.1, "Procedure", "p3", "ProcedureHeld", null, "permitlost"],
+    [24, "Subject", "s2", "SubjectRegistered"],
+    [22, "Enclosure", "enc1", "EnclosurePermitObserved", "permitback"],
+    [21.6, "Run", "r1", "RunResumed", null, "permitback"],
+    [21.4, "Run", "r1", "HoldClaimReleased", null, "permitback"],
+    [21.3, "Procedure", "p3", "ProcedureResumed", null, "permitback"],
+
+    // R-4472 starts on the second sample while R-4471 keeps scanning.
+    [21, "Run", "r2", "RunStarted", "r2start"],
+    [20.6, "Subject", "s2", "SubjectMounted", null, "r2start"],
+    [20.2, "Run", "r2", "RunAddedToCampaign", null, "r2start"],
+    [19.4, "Procedure", "p4", "ProcedureRegistered"],
+    [19, "Procedure", "p4", "ProcedureStarted", null, "r2start"],
+    [18, "Procedure", "p4", "ProcedureIterationStarted"],
+
+    // An operator judgement, recorded and then rated.
+    [14, "Decision", "d1", "DecisionRegistered", "d1made"],
+    [13.4, "Decision", "d1", "DecisionRated", null, "d1made"],
+
+    // Cooling water starts to fall off before it trips. The degradation is
+    // the WARNING and has to precede the trip, or the fan below draws an
+    // effect ahead of its cause.
+    [13.2, "Supply", "sup1", "SupplyDegraded"],
+    // The trip itself lands at 12.9 and is the hub of the wide fan below,
+    // which is where R-4472's hold comes from.
+
+    // R-4480 begins, unbound to any campaign, which is the row that proves a
+    // standalone run still renders.
+    [9, "Run", "r3", "RunStarted", "r3start"],
+    [8.4, "Procedure", "p5", "ProcedureRegistered"],
+    [8, "Procedure", "p5", "ProcedureStarted", null, "r3start"],
+    [7, "Procedure", "p5", "ProcedureIterationStarted"],
+    [6.4, "Decision", "d2", "DecisionRegistered"],
+    [5.2, "Procedure", "p5", "ProcedureIterationStarted"],
+    [4.6, "Procedure", "p5", "ProcedureIterationEnded"],
+
+    // The product of the shift so far, and the one capture that fell short.
+    [2.6, "Dataset", "ds1", "DatasetRegistered", "ds1reg"],
+    [2.2, "Acquisition", "ds1", "AcquisitionRecorded", null, "ds1reg"],
+    [1.9, "Attestation", "ds1", "AttestationRecorded", null, "ds1reg"],
+    [1.5, "Dataset", "ds2", "DatasetPromoted"],
+    // Shipped today: a capture whose Run ended before the file stopped
+    // changing, holding 1 projection of a commanded 1541. Worth having in
+    // the demo precisely because it is the case the record could not state
+    // at all until now. NOTE: `Shortfall` is not yet in page.html's
+    // STREAM_TYPE_TO_DOMAIN, so it files under Unfiled until that lands.
+    [1.2, "Shortfall", "sf1", "ShortfallRecorded"],
+    [0.9, "Procedure", "p5", "ProcedureIterationStarted"],
+    // Deliberately not a real aggregate: the "Unfiled" lane has to be
+    // reachable on purpose, or the one row that catches an unknown stream
+    // type is the one row nothing ever tests.
+    [0.4, "Sprocket", "sp1", "SprocketWidened"],
+  ];
+
+  // The tomography scan itself, which is where a real 2-BM hour gets its
+  // density: 41 iterations across the 29 minutes p3 has been running, minus
+  // the four it sat held. Generated rather than typed out, because the count
+  // has to match the snapshot's `iteration_count` and a hand-typed list
+  // would drift from it on the first edit.
+  function tomographyIterations() {
     const out = [];
-    for (let i = 0; i < n; i++) out.push(event(stream, types, atMs + i * 400));
-
-    // A REACTION tail. Only a subscriber sets causation_id in production, and
-    // it fires within a couple of seconds of its cause and on a different
-    // stream, so the chain has to be built that way here or the fixture keeps
-    // producing roots forever. An earlier version tried to chain within a
-    // burst, which cannot work: a burst is one stream and the next is eight
-    // seconds away, so no candidate was ever both foreign and recent.
-    // The tail must FORK, not just run. It used to reassign `cause = re` on
-    // every hop, which can only ever produce a thread -- so no node in this
-    // fixture ever had two children, and the renderer's branching walk (the
-    // whole reason downstream is a frontier and not a pointer chase) had never
-    // once been exercised by the fixture written to exercise it. Production
-    // branches freely: one event wakes a projector, a policy watcher and an
-    // expirer, and all three append against the same causation_id.
-    if (rnd() < 0.55) {
-      const root = out[Math.floor(rnd() * out.length)];
-      let cause = root;
-      let ms = atMs + n * 400;
-      const hops = 2 + Math.floor(rnd() * 4);
-      for (let h = 0; h < hops; h++) {
-        const other = LANES.filter((l) => l[0] !== cause.stream_type);
-        const [rStream, rTypes] = other[Math.floor(rnd() * other.length)];
-        ms += 300 + rnd() * 1500;
-        const re = event(rStream, rTypes, ms);
-        re.causation_id = cause.event_id;
-        re.cause_occurred_at = cause.occurred_at;
-        re.correlation_id = cause.correlation_id;
-        out.push(re);
-        // Deepen, or hang a sibling off the same cause. Both shapes have to
-        // occur: a fixture that only forks tests depth no better than one
-        // that only threads tested branching.
-        cause = rnd() < 0.42 ? cause : re;
-      }
+    let n = 0;
+    for (let m = 28.5; m > 0.2 && n < 41; m -= 0.62) {
+      if (m < 25.4 && m > 21.3) continue; // held: the scan is not stepping
+      const started = event("Procedure", "p3", "ProcedureIterationStarted", mins(m));
+      out.push(started);
+      // Each step ends before the next begins. The pair is what a scan
+      // actually emits, and it is also most of where a busy 2-BM hour's
+      // event count comes from.
+      out.push(caused(event("Procedure", "p3", "ProcedureIterationEnded", mins(m - 0.28)), started));
+      n++;
     }
-
-    if (rnd() < 0.1) fanOut(out, out[Math.floor(rnd() * out.length)], atMs + n * 400 + 900);
     return out;
   }
 
   // A WIDE fan: one event waking a whole rank of subscribers at once, each of
-  // which wakes one or two more. The reaction tail cannot reach this shape --
-  // a 42% sibling rate mostly deepens, so a long cascade is still a
-  // near-thread, and the card's row cap of twelve stayed unreachable no matter
-  // how many hops were added. A cap that can never be hit makes every
-  // assertion about how it reports itself reconcile trivially.
-  function fanOut(out, hub, atMs) {
-    let fms = atMs;
-    const width = 5 + Math.floor(rnd() * 4);
-    for (let w = 0; w < width; w++) {
-      const pool = LANES.filter((l) => l[0] !== hub.stream_type);
-      const [wStream, wTypes] = pool[Math.floor(rnd() * pool.length)];
-      fms += 120 + rnd() * 400;
-      const kid = event(wStream, wTypes, fms);
-      kid.causation_id = hub.event_id;
-      kid.cause_occurred_at = hub.occurred_at;
-      kid.correlation_id = hub.correlation_id;
+  // which wakes one or two more. A reaction chain cannot reach this shape, and
+  // the card's row cap of twelve stayed unreachable no matter how many hops
+  // were added; a cap that can never be hit makes every assertion about how it
+  // reports itself reconcile trivially.
+  //
+  // The hub is the cooling-water supply going unavailable, the same BLEPS
+  // Flow4 shape the deployment actually saw. That is what this fan genuinely
+  // looks like in production: one observation wakes the run supervisor, the
+  // procedure watcher, the caution drafter and the debriefer, and several of
+  // those wake something in turn.
+  //
+  // Fixed at 12.9 minutes rather than left to a dice roll, because whether a
+  // fan lands where the chart is looking must not depend on the wall clock.
+  // It sits there rather than nearer the edge because THIS fan is where
+  // R-4472's hold comes from, and the snapshot puts that hold at 12 minutes:
+  // a hub placed later would have the effect preceding its cause on screen.
+  // Every arm has to make sense on its own, not merely be a distinct stream.
+  // Earlier drafts hung `SupplyDegraded` off the trip (degradation PRECEDES
+  // unavailability, so the fan drew the cause after its effect) and paired
+  // `CautionRegistered` with a `CautionSuperseded` two seconds later, which
+  // reads as CORA retracting a warning it has just issued. A fan is the one
+  // place a reader looks to ask "what did this cause", so a nonsense arm
+  // there is worse than no arm at all.
+  const FAN = [
+    ["Caution", "ct2", "CautionRegistered", ["Decision", "d3", "DecisionRegistered"]],
+    // The operator acknowledging a caution is a Run-stream fact, which is
+    // also what takes the cascade to exactly twelve: the card's row cap has
+    // to be REACHED by this fixture, or every assertion about how the card
+    // reports hitting it reconciles trivially.
+    //
+    // It lands on R-4471, the run that is actually up at this point. R-4480
+    // does not start for another four minutes, and hanging it there put an
+    // acknowledgement ahead of its own run's genesis: the precise shape this
+    // rewrite exists to remove, so it is worth naming rather than just
+    // fixing.
+    ["Caution", "ct3", "CautionRegistered", ["Run", "r1", "CautionAcknowledgement"]],
+    ["Procedure", "p4", "ProcedureHeld", ["Procedure", "p4", "ProcedureIterationEnded"]],
+    ["Run", "r2", "RunHeld", ["Run", "r2", "DecisionDebriefRequested"]],
+    ["Decision", "d4", "DecisionRegistered", ["Decision", "d4", "DecisionRated"]],
+    ["Clearance", "cl1", "ClearanceReviewStepAppended", null],
+    ["Attestation", "ds2", "AttestationRecorded", null],
+  ];
+
+  function supplyTripFan() {
+    const out = [];
+    const hubAt = mins(12.9);
+    const hub = event("Supply", "sup1", "SupplyMarkedUnavailable", hubAt);
+    out.push(hub);
+    let t = hubAt + 900;
+    FAN.forEach(([s, id, type, grand]) => {
+      t += 3000 + rnd() * 4000;
+      const kid = caused(event(s, id, type, t), hub);
       out.push(kid);
-      for (let g = 0, gn = 1 + Math.floor(rnd() * 2); g < gn; g++) {
-        const gpool = LANES.filter((l) => l[0] !== kid.stream_type);
-        const [gStream, gTypes] = gpool[Math.floor(rnd() * gpool.length)];
-        fms += 100 + rnd() * 300;
-        const gk = event(gStream, gTypes, fms);
-        gk.causation_id = kid.event_id;
-        gk.cause_occurred_at = kid.occurred_at;
-        gk.correlation_id = kid.correlation_id;
-        out.push(gk);
+      // Siblings hang off the hub AND children hang off the siblings, so the
+      // walk has both shapes to follow. A fixture that only forks tests depth
+      // no better than one that only threads tested branching.
+      if (grand) {
+        t += 1500 + rnd() * 2500;
+        out.push(caused(event(grand[0], grand[1], grand[2], t), kid));
       }
-    }
+    });
+    // The signal clears, but a person still has to accept the supply back, so
+    // Recovering is where it rests. That is exactly where 2-BM's own Flow4
+    // supply sat for weeks, which is the state worth showing.
+    out.push(event("Supply", "sup1", "SupplyMarkedRecovering", mins(3)));
     return out;
   }
 
-  // A full retention window, at the measured 2-BM shape: 228 events in the
-  // busiest hour, quieter overnight. This is the load the relay now replays
-  // on connect and the page then holds, so the preview has to carry it or the
+  // Prior shifts, filling the retention window behind the live hour. These
+  // run on r0 / p0, which have NO snapshot row: a run that finished before
+  // the window opened still has events inside it, and they must reach the
+  // "elsewhere" lane rather than vanish.
+  //
+  // Each is a complete cycle rather than a scatter of types, so scrolling
+  // back reads as previous shifts and not as noise: start, align, scan,
+  // finish, register the dataset, debrief.
+  const CYCLE = [
+    [0, "Run", "r0", "RunStarted"],
+    [0.6, "Run", "r0", "RunObservationLogbookOpened"],
+    [1.5, "Procedure", "p0", "ProcedureRegistered"],
+    [2, "Procedure", "p0", "ProcedureStarted"],
+    [3, "Procedure", "p0", "ProcedureIterationStarted"],
+    [4, "Procedure", "p0", "ProcedureIterationEnded"],
+    [5, "Procedure", "p0", "ProcedureIterationStarted"],
+    [6, "Procedure", "p0", "ProcedureIterationEnded"],
+    [7, "Procedure", "p0", "ProcedureCompleted"],
+    [9, "Calibration", "cal0", "CalibrationRevisionAppended"],
+    [12, "Run", "r0", "RunAdjusted"],
+    [16, "Run", "r0", "RunCompleted"],
+    [17, "Dataset", "ds3", "DatasetRegistered"],
+    [17.5, "Acquisition", "ds3", "AcquisitionRecorded"],
+    [18, "Run", "r0", "DecisionDebriefRequested"],
+    [19, "Attestation", "ds3", "AttestationRecorded"],
+  ];
+
+  function priorShift(startMinsAgo) {
+    const out = [];
+    let prev = null;
+    CYCLE.forEach(([off, s, id, type]) => {
+      const ev = event(s, id, type, mins(startMinsAgo - off));
+      // A short causal thread through the cycle, so the deep backlog is not
+      // uniformly root-only.
+      if (prev && rnd() < 0.5) caused(ev, prev);
+      out.push(ev);
+      prev = ev;
+    });
+    return out;
+  }
+
+  // A full retention window: roughly 780 events over the day, about 150 in
+  // the live hour, quieter overnight. This is the load the relay replays on
+  // connect and the page then holds, so the preview has to carry it or the
   // only thing ever exercised is the fifteen minutes the page used to keep.
+  //
+  // The live hour is below the 228 the busiest measured 2-BM hour reached.
+  // That gap is deliberate rather than unfinished: the old fixture hit 228 by
+  // emitting random types at a tuned interval, and this one only emits events
+  // a real session would produce, so the count is whatever the session's own
+  // beats add up to. Padding it back to 228 would mean inventing traffic,
+  // which is the exact thing this rewrite removed. If a check ever needs the
+  // busiest hour specifically, give it a denser SCAN rather than more noise:
+  // the iteration pairs are where a real hour's volume comes from.
   function backlog() {
     const events = [];
-    const span = 24 * 60 * 60 * 1000;
-    for (let t = NOW - span; t < NOW; ) {
-      // Hour of day drives the rate over the deep backlog: a beamline runs hot
-      // in shift hours and ticks over between them. The most recent hour is
-      // always busy regardless, because everything that reads this fixture --
-      // the eye and every check -- looks at the live window, and a fixture
-      // that goes quiet at 3am makes those checks pass or fail by the clock
-      // rather than by the code.
-      const hour = new Date(t).getHours();
-      const recent = NOW - t < 60 * 60 * 1000;
-      const busy = recent || (hour >= 8 && hour < 22);
-      t += (busy ? 8000 : 40000) + rnd() * (busy ? 25000 : 90000);
-      if (t < NOW) events.push(...burst(t));
+
+    // Behind the live hour: a cycle every ~25 minutes through shift hours,
+    // every ~75 overnight. The most recent hour is the scripted shift and is
+    // always busy regardless, because everything that reads this fixture
+    // looks at the live window, and a fixture that goes quiet at 3am makes
+    // checks pass or fail by the clock rather than by the code.
+    for (let m = 24 * 60; m > 62; ) {
+      const hour = new Date(mins(m)).getHours();
+      const busy = hour >= 8 && hour < 22;
+      events.push(...priorShift(m));
+      m -= (busy ? 22 : 68) + rnd() * (busy ? 9 : 30);
     }
 
-    // One guaranteed wide fan, placed in the live window. The same reasoning
-    // as the `recent` rate above: at a 10% chance per burst, whether a fan
-    // lands where the flowing chart is looking depends on the wall clock, so
-    // the check that needs one passed in the afternoon and reported "none
-    // found" an hour later. A shape a check requires cannot be left to a dice
-    // roll whose landing spot moves with the time of day.
-    const hubAt = NOW - 4 * 60 * 1000;
-    const [hStream, hTypes] = LANES[Math.floor(rnd() * LANES.length)];
-    const hub = event(hStream, hTypes, hubAt);
-    events.push(hub);
-    fanOut(events, hub, hubAt + 800);
+    SHIFT.forEach(([m, s, id, type]) => events.push(event(s, id, type, mins(m))));
+    // Second pass for the causal links, so a beat can name a tag defined
+    // anywhere in the script rather than only above it.
+    const tagged = {};
+    let i = events.length - SHIFT.length;
+    SHIFT.forEach(([, , , , tag], k) => { if (tag) tagged[tag] = events[i + k]; });
+    SHIFT.forEach(([, , , , , cause], k) => {
+      if (cause && tagged[cause]) caused(events[i + k], tagged[cause]);
+    });
+
+    events.push(...tomographyIterations());
+    events.push(...supplyTripFan());
     events.sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : 0));
     return events;
+  }
+
+  // What the page receives while you watch it. The scan is still stepping,
+  // so the live tail is the tomography ticking over plus the occasional
+  // observation, which is what a 2-BM feed actually looks like between
+  // operator actions rather than a fresh random domain every two seconds.
+  let liveIter = 0;
+  function liveTick() {
+    const now = Date.now();
+    const started = event("Procedure", "p3", "ProcedureIterationStarted", now);
+    const out = [started, caused(event("Procedure", "p3", "ProcedureIterationEnded", now + 700), started)];
+    liveIter++;
+    if (liveIter % 4 === 0) {
+      out.push(event("Procedure", "p5", "ProcedureIterationStarted", now + 200));
+    }
+    if (liveIter % 9 === 0) {
+      const reg = event("Dataset", "ds1", "DatasetRegistered", now + 500);
+      out.push(reg);
+      out.push(caused(event("Acquisition", "ds1", "AcquisitionRecorded", now + 900), reg));
+      out.push(caused(event("Attestation", "ds1", "AttestationRecorded", now + 1200), reg));
+    }
+    return out;
   }
 
   // A shape the LAYOUT can be built from, not just tables: two runs under one
@@ -434,7 +613,7 @@
         this._send({ kind: "activity", events: backlog() });
         this._tick = setInterval(() => {
           this._send(snapshot());
-          if (rnd() < 0.7) this._send({ kind: "activity", events: burst(Date.now()) });
+          this._send({ kind: "activity", events: liveTick() });
         }, 2000);
       }, 80);
     }
@@ -445,22 +624,56 @@
 
   const frame = document.createElement("iframe");
   document.body.appendChild(frame);
-  fetch(SRC)
+  // `no-store`, plus a cache-buster on the script the page pulls in.
+  //
+  // Without both, the harness happily shows a page.html and a scrubber.js
+  // from some earlier edit while the server already has the current ones.
+  // That is a uniquely expensive failure HERE, because this page's whole job
+  // is to show what a change looks like: the edit appears to have done
+  // nothing, and the natural next move is to go and "fix" code that was
+  // already right. It also makes the harness flaky in a way that looks like
+  // a fixture bug, since a stale page.html against a current scrubber.js
+  // fails in whatever way those two versions happen to disagree.
+  fetch(SRC, { cache: "no-store" })
     .then((r) => r.text())
     .then((html) => {
-      const doc = frame.contentDocument;
-      doc.open();
-      doc.write(html);
-      doc.close();
-      // Replace before page.html's own connect() runs on DOMContentLoaded-ish
-      // timing; its script is inline at the end of body, so patching the
-      // iframe's global here beats it to the first connect attempt.
-      frame.contentWindow.WebSocket = StubSocket;
-      frame.contentWindow.fetch = (url) => {
+      // Published on THIS window so the injected shim below can reach them
+      // through `window.parent`.
+      window.__coraStubSocket = StubSocket;
+      window.__coraStubFetch = (url) => {
         const m = String(url).match(/^\/run-history\/(.+)$/);
         const body = m ? runHistory(decodeURIComponent(m[1])) : runHistoryIndex();
         return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
       };
+
+      // Inject the swap INTO the document rather than assigning onto the
+      // iframe's window from out here.
+      //
+      // Assigning from outside is a race the preview loses at random, and
+      // loses invisibly: `document.open()` resets the frame's globals, so a
+      // patch applied before `write` is wiped, and one applied after `close`
+      // can arrive after page.html's own script has already opened a REAL
+      // WebSocket. That 404s against the static server and the page renders
+      // DISCONNECTED with zero events, which reads as a broken FIXTURE rather
+      // than a broken harness. Diagnosing it the slow way, the frame reports
+      // `WebSocket === StubSocket` while the page sits disconnected, because
+      // by then the patch has landed and the damage is done.
+      //
+      // A script tag at the top of <head> has no such ordering question: it
+      // is parsed and run before the page's own inline script at the end of
+      // body, every time.
+      const shim = "<scr" + "ipt>window.WebSocket=window.parent.__coraStubSocket;" +
+                   "window.fetch=window.parent.__coraStubFetch;</scr" + "ipt>";
+      const bust = "?preview=" + Date.now();
+      const fresh = html.replace(/(<script[^>]+src=")([^"]+)(")/g, "$1$2" + bust + "$3");
+      const wired = fresh.includes("<head>")
+        ? fresh.replace("<head>", "<head>" + shim)
+        : shim + fresh;
+
+      const doc = frame.contentDocument;
+      doc.open();
+      doc.write(wired);
+      doc.close();
     });
 </script>
 </body>

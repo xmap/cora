@@ -142,6 +142,15 @@
     box-shadow: 0 6px 22px rgb(0 0 0 / 45%);
   }
   .cs-tip[data-on="1"] { opacity: 1; }
+  /* A PINNED card is a different object from a hovering one. It is anchored
+     to its mark rather than to the pointer, it outlives the pointer, and its
+     `.cs-tip-list` / `.cs-tip-chain` are capped and scrollable. Left
+     click-through it cannot be scrolled at all: the wheel falls past it to
+     the timeline underneath, so a deep causal chain has rows the reader can
+     see and cannot reach. The pan and hover handlers are bound to the SVG,
+     not to the stage, so a card that swallows its own events takes nothing
+     away from them. */
+  .cs-tip[data-pinned="1"] { pointer-events: auto; }
   .cs-tip-head {
     font-size: 0.78rem; font-weight: 600; color: var(--cs-ink);
     margin-bottom: 0.35rem;
@@ -186,8 +195,10 @@
   .cs-tip-chain .cs-tip-k { overflow-wrap: anywhere; white-space: normal; }
   .cs-tip-item .cs-tip-k { color: var(--cs-mute); }
   .cs-tip-item--head .cs-tip-k { color: var(--cs-ink); font-weight: 600; }
-  /* The same two hues the arrows use, so a row in the card and the edge it
-     stands for are recognisably the same relation. All three are the same
+  /* The same two hues the edges use, so a row in the card and the edge it
+     stands for are recognisably the same relation. Carrying real weight now
+     that the edges have no heads: hue is what says whether an edge runs to a
+     cause or to an effect. All three are the same
      specificity as `.cs-tip-item .cs-tip-k`, so they have to sit BELOW it:
      written above they lost every hue to it without any warning. */
   .cs-tip-item--up .cs-tip-k { color: color-mix(in srgb, var(--cs-alarm) 72%, var(--cs-sub)); }
@@ -1429,7 +1440,7 @@
           note:
             "The observations the ribbon above was folded from, kept on their own row. " +
             "On one row they would pack into a bar covering the very condition they " +
-            "describe, and a causal arrow into a permit drop has to land on one of them.",
+            "describe, and a causal link into a permit drop has to land on one of them.",
           rows: [
             ["records", "Enclosure"],
             ["events on this lane", String((byStream[encId] || []).length)],
