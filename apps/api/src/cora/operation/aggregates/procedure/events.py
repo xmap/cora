@@ -64,7 +64,7 @@ encodes the state change. Same precedent as `RunStarted` /
 """
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, assert_never
@@ -441,6 +441,94 @@ class ProcedureAborted:
     actuation_kind: str | None = None
 
 
+HOLD_CAUSE_OPERATOR = "operator"
+"""A person asked for the pause, through the REST route or the MCP tool."""
+
+HOLD_CAUSE_STEP_FAULT = "step-fault"
+"""The Conductor parked the conduct because a step failed recoverably
+(`conduct_or_hold`). An attention claim: nothing in CORA re-establishes a
+faulted step, so an operator discharges it by resuming."""
+
+HOLD_CAUSE_DRIVER_STAND_DOWN = "driver-stand-down"
+"""The Conductor parked a steered loop because its steering driver went
+non-ACTIVE (`_hold_driver_stood_down`). A DIFFERENT concern from a step
+fault: it is answered by the driver being reinstated, not by the equipment
+recovering, so the two must be able to hold at the same time. Also an
+attention claim."""
+
+HOLD_CAUSES: frozenset[str] = frozenset(
+    {
+        HOLD_CAUSE_OPERATOR,
+        HOLD_CAUSE_STEP_FAULT,
+        HOLD_CAUSE_DRIVER_STAND_DOWN,
+    }
+)
+"""The closed set of concerns that may hold a Procedure. Coarse on purpose:
+a cause names WHICH concern is holding, not why in prose. The prose stays on
+`ProcedureHeld.reason`. Mirrors `HOLD_CAUSES` on Run."""
+
+ATTENTION_HOLD_CAUSES: frozenset[str] = frozenset(
+    {
+        HOLD_CAUSE_STEP_FAULT,
+        HOLD_CAUSE_DRIVER_STAND_DOWN,
+    }
+)
+"""The causes whose claim asks for an operator rather than asserting authority.
+
+A hold claim is one of two things, and which one decides who may discharge it.
+An AUTHORITY claim is held on behalf of a rule the holder enforces: Run's
+ratification and kill-switch claims are authority claims, and letting anyone
+else clear them would be the bypass they exist to prevent. An ATTENTION claim
+is the opposite. The Conductor parks a conduct it cannot itself un-stick and
+records why; nothing in CORA will ever discharge that claim, so an operator's
+resume does, and the claim's job was to say what they are resuming past.
+
+Every non-operator Procedure cause is an attention claim today, which is what
+makes an operator's resume able to clear a fault-parked conduct in one act.
+That is a property of these particular causes and NOT of Procedures, so the set
+is declared rather than assumed: `test_every_hold_cause_is_classified` fails
+until a newly added cause is put on one side or the other, which is the point
+at which "may an operator clear this" has to be answered rather than inherited.
+"""
+
+
+def is_deliberate_pause(hold_causes: Iterable[str]) -> bool:
+    """Did a person choose to pause this, as opposed to something getting stuck?
+
+    True only when at least one cause is recorded and every one of them is
+    `operator`. Two things follow from stating it that way rather than as "no
+    attention cause is present".
+
+    An empty set is NOT a deliberate pause. A Held Procedure recording nothing
+    that holds it is one nothing can vouch for, including the `LEGACY_CAUSE`
+    holds placed before causes existed, and reading "no evidence" as "a person
+    meant this" is how a stuck conduct would go unnoticed.
+
+    Nor is a cause that is neither `operator` nor an attention claim, which is
+    what a future authority claim on a Procedure would be. Such a hold is not
+    someone taking a break either, so it does not inherit a deliberate pause's
+    latitude by being unclassified.
+
+    Its caller is the ProcedureWatcher, which grants a much longer staleness
+    window to a pause than to a conduct nobody is coming back to.
+    """
+    causes = tuple(hold_causes)
+    return bool(causes) and all(cause == HOLD_CAUSE_OPERATOR for cause in causes)
+
+
+LEGACY_CLAIM_ID = UUID("01900000-0000-7000-8000-00000001dead")
+"""The single claim a pre-claim `ProcedureHeld` folds to, so a legacy stream
+replays to exactly its old one-bit meaning. Mirrors Run's sentinel."""
+
+LEGACY_CAUSE = "legacy-unscoped"
+"""The cause a pre-claim `ProcedureHeld` folds to."""
+
+
+def _optional_uuid(raw: object) -> UUID | None:
+    """Parse an optional UUID payload key, absent on pre-claim streams."""
+    return UUID(str(raw)) if raw is not None else None
+
+
 @dataclass(frozen=True)
 class ProcedureHeld:
     """A Procedure conduct was operator-paused (Running -> Held).
@@ -482,6 +570,17 @@ class ProcedureHeld:
     occurred_at: datetime
     decided_by_decision_id: UUID | None = None
     actuation_kind: str | None = None
+    claim_id: UUID | None = None
+    """Which claim this hold places. `Held` alone is one bit and cannot say
+    who is holding or whether anyone else still is, which is a safety fault
+    once independent concerns can each park the same Procedure: a second
+    holder arriving at an already-Held Procedure cannot record its intent,
+    and the FIRST holder's resume then restarts the conduct with the
+    second's cause unenforced. None on a legacy stream, folding to
+    `LEGACY_CLAIM_ID`."""
+    cause: str | None = None
+    """Which concern is holding, from `HOLD_CAUSES`. None on a legacy
+    stream, folding to `LEGACY_CAUSE`."""
 
 
 @dataclass(frozen=True)
@@ -513,6 +612,57 @@ class ProcedureResumed:
     re_establishment_boundary: int
     occurred_at: datetime
     decided_by_decision_id: UUID | None = None
+    released_claim_id: UUID | None = None
+    """The resumer's OWN claim, discharged by this resume.
+
+    A `ProcedureResumed` is legal only once no claim would remain active, which
+    is what makes RUNNING mean "no concern is holding this" rather than
+    "whoever spoke last is done". Any OTHER claim the resumer was entitled to
+    clear (an attention claim, per `ATTENTION_HOLD_CAUSES`) is discharged by
+    its own `ProcedureHoldClaimReleased` first, so a resume that answers three
+    concerns records three discharges rather than collapsing them into this one
+    field.
+
+    None when the resumer held no claim of its own, and on a legacy stream,
+    where a bare resume clears every claim and so replays the old one-bit
+    behaviour exactly."""
+
+
+@dataclass(frozen=True)
+class ProcedureHoldClaimReleased:
+    """One hold claim was discharged.
+
+    Status-neutral: the evolver returns prior state with the claim removed and
+    the status untouched. Whether the Procedure goes on to run again is the
+    business of a `ProcedureResumed` in the same append, not of this event.
+
+    This is the event that makes the hold algebra compositional. Without it
+    a concern has exactly two ways to stop holding, both wrong when it is
+    not the only holder: append `ProcedureResumed` and restart a conduct
+    other concerns still want parked, or append nothing and hold forever.
+    A releaser picks by folding the active claims first:
+
+      - own claim is the ONLY active one -> `ProcedureResumed(released_claim_id)`
+      - other claims remain              -> `ProcedureHoldClaimReleased(claim_id)`
+      - an operator clears attention claims alongside its own
+                                         -> one of these per extra claim,
+                                            then the `ProcedureResumed`
+
+    `claim_id` must name an active claim; releasing an unknown or
+    already-released claim is a no-op at the fold and is rejected by the
+    deciders rather than silently absorbed. Mirrors Run's `HoldClaimReleased`,
+    named with the `Procedure` prefix because this BC's event names are
+    aggregate-qualified.
+    """
+
+    procedure_id: UUID
+    claim_id: UUID
+    cause: str
+    occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
+    """Optional Decision-causation link, mirroring `ProcedureHeld`: None for
+    an operator-routed release, set when an in-process runtime discharges a
+    claim it placed."""
 
 
 @dataclass(frozen=True)
@@ -816,6 +966,7 @@ ProcedureEvent = (
     | ProcedureTruncated
     | ProcedureHeld
     | ProcedureResumed
+    | ProcedureHoldClaimReleased
     | ProcedureActivitiesLogbookOpened
     | ProcedureDiagnosticLogbookOpened
     | ProcedureOutcomeLogbookOpened
@@ -942,6 +1093,8 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             occurred_at=occurred_at,
             decided_by_decision_id=decided_by_decision_id,
             actuation_kind=actuation_kind,
+            claim_id=claim_id,
+            cause=cause,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -951,12 +1104,15 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 ),
                 "occurred_at": occurred_at.isoformat(),
                 "actuation_kind": actuation_kind,
+                "claim_id": str(claim_id) if claim_id is not None else None,
+                "cause": cause,
             }
         case ProcedureResumed(
             procedure_id=procedure_id,
             re_establishment_boundary=re_establishment_boundary,
             occurred_at=occurred_at,
             decided_by_decision_id=decided_by_decision_id,
+            released_claim_id=released_claim_id,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -965,6 +1121,25 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                     str(decided_by_decision_id) if decided_by_decision_id is not None else None
                 ),
                 "occurred_at": occurred_at.isoformat(),
+                "released_claim_id": (
+                    str(released_claim_id) if released_claim_id is not None else None
+                ),
+            }
+        case ProcedureHoldClaimReleased(
+            procedure_id=procedure_id,
+            claim_id=claim_id,
+            cause=cause,
+            occurred_at=occurred_at,
+            decided_by_decision_id=decided_by_decision_id,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "claim_id": str(claim_id),
+                "cause": cause,
+                "occurred_at": occurred_at.isoformat(),
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
             }
         case ProcedureActivitiesLogbookOpened(
             procedure_id=procedure_id,
@@ -1338,6 +1513,10 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     # Additive: pre-activation streams omit the key -> None.
                     actuation_kind=payload.get("actuation_kind"),
+                    # Additive: pre-claim streams omit both -> None, which the
+                    # fold reads as the single LEGACY_CLAIM_ID claim.
+                    claim_id=_optional_uuid(payload.get("claim_id")),
+                    cause=payload.get("cause"),
                 )
 
             return deserialize_or_raise("ProcedureHeld", _build_held)
@@ -1352,9 +1531,22 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                         UUID(raw_decided_by) if raw_decided_by is not None else None
                     ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # Additive: a bare legacy resume clears every claim.
+                    released_claim_id=_optional_uuid(payload.get("released_claim_id")),
                 )
 
             return deserialize_or_raise("ProcedureResumed", _build_resumed)
+        case "ProcedureHoldClaimReleased":
+            return deserialize_or_raise(
+                "ProcedureHoldClaimReleased",
+                lambda: ProcedureHoldClaimReleased(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    claim_id=UUID(payload["claim_id"]),
+                    cause=payload["cause"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    decided_by_decision_id=_optional_uuid(payload.get("decided_by_decision_id")),
+                ),
+            )
         case "ProcedureActivitiesLogbookOpened":
             return deserialize_or_raise(
                 "ProcedureActivitiesLogbookOpened",
@@ -1490,12 +1682,20 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
 
 
 __all__ = [
+    "ATTENTION_HOLD_CAUSES",
+    "HOLD_CAUSES",
+    "HOLD_CAUSE_DRIVER_STAND_DOWN",
+    "HOLD_CAUSE_OPERATOR",
+    "HOLD_CAUSE_STEP_FAULT",
+    "LEGACY_CAUSE",
+    "LEGACY_CLAIM_ID",
     "ProcedureAborted",
     "ProcedureActivitiesLogbookOpened",
     "ProcedureCompleted",
     "ProcedureDiagnosticLogbookOpened",
     "ProcedureEvent",
     "ProcedureHeld",
+    "ProcedureHoldClaimReleased",
     "ProcedureIterationEnded",
     "ProcedureIterationStarted",
     "ProcedureOutcomeLogbookOpened",
@@ -1508,5 +1708,6 @@ __all__ = [
     "SteeringDesignRecorded",
     "event_type_name",
     "from_stored",
+    "is_deliberate_pause",
     "to_payload",
 ]

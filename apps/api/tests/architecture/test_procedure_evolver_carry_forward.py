@@ -79,6 +79,20 @@ _WRITER_ARMS_PER_FIELD: dict[str, frozenset[str]] = {
     # Declared at genesis and never rewritten: a Procedure's beam need is
     # a property of the task, not of any transition it makes.
     "beam_requirement": frozenset(),
+    # The hold-claim set: placed by ProcedureHeld, discharged by
+    # ProcedureResumed (which is legal only for the LAST claim) and by the
+    # audit-only ProcedureHoldClaimReleased (which leaves the status alone).
+    # The three terminals clear it, since a finished Procedure holds nothing.
+    "hold_claims": frozenset(
+        {
+            "ProcedureHeld",
+            "ProcedureResumed",
+            "ProcedureHoldClaimReleased",
+            "ProcedureCompleted",
+            "ProcedureAborted",
+            "ProcedureTruncated",
+        }
+    ),
 }
 
 #: Fields every arm sets structurally rather than carrying forward:

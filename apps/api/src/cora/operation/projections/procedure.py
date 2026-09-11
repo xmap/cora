@@ -14,9 +14,15 @@ Subscribed events:
                                                               + interrupted_at
   - ProcedureHeld                -> UPDATE status='Held'      + status-change ts
                                                               + last_status_reason
+                                                              + hold_causes (append)
+  - ProcedureHoldClaimReleased   -> UPDATE hold_causes (remove); status NOT
+                                           touched, since one concern letting
+                                           go does not decide whether the
+                                           Procedure runs again
   - ProcedureResumed             -> UPDATE status='Running'   + status-change ts
                                                               (clears last_status_reason:
                                                                Running is not reason-bearing)
+                                                              + hold_causes = {}
   - ProcedureActivitiesLogbookOpened  -> UPDATE activity_logbook_id (status NOT touched;
                                                              logbook is orthogonal
                                                              to lifecycle)
@@ -40,6 +46,23 @@ rather than setting it), so a single parameterized SQL would need
 conditional columns and read worse than the explicit constants. Revisit
 only if a future arm restores uniformity.
 
+## hold_causes
+
+Which concerns are holding, oldest first, denormed so a reader can ask "held
+by what" without folding the aggregate. Its consumer is the ProcedureWatcher,
+which used to clock every hold against one week-long window because `status`
+could not tell a deliberate operator pause from a conduct the Conductor parked
+on a fault. The CAUSES are denormed rather than a precomputed
+"needs attention" flag: the classification lives in `ATTENTION_HOLD_CAUSES`,
+and baking it in here would leave old rows silently wrong the day it changes.
+
+Append is deduplicated by claim CAUSE rather than by `array_append` alone,
+because a re-delivered `ProcedureHeld` must not stack a second copy. That
+mirrors the aggregate, where `_with_claim` is idempotent on an already-active
+claim id. A pre-claim `ProcedureHeld` carries no cause and folds to
+`LEGACY_CAUSE` in the aggregate, so it lands as that string here too rather
+than as an empty append.
+
 All branches idempotent. The status CHECK was widened to admit 'Held' in
 migration `20260621060000_proc_summary_status_admit_held` (Resumed maps
 back to 'Running', so 'Held' is the only new persisted value). See
@@ -53,14 +76,15 @@ from uuid import UUID
 
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.infrastructure.projection.handler import ConnectionLike
+from cora.operation.aggregates.procedure import LEGACY_CAUSE
 
 _INSERT_PROCEDURE_SQL = """
 INSERT INTO proj_operation_procedure_summary
     (procedure_id, name, kind, target_asset_ids, parent_run_id, status,
      activity_logbook_id, registered_at,
      last_status_changed_at, last_status_reason, interrupted_at,
-     recipe_id, iteration_count)
-VALUES ($1, $2, $3, $4::uuid[], $5, 'Defined', NULL, $6, NULL, NULL, NULL, $7, 0)
+     recipe_id, iteration_count, hold_causes)
+VALUES ($1, $2, $3, $4::uuid[], $5, 'Defined', NULL, $6, NULL, NULL, NULL, $7, 0, '{}')
 ON CONFLICT (procedure_id) DO NOTHING
 """
 
@@ -76,6 +100,7 @@ _UPDATE_COMPLETED_SQL = """
 UPDATE proj_operation_procedure_summary
 SET status = 'Completed',
     last_status_changed_at = $2,
+    hold_causes = '{}',
     updated_at = now()
 WHERE procedure_id = $1
 """
@@ -85,6 +110,7 @@ UPDATE proj_operation_procedure_summary
 SET status = 'Aborted',
     last_status_changed_at = $2,
     last_status_reason = $3,
+    hold_causes = '{}',
     updated_at = now()
 WHERE procedure_id = $1
 """
@@ -95,6 +121,7 @@ SET status = 'Truncated',
     last_status_changed_at = $2,
     last_status_reason = $3,
     interrupted_at = $4,
+    hold_causes = '{}',
     updated_at = now()
 WHERE procedure_id = $1
 """
@@ -104,6 +131,16 @@ UPDATE proj_operation_procedure_summary
 SET status = 'Held',
     last_status_changed_at = $2,
     last_status_reason = $3,
+    hold_causes = CASE WHEN $4 = ANY(hold_causes)
+                       THEN hold_causes
+                       ELSE array_append(hold_causes, $4::text) END,
+    updated_at = now()
+WHERE procedure_id = $1
+"""
+
+_UPDATE_HOLD_CLAIM_RELEASED_SQL = """
+UPDATE proj_operation_procedure_summary
+SET hold_causes = array_remove(hold_causes, $2::text),
     updated_at = now()
 WHERE procedure_id = $1
 """
@@ -113,6 +150,7 @@ UPDATE proj_operation_procedure_summary
 SET status = 'Running',
     last_status_changed_at = $2,
     last_status_reason = NULL,
+    hold_causes = '{}',
     updated_at = now()
 WHERE procedure_id = $1
 """
@@ -144,6 +182,7 @@ class ProcedureSummaryProjection:
             "ProcedureAborted",
             "ProcedureTruncated",
             "ProcedureHeld",
+            "ProcedureHoldClaimReleased",
             "ProcedureResumed",
             "ProcedureActivitiesLogbookOpened",
             "ProcedureIterationStarted",
@@ -220,11 +259,23 @@ class ProcedureSummaryProjection:
             return
 
         if event.event_type == "ProcedureHeld":
+            # A pre-claim hold carries no cause; the aggregate folds it to
+            # LEGACY_CAUSE, so the denorm says the same rather than recording
+            # a Held row that nothing appears to hold.
             await conn.execute(
                 _UPDATE_HELD_SQL,
                 UUID(event.payload["procedure_id"]),
                 datetime.fromisoformat(event.payload["occurred_at"]),
                 event.payload["reason"],
+                event.payload.get("cause") or LEGACY_CAUSE,
+            )
+            return
+
+        if event.event_type == "ProcedureHoldClaimReleased":
+            await conn.execute(
+                _UPDATE_HOLD_CLAIM_RELEASED_SQL,
+                UUID(event.payload["procedure_id"]),
+                event.payload["cause"],
             )
             return
 

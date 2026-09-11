@@ -123,14 +123,18 @@ def test_decide_rejects_too_long_reason() -> None:
     "status",
     [
         ProcedureStatus.DEFINED,
-        ProcedureStatus.HELD,
         ProcedureStatus.COMPLETED,
         ProcedureStatus.ABORTED,
         ProcedureStatus.TRUNCATED,
     ],
 )
-def test_decide_rejects_non_running_status(status: ProcedureStatus) -> None:
-    """Holding a non-Running procedure raises (re-holding a Held one too)."""
+def test_decide_rejects_non_holdable_status(status: ProcedureStatus) -> None:
+    """A Defined or terminal Procedure cannot be parked at all.
+
+    `Held` is deliberately absent: a SECOND concern must be able to record a
+    hold on an already-held conduct, which is the fault cause-scoped claims
+    exist to fix. Re-holding under the SAME cause is still refused, by the
+    per-claim guard rather than by this status guard."""
     proc = _procedure(status=status)
     with pytest.raises(ProcedureCannotHoldError) as exc:
         hold_procedure.decide(

@@ -72,7 +72,9 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import Allow, Conjunct, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID, SYSTEM_HTTP_SURFACE_ID
 from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_OPERATOR,
     ProcedureRegistered,
+    derive_claim_id,
     event_type_name,
     to_payload,
 )
@@ -293,13 +295,15 @@ async def test_a_person_and_an_agent_hold_through_one_gate_and_the_record_agrees
     # equal. A future field written on one path and not the other fails
     # here without anyone remembering to add an assertion for it.
     #
-    # Three fields are stripped and each for its own reason. `stream_id`
+    # Four fields are stripped and each for its own reason. `stream_id`
     # and the payload's `procedure_id` name the two different Procedures.
-    # `principal_id` is the one the claim is about, and it is asserted
-    # explicitly below rather than merely dropped.
+    # `claim_id` is DERIVED from that same procedure_id, so it differs for
+    # exactly the same reason. `principal_id` is the one the claim is about.
+    # The last two are asserted explicitly below rather than merely dropped.
     def comparable(row: dict[str, Any]) -> dict[str, Any]:
         payload = dict(row["payload"])
         payload.pop("procedure_id", None)
+        payload.pop("claim_id", None)
         return {
             **{k: v for k, v in row.items() if k not in ("stream_id", "principal_id", "payload")},
             "payload": payload,
@@ -310,6 +314,16 @@ async def test_a_person_and_an_agent_hold_through_one_gate_and_the_record_agrees
     # The comparison is only worth something if there was something to
     # compare: an empty dict on both sides would satisfy it silently.
     assert human_row["payload"], human_row
+
+    # The stripped claim id, checked rather than ignored. Both paths must place
+    # the hold under the SAME cause, differing only by which Procedure the
+    # claim is on. An agent whose hold was filed under a different cause than a
+    # person's would be the two principals shaped differently, which is the
+    # thing this test exists to refuse.
+    for proc in (human_proc, agent_proc):
+        payload = by_stream[proc]["payload"]
+        assert payload["cause"] == HOLD_CAUSE_OPERATOR, proc
+        assert payload["claim_id"] == str(derive_claim_id(proc, HOLD_CAUSE_OPERATOR)), proc
     assert human_row["metadata"], human_row
     assert by_stream[human_proc]["principal_id"] == human_id
     assert by_stream[agent_proc]["principal_id"] == agent_id

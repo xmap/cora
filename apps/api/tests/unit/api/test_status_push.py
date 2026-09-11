@@ -1680,6 +1680,7 @@ def _procedure_item(
         last_status_reason="operator said something private",
         interrupted_at=None,
         iteration_count=3,
+        hold_causes=[],
     )
 
 

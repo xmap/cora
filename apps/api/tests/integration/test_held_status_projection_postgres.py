@@ -12,6 +12,9 @@ Pins:
   - ProcedureResumed folds back to status='Running' and clears
     last_status_reason (Running is not reason-bearing).
   - The list_procedures read path surfaces + filters on status='Held'.
+  - `hold_causes` accumulates per concern and drains per discharge. The
+    unit tests mock the connection, so the array SQL (a deduplicated
+    append, an array_remove) executes for the first time here.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -25,6 +28,10 @@ import pytest
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.operation._projections import register_operation_projections
+from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_OPERATOR,
+    HOLD_CAUSE_STEP_FAULT,
+)
 from cora.operation.features.hold_procedure import HoldProcedure
 from cora.operation.features.hold_procedure import bind as bind_hold
 from cora.operation.features.list_procedures import ListProcedures
@@ -56,7 +63,8 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
 async def _status_row(db_pool: asyncpg.Pool, proc_id: UUID) -> asyncpg.Record:
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT status, last_status_reason FROM proj_operation_procedure_summary "
+            "SELECT status, last_status_reason, hold_causes "
+            "FROM proj_operation_procedure_summary "
             "WHERE procedure_id = $1",
             proc_id,
         )
@@ -91,6 +99,7 @@ async def test_hold_then_resume_drives_status_in_read_model(db_pool: asyncpg.Poo
     held = await _status_row(db_pool, proc_id)
     assert held["status"] == "Held"
     assert held["last_status_reason"] == "beam dropped"
+    assert held["hold_causes"] == ["operator"]
 
     # The list read path surfaces + filters on the new status.
     page = await bind_list(deps)(
@@ -112,3 +121,57 @@ async def test_hold_then_resume_drives_status_in_read_model(db_pool: asyncpg.Poo
     resumed = await _status_row(db_pool, proc_id)
     assert resumed["status"] == "Running"
     assert resumed["last_status_reason"] is None
+    assert resumed["hold_causes"] == []
+
+
+@pytest.mark.integration
+async def test_two_concerns_accumulate_and_drain_in_the_read_model(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The whole chain in the read model: a conduct parks itself, a person
+    pauses the same conduct, and the person's resume discharges both.
+
+    What this catches that the mocked unit tests cannot is the array SQL
+    itself, including that a re-delivered hold does not stack a second copy
+    of a cause it already carries.
+    """
+    proc_id = uuid4()
+    deps = _build_deps(db_pool, [proc_id, *[uuid4() for _ in range(8)]])
+
+    await bind_register(deps)(
+        RegisterProcedure(name="2-BM rotation alignment", kind="center_alignment"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_start(deps)(
+        StartProcedure(procedure_id=proc_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    for cause, reason in (
+        (HOLD_CAUSE_STEP_FAULT, "check on 2bma:rot:rbv did not settle"),
+        (HOLD_CAUSE_OPERATOR, "swapping the sample"),
+    ):
+        await bind_hold(deps)(
+            HoldProcedure(procedure_id=proc_id, reason=reason, cause=cause),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    await _drain(db_pool)
+    both = await _status_row(db_pool, proc_id)
+    assert both["status"] == "Held"
+    # Oldest first, mirroring Procedure.hold_claims.
+    assert both["hold_causes"] == [HOLD_CAUSE_STEP_FAULT, HOLD_CAUSE_OPERATOR]
+
+    # One resume, both concerns answered: the operator's claim rides the
+    # ProcedureResumed and the fault's gets its own release event.
+    await bind_resume(deps)(
+        ResumeProcedure(procedure_id=proc_id, re_establishment_boundary=0),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+    cleared = await _status_row(db_pool, proc_id)
+    assert cleared["status"] == "Running"
+    assert cleared["hold_causes"] == []

@@ -77,6 +77,7 @@ from cora.infrastructure.ports.clock import FakeClock
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
+from cora.operation.aggregates.procedure import HOLD_CAUSE_STEP_FAULT
 from cora.operation.conductor import (
     ActionContext,
     ActionStep,
@@ -2616,6 +2617,10 @@ async def test_conduct_or_hold_held_procedure_does_not_run_closing_steps() -> No
     assert result.held is True
     assert len(hold.calls) == 1
     assert dict(result.substrate_writes) == {"2bma:shutter": 1}  # NOT "2bma:closing"
+    # The conduct holds under its OWN claim. On the command's default cause the
+    # fault would be filed as an operator pause, so an operator holding the same
+    # conduct would find their hold refused as a duplicate of it.
+    assert hold.calls[0].command.cause == HOLD_CAUSE_STEP_FAULT
 
 
 @pytest.mark.unit

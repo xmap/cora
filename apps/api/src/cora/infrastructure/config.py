@@ -529,12 +529,15 @@ class Settings(BaseSettings):
     # sit without progressing before it is flagged; live conduct is far
     # shorter-lived than a clearance or calibration, so the default is an hour
     # (off by default; an operator sets the real window on enable).
-    # `procedure_watcher_held_stale_after_seconds` is the separate window for a
-    # Held procedure: a hold is commonly a deliberate operator pause (a bakeout,
-    # waiting on beam, waiting on a collaborator) that legitimately runs far
-    # longer than an hour, and a Held conduct logs no activity to fold in as a
-    # second chance, so it needs its own, much longer default; matches
-    # `campaign_watcher_stale_after_seconds`'s Held precedent, a week.
+    # `procedure_watcher_held_stale_after_seconds` is the window for a DELIBERATE
+    # operator pause (a bakeout, waiting on beam, waiting on a collaborator),
+    # which legitimately runs far longer than an hour and logs no activity to
+    # fold in as a second chance; matches `campaign_watcher_stale_after_seconds`'s
+    # Held precedent, a week. It is selected by the hold's recorded CAUSE, not by
+    # the Held status: a conduct the Conductor parked on a fault will not move
+    # until a person comes, so it takes the shorter window above. Anything the
+    # record cannot positively show to be an operator pause takes the short one
+    # too.
     procedure_watcher_enabled: bool = False
     procedure_watcher_tick_seconds: float = 300.0
     procedure_watcher_stale_after_seconds: float = 3600.0

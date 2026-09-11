@@ -12,9 +12,11 @@ import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_OPERATOR,
     InvalidProcedureHoldReasonError,
     ProcedureCannotHoldError,
     ProcedureNotFoundError,
+    derive_claim_id,
 )
 from cora.operation.errors import UnauthorizedError
 from cora.operation.features import hold_procedure
@@ -63,6 +65,10 @@ async def test_handler_appends_procedure_held_event_with_trimmed_reason() -> Non
         "occurred_at": _NOW.isoformat(),
         # Operator hold (no conduct observer) leaves actuation_kind None.
         "actuation_kind": None,
+        # The route and tool do not expose `cause`, so an operator hold is
+        # what a wire caller always gets, under a claim derived from it.
+        "claim_id": str(derive_claim_id(_PROCEDURE_ID, HOLD_CAUSE_OPERATOR)),
+        "cause": HOLD_CAUSE_OPERATOR,
     }
 
 

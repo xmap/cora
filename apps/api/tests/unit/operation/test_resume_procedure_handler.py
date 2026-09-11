@@ -14,10 +14,12 @@ import pytest
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.operation.aggregates.procedure import (
+    HOLD_CAUSE_OPERATOR,
     ProcedureCannotResumeError,
     ProcedureNotFoundError,
     ProcedureRegistered,
     ProcedureStarted,
+    derive_claim_id,
     event_type_name,
     to_payload,
 )
@@ -142,6 +144,9 @@ async def test_handler_appends_procedure_resumed_event() -> None:
         "re_establishment_boundary": 2,
         "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
+        # The hold above placed an operator claim, and it is the only one, so
+        # the resume discharges it by name rather than clearing the world.
+        "released_claim_id": str(derive_claim_id(_PROCEDURE_ID, HOLD_CAUSE_OPERATOR)),
     }
 
 

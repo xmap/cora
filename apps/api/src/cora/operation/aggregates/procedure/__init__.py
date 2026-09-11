@@ -25,12 +25,20 @@ from cora.operation.aggregates.procedure.entries import (
     PostgresOutcomeStore,
 )
 from cora.operation.aggregates.procedure.events import (
+    ATTENTION_HOLD_CAUSES,
+    HOLD_CAUSE_DRIVER_STAND_DOWN,
+    HOLD_CAUSE_OPERATOR,
+    HOLD_CAUSE_STEP_FAULT,
+    HOLD_CAUSES,
+    LEGACY_CAUSE,
+    LEGACY_CLAIM_ID,
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
     ProcedureDiagnosticLogbookOpened,
     ProcedureEvent,
     ProcedureHeld,
+    ProcedureHoldClaimReleased,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
     ProcedureOutcomeLogbookOpened,
@@ -43,9 +51,11 @@ from cora.operation.aggregates.procedure.events import (
     SteeringDesignRecorded,
     event_type_name,
     from_stored,
+    is_deliberate_pause,
     to_payload,
 )
 from cora.operation.aggregates.procedure.evolver import evolve, fold
+from cora.operation.aggregates.procedure.hold_claims import derive_claim_id
 from cora.operation.aggregates.procedure.read import (
     load_procedure,
     load_procedure_with_events,
@@ -87,6 +97,7 @@ from cora.operation.aggregates.procedure.state import (
     ProcedureCannotTruncateError,
     ProcedureCapabilityExecutorMismatchError,
     ProcedureEnclosureCoverageMismatchError,
+    ProcedureHoldClaimsRemainError,
     ProcedureHoldReason,
     ProcedureIterationLimitReachedError,
     ProcedureName,
@@ -113,7 +124,14 @@ from cora.operation.aggregates.procedure.state import (
 )
 
 __all__ = [
+    "ATTENTION_HOLD_CAUSES",
     "DIAGNOSTIC_LOGBOOK_SCHEMA",
+    "HOLD_CAUSES",
+    "HOLD_CAUSE_DRIVER_STAND_DOWN",
+    "HOLD_CAUSE_OPERATOR",
+    "HOLD_CAUSE_STEP_FAULT",
+    "LEGACY_CAUSE",
+    "LEGACY_CLAIM_ID",
     "LOGBOOK_KIND_ACTIVITY",
     "LOGBOOK_KIND_DIAGNOSTIC",
     "LOGBOOK_KIND_OUTCOME",
@@ -167,6 +185,8 @@ __all__ = [
     "ProcedureEnclosureCoverageMismatchError",
     "ProcedureEvent",
     "ProcedureHeld",
+    "ProcedureHoldClaimReleased",
+    "ProcedureHoldClaimsRemainError",
     "ProcedureHoldReason",
     "ProcedureIterationEnded",
     "ProcedureIterationLimitReachedError",
@@ -199,10 +219,12 @@ __all__ = [
     "ResolvedStepsRecorded",
     "SteeringDesignRecorded",
     "StepKind",
+    "derive_claim_id",
     "event_type_name",
     "evolve",
     "fold",
     "from_stored",
+    "is_deliberate_pause",
     "load_procedure",
     "load_procedure_with_events",
     "merge_actuation_kinds",

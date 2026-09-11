@@ -23,6 +23,7 @@ from cora.infrastructure.ports.principal_liveness_lookup import PrincipalLivenes
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
+from cora.operation.aggregates.procedure import HOLD_CAUSE_DRIVER_STAND_DOWN
 from cora.operation.conductor import Conductor, ConductorResult
 from cora.operation.ports.decide_port import (
     SteeringAdvice,
@@ -160,6 +161,10 @@ async def test_loop_holds_at_the_boundary_where_the_driver_was_stood_down() -> N
     assert "hold_procedure" in " ".join(transcript.events)
     assert "abort_procedure" not in transcript.events
     assert "complete_procedure" not in transcript.events
+    # Its own claim, distinct from a step fault: a stood-down driver is answered
+    # by reinstating the driver, not by the equipment recovering, so the two
+    # must be able to hold the same conduct at once.
+    assert transcript.hold_causes == [HOLD_CAUSE_DRIVER_STAND_DOWN]
 
 
 @pytest.mark.unit

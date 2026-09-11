@@ -1189,6 +1189,8 @@ def test_to_payload_serializes_procedure_held() -> None:
         "decided_by_decision_id": str(decision_id),
         "occurred_at": _NOW.isoformat(),
         "actuation_kind": "Simulated",
+        "claim_id": None,
+        "cause": None,
     }
 
 
@@ -1203,6 +1205,7 @@ def test_to_payload_serializes_procedure_resumed_with_null_decision() -> None:
         "re_establishment_boundary": 5,
         "decided_by_decision_id": None,
         "occurred_at": _NOW.isoformat(),
+        "released_claim_id": None,
     }
 
 

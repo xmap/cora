@@ -23,16 +23,29 @@ liveness gap is one `_run_supervisor` does not cover.
 
 `stalled_seconds = now - last_progress_at`.
 
-`Running` and `Held` are clocked against SEPARATE operator-config windows
-(`procedure_watcher_stale_after_seconds` and
-`procedure_watcher_held_stale_after_seconds`), because the two statuses mean
-different things: a `Running` procedure sitting idle for an hour is a plausible
-stall, but a `Held` procedure sitting for an hour is routinely a deliberate
-operator pause (a bakeout, waiting on beam, waiting on a collaborator) that can
-legitimately run for days. One shared window would either false-flag an
-ordinary overnight hold or blind the watcher to a genuinely stuck `Running`
-conduct; this mirrors `_campaign_watcher`'s week-long default for its own
-`Held` window.
+Two operator-config windows (`procedure_watcher_stale_after_seconds` and
+`procedure_watcher_held_stale_after_seconds`) are selected per procedure, and
+what selects them is NOT the status. A `Running` procedure idle for an hour is
+a plausible stall; a `Held` one is routinely a deliberate operator pause (a
+bakeout, waiting on beam, waiting on a collaborator) that legitimately runs for
+days, which is why the long window exists and mirrors `_campaign_watcher`'s.
+
+But `Held` alone never meant "deliberate pause". The Conductor parks a conduct
+on a recoverable step fault or a stood-down steering driver, and that is the
+OPPOSITE case: nothing in CORA will move it until a person comes, so a week of
+silence is precisely wrong for it. While a hold was one bit, the watcher could
+not tell the two apart and gave every hold the benefit of the doubt. Now that a
+hold records its cause, it does not have to.
+
+So the long window applies only on POSITIVE evidence of a deliberate pause:
+`hold_causes` is non-empty and every cause in it is `operator`. Everything else
+gets the short one. That is deliberately the loud direction on missing or
+unrecognized evidence, because the whole point is that a machine-parked conduct
+must not hide, and being wrong costs one advisory Decision a person can ignore.
+A hold placed before causes were recorded folds to `legacy-unscoped`, which is
+not evidence of anything and so gets the short window; on a deployment carrying
+such holds that is a one-time flag per procedure, which is the correct answer
+to "nobody can say why this is held".
 
 For `Held` the conduct is paused and accepts no activity, so
 `last_status_changed_at` (the time it was held, on the list projection) is the
@@ -84,6 +97,7 @@ from cora.infrastructure.routing import SYSTEM_IN_PROCESS_SURFACE_ID
 from cora.operation.adapters.postgres_procedure_activity_lookup import (
     PostgresProcedureActivityLookup,
 )
+from cora.operation.aggregates.procedure import is_deliberate_pause
 from cora.operation.errors import UnauthorizedError
 from cora.operation.features.list_procedures import ListProcedures
 from cora.operation.ports import InMemoryProcedureActivityLookup
@@ -136,6 +150,7 @@ async def _record_decision(
     *,
     procedure_id: UUID,
     status: str,
+    hold_causes: tuple[str, ...],
     last_progress_at: datetime,
     now: datetime,
 ) -> None:
@@ -152,13 +167,17 @@ async def _record_decision(
         entity_id=procedure_id,
         now=now,
         reasoning=(
-            f"Procedure has been {status} for {stalled_seconds}s without progressing "
-            "(past the staleness window, no recent activity); surfaced for operator "
-            "follow-up."
+            f"Procedure has been {status}{_held_by_clause(hold_causes)} for "
+            f"{stalled_seconds}s without progressing (past the staleness window, no "
+            "recent activity); surfaced for operator follow-up."
         ),
         inputs={
             "procedure_id": str(procedure_id),
             "status": status,
+            # The causes ride the record because they are what chose the
+            # window: without them the Decision cannot be read back to see
+            # whether the short window was applied for the right reason.
+            "hold_causes": ",".join(hold_causes),
             "last_progress_at": last_progress_at.isoformat(),
             "stalled_seconds": str(stalled_seconds),
             "occurred_at": now.isoformat(),
@@ -223,7 +242,10 @@ async def _watch_tick(
         if base is None:
             # No status-change timestamp recorded: cannot evaluate; defer.
             continue
-        stale_after = stale_after_held if item.status == _STATUS_HELD else stale_after_running
+        hold_causes = tuple(item.hold_causes)
+        stale_after = stale_after_running
+        if item.status == _STATUS_HELD and is_deliberate_pause(hold_causes):
+            stale_after = stale_after_held
         if not is_stalled(base, now, stale_after):
             # Fresh by its status's own window. For Running a later activity only
             # makes it fresher, so skipping here cannot hide a stall.
@@ -244,6 +266,7 @@ async def _watch_tick(
             deps,
             procedure_id=item.procedure_id,
             status=item.status,
+            hold_causes=hold_causes,
             last_progress_at=last_progress_at,
             now=now,
         )
@@ -287,6 +310,13 @@ async def procedure_watcher_lifespan(
         interval_seconds=interval_seconds,
     ):
         yield
+
+
+def _held_by_clause(hold_causes: tuple[str, ...]) -> str:
+    """The ` (held by x, y)` fragment, empty when nothing is recorded."""
+    if not hold_causes:
+        return ""
+    return f" (held by {', '.join(hold_causes)})"
 
 
 __all__ = ["is_stalled", "procedure_watcher_lifespan"]

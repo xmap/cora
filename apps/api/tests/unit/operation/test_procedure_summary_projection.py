@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.operation.aggregates.procedure import LEGACY_CAUSE
 from cora.operation.projections import ProcedureSummaryProjection
 
 _PROCEDURE_ID = uuid4()
@@ -50,6 +51,7 @@ def test_projection_metadata() -> None:
             "ProcedureAborted",
             "ProcedureTruncated",
             "ProcedureHeld",
+            "ProcedureHoldClaimReleased",
             "ProcedureResumed",
             "ProcedureActivitiesLogbookOpened",
             "ProcedureIterationStarted",
@@ -248,6 +250,99 @@ async def test_procedure_held_updates_status_and_reason() -> None:
 
 
 @pytest.mark.unit
+async def test_procedure_held_appends_the_holding_cause() -> None:
+    """`status` says a conduct is paused, never by whom, and the watcher's
+    window now turns on which concern it is."""
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureHeld",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "reason": "check did not settle",
+            "cause": "step-fault",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    sql = conn.execute.call_args.args[0]
+    # Deduplicated rather than a bare array_append: a re-delivered hold must
+    # not stack a second copy, mirroring the aggregate's idempotent
+    # `_with_claim`.
+    assert "array_append(hold_causes" in sql
+    assert "= ANY(hold_causes)" in sql
+    assert conn.execute.call_args.args[4] == "step-fault"
+
+
+@pytest.mark.unit
+async def test_procedure_held_without_a_cause_records_the_legacy_one() -> None:
+    """A pre-claim hold carries no cause and the aggregate folds it to
+    LEGACY_CAUSE. Writing nothing instead would leave a Held row claiming
+    that nothing holds it, which reads as a deliberate pause to the watcher."""
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureHeld",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "reason": "beam dropped",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    assert conn.execute.call_args.args[4] == LEGACY_CAUSE
+
+
+@pytest.mark.unit
+async def test_hold_claim_released_drops_the_cause_and_leaves_the_status() -> None:
+    """One concern letting go does not decide whether the Procedure runs
+    again; that is the ProcedureResumed's business in the same append."""
+    proj = ProcedureSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureHoldClaimReleased",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "claim_id": str(uuid4()),
+            "cause": "step-fault",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    sql = conn.execute.call_args.args[0]
+    assert "array_remove(hold_causes" in sql
+    assert "SET status" not in sql
+    assert conn.execute.call_args.args[1] == _PROCEDURE_ID
+    assert conn.execute.call_args.args[2] == "step-fault"
+
+
+@pytest.mark.unit
+async def test_resume_and_every_terminal_clear_the_holding_causes() -> None:
+    """A Running or finished Procedure holds nothing, so no arm may leave a
+    cause behind for the watcher to read as a live hold."""
+    proj = ProcedureSummaryProjection()
+    for event_type, extra in (
+        ("ProcedureResumed", {"re_establishment_boundary": 0}),
+        ("ProcedureCompleted", {}),
+        ("ProcedureAborted", {"reason": "vacuum loss"}),
+        ("ProcedureTruncated", {"reason": "power loss", "interrupted_at": _NOW.isoformat()}),
+    ):
+        conn = AsyncMock()
+        await proj.apply(
+            _stored(
+                event_type,
+                {
+                    "procedure_id": str(_PROCEDURE_ID),
+                    "occurred_at": _NOW.isoformat(),
+                    **extra,
+                },
+            ),
+            conn,
+        )
+        assert "hold_causes = '{}'" in conn.execute.call_args.args[0], event_type
+
+
+@pytest.mark.unit
 async def test_procedure_resumed_updates_status_to_running_and_clears_reason() -> None:
     proj = ProcedureSummaryProjection()
     conn = AsyncMock()
@@ -316,8 +411,10 @@ async def test_procedure_registered_seeds_iteration_count_to_zero() -> None:
     await proj.apply(event, conn)
     sql = conn.execute.call_args.args[0]
     assert "iteration_count" in sql
-    # iteration_count is seeded with the literal 0 (no positional arg).
-    assert ", 0)" in sql.replace("\n", " ").replace("  ", " ")
+    # iteration_count and hold_causes are both seeded with literals (no
+    # positional arg): a fresh Procedure has run no iterations and is Defined,
+    # so nothing holds it.
+    assert ", 0, '{}')" in sql.replace("\n", " ").replace("  ", " ")
 
 
 @pytest.mark.unit

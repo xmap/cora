@@ -980,24 +980,57 @@ class ProcedureCannotTruncateError(Exception):
 
 
 class ProcedureCannotHoldError(Exception):
-    """Attempted to hold a Procedure not in `Running`.
+    """Attempted to hold a Procedure that this concern cannot hold.
 
-    Single-source guard: `hold_procedure` accepts only `Running`.
-    Re-holding an already-`Held` Procedure raises (strict-not-
-    idempotent); holding a `Defined` or terminal Procedure raises.
-    Mirrors `RunCannotHoldError`. Hold <-> Resume is bidirectional and
-    unlimited-cycle: an operator can hold -> resume -> hold repeatedly
-    within one conduct, each hold requiring an intervening resume.
-    Mapped to HTTP 409.
+    Two cases. The status is neither `Running` nor `Held` (a `Defined` or
+    terminal Procedure cannot be parked at all), or THIS concern already
+    holds an active claim.
+
+    `Held` became a legal starting status when holds gained claims. It was
+    not before, and that was right while a hold had one author: it became a
+    fault once independent concerns could each park the same conduct, since
+    a second concern arriving at an already-Held Procedure could not record
+    its intent and the first concern's resume then restarted the conduct
+    with the second's cause unenforced. The guard moved from "is this
+    Procedure un-held" to "is THIS CONCERN already holding it", so
+    alternation is still enforced per claim while two DIFFERENT concerns
+    may now hold at once. Mirrors `RunCannotHoldError`. Mapped to HTTP 409.
     """
 
     def __init__(self, procedure_id: UUID, current_status: "ProcedureStatus") -> None:
         super().__init__(
-            f"Procedure {procedure_id} cannot be held: currently in status "
-            f"{current_status.value}, hold requires {ProcedureStatus.RUNNING.value}"
+            f"Procedure {procedure_id} cannot be held by this concern: currently in "
+            f"status {current_status.value}, and a hold requires "
+            f"{ProcedureStatus.RUNNING.value} or {ProcedureStatus.HELD.value} with no "
+            f"active claim for this cause"
         )
         self.procedure_id = procedure_id
         self.current_status = current_status
+
+
+class ProcedureHoldClaimsRemainError(Exception):
+    """Attempted to resume a Held Procedure OTHER concerns are still holding.
+
+    The Procedure is `Held` and the caller holds no active claim of its own,
+    so resuming would clear a hold the caller never placed. That is the fault
+    this class exists to make impossible: an operator must not restart a
+    conduct the Conductor parked on a failed setpoint, and a re-established
+    step must not restart one whose steering driver is still stood down.
+
+    `blocking_causes` names the concerns still holding, so the caller learns
+    which one to address rather than only that it was refused. Clearing
+    another concern's claim is that concern's business. Mirrors
+    `RunHoldClaimsRemainError`. Mapped to HTTP 409.
+    """
+
+    def __init__(self, procedure_id: UUID, blocking_causes: tuple[str, ...]) -> None:
+        causes = ", ".join(blocking_causes) if blocking_causes else "unknown"
+        super().__init__(
+            f"Procedure {procedure_id} cannot be resumed: still held by {causes}. "
+            f"Each concern discharges its own claim."
+        )
+        self.blocking_causes = blocking_causes
+        self.procedure_id = procedure_id
 
 
 class ProcedureCannotResumeError(Exception):
@@ -1557,6 +1590,18 @@ class Procedure:
     a denorm for audit-by-Capability read paths without requiring a
     Recipe join. Both fields are set by `register_procedure_from_recipe`
     to the same logical binding."""
+    hold_claims: tuple[tuple[UUID, str], ...] = ()
+    """Which concerns are currently holding this Procedure, oldest first.
+
+    `status` alone answers "is this Held"; it cannot answer "by whom, and is
+    anyone else still holding it". That was adequate while a hold had a single
+    author and became a fault once independent concerns could each park the
+    same conduct: a second holder could not record its intent, and the first
+    holder's resume then restarted the conduct with the second's cause
+    unenforced. Terminal arms clear it, since a finished Procedure holds
+    nothing. Defaults to empty so pre-claim streams fold cleanly. Mirrors
+    `Run.hold_claims`."""
+
     current_iteration_index: int | None = field(default=None)
     """The convergence-loop iteration currently open, or None.
 
