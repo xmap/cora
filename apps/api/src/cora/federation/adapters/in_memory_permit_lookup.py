@@ -10,8 +10,10 @@ from `proj_federation_permit_summary`.
 from uuid import UUID
 
 from cora.infrastructure.ports.federation.permit_lookup import (
+    AbiTierValue,
     PermitLookup,
     PermitLookupResult,
+    PermitStatusValue,
 )
 from cora.shared.facility_code import FacilityCode
 
@@ -62,8 +64,8 @@ class InMemoryPermitLookup(PermitLookup):
         peer_facility_id: str | FacilityCode,
         artifact_kind: str,
         permit_id: UUID,
-        status: str = "Active",
-        abi_tier_floor: str = "Stable",
+        status: PermitStatusValue = "Active",
+        abi_tier_floor: AbiTierValue = "Stable",
         current_version: int = 0,
     ) -> PermitLookupResult:
         """Convenience: seed an outbound permit; returns the seeded result for assertions."""
@@ -90,8 +92,8 @@ class InMemoryPermitLookup(PermitLookup):
         peer_facility_id: str | FacilityCode,
         artifact_kind: str,
         permit_id: UUID,
-        status: str = "Active",
-        abi_tier_floor: str = "Stable",
+        status: PermitStatusValue = "Active",
+        abi_tier_floor: AbiTierValue = "Stable",
         current_version: int = 0,
     ) -> PermitLookupResult:
         """Convenience: seed an inbound permit; returns the seeded result for assertions."""

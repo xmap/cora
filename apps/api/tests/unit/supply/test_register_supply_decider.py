@@ -10,7 +10,11 @@ from cora.infrastructure.ports.asset_lookup import (
     AssetLookupResult,
     AssetTierValue,
 )
-from cora.infrastructure.ports.facility_lookup import FacilityLookupResult, FacilityStatusValue
+from cora.infrastructure.ports.facility_lookup import (
+    FacilityKindValue,
+    FacilityLookupResult,
+    FacilityStatusValue,
+)
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.supply.aggregates.supply import (
@@ -36,7 +40,7 @@ _CONTAINING_ASSET_ID = UUID("01900000-0000-7000-8000-000000000a55")
 
 def _facility_lookup_result(
     *,
-    kind: str = "Site",
+    kind: FacilityKindValue = "Site",
     status: FacilityStatusValue = "Active",
 ) -> FacilityLookupResult:
     return FacilityLookupResult(

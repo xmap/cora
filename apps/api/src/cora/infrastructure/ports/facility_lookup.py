@@ -45,15 +45,15 @@ two-tier identity (id + code).
 
 ## No BC imports in the port
 
-`kind` stays typed `str` (not Federation BC's `FacilityKind`
-StrEnum) and `status` is a `Literal` alias pinning Federation BC's
-`FacilityStatus` StrEnum value set (not the StrEnum itself), so this
-port stays inside `cora.infrastructure`'s `depends_on = []` tach
-contract: `Literal` comes from `typing`, so the alias pins the
-enum's value set without importing the enum. A fitness test pins
-the alias to the enum and fails if the two ever drift. `kind`'s
-values match the StrEnum's string values; deciders partition by
-literal comparison (`kind == "Site"`, `status == "Active"`).
+`kind` and `status` are `Literal` aliases pinning Federation BC's
+`FacilityKind` and `FacilityStatus` StrEnum value sets, not the
+StrEnums themselves, so this port stays inside
+`cora.infrastructure`'s `depends_on = []` tach contract: `Literal`
+comes from `typing`, so an alias pins a value set without importing
+the enum. A fitness test pins each alias to its enum and fails if
+the two ever drift, so a decider partitioning by literal comparison
+(`kind == "Site"`, `status == "Active"`) is a type error the moment
+it names a value the enum does not have.
 
 `trust_anchor_credential_ids` is typed `frozenset[UUID]` (not
 `frozenset[CredentialId]`) for the same tach reason; Federation BC
@@ -75,6 +75,7 @@ from uuid import UUID
 
 from cora.shared.facility_code import FacilityCode
 
+FacilityKindValue = Literal["Site", "Area"]
 FacilityStatusValue = Literal["Active", "Decommissioned"]
 
 
@@ -106,7 +107,7 @@ class FacilityLookupResult:
 
     id: UUID
     code: FacilityCode
-    kind: str
+    kind: FacilityKindValue
     status: FacilityStatusValue
     trust_anchor_credential_ids: frozenset[UUID]
 

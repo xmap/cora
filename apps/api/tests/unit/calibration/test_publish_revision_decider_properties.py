@@ -27,7 +27,7 @@ an Idempotency-Key. Re-issue de-duplication is not asserted here.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 from uuid import UUID, uuid4
 
 import pytest
@@ -54,6 +54,7 @@ from cora.calibration.features.publish_revision import (
 from cora.infrastructure.ports.federation import (
     DsseStaticJwksEnvelope,
     PermitLookupResult,
+    PermitStatusValue,
 )
 from cora.shared.facility_code import FACILITY_CODE_MAX_LENGTH, FacilityCode
 from cora.shared.identity import ActorId
@@ -72,8 +73,10 @@ _PEER_FACILITY_ID = st.lists(
 _SIGNATURE_KID = printable_ascii_text(min_size=1, max_size=128)
 _SIGNING_VERSION = st.sampled_from(["cora/v1"])
 _PAYLOAD_BYTES = st.binary(min_size=1, max_size=512)
-_PERMIT_NON_ACTIVE_STATUS = st.sampled_from(["Defined", "Suspended", "Revoked"])
-_PERMIT_ANY_STATUS = st.sampled_from(["Defined", "Active", "Suspended", "Revoked"])
+_PERMIT_ANY_STATUS = st.sampled_from(get_args(PermitStatusValue))
+_PERMIT_NON_ACTIVE_STATUS = st.sampled_from(
+    tuple(value for value in get_args(PermitStatusValue) if value != "Active")
+)
 
 
 def _revision(
@@ -122,7 +125,9 @@ def _envelope(payload_bytes: bytes, signing_version: str) -> DsseStaticJwksEnvel
     )
 
 
-def _permit(*, permit_id: UUID, peer_facility_id: str, status: str) -> PermitLookupResult:
+def _permit(
+    *, permit_id: UUID, peer_facility_id: str, status: PermitStatusValue
+) -> PermitLookupResult:
     return PermitLookupResult(
         permit_id=permit_id,
         peer_facility_id=FacilityCode(peer_facility_id),
@@ -188,7 +193,7 @@ def test_decide_with_unknown_revision_always_raises_revision_not_found(
     calibration_id: UUID,
     known_revision_id: UUID,
     queried_revision_id: UUID,
-    permit_status: str,
+    permit_status: PermitStatusValue,
     content_hash: str,
     peer_facility_id: str,
     receipt_id: UUID,
@@ -244,7 +249,7 @@ def test_decide_with_unknown_revision_always_raises_revision_not_found(
 def test_decide_with_legacy_revision_always_raises_cannot_publish(
     calibration_id: UUID,
     revision_id: UUID,
-    permit_status: str,
+    permit_status: PermitStatusValue,
     peer_facility_id: str,
     receipt_id: UUID,
     now: datetime,
@@ -300,7 +305,7 @@ def test_decide_with_inactive_permit_always_raises_permit_not_active(
     calibration_id: UUID,
     revision_id: UUID,
     content_hash: str,
-    permit_status: str,
+    permit_status: PermitStatusValue,
     peer_facility_id: str,
     receipt_id: UUID,
     now: datetime,

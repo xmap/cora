@@ -42,7 +42,12 @@ from cora.equipment.aggregates.assembly import AssemblyStatus
 from cora.equipment.aggregates.asset import AssetLifecycle, AssetTier
 from cora.equipment.aggregates.family import FamilyStatus
 from cora.federation.aggregates.credential import CredentialStatus
-from cora.federation.aggregates.facility import FacilityStatus
+from cora.federation.aggregates.facility import FacilityKind, FacilityStatus
+from cora.federation.aggregates.permit.state import (
+    AbiTier,
+    Direction,
+    PermitStatus,
+)
 from cora.infrastructure.ports.assembly_lookup import AssemblyStatusValue
 from cora.infrastructure.ports.asset_lookup import AssetLifecycleValue, AssetTierValue
 from cora.infrastructure.ports.capability_lookup import CapabilityStatusValue
@@ -58,8 +63,16 @@ from cora.infrastructure.ports.enclosure_lookup import (
     EnclosureLifecycleValue,
     EnclosurePermitStatusValue,
 )
-from cora.infrastructure.ports.facility_lookup import FacilityStatusValue
+from cora.infrastructure.ports.facility_lookup import (
+    FacilityKindValue,
+    FacilityStatusValue,
+)
 from cora.infrastructure.ports.family_lookup import FamilyStatusValue
+from cora.infrastructure.ports.federation import (
+    AbiTierValue,
+    DirectionValue,
+    PermitStatusValue,
+)
 from cora.infrastructure.ports.language_model_lookup import LanguageModelStatusValue
 from cora.infrastructure.ports.supply_lookup import SupplyStatusValue
 from cora.recipe.aggregates.capability import CapabilityStatus
@@ -86,8 +99,24 @@ REGISTRY: Final[tuple[tuple[str, object, type[StrEnum]], ...]] = (
     ("ClearanceTemplateStatusValue", ClearanceTemplateStatusValue, ClearanceTemplateStatus),
     ("CredentialStatusValue", CredentialStatusValue, CredentialStatus),
     ("FacilityStatusValue", FacilityStatusValue, FacilityStatus),
+    ("FacilityKindValue", FacilityKindValue, FacilityKind),
     ("SupplyStatusValue", SupplyStatusValue, SupplyStatus),
+    ("DirectionValue", DirectionValue, Direction),
+    ("PermitStatusValue", PermitStatusValue, PermitStatus),
+    ("AbiTierValue", AbiTierValue, AbiTier),
 )
+
+
+_AXIS_FIELD_NAMES: Final = frozenset(
+    {"status", "lifecycle", "tier", "state", "direction", "permit_status", "kind"}
+)
+
+UNPINNED_AXIS_FIELDS: Final[dict[tuple[str, str], str]] = {
+    ("SupplyLookupResult", "kind"): (
+        "Supply.kind is free-form text today; no SupplyKind StrEnum exists to "
+        "pin against. Pin this the moment that enum lands."
+    ),
+}
 
 
 def _declared_aliases() -> dict[str, str]:
@@ -142,4 +171,46 @@ def test_every_port_status_literal_is_registered() -> None:
         + ", ".join(f"{name} ({mod})" for name, mod in sorted(unregistered.items()))
         + ". Add each to REGISTRY with the StrEnum it mirrors, or the alias is a "
         "hand-written value set that nothing keeps in step with its source."
+    )
+
+
+@pytest.mark.architecture
+def test_no_port_axis_field_is_left_as_bare_str() -> None:
+    """Range over port FIELDS, not over the aliases that happen to exist.
+
+    The registry check above asks whether every alias is pinned, which is blind
+    to a field that never got an alias at all. That blindness is not
+    hypothetical: it is how `federation/permit_lookup.py` was missed when the
+    other ports were converted, and it is the shape described in
+    `project_aggregate_coverage_blindness`. The subject of this check is
+    therefore the field.
+
+    A genuine exception is recorded in `UNPINNED_AXIS_FIELDS` with its reason,
+    so the absence of a pin is a written claim rather than a silent gap.
+    """
+    bare: list[str] = []
+    for path in tracked_python_files():
+        if _PORTS_DIR not in path.as_posix():
+            continue
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for stmt in node.body:
+                if not isinstance(stmt, ast.AnnAssign) or not isinstance(stmt.target, ast.Name):
+                    continue
+                field = stmt.target.id
+                if field not in _AXIS_FIELD_NAMES:
+                    continue
+                if ast.unparse(stmt.annotation) != "str":
+                    continue
+                if (node.name, field) in UNPINNED_AXIS_FIELDS:
+                    continue
+                bare.append(f"{path.name}:{node.name}.{field}")
+    assert not bare, (
+        "port fields on a closed axis still typed as a bare str: "
+        + ", ".join(sorted(bare))
+        + ". Give each a Literal alias pinning its owning StrEnum and register "
+        "it, or record it in UNPINNED_AXIS_FIELDS with the reason no enum "
+        "exists to pin against. A bare str here means a consumer in another BC "
+        "can compare it against a value the owner never defined."
     )

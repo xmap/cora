@@ -132,7 +132,7 @@ def _row_to_result(row: Any) -> FacilityLookupResult:
     return FacilityLookupResult(
         id=row["facility_id"],
         code=FacilityCode(str(row["code"])),
-        kind=FacilityKind(row["kind"]),
+        kind=FacilityKind(row["kind"]).value,
         status=FacilityStatus(row["status"]).value,
         trust_anchor_credential_ids=_decode_trust_anchor_ids(row["trust_anchor_credential_ids"]),
     )
