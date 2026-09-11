@@ -6,6 +6,7 @@ from cora.data.projections import (
     DatasetSummaryProjection,
     DistributionSummaryProjection,
     EditionSummaryProjection,
+    ShortfallSummaryProjection,
 )
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry
@@ -22,6 +23,7 @@ def register_data_projections(
     registry.register(DistributionSummaryProjection())
     registry.register(EditionSummaryProjection())
     registry.register(AttestationSummaryProjection())
+    registry.register(ShortfallSummaryProjection())
 
 
 __all__ = ["register_data_projections"]

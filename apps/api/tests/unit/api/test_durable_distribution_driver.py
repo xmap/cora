@@ -246,7 +246,8 @@ async def test_the_registered_locator_resolves_back_to_the_recorded_path() -> No
         str(registrar.calls[0]["locator"]), capture_path_store=recorder.store
     )
 
-    assert resolved == f"file://{_FOUND}"
+    assert resolved is not None
+    assert resolved.uri == f"file://{_FOUND}"
 
 
 @pytest.mark.parametrize(
@@ -297,7 +298,8 @@ async def test_a_root_spelled_with_a_trailing_slash_still_round_trips() -> None:
     resolved = await resolve_capture_path_locator(
         str(registrar.calls[0]["locator"]), capture_path_store=recorder.store
     )
-    assert resolved == f"file://{_FOUND}"
+    assert resolved is not None
+    assert resolved.uri == f"file://{_FOUND}"
 
 
 async def test_the_recorded_observation_time_is_the_files_own_not_the_clocks() -> None:
@@ -639,7 +641,8 @@ async def test_the_locator_names_the_file_the_probe_found_not_the_one_it_searche
         str(registrar.calls[0]["locator"]), capture_path_store=recorder.store
     )
 
-    assert resolved == f"file://{renamed}"
+    assert resolved is not None
+    assert resolved.uri == f"file://{renamed}"
 
 
 async def test_a_tick_stopped_by_a_dead_transport_retries_the_same_candidate() -> None:

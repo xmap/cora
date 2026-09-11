@@ -80,7 +80,7 @@ from cora.run.aggregates.run.parameters_validation import (
     validate_adjusted_parameters_against_method_schema,
     validate_effective_parameters_against_method_schema,
 )
-from cora.run.aggregates.run.read import load_run
+from cora.run.aggregates.run.read import load_run, load_run_ended_at
 from cora.run.aggregates.run.safety_envelope import (
     beam_gate_refusal,
     check_safety_envelope,
@@ -302,6 +302,7 @@ __all__ = [
     "is_last_active_claim",
     "load_run",
     "load_run_capture_path",
+    "load_run_ended_at",
     "load_run_experiment_identity",
     "supply_gate_check",
     "to_payload",

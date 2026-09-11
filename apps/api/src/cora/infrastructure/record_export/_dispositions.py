@@ -1765,6 +1765,21 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "reason": "drop:text",
         "started_by": "token:uuid",
     },
+    "ShortfallRecorded": {
+        "capture_path_id": "token:uuid",
+        "commanded_projection_count": "keep:number",
+        "dropped_frame_count": "keep:number",
+        "file_modified_at": "keep:time",
+        "host": "drop:text",
+        "occurred_at": "keep:time",
+        "producing_run_id": "token:uuid",
+        "projection_count": "keep:number",
+        "reason": "keep:enum:ShortfallReason",
+        "recorded_by": "token:uuid",
+        "root": "drop:text",
+        "run_ended_at": "keep:time",
+        "shortfall_id": "token:uuid",
+    },
     "SteeringDesignRecorded": {
         "brain": {
             "handoff_brain": {

@@ -21,7 +21,11 @@ Everything that can refuse does so BEFORE the deciders run: the reader
 (unreadable, unrecognized, structurally incomplete), the timestamp
 policy, the digest pass, the changed-under-read guard, the natural-key
 duplicate check, and the cross-aggregate pre-loads. A refusal at any
-point leaves zero events. Decider rejections (Capturing gate, future
+point leaves zero events ON THE DATASET CHAIN, which is the guarantee
+this slice exists to make: never a Dataset without its Distribution and
+Acquisition. Exactly one refusal additionally writes a fact of its own
+first, on a SEPARATE stream that is complete in itself and is no part
+of that chain: see "The second outcome" below. Decider rejections (Capturing gate, future
 captured_at, non-Storage supply, and now evidence shape --
 `AcquisitionEvidence` validation moved from a pre-decider check here to
 `record_acquisition.decide`'s `validate_evidence` call, reached last
@@ -32,6 +36,26 @@ dataset/distribution invariant are both violated now surfaces the
 dataset/distribution error first, not the evidence one; the
 all-or-nothing guarantee and the resulting HTTP 400 either way are
 unaffected.
+
+## The second outcome
+
+A structurally incomplete file whose Run has already ended is not a
+file to retry: it is a finished capture that produced nothing
+ingestable, and re-reading it costs a 6.3s round trip to the detector
+host to learn the same thing again. When the evidence supports saying
+so, the refusal records a `Shortfall` (its own terminal-at-genesis
+stream, keyed on the observation) and then raises exactly as before.
+
+The 400 is unchanged deliberately. The caller asked for a Dataset and
+did not get one, so the refusal is still the truthful answer to their
+question; the Shortfall is CORA writing down what it learned while
+answering, which is a different act. Nothing about the response shape,
+the route or the MCP tool moves, and `CaptureScanIngestor` needs no new
+grant: it already catches this exception, and the candidate simply
+stops being selected once the fact lands.
+
+See `_record_shortfall_if_final` for the three preconditions and for
+why the finality rule is an invariant rather than a retry threshold.
 
 ## The timestamp policy
 
@@ -54,19 +78,35 @@ over the file. See `DataExchangeScanReader` for the 2-BM measurement
 that forced the distinction.
 """
 
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import unquote, urlparse
 from uuid import UUID
 
 from cora.data._ingest import StreamPlan, decide_ingest
-from cora.data.adapters.capture_path_locator import CapturePathLookup, resolve_capture_path_locator
+from cora.data.adapters.capture_path_locator import (
+    CapturePathLookup,
+    CapturePathReference,
+    resolve_capture_path_locator,
+)
 from cora.data.aggregates.acquisition import AcquisitionAssetNotFoundError
 from cora.data.aggregates.dataset import (
     DatasetAlreadyIngestedError,
     ProducingRunNotFoundError,
 )
 from cora.data.aggregates.distribution import DistributionSupplyNotFoundError
+from cora.data.aggregates.shortfall import (
+    ShortfallReason,
+    ShortfallRecorded,
+    shortfall_stream_id,
+)
+from cora.data.aggregates.shortfall import (
+    event_type_name as shortfall_event_type_name,
+)
+from cora.data.aggregates.shortfall import (
+    to_payload as shortfall_to_payload,
+)
 from cora.data.errors import InvalidScanFileError, ScanFileInvalidReason, UnauthorizedError
 from cora.data.features.ingest_scan.command import IngestScan
 from cora.data.ports.checksum_computer import ChecksumComputer
@@ -76,15 +116,16 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
-from cora.infrastructure.ports.event_store import StreamAppend
+from cora.infrastructure.ports.event_store import ConcurrencyError, StreamAppend
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.run.aggregates.run import load_run
+from cora.run.aggregates.run import load_run, load_run_ended_at
 from cora.shared.identity import ActorId
 
 _COMMAND_NAME = "IngestScan"
 _DATASET_STREAM = "Dataset"
 _DISTRIBUTION_STREAM = "Distribution"
 _ACQUISITION_STREAM = "Acquisition"
+_SHORTFALL_STREAM = "Shortfall"
 
 _log = get_logger(__name__)
 
@@ -203,15 +244,16 @@ def bind(
         # POST route and MCP tool are unaffected. `command.locator`
         # itself is left UNCHANGED below: it is what gets recorded on
         # the Dataset/Distribution events, indirect form intact.
-        resolved_locator = await resolve_capture_path_locator(
+        resolved = await resolve_capture_path_locator(
             command.locator, capture_path_store=capture_path_store
         )
-        if resolved_locator is None:
+        if resolved is None:
             raise InvalidScanFileError(
                 "scan file locator could not be resolved: the referenced "
                 "run's capture path is missing or no longer matches.",
                 reason=ScanFileInvalidReason.LOCATOR_UNRESOLVED,
             )
+        resolved_locator = resolved.uri
         # Whether resolution actually substituted a DIFFERENT string:
         # `described.reason` / `computed.error_detail` below come from
         # `os.stat`/h5py error text and embed whatever path the reader
@@ -221,7 +263,10 @@ def bind(
         # caller does not necessarily have any prior right to the
         # REAL path it resolved to (that is the whole point of the
         # indirection), so that detail must never reach the response.
-        locator_was_resolved = resolved_locator != command.locator
+        # `reference` is present exactly when the scheme was indirect,
+        # which is the same condition, stated directly rather than
+        # inferred from the two strings differing.
+        locator_was_resolved = resolved.reference is not None
 
         # 1. Read the file's facts. Any non-Description is a refusal
         # with the reader's reason; an incomplete file is refused too,
@@ -241,6 +286,14 @@ def bind(
                 reason=ScanFileInvalidReason.UNRECOGNIZED,
             )
         if not described.structurally_complete:
+            await _record_shortfall_if_final(
+                deps,
+                described=described,
+                reference=resolved.reference,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                principal_id=principal_id,
+            )
             raise InvalidScanFileError(
                 "scan file is structurally incomplete: the rotation-angle "
                 "dataset is absent, meaning post-processing has not "
@@ -390,6 +443,157 @@ def bind(
         return dataset_id
 
     return handler
+
+
+def _instant_of(mtime_ns: int) -> datetime:
+    """A filesystem mtime in integer nanoseconds as a UTC datetime.
+
+    Integer arithmetic throughout: `mtime_ns / 1e9` loses precision
+    well before the nanosecond, because a float64 carries about 16
+    significant digits and a modern epoch-nanosecond value needs 19.
+    Truncating to `datetime`'s microsecond resolution is the only loss,
+    and it is the reason `_record_shortfall_if_final`'s comparison
+    documents its own granularity.
+    """
+    seconds, nanos = divmod(mtime_ns, 1_000_000_000)
+    return datetime.fromtimestamp(seconds, tz=UTC).replace(microsecond=nanos // 1000)
+
+
+async def _record_shortfall_if_final(
+    deps: Kernel,
+    *,
+    described: Description,
+    reference: CapturePathReference | None,
+    correlation_id: UUID,
+    causation_id: UUID | None,
+    principal_id: UUID,
+) -> None:
+    """Record that this capture can never become a Dataset, when the
+    evidence supports saying so. Otherwise do nothing at all.
+
+    Called from the structurally-incomplete refusal, BEFORE it raises.
+    The refusal still raises either way: the caller asked for a Dataset
+    and did not get one, so a 400 remains the truthful answer to their
+    question. This writes down what CORA learned while answering it,
+    which is a different thing from answering it. A failed login
+    returning 401 and writing an audit row is the same shape.
+
+    ## Three preconditions, none of them about who is calling
+
+    A `reference` is required: the stream is keyed on
+    `capture_path_id`, so a caller-supplied `file://` path has no key
+    to be recorded under. A terminal Run is required: `ended_at` is one
+    half of the finality test. And the file must be OLDER than that
+    terminal.
+
+    Together these mean the automated sweep always qualifies (its
+    candidates are terminal Runs with vault rows) and a hand-typed path
+    never does, without either being named. A human who POSTs an
+    indirect locator gets identical treatment to the sweep, which is
+    the point: the rule is about what CORA can prove, not about whom it
+    is talking to.
+
+    ## Why "older than the Run's terminal" is the whole finality rule
+
+    Measured, not assumed: across 329 scan files still resident on the
+    2-BM detector host, every single one stopped changing 7.0 to 8.8
+    seconds BEFORE its Run's terminal event was recorded, zero
+    exceptions, with host clock skew bounded under one second. So a
+    file that is still older than its Run's terminal is one nothing
+    will write to again, and the absent rotation-angle dataset it has
+    now is the one it will have forever.
+
+    The comparison is at microsecond resolution (`datetime`'s), against
+    a measured margin of seconds. No stability window and no attempt
+    counter: both would need a fresh mtime read, and `ScanReader`
+    exposes only `describe()`, so reading one costs the same 6.3s round
+    trip this whole change exists to stop paying.
+
+    The two sides are independent by construction, which is what makes
+    the check worth running: `file_modified_at` comes from the
+    filesystem via the reader, `run_ended_at` from CORA's own event
+    stream. Neither is derived from the other, and neither is derived
+    from `deps.clock`.
+    """
+    if reference is None:
+        return
+
+    run_ended_at = await load_run_ended_at(deps.event_store, reference.run_id)
+    if run_ended_at is None:
+        return
+    if run_ended_at.tzinfo is None:
+        # Every Run terminal is written tz-aware; a naive one means the
+        # stream is malformed, not that the file is final. Refusing to
+        # judge is the fail-closed answer, but a silent refusal here
+        # would be indistinguishable from an open Run, so it is logged.
+        _log.warning(
+            "ingest_scan.shortfall_run_ended_at_naive",
+            run_id=str(reference.run_id),
+        )
+        return
+
+    file_modified_at = _instant_of(described.mtime_ns)
+    if file_modified_at >= run_ended_at:
+        return
+
+    shortfall_id = shortfall_stream_id(reference.capture_path_id)
+    event = ShortfallRecorded(
+        shortfall_id=shortfall_id,
+        producing_run_id=reference.run_id,
+        capture_path_id=reference.capture_path_id,
+        host=reference.host,
+        root=reference.root,
+        projection_count=described.projection_count,
+        commanded_projection_count=described.commanded_projection_count,
+        dropped_frame_count=described.dropped_frame_count,
+        reason=ShortfallReason.STRUCTURALLY_INCOMPLETE,
+        file_modified_at=file_modified_at,
+        run_ended_at=run_ended_at,
+        occurred_at=deps.clock.now(),
+        recorded_by=ActorId(principal_id),
+    )
+    try:
+        await deps.event_store.append(
+            _SHORTFALL_STREAM,
+            shortfall_id,
+            0,
+            [
+                to_new_event(
+                    event_type=shortfall_event_type_name(event),
+                    payload=shortfall_to_payload(event),
+                    occurred_at=event.occurred_at,
+                    event_id=deps.id_generator.new_id(),
+                    command_name=_COMMAND_NAME,
+                    correlation_id=correlation_id,
+                    causation_id=causation_id,
+                    principal_id=principal_id,
+                )
+            ],
+        )
+    except ConcurrencyError:
+        # Expected, not exceptional. `_CANDIDATE_SQL` drops a candidate
+        # once its Shortfall lands, but that read goes through a
+        # projection: until the projection catches up, the sweep
+        # re-selects this same candidate and arrives back here. The
+        # derived stream id is what turns that into a no-op instead of
+        # a duplicate fact, and this is where the no-op is absorbed.
+        # Surfacing it would convert a routine lag window into an error
+        # the operator cannot act on.
+        _log.info(
+            "ingest_scan.shortfall_already_recorded",
+            run_id=str(reference.run_id),
+            shortfall_id=str(shortfall_id),
+        )
+        return
+
+    _log.warning(
+        "ingest_scan.shortfall_recorded",
+        run_id=str(reference.run_id),
+        shortfall_id=str(shortfall_id),
+        reason=ShortfallReason.STRUCTURALLY_INCOMPLETE.value,
+        projection_count=described.projection_count,
+        commanded_projection_count=described.commanded_projection_count,
+    )
 
 
 def _redacted_suffix(detail: str, *, redact: bool) -> str:

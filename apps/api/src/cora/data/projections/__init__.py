@@ -1,6 +1,6 @@
 """Data BC projections.
 
-Five projection writers:
+Six projection writers:
   - DatasetSummaryProjection: folds Dataset lifecycle events into
     proj_data_dataset_summary.
   - AcquisitionSummaryProjection: folds AcquisitionRecorded into
@@ -12,12 +12,15 @@ Five projection writers:
     proj_data_edition_summary.
   - AttestationSummaryProjection: folds AttestationRecorded into
     proj_data_attestation_summary.
+  - ShortfallSummaryProjection: folds ShortfallRecorded into
+    proj_data_shortfall_summary.
 """
 
 from cora.data.projections.acquisition_summary import AcquisitionSummaryProjection
 from cora.data.projections.attestation_summary import AttestationSummaryProjection
 from cora.data.projections.distribution_summary import DistributionSummaryProjection
 from cora.data.projections.edition_summary import EditionSummaryProjection
+from cora.data.projections.shortfall_summary import ShortfallSummaryProjection
 from cora.data.projections.summary import DatasetSummaryProjection
 
 __all__ = [
@@ -26,4 +29,5 @@ __all__ = [
     "DatasetSummaryProjection",
     "DistributionSummaryProjection",
     "EditionSummaryProjection",
+    "ShortfallSummaryProjection",
 ]

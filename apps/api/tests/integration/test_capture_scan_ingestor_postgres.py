@@ -74,6 +74,32 @@ async def _insert_capture_path(
     )
 
 
+async def _insert_shortfall(
+    pool: asyncpg.Pool, *, producing_run_id: UUID, capture_path_id: UUID
+) -> None:
+    """Record a Shortfall against ONE capture observation.
+
+    Written straight to the projection for the same reason every other
+    helper here is: what these tests exercise is the raw join, not the
+    fold that would normally populate it.
+    """
+    await pool.execute(
+        """
+        INSERT INTO proj_data_shortfall_summary
+            (shortfall_id, producing_run_id, capture_path_id, host, root,
+             projection_count, commanded_projection_count, dropped_frame_count,
+             reason, file_modified_at, run_ended_at, recorded_at, recorded_by, status)
+        VALUES ($1, $2, $3, 'tomdet', '/local1/2BM', 1, 1541, 0,
+                'StructurallyIncomplete', $4, $4, $4, $5, 'Recorded')
+        """,
+        uuid4(),
+        producing_run_id,
+        capture_path_id,
+        _NOW,
+        uuid4(),
+    )
+
+
 async def _insert_dataset(pool: asyncpg.Pool, *, producing_run_id: UUID) -> None:
     await pool.execute(
         """
@@ -313,3 +339,60 @@ async def test_a_run_whose_location_was_never_recorded_is_not_a_candidate(
     assert candidate is not None
     assert candidate.run_id == run_id
     assert candidate.root == "/local1/2BM"
+
+
+@pytest.mark.integration
+async def test_a_capture_path_with_a_recorded_shortfall_is_not_a_candidate(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A Shortfall is a terminal verdict on the observation: the file
+    can never become a Dataset, so re-selecting it would buy nothing
+    but another 6.3s round trip to the detector host, forever. This is
+    the clause that turns the retry loop off."""
+    run_id = uuid4()
+    await _insert_run_summary(db_pool, run_id=run_id, capture_code="2bmb-tomoscan")
+    capture_path_id = await _insert_capture_path(
+        db_pool, run_id=run_id, observed_path="/local1/2BM/scan.h5", created_at=_NOW
+    )
+    await _insert_shortfall(db_pool, producing_run_id=run_id, capture_path_id=capture_path_id)
+
+    lookup = PostgresScanIngestCandidateLookup(db_pool)
+
+    assert await lookup.next_candidate() is None
+
+
+@pytest.mark.integration
+async def test_a_shortfall_on_one_location_still_leaves_the_other_a_candidate(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The discriminating case for the exclusion's KEY. Keyed on
+    `capture_path_id`, a verdict about the acquisition-tier copy says
+    nothing about the archive-tier copy, which is a separate file that
+    may well be complete. Keyed on `run_id` instead, this test fails
+    and one bad copy would silently condemn every other copy of the
+    same Run: the plain single-location test above passes either way,
+    so it alone would not catch that."""
+    run_id = uuid4()
+    await _insert_run_summary(db_pool, run_id=run_id, capture_code="2bmb-tomoscan")
+    local_capture_path_id = await _insert_capture_path(
+        db_pool,
+        run_id=run_id,
+        observed_path="/local1/2BM/scan.h5",
+        created_at=_NOW,
+        root="/local1/2BM",
+    )
+    await _insert_capture_path(
+        db_pool,
+        run_id=run_id,
+        observed_path="/gdata/dm/2BM/scan.h5",
+        created_at=_NOW,
+        root="/gdata/dm/2BM",
+    )
+    await _insert_shortfall(db_pool, producing_run_id=run_id, capture_path_id=local_capture_path_id)
+
+    lookup = PostgresScanIngestCandidateLookup(db_pool)
+    candidate = await lookup.next_candidate()
+
+    assert candidate is not None
+    assert candidate.run_id == run_id
+    assert candidate.root == "/gdata/dm/2BM"
