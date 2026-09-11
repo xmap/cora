@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_a49960b61b8fc5fb_capture_path_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-10 21:49 +0000
+            created at 2026-09-11 13:09 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -164,7 +164,7 @@
     <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">validate_adjusted_parameters_against_method_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">validate_effective_parameters_against_method_schema</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">read</span> <span class="key">import</span> <span class="nam">load_run</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">read</span> <span class="key">import</span> <span class="nam">load_run</span><span class="op">,</span> <span class="nam">load_run_ended_at</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">run</span><span class="op">.</span><span class="nam">safety_envelope</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">    <span class="nam">beam_gate_refusal</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">    <span class="nam">check_safety_envelope</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -386,15 +386,16 @@
     <p class="run run2"><span class="n"><a id="t302" href="#t302">302</a></span><span class="t">    <span class="str">&quot;is_last_active_claim&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">    <span class="str">&quot;load_run&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">    <span class="str">&quot;load_run_capture_path&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="str">&quot;load_run_experiment_identity&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="str">&quot;supply_gate_check&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="str">&quot;to_payload&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">    <span class="str">&quot;validate_adjusted_parameters_against_method_schema&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">    <span class="str">&quot;validate_effective_parameters_against_method_schema&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t">    <span class="str">&quot;validate_input_dataset_ids&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">    <span class="str">&quot;validate_pinned_calibration_ids&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="str">&quot;witness_safety_envelope&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="str">&quot;load_run_ended_at&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="str">&quot;load_run_experiment_identity&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="str">&quot;supply_gate_check&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">    <span class="str">&quot;to_payload&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">    <span class="str">&quot;validate_adjusted_parameters_against_method_schema&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t">    <span class="str">&quot;validate_effective_parameters_against_method_schema&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">    <span class="str">&quot;validate_input_dataset_ids&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="str">&quot;validate_pinned_calibration_ids&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">    <span class="str">&quot;witness_safety_envelope&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -404,7 +405,7 @@
             <a class="nav" href="z_a49960b61b8fc5fb_capture_path_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-10 21:49 +0000
+            created at 2026-09-11 13:09 +0000
         </p>
     </div>
 </footer>
